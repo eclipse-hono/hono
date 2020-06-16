@@ -1,7 +1,7 @@
 {
   "cmd": "gw",
   "seqno": 136,
-  "EUI": "loriot-device",
+  "EUI": "0102030405060708",
   "ts": 1573574479110,
   "fcnt": 135,
   "port": 2,
@@ -20,5 +20,5 @@
     }
   ],
   "bat": 255,
-  "data": "payload"
+  "data": "62756D6C7578"
 }

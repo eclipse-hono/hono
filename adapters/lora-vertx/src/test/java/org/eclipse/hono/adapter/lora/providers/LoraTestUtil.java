@@ -13,36 +13,39 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.List;
+import java.nio.file.Paths;
+import java.util.Objects;
 
-import io.vertx.core.json.JsonObject;
+import org.eclipse.hono.adapter.lora.LoraMessageType;
+
+import io.vertx.core.buffer.Buffer;
 
 /**
  * Utility methods for testing functionality of LoRa providers.
  */
-public class LoraTestUtil {
+public final class LoraTestUtil {
 
     private LoraTestUtil() {
         // Prevent instantiation
     }
 
     /**
-     * Loads a json test file from the payload directory.
+     * Loads a test file from the payload directory.
      *
-     * @param name the test file name to load
-     * @return the contents of the Json
-     * @throws RuntimeException if the test file could not be loaded
+     * @param providerName The name of the provider to load the file for.
+     * @param type The type of message to load.
+     * @return the contents of the file.
+     * @throws IOException if the test file could not be loaded.
+     * @throws URISyntaxException if the test file could not be loaded.
      */
-    public static JsonObject loadTestFile(final String name) throws RuntimeException {
-        try {
-            final URL url = LoraTestUtil.class.getResource("/payload/" + name + ".json");
-            final List<String> lines = Files.readAllLines(java.nio.file.Paths.get(url.toURI()));
-            final String fullJson = String.join("", lines);
-            return new JsonObject(fullJson);
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
-        }
+    public static Buffer loadTestFile(final String providerName, final LoraMessageType type) throws IOException, URISyntaxException {
+        Objects.requireNonNull(providerName);
+        Objects.requireNonNull(type);
+        final URL location = LoraTestUtil.class.getResource(String.format("/payload/%s.%s.json", providerName, type.name().toLowerCase()));
+        return Buffer.buffer(Files.readAllBytes(Paths.get(location.toURI())));
     }
 }

@@ -13,49 +13,16 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.JsonObject;
-
 /**
  * Verifies behavior of {@link ProximusProvider}.
  */
-public class ProximusProviderTest {
-
-    private final ProximusProvider provider = new ProximusProvider();
+public class ProximusProviderTest extends LoraProviderTestBase<ProximusProvider> {
 
     /**
-     * Verifies that the extraction of the device id from a message is successful.
+     * {@inheritDoc}
      */
-    @Test
-    public void extractDeviceIdFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
-        final String deviceId = this.provider.extractDeviceId(loraMessage);
-
-        assertEquals("56FDB2B433873F4C", deviceId);
-    }
-
-    /**
-     * Verifies the extraction of a payload from a message is successful.
-     */
-    @Test
-    public void extractPayloadFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
-        final String payload = this.provider.extractPayload(loraMessage);
-
-        assertEquals("2205630000328c", payload);
-    }
-
-    /**
-     * Verifies that the extracted message type matches uplink.
-     */
-    @Test
-    public void extractTypeFromLoraUplinkMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
-        final LoraMessageType type = this.provider.extractMessageType(loraMessage);
-        assertEquals(LoraMessageType.UPLINK, type);
+    @Override
+    protected ProximusProvider newProvider() {
+        return new ProximusProvider();
     }
 }

@@ -13,15 +13,20 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Base64;
+import java.util.Objects;
+
+import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for Kerlink.
  */
 @Component
-public class KerlinkProvider implements LoraProvider {
+public class KerlinkProvider extends BaseLoraProvider {
 
     static final String FIELD_KERLINK_CLUSTER_ID = "cluster-id";
     static final String FIELD_KERLINK_CUSTOMER_ID = "customer-id";
@@ -42,18 +47,43 @@ public class KerlinkProvider implements LoraProvider {
         return "/kerlink/rxmessage";
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method always returns {@link LoraMessageType#UPLINK}.
+     */
+    @Override
+    public LoraMessageType extractMessageType(final JsonObject loraMessage) {
+        return LoraMessageType.UPLINK;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method always returns {@value #HEADER_CONTENT_TYPE_KERLINK_JSON}.
+     */
     @Override
     public String acceptedContentType() {
         return HEADER_CONTENT_TYPE_KERLINK_JSON;
     }
 
     @Override
-    public String extractDeviceId(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_UPLINK_DEVICE_EUI);
+    protected String extractDevEui(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_UPLINK_DEVICE_EUI, String.class)
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
     }
 
     @Override
-    public String extractPayload(final JsonObject loraMessage) {
-        return loraMessage.getJsonObject(FIELD_UPLINK_USER_DATA, new JsonObject()).getString(FIELD_UPLINK_PAYLOAD);
+    protected Buffer extractPayload(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_UPLINK_USER_DATA, JsonObject.class)
+                .map(userData -> userData.getValue(FIELD_UPLINK_PAYLOAD))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .map(s -> Buffer.buffer(Base64.getDecoder().decode(s)))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded payload property"));
     }
 }

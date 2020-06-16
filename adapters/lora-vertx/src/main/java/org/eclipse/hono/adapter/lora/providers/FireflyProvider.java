@@ -15,11 +15,15 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
+import com.google.common.io.BaseEncoding;
+
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -27,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  * A LoRaWAN provider with API for Firefly.
  */
 @Component
-public class FireflyProvider implements LoraProvider {
+public class FireflyProvider extends BaseLoraProvider {
 
     private static final String FIELD_FIREFLY_SPREADING_FACTOR = "spreading_factor";
     private static final String FIELD_FIREFLY_FUNCTION_PORT = "port";
@@ -61,82 +65,134 @@ public class FireflyProvider implements LoraProvider {
     }
 
     @Override
-    public String extractDeviceId(final JsonObject loraMessage) {
-        return loraMessage.getJsonObject(FIELD_FIREFLY_DEVICE, new JsonObject())
-                .getString(FIELD_FIREFLY_DEVICE_EUI);
+    protected String extractDevEui(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_FIREFLY_DEVICE, JsonObject.class)
+                .map(device -> device.getValue(FIELD_FIREFLY_DEVICE_EUI))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
     }
 
     @Override
-    public String extractPayload(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_FIREFLY_PAYLOAD);
+    protected Buffer extractPayload(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_FIREFLY_PAYLOAD, String.class)
+                .map(s -> Buffer.buffer(BaseEncoding.base16().decode(s.toUpperCase())))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued payload property"));
     }
 
     @Override
-    public LoraMessageType extractMessageType(final JsonObject loraMessage) {
-        if (FIELD_FIREFLY_MESSAGE_TYPE_UPLINK.equals(loraMessage.getJsonObject(FIELD_FIREFLY_SERVER_DATA, new JsonObject())
-                .getString(FIELD_FIREFLY_MESSAGE_TYPE))) {
-            return LoraMessageType.UPLINK;
-        }
-        return LoraMessageType.UNKNOWN;
+    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_FIREFLY_SERVER_DATA, JsonObject.class)
+                .map(serverData -> serverData.getValue(FIELD_FIREFLY_MESSAGE_TYPE))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .map(type -> FIELD_FIREFLY_MESSAGE_TYPE_UPLINK.equals(type) ? LoraMessageType.UPLINK : LoraMessageType.UNKNOWN)
+                .orElse(LoraMessageType.UNKNOWN);
     }
 
     @Override
-    public Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
-        final Map<String, Object> returnMap = new HashMap<>();
-        if (loraMessage.containsKey(FIELD_FIREFLY_SPREADING_FACTOR)) {
-            returnMap.put(LoraConstants.APP_PROPERTY_SPREADING_FACTOR, loraMessage.getInteger(FIELD_FIREFLY_SPREADING_FACTOR));
-        }
-        if (loraMessage.containsKey(FIELD_FIREFLY_BANDWIDTH)) {
-            returnMap.put(LoraConstants.APP_PROPERTY_BANDWIDTH, loraMessage.getInteger(FIELD_FIREFLY_BANDWIDTH));
-        }
-        if (loraMessage.containsKey(FIELD_FIREFLY_FUNCTION_PORT)) {
-            returnMap.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, loraMessage.getInteger(FIELD_FIREFLY_FUNCTION_PORT));
-        }
-        if (loraMessage.containsKey(FIELD_FIREFLY_MIC_PASS)) {
-            returnMap.put(LoraConstants.APP_PROPERTY_MIC, loraMessage.getBoolean(FIELD_FIREFLY_MIC_PASS));
-        }
-        final JsonObject dataRateJson = loraMessage.getJsonObject(FIELD_FIREFLY_SERVER_DATA, new JsonObject());
+    protected Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
 
-        if (dataRateJson.containsKey(FIELD_FIREFLY_DATA_RATE)) {
-            returnMap.put(LoraConstants.DATA_RATE, dataRateJson.getString(FIELD_FIREFLY_DATA_RATE));
-        }
-        if (dataRateJson.containsKey(FIELD_FIREFLY_CODING_RATE)) {
-            returnMap.put(LoraConstants.CODING_RATE, dataRateJson.getString(FIELD_FIREFLY_CODING_RATE));
-        }
-        if (dataRateJson.containsKey(FIELD_FIREFLY_FREQUENCY)) {
-            returnMap.put(LoraConstants.FREQUENCY, dataRateJson.getDouble(FIELD_FIREFLY_FREQUENCY));
-        }
+        Objects.requireNonNull(loraMessage);
+        final Map<String, Object> data = new HashMap<>();
 
-        final JsonObject parsedPacketJson = loraMessage.getJsonObject(FIELD_FIREFLY_PARSED_PACKET, new JsonObject());
-        if (parsedPacketJson.containsKey(FIELD_FIREFLY_FRAME_COUNT)) {
-            returnMap.put(LoraConstants.FRAME_COUNT, parsedPacketJson.getInteger(FIELD_FIREFLY_FRAME_COUNT));
-        }
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_FIREFLY_SPREADING_FACTOR,
+                Integer.class,
+                LoraConstants.APP_PROPERTY_SPREADING_FACTOR,
+                v -> v,
+                data);
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_FIREFLY_BANDWIDTH,
+                Integer.class,
+                LoraConstants.APP_PROPERTY_BANDWIDTH,
+                v -> v,
+                data);
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_FIREFLY_FUNCTION_PORT,
+                Integer.class,
+                LoraConstants.APP_PROPERTY_FUNCTION_PORT,
+                v -> v,
+                data);
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_FIREFLY_MIC_PASS,
+                Boolean.class,
+                LoraConstants.APP_PROPERTY_MIC,
+                v -> v,
+                data);
 
-        if (dataRateJson.containsKey(FIELD_FIREFLY_GATEWAY_RX)) {
-            final JsonArray gwRxs = dataRateJson.getJsonArray(FIELD_FIREFLY_GATEWAY_RX);
-            final JsonArray normalizedGatways = new JsonArray();
-            for (int i = 0; i < gwRxs.size(); i++) {
-                final JsonObject gwRx = gwRxs.getJsonObject(i);
-                final JsonObject normalizedGatway = new JsonObject();
-                if (gwRx.containsKey(FIELD_FIREFLY_GATEWAY_EUI)) {
-                    normalizedGatway.put(LoraConstants.GATEWAY_ID, gwRx.getString(FIELD_FIREFLY_GATEWAY_EUI));
-                }
-                if (gwRx.containsKey(FIELD_FIREFLY_RSSI)) {
-                    normalizedGatway.put(LoraConstants.APP_PROPERTY_RSS, gwRx.getInteger(FIELD_FIREFLY_RSSI));
-                }
-                if (gwRx.containsKey(FIELD_FIREFLY_LSNR)) {
-                    normalizedGatway.put(LoraConstants.APP_PROPERTY_SNR, gwRx.getDouble(FIELD_FIREFLY_LSNR));
-                }
-                normalizedGatways.add(normalizedGatway);
-            }
-            returnMap.put(LoraConstants.GATEWAYS, normalizedGatways.toString());
-        }
+        LoraUtils.getChildObject(loraMessage, FIELD_FIREFLY_PARSED_PACKET, JsonObject.class)
+            .map(parsedPacket -> parsedPacket.getValue(FIELD_FIREFLY_FRAME_COUNT))
+            .filter(Integer.class::isInstance)
+            .map(Integer.class::cast)
+            .ifPresent(v -> data.put(LoraConstants.FRAME_COUNT, v));
 
-        return returnMap;
+
+        LoraUtils.getChildObject(loraMessage, FIELD_FIREFLY_SERVER_DATA, JsonObject.class)
+            .map(serverData -> {
+
+                LoraUtils.addNormalizedValue(
+                        serverData,
+                        FIELD_FIREFLY_DATA_RATE,
+                        String.class,
+                        LoraConstants.DATA_RATE,
+                        v -> v,
+                        data);
+                LoraUtils.addNormalizedValue(
+                        serverData,
+                        FIELD_FIREFLY_CODING_RATE,
+                        String.class,
+                        LoraConstants.CODING_RATE,
+                        v -> v,
+                        data);
+                LoraUtils.addNormalizedValue(
+                        serverData,
+                        FIELD_FIREFLY_FREQUENCY,
+                        Double.class,
+                        LoraConstants.FREQUENCY,
+                        v -> v,
+                        data);
+
+                return serverData.getValue(FIELD_FIREFLY_GATEWAY_RX);
+            })
+            .filter(JsonArray.class::isInstance)
+            .map(JsonArray.class::cast)
+            .ifPresent(gwRxs -> {
+                final JsonArray normalizedGatways = gwRxs.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .map(gwRx -> {
+                            final JsonObject normalizedGatway = new JsonObject();
+                            LoraUtils.getChildObject(gwRx, FIELD_FIREFLY_GATEWAY_EUI, String.class)
+                                .ifPresent(v -> normalizedGatway.put(LoraConstants.GATEWAY_ID, v));
+                            LoraUtils.getChildObject(gwRx, FIELD_FIREFLY_RSSI, Integer.class)
+                                .ifPresent(v -> normalizedGatway.put(LoraConstants.APP_PROPERTY_RSS, v));
+                            LoraUtils.getChildObject(gwRx, FIELD_FIREFLY_LSNR, Double.class)
+                                .ifPresent(v -> normalizedGatway.put(LoraConstants.APP_PROPERTY_SNR, v));
+                            return normalizedGatway;
+                        })
+                        .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
+                data.put(LoraConstants.GATEWAYS, normalizedGatways.toString());
+            });
+
+        return data;
     }
 
     @Override
-    public JsonObject extractAdditionalData(final JsonObject loraMessage) {
+    protected JsonObject extractAdditionalData(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+
         final JsonObject returnMessage = loraMessage.copy();
         if (returnMessage.containsKey(FIELD_FIREFLY_SPREADING_FACTOR)) {
             returnMessage.remove(LoraConstants.APP_PROPERTY_SPREADING_FACTOR);

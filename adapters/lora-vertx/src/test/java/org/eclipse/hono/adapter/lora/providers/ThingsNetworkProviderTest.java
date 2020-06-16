@@ -13,49 +13,18 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.JsonObject;
-
 /**
  * Verifies behavior of {@link ThingsNetworkProvider}.
  */
-public class ThingsNetworkProviderTest {
+public class ThingsNetworkProviderTest extends LoraProviderTestBase<ThingsNetworkProvider> {
 
-    private final ThingsNetworkProvider provider = new ThingsNetworkProvider();
-
-    /**
-     * Verifies that the extraction of the device id from a message is successful.
-     */
-    @Test
-    public void extractDeviceIdFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("ttn.uplink");
-        final String deviceId = provider.extractDeviceId(loraMessage);
-
-        assertEquals("0352828610682633", deviceId);
-    }
 
     /**
-     * Verifies the extraction of a payload from a message is successful.
+     * {@inheritDoc}
      */
-    @Test
-    public void extractPayloadFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("ttn.uplink");
-        final String payload = provider.extractPayload(loraMessage);
-
-        assertEquals("YnVtbHV4", payload);
+    @Override
+    protected ThingsNetworkProvider newProvider() {
+        return new ThingsNetworkProvider();
     }
 
-    /**
-     * Verifies that the extracted message type matches uplink.
-     */
-    @Test
-    public void extractTypeFromLoraUplinkMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("ttn.uplink");
-        final LoraMessageType type = provider.extractMessageType(loraMessage);
-        assertEquals(LoraMessageType.UPLINK, type);
-    }
 }

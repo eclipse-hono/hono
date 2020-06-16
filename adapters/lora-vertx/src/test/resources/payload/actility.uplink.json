@@ -1,13 +1,13 @@
 {
   "DevEUI_uplink": {
     "Time": "2019-02-27T14:48:35.544+01:00",
-    "DevEUI": "actility-device",
+    "DevEUI": "0102030405060708",
     "FPort": "1",
     "FCntUp": "548",
     "ADRbit": "1",
     "MType": "2",
     "FCntDn": "43",
-    "payload_hex": "00",
+    "payload_hex": "62756D6C7578",
     "mic_hex": "922d4454",
     "Lrcid": "00000119",
     "LrrRSSI": "-48.000000",

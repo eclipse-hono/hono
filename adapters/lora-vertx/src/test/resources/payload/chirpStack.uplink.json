@@ -2,7 +2,7 @@
   "applicationID": "123",
   "applicationName": "temperature-sensor",
   "deviceName": "garden-sensor",
-  "devEUI": "AgICAgICAgI=",
+  "devEUI": "AQIDBAUGBwg=",
   "rxInfo": [
     {
       "gatewayID": "AwMDAwMDAwM=",
@@ -38,7 +38,7 @@
   "dr": 1,
   "fCnt": 10,
   "fPort": 5,
-  "data": "data",
+  "data": "YnVtbHV4",
   "objectJSON": "{\"temperatureSensor\":25,\"humiditySensor\":32}",
   "tags": {
     "key": "value"

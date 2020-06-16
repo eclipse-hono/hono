@@ -15,19 +15,33 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.google.common.io.BaseEncoding;
+
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for Loriot.
+ * <p>
+ * This provider only supports <a href="https://docs.loriot.io/display/LNS/Gateway+Information">
+ * Gateway Information</a> messages.
  */
 @Component
-public class LoriotProvider implements LoraProvider {
+public class LoriotProvider extends BaseLoraProvider {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LoriotProvider.class);
+    private static final Pattern PATTERN_DATA_RATE = Pattern.compile("^SF(\\d+) BW(\\d+) (.+)$");
     private static final String FIELD_LORIOT_EUI = "EUI";
     private static final String FIELD_LORIOT_PAYLOAD = "data";
 
@@ -53,71 +67,100 @@ public class LoriotProvider implements LoraProvider {
     }
 
     @Override
-    public String extractDeviceId(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_LORIOT_EUI);
+    protected String extractDevEui(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_LORIOT_EUI, String.class)
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
     }
 
     @Override
-    public String extractPayload(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_LORIOT_PAYLOAD);
+    protected Buffer extractPayload(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_LORIOT_PAYLOAD, String.class)
+                .map(s -> Buffer.buffer(BaseEncoding.base16().decode(s.toUpperCase())))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued payload property"));
     }
 
     @Override
-    public LoraMessageType extractMessageType(final JsonObject loraMessage) {
-        if (FIELD_LORIOT_MESSAGE_TYPE_UPLINK.equals(loraMessage.getString(FIELD_LORIOT_MESSAGE_TYPE))) {
-            return LoraMessageType.UPLINK;
-        }
-        return LoraMessageType.UNKNOWN;
+    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_LORIOT_MESSAGE_TYPE, String.class)
+                .map(s -> FIELD_LORIOT_MESSAGE_TYPE_UPLINK.equals(s) ? LoraMessageType.UPLINK : LoraMessageType.UNKNOWN)
+                .orElse(LoraMessageType.UNKNOWN);
     }
 
     @Override
-    public Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
-        final Map<String, Object> returnMap = new HashMap<>();
-        if (loraMessage.containsKey(FIELD_LORIOT_DATARATE)) {
-            final String dataRate = loraMessage.getString(FIELD_LORIOT_DATARATE);
-            returnMap.put(LoraConstants.DATA_RATE, dataRate);
-            final String[] datarateSplit = dataRate.split(" ");
-            returnMap.put(LoraConstants.APP_PROPERTY_SPREADING_FACTOR, Integer.parseInt(datarateSplit[0].substring(2)));
-            returnMap.put(LoraConstants.APP_PROPERTY_BANDWIDTH, Integer.parseInt(datarateSplit[1].substring(2)));
-            returnMap.put(LoraConstants.CODING_RATE, datarateSplit[2]);
-        }
-        if (loraMessage.containsKey(FIELD_LORIOT_FUNCTION_PORT)) {
-            returnMap.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, loraMessage.getInteger(FIELD_LORIOT_FUNCTION_PORT));
-        }
+    protected Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
 
-        if (loraMessage.containsKey(FIELD_LORIOT_FRAME_COUNT)) {
-            returnMap.put(LoraConstants.FRAME_COUNT, loraMessage.getInteger(FIELD_LORIOT_FRAME_COUNT));
-        }
+        Objects.requireNonNull(loraMessage);
 
-        if (loraMessage.containsKey(FIELD_LORIOT_FREQUENCY)) {
-            returnMap.put(LoraConstants.FREQUENCY, loraMessage.getDouble(FIELD_LORIOT_FREQUENCY));
-        }
+        final Map<String, Object> data = new HashMap<>();
 
-        if (loraMessage.containsKey(FIELD_LORIOT_GATEWAYS)) {
-            final JsonArray gws = loraMessage.getJsonArray(FIELD_LORIOT_GATEWAYS);
-            final JsonArray normalizedGatways = new JsonArray();
-            for (int i = 0; i < gws.size(); i++) {
-                final JsonObject gw = gws.getJsonObject(i);
-                final JsonObject normalizedGatway = new JsonObject();
-                if (gw.containsKey(FIELD_LORIOT_GATEWAY_EUI)) {
-                    normalizedGatway.put(LoraConstants.GATEWAY_ID, gw.getString(FIELD_LORIOT_GATEWAY_EUI));
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_LORIOT_FUNCTION_PORT,
+                Integer.class,
+                LoraConstants.APP_PROPERTY_FUNCTION_PORT,
+                v -> v,
+                data);
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_LORIOT_FRAME_COUNT,
+                Integer.class,
+                LoraConstants.FRAME_COUNT,
+                v -> v,
+                data);
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_LORIOT_FREQUENCY,
+                Double.class,
+                LoraConstants.FREQUENCY,
+                v -> v,
+                data);
+
+        LoraUtils.getChildObject(loraMessage, FIELD_LORIOT_DATARATE, String.class)
+            .ifPresent(dataRate -> {
+                data.put(LoraConstants.DATA_RATE, dataRate);
+                final Matcher matcher = PATTERN_DATA_RATE.matcher(dataRate);
+                if (matcher.matches()) {
+                    data.put(LoraConstants.APP_PROPERTY_SPREADING_FACTOR, Integer.parseInt(matcher.group(1)));
+                    data.put(LoraConstants.APP_PROPERTY_BANDWIDTH, Integer.parseInt(matcher.group(2)));
+                    data.put(LoraConstants.CODING_RATE, matcher.group(3));
+                } else {
+                    LOG.debug("invalid data rate [{}]", dataRate);
                 }
-                if (gw.containsKey(FIELD_LORIOT_RSSI)) {
-                    normalizedGatway.put(LoraConstants.APP_PROPERTY_RSS, gw.getInteger(FIELD_LORIOT_RSSI));
-                }
-                if (gw.containsKey(FIELD_LORIOT_SNR)) {
-                    normalizedGatway.put(LoraConstants.APP_PROPERTY_SNR, gw.getDouble(FIELD_LORIOT_SNR));
-                }
-                normalizedGatways.add(normalizedGatway);
-            }
-            returnMap.put(LoraConstants.GATEWAYS, normalizedGatways.toString());
-        }
+            });
 
-        return returnMap;
+        LoraUtils.getChildObject(loraMessage, FIELD_LORIOT_GATEWAYS, JsonObject.class)
+            .map(gateways -> gateways.getValue(FIELD_LORIOT_GATEWAYS))
+            .filter(JsonArray.class::isInstance)
+            .map(JsonArray.class::cast)
+            .ifPresent(gws -> {
+                final JsonArray normalizedGatways = gws.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .map(gw -> {
+                            final JsonObject normalizedGatway = new JsonObject();
+                            LoraUtils.getChildObject(gw, FIELD_LORIOT_GATEWAY_EUI, String.class)
+                                .ifPresent(v -> normalizedGatway.put(LoraConstants.GATEWAY_ID, v));
+                            LoraUtils.getChildObject(gw, FIELD_LORIOT_RSSI, Integer.class)
+                                .ifPresent(v -> normalizedGatway.put(LoraConstants.APP_PROPERTY_RSS, v));
+                            LoraUtils.getChildObject(gw, FIELD_LORIOT_SNR, Double.class)
+                                .ifPresent(v -> normalizedGatway.put(LoraConstants.APP_PROPERTY_SNR, v));
+                            return normalizedGatway;
+                        })
+                        .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
+                data.put(LoraConstants.GATEWAYS, normalizedGatways.toString());
+            });
+
+        return data;
     }
 
     @Override
-    public JsonObject extractAdditionalData(final JsonObject loraMessage) {
+    protected JsonObject extractAdditionalData(final JsonObject loraMessage) {
         return null;
     }
 }

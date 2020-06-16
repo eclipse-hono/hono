@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,10 +21,21 @@ public class LoraProviderMalformedPayloadException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Create the Exception with the given message and cause.
+     * Creates a new exception for a message.
      *
-     * @param message the Exception message
-     * @param cause the Exception cause
+     * @param message The message describing the error.
+     */
+    public LoraProviderMalformedPayloadException(final String message) {
+        this(message, null);
+    }
+
+    /**
+     * Creates a new exception for a message and root cause.
+     *
+     * @param message The message describing the error.
+     * @param cause The root cause for the error. (A {@code null} value is
+     *         permitted, and indicates that the cause is nonexistent or
+     *         unknown.)
      */
     public LoraProviderMalformedPayloadException(final String message, final Exception cause) {
         super(message, cause);

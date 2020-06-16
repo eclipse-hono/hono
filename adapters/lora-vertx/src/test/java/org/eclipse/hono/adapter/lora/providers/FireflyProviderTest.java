@@ -13,75 +13,36 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies behavior of {@link FireflyProvider}.
  */
-public class FireflyProviderTest {
-
-    private final FireflyProvider provider = new FireflyProvider();
+public class FireflyProviderTest extends LoraProviderTestBase<FireflyProvider> {
 
     /**
-     * Verifies that the extraction of the device id from a message is successful.
+     * {@inheritDoc}
      */
-    @Test
-    public void extractDeviceIdFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("firefly.uplink");
-        final String deviceId = provider.extractDeviceId(loraMessage);
-
-        assertEquals("firefly-device", deviceId);
+    @Override
+    protected FireflyProvider newProvider() {
+        return new FireflyProvider();
     }
 
     /**
-     * Verifies the extraction of a payload from a message is successful.
+     * Verifies that properties are parsed correctly from the lora message.
      */
     @Test
-    public void extractPayloadFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("firefly.uplink");
-        final String payload = provider.extractPayload(loraMessage);
+    public void testGetMessageParsesNormalizedData() {
 
-        assertEquals("payload", payload);
-    }
+        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(uplinkMessageBuffer);
 
-    /**
-     * Verifies that the extracted message type matches uplink.
-     */
-    @Test
-    public void extractTypeFromLoraUplinkMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("firefly.uplink");
-        final LoraMessageType type = provider.extractMessageType(loraMessage);
-        assertEquals(LoraMessageType.UPLINK, type);
-    }
-
-    /**
-     * Verifies that the extracted mic is true.
-     */
-    @Test
-    public void extractMicFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("firefly.uplink");
-        final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
-        assertTrue(map.containsKey(LoraConstants.APP_PROPERTY_MIC));
-        assertTrue((boolean) map.getOrDefault(LoraConstants.APP_PROPERTY_MIC, null));
-    }
-
-    /**
-     * Verifies that an unknown message type defaults to the {@link LoraMessageType#UNKNOWN} type.
-     */
-    @Test
-    public void extractTypeFromLoraUnknownMessage() {
-        final JsonObject loraMessage = new JsonObject();
-        loraMessage.put("bumlux", "bumlux");
-        final LoraMessageType type = provider.extractMessageType(loraMessage);
-        assertEquals(LoraMessageType.UNKNOWN, type);
+        final Map<String, Object> map = loraMessage.getNormalizedData();
+        assertThat(map.get(LoraConstants.APP_PROPERTY_MIC)).isEqualTo(Boolean.TRUE);
     }
 }
