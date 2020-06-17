@@ -31,7 +31,6 @@
   <modules>
     <module>hono-client-examples</module>
     <module>protocol-gateway-example</module>
-    <module>quickstart-python</module>
   </modules>
 
   <properties>

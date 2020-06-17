@@ -1,15 +1,3 @@
-<!--
-    Copyright (c) 2020 Contributors to the Eclipse Foundation
-
-    See the NOTICE file(s) distributed with this work for additional
-    information regarding copyright ownership.
-
-    This program and the accompanying materials are made available under the
-    terms of the Eclipse Public License 2.0 which is available at
-    http://www.eclipse.org/legal/epl-2.0
-
-    SPDX-License-Identifier: EPL-2.0
- -->
 # Eclipse Hono Quickstart tutorial
 
 Note: This tutorial follows the Tutorial from the official homepage https://www.eclipse.org/hono/getting-started/.
@@ -30,7 +18,7 @@ Then, just run the `quickstart.py` script.
 
 The output should roughly look like this
 
-```
+```bash
 Registered tenant f184ce49-d906-4a8c-af27-21df4c4acbf1
 Registered device 6f948c41-c2da-47f5-a52e-bf013f09e670
 Password is set!

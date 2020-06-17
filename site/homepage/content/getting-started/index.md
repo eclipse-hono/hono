@@ -43,15 +43,15 @@ If you want to really kickstart your Hono experience there also is a convenience
 automatically replay the Tutorial given here (at least the telemetry part for now).
 
 {{% note title="Python Quickstart" %}}
-You can find the Python tutorial in the [Examples](https://github.com/eclipse/hono/tree/master/examples/quickstart/python/src/main/python).
+You can find the Python tutorial in the [Examples](https://github.com/eclipse/hono/tree/master/examples/quickstart-python).
 The python script does
-* Setup a Tenant
-* Setup a Device in the tenant
+* Set up a Tenant
+* Set up a Device in the tenant
 * Add credentials to the device
 * Start an (northbound) AMQP Receiver as "Consumer" of the data
 * Send a Telemetry message via HTTP API
 * Send a Telemetry message via MQTT API
-For more details have a look in the [Readme](https://github.com/eclipse/hono/tree/master/examples/quickstart/python/README.md).
+For more details have a look in the [Readme](https://github.com/eclipse/hono/tree/master/examples/quickstart-python/README.md).
 {{% /note %}}
 
 #### Hono Sandbox
