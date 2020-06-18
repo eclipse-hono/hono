@@ -68,6 +68,7 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
         Objects.requireNonNull(value);
         Objects.requireNonNull(maxAge);
 
+        LOG.trace("adding value to cache [key: {}, expiry: {}s]", key, maxAge.toSeconds());
         put(key, value, Instant.now().plus(maxAge));
     }
 
