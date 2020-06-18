@@ -449,8 +449,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         "cannot process response from service [" + getName() + "]")));
                 ProtonHelper.released(delivery, true);
             } else {
-                LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
-                        replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
+                LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}, cache-directive: {}]",
+                        replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus(), response.getCacheDirective());
                 addToCache(handler.two(), response);
                 if (span != null) {
                     span.log("response from peer accepted");
