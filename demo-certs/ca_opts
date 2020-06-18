@@ -133,3 +133,9 @@ keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
 subjectAltName       = DNS.1:hono-adapter-coap-vertx,DNS.2:hono-adapter-coap-vertx.hono,DNS.3:localhost
 
+[ req_ext_example-gateway ]
+
+subjectKeyIdentifier = hash
+keyUsage             = keyAgreement,keyEncipherment,digitalSignature
+extendedKeyUsage     = serverAuth, clientAuth
+subjectAltName       = DNS.1:localhost
