@@ -29,6 +29,7 @@ import java.util.Map;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -76,7 +77,7 @@ public class HttpBasedMessageMappingTest {
     @BeforeEach
     public void setUp() {
         mapperWebClient = mock(WebClient.class);
-        config = new MqttProtocolAdapterProperties();
+        config = new MqttProtocolAdapterProperties(new ClientConfigProperties());
         messageMapping = new HttpBasedMessageMapping(mapperWebClient, config);
     }
 

@@ -90,7 +90,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.amqp")
     public AmqpAdapterProperties adapterProperties() {
-        final AmqpAdapterProperties config = new AmqpAdapterProperties();
+        final AmqpAdapterProperties config = new AmqpAdapterProperties(downstreamSenderFactoryConfig());
         return config;
     }
 

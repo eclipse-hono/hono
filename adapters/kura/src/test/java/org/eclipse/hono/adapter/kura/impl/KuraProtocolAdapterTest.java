@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -53,7 +54,7 @@ public class KuraProtocolAdapterTest {
     @BeforeEach
     public void setUp() {
 
-        config = new KuraAdapterProperties();
+        config = new KuraAdapterProperties(new ClientConfigProperties());
         adapter = new KuraProtocolAdapter();
         adapter.setConfig(config);
     }

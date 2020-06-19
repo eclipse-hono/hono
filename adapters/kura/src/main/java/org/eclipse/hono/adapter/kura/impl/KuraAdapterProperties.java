@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.kura.impl;
 
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 
 
 /**
@@ -38,6 +39,16 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
     private String controlPrefix = DEFAULT_CONTROL_PREFIX;
     private String ctrlMsgContentType = DEFAULT_CONTENT_TYPE_KURA_CONTROL_MSG;
     private String dataMsgContentType = DEFAULT_CONTENT_TYPE_KURA_DATA_MSG;
+
+    /**
+     * Create new Kura adapter properties with default values based on the given client configuration properties where
+     * applicable.
+     *
+     * @param clientConfigProperties Client configuration properties whose values shall be set as default.
+     */
+    public KuraAdapterProperties(final ClientConfigProperties clientConfigProperties) {
+        super(clientConfigProperties);
+    }
 
     /**
      * Gets the <em>topic.control-prefix</em> to use for determining if a message published
