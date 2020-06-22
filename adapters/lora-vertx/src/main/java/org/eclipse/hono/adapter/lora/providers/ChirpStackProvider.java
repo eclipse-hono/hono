@@ -40,7 +40,6 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     private static final String FIELD_CHIRPSTACK_BANDWIDTH = "bandwidth";
     private static final String FIELD_CHIRPSTACK_CHANNEL = "channel";
     private static final String FIELD_CHIRPSTACK_CODE_RATE = "codeRate";
-    private static final String FIELD_CHIRPSTACK_DATA_RATE = "dr";
     private static final String FIELD_CHIRPSTACK_DEVICE = "devEUI";
     private static final String FIELD_CHIRPSTACK_FRAME_COUNT = "fCnt";
     private static final String FIELD_CHIRPSTACK_FREQUENCY = "frequency";
@@ -102,9 +101,6 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
 
         final LoraMetaData data = new LoraMetaData();
 
-        LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DATA_RATE, Integer.class)
-            .map(String::valueOf)
-            .ifPresent(data::setDataRateIdentifier);
         LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_FUNCTION_PORT, Integer.class)
             .ifPresent(data::setFunctionPort);
         LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_FRAME_COUNT, Integer.class)

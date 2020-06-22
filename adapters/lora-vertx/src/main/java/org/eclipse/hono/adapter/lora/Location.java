@@ -36,9 +36,9 @@ public final class Location {
     /**
      * Creates a new location for coordinates.
      *
-     * @param longitude The longitude.
-     * @param latitude The latitude.
-     * @param altitude The altitude or {@code null} if unknown.
+     * @param longitude The longitude in decimal degrees.
+     * @param latitude The latitude in decimal degrees.
+     * @param altitude The altitude in meters or {@code null} if unknown.
      * @throws NullPointerException if longitude or latitude are {@code null}.
      */
     public Location(
@@ -53,7 +53,7 @@ public final class Location {
     /**
      * Gets the longitude of the location.
      *
-     * @return The longitude.
+     * @return The longitude in decimal degrees.
      */
     public Double getLongitude() {
         return longitude;
@@ -62,7 +62,7 @@ public final class Location {
     /**
      * Gets the latitude of the location.
      *
-     * @return The latitude.
+     * @return The latitude in decimal degrees.
      */
     public Double getLatitude() {
         return latitude;
@@ -71,7 +71,7 @@ public final class Location {
     /**
      * Gets the altitude of the location.
      *
-     * @return The altitude.
+     * @return The altitude in meters.
      */
     public Double getAltitude() {
         return altitude;

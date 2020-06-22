@@ -41,7 +41,6 @@ public class EverynetProvider extends JsonBasedLoraProvider {
     private static final String FIELD_EVERYNET_BANDWIDTH = "bandwidth";
     private static final String FIELD_EVERYNET_CHANNEL = "channel";
     private static final String FIELD_EVERYNET_CODERATE = "coderate";
-    private static final String FIELD_EVERYNET_DATA_RATE = "datarate";
     private static final String FIELD_EVERYNET_DEVICE_EUI = "device";
     private static final String FIELD_EVERYNET_FRAME_COUNT = "counter_up";
     private static final String FIELD_EVERYNET_FREQUENCY = "freq";
@@ -153,9 +152,6 @@ public class EverynetProvider extends JsonBasedLoraProvider {
             .ifPresent(radio -> {
                 LoraUtils.getChildObject(radio, FIELD_EVERYNET_FREQUENCY, Double.class)
                     .ifPresent(metaData::setFrequency);
-                LoraUtils.getChildObject(radio, FIELD_EVERYNET_DATA_RATE, Integer.class)
-                    .map(String::valueOf)
-                    .ifPresent(metaData::setDataRateIdentifier);
 
                 LoraUtils.getChildObject(radio, OBJECT_EVERYNET_MODULATION, JsonObject.class)
                     .ifPresent(modulation -> {

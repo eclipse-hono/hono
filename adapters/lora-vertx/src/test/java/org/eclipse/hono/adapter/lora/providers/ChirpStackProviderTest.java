@@ -44,7 +44,6 @@ public class ChirpStackProviderTest extends LoraProviderTestBase<ChirpStackProvi
         assertThat(metaData.getSpreadingFactor()).isEqualTo(11);
         assertThat(metaData.getBandwidth()).isEqualTo(125);
         assertThat(metaData.getFrequency()).isEqualTo(868.1);
-        assertThat(metaData.getDataRateIdentifier()).isEqualTo("1");
 
         assertThat(metaData.getGatewayInfo()).hasSize(1);
         assertThat(metaData.getGatewayInfo().get(0).getGatewayId()).isEqualTo("0303030303030303");

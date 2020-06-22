@@ -55,15 +55,23 @@ public final class LoraMetaData {
     private List<GatewayInfo> gatewayInfo = new LinkedList<>();
 
     /**
-     * @return The bandwidth in kHz.
+     * Gets the bandwidth used by the device's radio for sending the data.
+     *
+     * @return The bandwidth in kHz or {@code null} if unknown.
+     * @see <a href="https://docs.exploratory.engineering/lora/dr_sf/">
+     * Data Rate and Spreading Factor</a>
      */
     public Integer getBandwidth() {
         return bandwidth;
     }
 
     /**
-     * @param bandwidth The bandwidth in kHz.
+     * Sets the bandwidth used by the device's radio for sending the data.
+     *
+     * @param bandwidth The bandwidth in kHz or {@code null} if unknown.
      * @return This object for command chaining.
+     * @see <a href="https://docs.exploratory.engineering/lora/dr_sf/">
+     * Data Rate and Spreading Factor</a>
      */
     public LoraMetaData setBandwidth(final Integer bandwidth) {
         this.bandwidth = bandwidth;
@@ -71,14 +79,20 @@ public final class LoraMetaData {
     }
 
     /**
-     * @return The functionPort.
+     * Gets the function port number used to represent the type and/or
+     * characteristics of the payload data.
+     *
+     * @return The port number or {@code null} if unknown.
      */
     public Integer getFunctionPort() {
         return functionPort;
     }
 
     /**
-     * @param functionPort The functionPort to set.
+     * Sets the function port number used to represent the type and/or
+     * characteristics of the payload data.
+     *
+     * @param functionPort The port number or {@code null} if unknown.
      * @return This object for command chaining.
      */
     public LoraMetaData setFunctionPort(final Integer functionPort) {
@@ -87,14 +101,20 @@ public final class LoraMetaData {
     }
 
     /**
-     * @return The frameCount.
+     * Gets the number of uplink messages that have been sent by the device
+     * since the beginning of the LoRa network session.
+     *
+     * @return The number of messages or {@code null} if unknown.
      */
     public Integer getFrameCount() {
         return frameCount;
     }
 
     /**
-     * @param frameCount The frameCount to set.
+     * Sets the number of uplink messages that have been sent by the device
+     * since the beginning of the LoRa network session.
+     *
+     * @param frameCount The number of messages or {@code null} if unknown.
      * @return This object for command chaining.
      */
     public LoraMetaData setFrameCount(final Integer frameCount) {
@@ -103,14 +123,18 @@ public final class LoraMetaData {
     }
 
     /**
-     * @return The frequency in mHz.
+     * Gets the frequency used by the device's radio for sending the data.
+     *
+     * @return The frequency in mHz or {@code null} if unknown.
      */
     public Double getFrequency() {
         return frequency;
     }
 
     /**
-     * @param frequency The frequency in mHz.
+     * Sets the frequency used by the device's radio for sending the data.
+     *
+     * @param frequency The frequency in mHz or {@code null} if unknown.
      *
      * @return This object for command chaining.
      * @throws IllegalArgumentException if frequency is negative.
@@ -120,38 +144,6 @@ public final class LoraMetaData {
             throw new IllegalArgumentException("frequency must be positive");
         }
         this.frequency = frequency;
-        return this;
-    }
-
-    /**
-     * @return The dataRate.
-     */
-    public Integer getDataRate() {
-        return dataRate;
-    }
-
-    /**
-     * @param dataRate The dataRate to set.
-     * @return This object for command chaining.
-     */
-    public LoraMetaData setDataRate(final Integer dataRate) {
-        this.dataRate = dataRate;
-        return this;
-    }
-
-    /**
-     * @return The dataRateIdentifier.
-     */
-    public String getDataRateIdentifier() {
-        return dataRateIdentifier;
-    }
-
-    /**
-     * @param dataRateIdentifier The dataRateIdentifier to set.
-     * @return This object for command chaining.
-     */
-    public LoraMetaData setDataRateIdentifier(final String dataRateIdentifier) {
-        this.dataRateIdentifier = dataRateIdentifier;
         return this;
     }
 
@@ -172,37 +164,63 @@ public final class LoraMetaData {
     }
 
     /**
-     * @return The adaptiveDataRateEnabled.
+     * Checks if the network server uses Adaptive Data Rate (ADR) control to optimize
+     * the device's data rate.
+     *
+     * @return {@code true} if ADR is in use or {@code null} if unknown.
      */
     public Boolean getAdaptiveDataRateEnabled() {
         return adaptiveDataRateEnabled;
     }
 
     /**
-     * @param adaptiveDataRateEnabled The adaptiveDataRateEnabled to set.
+     * Sets whether the network server uses Adaptive Data Rate (ADR) control to optimize
+     * the device's data rate.
+     *
+     * @param flag {@code true} if ADR is in use or {@code null} if unknown.
      * @return This object for command chaining.
      */
-    public LoraMetaData setAdaptiveDataRateEnabled(final Boolean adaptiveDataRateEnabled) {
-        this.adaptiveDataRateEnabled = adaptiveDataRateEnabled;
+    public LoraMetaData setAdaptiveDataRateEnabled(final Boolean flag) {
+        this.adaptiveDataRateEnabled = flag;
         return this;
     }
 
     /**
-     * @return The spreadingFactor.
+     * Gets the spreading factor used by the device's radio to send the data.
+     *
+     * @return The spreading factor or {@code null} if unknown.
+     * @see <a href="https://docs.exploratory.engineering/lora/dr_sf/">
+     * Data Rate and Spreading Factor</a>
      */
     public Integer getSpreadingFactor() {
         return spreadingFactor;
     }
 
     /**
-     * @param spreadingFactor The spreadingFactor to set.
+     * Sets the spreading factor used by the device's radio to send the data.
+     *
+     * @param spreadingFactor The spreading factor or {@code null} if unknown.
      * @return This object for command chaining.
+     * @throws IllegalArgumentException if the spreading factor is smaller than 7 or greater than 12.
+     * @see <a href="https://docs.exploratory.engineering/lora/dr_sf/">
+     * Data Rate and Spreading Factor</a>
      */
     public LoraMetaData setSpreadingFactor(final Integer spreadingFactor) {
+
+        if (spreadingFactor != null) {
+            if (spreadingFactor < 7 || spreadingFactor > 12) {
+                throw new IllegalArgumentException("spreading factor must be > 6 and < 13");
+            }
+        }
         this.spreadingFactor = spreadingFactor;
         return this;
     }
 
+    /**
+     * Gets the location of the device.
+     *
+     * @return The location or {@code null} if unknown.
+     */
     public Location getLocation() {
         return location;
     }
@@ -210,7 +228,7 @@ public final class LoraMetaData {
     /**
      * Sets the location of the device.
      *
-     * @param location The location.
+     * @param location The location or {@code null} if unknown.
      * @return This object for command chaining.
      */
     public LoraMetaData setLocation(final Location location) {

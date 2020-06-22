@@ -43,7 +43,6 @@ public class EverynetProviderTest extends LoraProviderTestBase<EverynetProvider>
         assertThat(metaData.getFrequency()).isEqualTo(868.1);
         assertThat(metaData.getSpreadingFactor()).isEqualTo(12);
         assertThat(metaData.getBandwidth()).isEqualTo(125);
-        assertThat(metaData.getDataRateIdentifier()).isEqualTo("0");
 
         assertThat(metaData.getGatewayInfo()).hasSize(1);
         assertThat(metaData.getGatewayInfo().get(0).getChannel()).isEqualTo(0);
