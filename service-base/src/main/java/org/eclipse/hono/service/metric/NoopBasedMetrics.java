@@ -43,6 +43,10 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
+    public void incrementRejectedConnections() {
+    }
+
+    @Override
     public void decrementConnections(final String tenantId) {
     }
 

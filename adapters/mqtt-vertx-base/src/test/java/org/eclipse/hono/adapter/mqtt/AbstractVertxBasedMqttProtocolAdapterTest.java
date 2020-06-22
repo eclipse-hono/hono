@@ -396,6 +396,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
             // THEN the connection is not established
             ctx.verify(() -> verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
+            ctx.verify(() -> verify(metrics).incrementRejectedConnections());
             ctx.completeNow();
         }));
     }

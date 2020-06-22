@@ -388,7 +388,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
                                 .compose(tenantConfig -> CompositeFuture.all(
                                         isAdapterEnabled(tenantConfig),
-                                        checkConnectionLimitForAdapter(),
+                                        checkConnectionLimitForAdapter()
+                                            .onFailure(ex -> {
+                                                metrics.incrementRejectedConnections();
+                                            }),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                         .map(ok -> {
                             log.debug("{} is registered and enabled", authenticatedDevice);

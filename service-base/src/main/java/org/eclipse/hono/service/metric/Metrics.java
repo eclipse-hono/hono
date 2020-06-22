@@ -49,6 +49,11 @@ public interface Metrics {
     void decrementUnauthenticatedConnections();
 
     /**
+     * Reports a a connection which was rejected since the connection limit of an adapter was exceeded.
+     */
+    void incrementRejectedConnections();
+
+    /**
      * Gets the total number of current connections - authenticated for all tenants and unauthenticated.
      *
      * @return total number of connections.

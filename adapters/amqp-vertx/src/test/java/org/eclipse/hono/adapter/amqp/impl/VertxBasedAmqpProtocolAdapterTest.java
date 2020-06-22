@@ -1192,6 +1192,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
         verify(deviceConnection).setCondition(errorConditionCaptor.capture());
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+        verify(metrics).incrementRejectedConnections();
     }
 
     private String getCommandEndpoint() {

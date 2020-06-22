@@ -30,6 +30,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -61,6 +62,10 @@ public class MicrometerBasedMetrics implements Metrics {
      */
     public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
     /**
+     * The name of the meter for rejected connections.
+     */
+    public static final String METER_CONNECTIONS_REJECTED = "hono.connections.rejected";
+    /**
      * The name of the meter for recording message payload size.
      */
     public static final String METER_MESSAGES_PAYLOAD = "hono.messages.payload";
@@ -90,6 +95,7 @@ public class MicrometerBasedMetrics implements Metrics {
     private final Map<String, DeviceConnectionDurationTracker> connectionDurationTrackers = new ConcurrentHashMap<>();
     private final Map<String, Long> lastSeenTimestampPerTenant = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
+    private final Counter rejectedConnections;
     private final AtomicInteger totalCurrentConnections = new AtomicInteger();
     private final Vertx vertx;
     private long tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
@@ -116,6 +122,7 @@ public class MicrometerBasedMetrics implements Metrics {
             }
         });
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
+        this.rejectedConnections = registry.counter(METER_CONNECTIONS_REJECTED);
     }
 
     /**
@@ -166,6 +173,11 @@ public class MicrometerBasedMetrics implements Metrics {
     public final void decrementUnauthenticatedConnections() {
         this.unauthenticatedConnections.decrementAndGet();
         this.totalCurrentConnections.decrementAndGet();
+    }
+
+    @Override
+    public void incrementRejectedConnections() {
+        this.rejectedConnections.increment();
     }
 
     @Override
