@@ -1,5 +1,5 @@
 +++
-title = "Device Registry"
+title = "File Based Device Registry"
 weight = 205
 +++
 

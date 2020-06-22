@@ -22,7 +22,7 @@ By means of the [Tenant API]({{< relref "/api/tenant" >}}) Hono handles tenants 
 The API defines how to *retrieve* the details of a specific tenant. This offers the possibility to handle arbitrary
 properties on the level of a tenant (see e.g. [Protocol adapter configuration]({{< relref "#protocol-adapter-configuration" >}})).
 For convenience, there are CRUD operations for the handling of tenants, which can be found in the 
-[Device Registry]({{< relref "device-registry.md#managing-tenants" >}}).
+[Device Registry Management API]({{< relref "/api/management" >}}).
 
 ## Protocol Adapters respect the Tenant API
 
