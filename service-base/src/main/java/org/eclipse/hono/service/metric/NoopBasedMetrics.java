@@ -43,7 +43,7 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementRejectedConnections() {
+    public void incrementRejectedConnectionsDueToAdapterConnectionLimit() {
     }
 
     @Override

@@ -62,9 +62,17 @@ public class MicrometerBasedMetrics implements Metrics {
      */
     public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
     /**
-     * The name of the meter for rejected connections.
+     * The name of the meter for connection attempts. The outcome is signaled by the accordingly named tag.
      */
-    public static final String METER_CONNECTIONS_REJECTED = "hono.connections.rejected";
+    public static final String METER_CONNECTIONS_ATTEMPTS = "hono.connections.attempts";
+    /**
+     * The key for the meter connection attempt tag holding the outcome of the connection attempt.
+     */
+    public static final String METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME = "outcome";
+    /**
+     * The key for the meter connection attempt tag holding the reason for the outcome of connection attempt (if any).
+     */
+    public static final String METER_CONNECTION_ATTEMPTS_TAG_KEY_REASON = "reason";
     /**
      * The name of the meter for recording message payload size.
      */
@@ -122,7 +130,11 @@ public class MicrometerBasedMetrics implements Metrics {
             }
         });
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
-        this.rejectedConnections = registry.counter(METER_CONNECTIONS_REJECTED);
+
+        this.rejectedConnections = Counter.builder(METER_CONNECTIONS_ATTEMPTS)
+            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME, "rejected")
+            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_REASON, "adapter-connection-limit-exceeded")
+            .register(registry);
     }
 
     /**
@@ -176,7 +188,7 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementRejectedConnections() {
+    public void incrementRejectedConnectionsDueToAdapterConnectionLimit() {
         this.rejectedConnections.increment();
     }
 

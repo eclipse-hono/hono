@@ -390,7 +390,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                         isAdapterEnabled(tenantConfig),
                                         checkConnectionLimitForAdapter()
                                             .onFailure(ex -> {
-                                                metrics.incrementRejectedConnections();
+                                                metrics.incrementRejectedConnectionsDueToAdapterConnectionLimit();
                                             }),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                         .map(ok -> {

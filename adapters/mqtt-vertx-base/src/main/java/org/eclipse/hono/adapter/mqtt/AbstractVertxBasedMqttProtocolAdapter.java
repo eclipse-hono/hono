@@ -397,7 +397,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         // the ConnectionLimitManager is null in some unit tests
         if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
             currentSpan.log("connection limit exceeded, reject connection request");
-            metrics.incrementRejectedConnections();
+            metrics.incrementRejectedConnectionsDueToAdapterConnectionLimit();
             return Future.failedFuture(new MqttConnectionException(
                     MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
         }
