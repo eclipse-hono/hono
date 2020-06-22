@@ -9,6 +9,7 @@ title = "Release Notes"
 * The `HonoConnection` implementation didn't use a delay before a reconnect attempt after
   a certain number of reconnnect attempts (58 with the default configuration) had already
   failed. This has been fixed.
+* An error when freeing Command & Control related resources of an idle tenant has been fixed.
 
 ## 1.2.3
 
