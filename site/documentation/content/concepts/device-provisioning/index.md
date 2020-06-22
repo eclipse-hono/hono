@@ -22,13 +22,12 @@ There are different ways to perform device provisioning.
 Devices can be provisioned using Hono's [Device Registry Management API]({{< relref "/api/management" >}}) via HTTP.
 
 If the desired *tenant* does not yet exist, it must be created first. 
-How to do this is described in the [User Guide]({{< ref "/user-guide/device-registry#add-a-tenant" >}})
-of the Device Registry.
+How to do this is described in the tenants section of the [Device Registry Management API]({{< relref "/api/management" >}}).
 
-The actual Device Provisioning is then performed as described under
-[Register Device]({{< relref "/user-guide/device-registry#register-device" >}}).
+The actual Device Provisioning is then performed by adding devices as described under devices section of the 
+[Device Registry Management API]({{< relref "/api/management" >}}).
 This creates both a device identity and an (empty) credentials record. The last step is to add real credentials
-as described in [Update Credentials for a Device]({{< relref "/user-guide/device-registry#update-credentials-for-a-device" >}}).
+as described in the credentials section of the [Device Registry Management API]({{< relref "/api/management" >}}).
 
 
 ## Automatic Device Provisioning

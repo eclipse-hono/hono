@@ -11,7 +11,7 @@ Protocol adapters use these APIs to determine a device's registration status, e.
 
 There is no particular technical reason to implement these three APIs in one component, so for production scenarios there might be up to three different components each implementing one of the API's.
 
-The Device Registry component also exposes [HTTP based resources]({{< relref "/user-guide/device-registry.md" >}}) for managing tenants and the registration information and credentials of devices.
+The Device Registry component also exposes [HTTP based resources]({{< relref "/api/management" >}}) for managing tenants and the registration information and credentials of devices.
 
 The Device Registry is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-file/) created from it.
 
