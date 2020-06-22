@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.CommandContext;
@@ -322,12 +323,13 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
             log.info("timeout of tenant {}: closing and removing command consumer", tenantId);
             consumer.close(v -> mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId));
         }
-        adapterInstanceCommandHandler
+        final List<CommandHandlerWrapper> handlersToRemove = adapterInstanceCommandHandler
                 .getDeviceSpecificCommandHandlers().stream().filter(handler -> handler.getTenantId().equals(tenantId))
-                .forEach(handler -> {
-                    log.info("timeout of tenant {}: removing command handler for device {}", tenantId, handler.getDeviceId());
-                    adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(handler.getTenantId(), handler.getDeviceId());
-                });
+                .collect(Collectors.toList());
+        handlersToRemove.forEach(handler -> {
+            log.info("timeout of tenant {}: removing command handler for device {}", tenantId, handler.getDeviceId());
+            adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(handler.getTenantId(), handler.getDeviceId());
+        });
     }
 
     /**
