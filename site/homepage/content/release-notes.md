@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.2.4 (not yet released)
+
+### Fixes & Enhancements
+
+* The `HonoConnection` implementation didn't use a delay before a reconnect attempt after
+  a certain number of reconnnect attempts (58 with the default configuration) had already
+  failed. This has been fixed.
+
 ## 1.2.3
 
 ### Fixes & Enhancements
