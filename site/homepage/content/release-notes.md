@@ -7,8 +7,8 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The Device Connection service did return a 500 error code if no *last known gateway* could
-  be found for a device ID. This has been fixed so that the service now returns a 404 in that
-  case as specified by the Device Connection API.
+  be found for a device ID. This has been fixed so that the service now returns a 404
+  in that case as specified by the Device Connection API.
 * The cache based Device Connection service implementation now applies a lifespan of 28 days
   when setting/updating cache entries containing *last known gateway* information. This means
   no global expiration configuration is needed anymore for the cache.
@@ -22,6 +22,27 @@ title = "Release Notes"
   Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
   method has been removed.
 
+## 1.2.2
+
+### Fixes & Enhancements
+
+* Commands might not have been routed to the target device or gateway if multiple
+  Verticle instances were deployed in a protocol adapter instance. This has been fixed.
+* The example registry's admin guide has been amended with some missing configuration
+  variables.
+* The documentation of the underlying concepts of Hono's Command & Control functionality
+  has been updated to reflect recent changes.
+* Some dependencies have been updated to more recent versions fixing potential
+  vulnerabilities.
+
+## 1.2.1
+
+### Fixes & Enhancements
+
+* The AMQP adapter didn't report any metrics anymore. This has been fixed.
+* The CoAP and HTTP adapters' user guide now correctly documents the 413 status code returned
+  in response to a request that contains a payload exceeding the configured maximum size.
+
 ## 1.2.0
 
 ### New Features
@@ -34,11 +55,15 @@ title = "Release Notes"
   and/or a username and password in order to be able to connect to a Prometheus server
   that requires TLS and/or client authentication.
 * A Java client for the communication with the AMQP protocol adapter has been added.
-  It can be used to implement devices, (protocol) gateways and for testing puposes.
+  It can be used to implement devices, (protocol) gateways and for testing purposes.
   For more information refer to [AMQP Adapter Client for Java]({{% doclink "/dev-guide/amqp_adapter_client/" %}}).
 * Devices can now be configured with *groups* of gateways that are allowed to act on behalf of the
   device. This makes it easier to support scenarios in which a device may *roam* between multiple
   gateways. The HTTP based management API has been adapted accordingly.
+* The CoAP adapter now supports forwarding commands to devices in the response body of requests for
+  uploading telemetry data and/or events, analogous to the HTTP adapter.
+  Please note that the CoAP adapter is still considered *experimental* and its device facing API
+  is therefore still subject to change.
 
 ### Fixes & Enhancements
 
@@ -49,7 +74,7 @@ title = "Release Notes"
 * The Command & Control implementation in the protocol adapters has been optimized to use
   far fewer consumer links to the AMQP Messaging Network, saving up on resources.
   Before this change, the protocol adapters created a separate receiver link for each device that wanted
-  to receive commands. Now each protocol adapter instance creates onyl a single receiver link over
+  to receive commands. Now each protocol adapter instance creates only a single receiver link over
   which all commands for all devices connected to the adapter instance are transmitted.
 * The base classes for implementing a device registry have been moved into their own `device-registry-based`
   module.
@@ -79,6 +104,15 @@ title = "Release Notes"
 * The Device Registry Management API has been extended to support the definition of *Gateway Groups* which
   can be referenced in a device's *viaGroups* property in order to authorize all gateways that are a member
   of any of the groups to act on behalf of the device.
+
+## 1.1.2
+
+### API Changes
+
+* The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
+  because the Device Registration API does not define a corresponding operation.
+  Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
+  method has been removed.
 
 ## 1.1.1
 
@@ -156,6 +190,15 @@ title = "Release Notes"
   configured in such a way that protocol adapters can send and receive messages on the `control/*`
   address pattern. This is now used for internal communication between protocol adapters only.
 * The `create` method in `org.eclipse.hono.client.HonoConnection` now requires its Vertx parameter to be not null.
+
+## 1.0.4
+
+### API Changes
+
+* The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
+  because the Device Registration API does not define a corresponding operation.
+  Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
+  method has been removed.
 
 ## 1.0.3
 
