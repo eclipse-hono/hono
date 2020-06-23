@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -88,6 +89,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -1189,10 +1191,17 @@ public class VertxBasedAmqpProtocolAdapterTest {
                 .forClass(Handler.class);
         verify(deviceConnection).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
-        // THEN the adapter does not accept the incoming connection request. 
+        // THEN the adapter closes the connection right after it opened it
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).closeHandler(closeHandler.capture());
+        closeHandler.getValue().handle(Future.succeededFuture());
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
         verify(deviceConnection).setCondition(errorConditionCaptor.capture());
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+        // AND increments and decrements the connection count accordingly
+        final InOrder metricsInOrderVerifier = inOrder(metrics);
+        metricsInOrderVerifier.verify(metrics).incrementConnections(TEST_TENANT_ID);
+        metricsInOrderVerifier.verify(metrics).decrementConnections(TEST_TENANT_ID);
         verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
     }
 
