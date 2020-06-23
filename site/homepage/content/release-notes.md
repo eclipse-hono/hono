@@ -12,7 +12,7 @@ title = "Release Notes"
 * The AMQP 1.0 event message based Connection Event producer now sets a TTL on the event messages
   it produces. The TTL is the *max TTL* configured at the tenant level.
 * A new Device Registry implementation based on MongoDB database is now available in Hono.
-  Please refer to [MongoDB Device Registry Configuration]({{% doclink "/admin-guide/common-config/#mongodb-device-registry-config.md" %}})
+  Please refer to the [MongoDB Device Registry User Guide]({{% doclink "/user-guide/mongodb-based-device-registry" %}})
   for additional information.
 
 ### Fixes & Enhancements
