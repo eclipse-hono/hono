@@ -15,7 +15,12 @@
 package org.eclipse.hono.service.management;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
@@ -51,6 +56,39 @@ public abstract class AbstractDelegatingRegistryHttpEndpoint<S, T extends Servic
         super(vertx, service);
     }
 
+    /**
+     * Creates a predicate for testing values against a pattern.
+     *
+     * @param testPattern The pattern to test against.
+     * @param optional {@code true} if the values to check are optional.
+     * @return The predicate for testing values.
+     *         The predicate's test method will return {@code true}
+     *         <ul>
+     *         <li>if the value matches the pattern or</li>
+     *         <li>if the value is {@code null} and the <em>optional</em> flag is {@code true}.</li>
+     *         </ul>
+     *         Otherwise the predicate will throw an {@code IllegalArgumentException}
+     *         containing a message indicating the cause of the failed check.
+     */
+    protected static Predicate<String> getPredicate(final Pattern testPattern, final boolean optional) {
+
+        Objects.requireNonNull(testPattern);
+
+        return value -> {
+            final Matcher matcher = testPattern.matcher(Optional.ofNullable(value).orElse(""));
+            if (matcher.matches()) {
+                return true;
+            } else if (value == null) {
+                if (optional) {
+                    return true;
+                } else {
+                    throw new IllegalArgumentException("mandatory value must not be null");
+                }
+            } else {
+                throw new IllegalArgumentException(String.format("value does not match pattern [%s]", testPattern));
+            }
+        };
+    }
     /**
      * Writes a response based on generic result.
      * <p>

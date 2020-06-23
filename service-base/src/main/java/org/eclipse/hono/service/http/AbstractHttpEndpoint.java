@@ -16,9 +16,9 @@ package org.eclipse.hono.service.http;
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -210,9 +210,10 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      *
      * @param ctx The routing context to get the parameter from.
      * @param paramName The name of the parameter.
-     * @param validator A predicate to use for validating the parameter value or
-     *                  {@code null} if the value should not be validated.
-     * @param optional {@code true} if parameter is not mandatory.
+     * @param validator A predicate to use for validating the parameter value.
+     *                  The predicate may throw an {@code IllegalArgumentException}
+     *                  instead of returning {@code false} in order to convey additional
+     *                  information about why the test failed.
      * @return A future indicating the outcome of the operation.
      *         If the request does not contain a parameter with the given name, the future will be
      *         <ul>
@@ -225,34 +226,32 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      *         given and the predicate evaluates to {@code false}, or</li>
      *         <li>otherwise be completed with the parameter value.</li>
      *         </ul>
-     * @throws NullPointerException If ctx or paramName are {@code null}.
+     * @throws NullPointerException If ctx, paramName or validator are {@code null}.
      */
-    protected final Future<Optional<String>> getRequestParameter(
+    protected final Future<String> getRequestParameter(
             final RoutingContext ctx,
             final String paramName,
-            final Pattern validator,
-            final boolean optional) {
+            final Predicate<String> validator) {
 
-        final Promise<Optional<String>> result = Promise.promise();
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(paramName);
+        Objects.requireNonNull(validator);
+
+        final Promise<String> result = Promise.promise();
         final String value = ctx.request().getParam(paramName);
 
-        if (value == null) {
-            if (optional) {
-                result.complete(Optional.empty());
+        try {
+            if (validator.test(value)) {
+                result.complete(value);
             } else {
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        String.format("request does not contain required parameter [name: %s]", paramName)));
+                        String.format("request parameter [name: %s, value: %s] failed validation", paramName, value)));
             }
-        } else if (validator != null) {
-            if (validator.matcher(value).matches()) {
-                result.complete(Optional.of(value));
-            } else {
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        String.format("request parameter [name: %s, value: %s] does not match pattern: %s",
-                                paramName, value, validator.pattern())));
-            }
-        } else {
-            result.complete(Optional.of(value));
+        } catch (final IllegalArgumentException e) {
+            result.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("request parameter [name: %s, value: %s] failed validation: %s", paramName, value, e.getMessage()),
+                    e));
         }
         return result.future();
     }

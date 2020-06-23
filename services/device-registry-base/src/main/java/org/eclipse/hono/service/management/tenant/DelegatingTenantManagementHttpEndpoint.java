@@ -126,10 +126,10 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), false)
+        getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false))
             .compose(tenantId -> {
-                logger.debug("retrieving tenant [id: {}]", tenantId.get());
-                return getService().readTenant(tenantId.get(), span);
+                logger.debug("retrieving tenant [id: {}]", tenantId);
+                return getService().readTenant(tenantId, span);
             })
             .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
             .onFailure(t -> failRequest(ctx, t, span))
@@ -145,13 +145,14 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final Future<Optional<String>> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), true);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), true));
         final Future<Tenant> payload = fromPayload(ctx);
 
         CompositeFuture.all(tenantId, payload)
             .compose(ok -> {
-                logger.debug("creating tenant [{}]", tenantId.result().orElse("<auto>"));
-                return getService().createTenant(tenantId.result(), payload.result(), span);
+                final Optional<String> tid = Optional.ofNullable(tenantId.result());
+                logger.debug("creating tenant [{}]", tid.orElse("<auto>"));
+                return getService().createTenant(tid, payload.result(), span);
             })
             .onSuccess(operationResult -> writeResponse(ctx, operationResult, (responseHeaders, status) -> {
                 if (status == HttpURLConnection.HTTP_CREATED) {
@@ -176,14 +177,13 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final Future<Optional<String>> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), true);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
         final Future<Tenant> payload = fromPayload(ctx);
 
         CompositeFuture.all(tenantId, payload)
             .compose(tenant -> {
-                final String id = tenantId.result().get();
-                logger.debug("updating tenant [{}]", id);
-                return getService().updateTenant(id, payload.result(), Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION)), span);
+                logger.debug("updating tenant [{}]", tenantId.result());
+                return getService().updateTenant(tenantId.result(), payload.result(), Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION)), span);
             })
             .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
             .onFailure(t -> failRequest(ctx, t, span))
@@ -199,11 +199,11 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), false)
+        getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false))
             .compose(tenantId -> {
-                logger.debug("removing tenant [{}]", tenantId.get());
+                logger.debug("removing tenant [{}]", tenantId);
                 final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
-                return getService().deleteTenant(tenantId.get(), resourceVersion, span);
+                return getService().deleteTenant(tenantId, resourceVersion, span);
             })
             .onSuccess(result -> writeResponse(ctx, result, span))
             .onFailure(t -> failRequest(ctx, t, span))
