@@ -128,7 +128,7 @@ public class MicrometerBasedMetrics implements Metrics {
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
 
         this.rejectedConnections = Counter.builder(METER_CONNECTIONS_ATTEMPTS)
-            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME, "rejected-adapter-connection-limit-exceeded")
+            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME, "adapter-connection-limit-exceeded")
             .register(registry);
     }
 
