@@ -70,10 +70,6 @@ public class MicrometerBasedMetrics implements Metrics {
      */
     public static final String METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME = "outcome";
     /**
-     * The key for the meter connection attempt tag holding the reason for the outcome of connection attempt (if any).
-     */
-    public static final String METER_CONNECTION_ATTEMPTS_TAG_KEY_REASON = "reason";
-    /**
      * The name of the meter for recording message payload size.
      */
     public static final String METER_MESSAGES_PAYLOAD = "hono.messages.payload";
@@ -132,8 +128,7 @@ public class MicrometerBasedMetrics implements Metrics {
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
 
         this.rejectedConnections = Counter.builder(METER_CONNECTIONS_ATTEMPTS)
-            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME, "rejected")
-            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_REASON, "adapter-connection-limit-exceeded")
+            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME, "rejected-adapter-connection-limit-exceeded")
             .register(registry);
     }
 
