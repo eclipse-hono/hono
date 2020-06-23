@@ -161,7 +161,7 @@ public class EverynetProvider extends JsonBasedLoraProvider {
                             .map(v -> v / 1000)
                             .ifPresent(metaData::setBandwidth);
                         LoraUtils.getChildObject(modulation, FIELD_EVERYNET_CODERATE, String.class)
-                            .ifPresent(metaData::setCodingRateIdentifier);
+                            .ifPresent(metaData::setCodingRate);
                     });
 
                 LoraUtils.getChildObject(radio, OBJECT_EVERYNET_HARDWARE, JsonObject.class)

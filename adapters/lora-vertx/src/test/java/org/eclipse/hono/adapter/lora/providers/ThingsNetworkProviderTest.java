@@ -66,7 +66,7 @@ public class ThingsNetworkProviderTest extends LoraProviderTestBase<ThingsNetwor
         assertThat(metaData.getSpreadingFactor()).isEqualTo(7);
         assertThat(metaData.getBandwidth()).isEqualTo(125);
         assertThat(metaData.getFrequency()).isEqualTo(868.1);
-        assertThat(metaData.getCodingRateIdentifier()).isEqualTo("4/5");
+        assertThat(metaData.getCodingRate()).isEqualTo("4/5");
 
         assertThat(metaData.getGatewayInfo()).hasSize(1);
         assertThat(metaData.getGatewayInfo().get(0).getGatewayId()).isEqualTo("0203040506070809");

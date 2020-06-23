@@ -122,7 +122,7 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
                 LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_BANDWIDTH, Integer.class)
                     .ifPresent(data::setBandwidth);
                 LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_CODE_RATE, String.class)
-                    .ifPresent(data::setCodingRateIdentifier);
+                    .ifPresent(data::setCodingRate);
             });
 
         LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_RX_INFO, JsonArray.class)

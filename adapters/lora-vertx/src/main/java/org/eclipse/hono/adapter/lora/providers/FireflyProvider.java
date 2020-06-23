@@ -126,7 +126,7 @@ public class FireflyProvider extends JsonBasedLoraProvider {
                 LoraUtils.getChildObject(serverData, FIELD_FIREFLY_FREQUENCY, Double.class)
                     .ifPresent(data::setFrequency);
                 LoraUtils.getChildObject(serverData, FIELD_FIREFLY_CODING_RATE, String.class)
-                    .ifPresent(data::setCodingRateIdentifier);
+                    .ifPresent(data::setCodingRate);
 
                 return serverData.getValue(OBJECT_FIREFLY_GATEWAY_RX);
             })

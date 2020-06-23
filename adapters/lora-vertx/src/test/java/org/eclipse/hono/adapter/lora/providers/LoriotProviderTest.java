@@ -39,7 +39,7 @@ public class LoriotProviderTest extends LoraProviderTestBase<LoriotProvider> {
 
         final LoraMetaData metaData = loraMessage.getMetaData();
         assertThat(metaData.getBandwidth()).isEqualTo(125);
-        assertThat(metaData.getCodingRateIdentifier()).isEqualTo("4/5");
+        assertThat(metaData.getCodingRate()).isEqualTo("4/5");
         assertThat(metaData.getFrameCount()).isEqualTo(135);
         assertThat(metaData.getFrequency()).isEqualTo(868.3);
         assertThat(metaData.getFunctionPort()).isEqualTo(2);

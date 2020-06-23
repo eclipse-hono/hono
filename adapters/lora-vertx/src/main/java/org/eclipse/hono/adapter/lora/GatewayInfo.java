@@ -36,6 +36,12 @@ public class GatewayInfo {
     @JsonProperty(LoraConstants.LOCATION)
     private Location location;
 
+    /**
+     * Gets the gateway's identifier.
+     *
+     * @return The identifier or {@code null} if unknown.
+     * @throws NullPointerException if id is {@code null}.
+     */
     public String getGatewayId() {
         return gatewayId;
     }
@@ -43,21 +49,28 @@ public class GatewayInfo {
     /**
      * Sets the gateway's identifier.
      *
-     * @param id The identifier.
+     * @param id The identifier or {@code null} if unknown.
      * @throws NullPointerException if id is {@code null}.
      */
     public void setGatewayId(final String id) {
         this.gatewayId = Objects.requireNonNull(id);
     }
 
+    /**
+     * Gets the concentrator IF channel that the gateway used for receiving
+     * the data.
+     *
+     * @return The channel or {@code null} if unknown.
+     */
     public Integer getChannel() {
         return channel;
     }
 
     /**
-     * Sets the concentrator IF channel used for RX.
+     * Sets the concentrator IF channel that the gateway used for receiving
+     * the data.
      *
-     * @param channel The channel.
+     * @param channel The channel or {@code null} if unknown.
      * @return This object for command chaining.
      */
     public GatewayInfo setChannel(final Integer channel) {
@@ -65,6 +78,11 @@ public class GatewayInfo {
         return this;
     }
 
+    /**
+     * Gets the location of the receiving gateway.
+     *
+     * @return The location or {@code null} if unknown.
+     */
     public Location getLocation() {
         return location;
     }
@@ -72,7 +90,7 @@ public class GatewayInfo {
     /**
      * Sets the location of the receiving gateway.
      *
-     * @param location The location.
+     * @param location The location or {@code null} if unknown.
      * @return This object for command chaining.
      */
     public GatewayInfo setLocation(final Location location) {
@@ -80,14 +98,21 @@ public class GatewayInfo {
         return this;
     }
 
+    /**
+     * Gets the signal-to-noise ratio (SNR) detected by the
+     * gateway when receiving the data.
+     *
+     * @return The ratio in dB or {@code null} if unknown.
+     */
     public Double getSnr() {
         return snr;
     }
 
     /**
-     * Sets the Lora SNR ratio.
+     * Sets the signal-to-noise ratio (SNR) detected by the
+     * gateway when receiving the data.
      *
-     * @param snr The ration in dB.
+     * @param snr The ratio in dB or {@code null} if unknown.
      * @return This object for command chaining.
      */
     public GatewayInfo setSnr(final Double snr) {
@@ -95,15 +120,28 @@ public class GatewayInfo {
         return this;
     }
 
+    /**
+     * Gets the received signal strength indicator (RSSI) detected by the
+     * gateway when receiving the data.
+     *
+     * @return The RSSI value in dBm or {@code null} if unknown.
+     */
     public Integer getRssi() {
         return rssi;
     }
 
     /**
-     * @param rssi The RSSI value to set.
+     * Sets the received signal strength indicator (RSSI) detected by the
+     * gateway when receiving the data.
+     *
+     * @param rssi The RSSI value in dBm or {@code null} if unknown.
      * @return This object for command chaining.
+     * @throws IllegalArgumentException if the rssi value is positive.
      */
     public GatewayInfo setRssi(final Integer rssi) {
+        if (rssi != null && rssi.intValue() > 0) {
+            throw new IllegalArgumentException("RSSI value must be a negative integer");
+        }
         this.rssi = rssi;
         return this;
     }

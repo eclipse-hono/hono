@@ -117,7 +117,7 @@ public class LoriotProvider extends JsonBasedLoraProvider {
                 if (matcher.matches()) {
                     data.setSpreadingFactor(Integer.parseInt(matcher.group(1)));
                     data.setBandwidth(Integer.parseInt(matcher.group(2)));
-                    data.setCodingRateIdentifier(matcher.group(3));
+                    data.setCodingRate(matcher.group(3));
                 } else {
                     LOG.debug("invalid data rate [{}]", dataRate);
                 }

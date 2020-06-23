@@ -115,7 +115,7 @@ public class ThingsNetworkProvider extends JsonBasedLoraProvider {
             .map(meta -> {
 
                 LoraUtils.getChildObject(meta, FIELD_TTN_CODING_RATE, String.class)
-                .ifPresent(data::setCodingRateIdentifier);
+                .ifPresent(data::setCodingRate);
 
                 LoraUtils.getChildObject(meta, FIELD_TTN_DATA_RATE, String.class)
                     .ifPresent(dataRate -> {

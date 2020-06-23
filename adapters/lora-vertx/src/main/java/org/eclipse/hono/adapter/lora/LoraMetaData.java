@@ -43,7 +43,7 @@ public final class LoraMetaData {
     @JsonProperty(LoraConstants.DATA_RATE_ID)
     private String dataRateIdentifier;
     @JsonProperty(LoraConstants.CODING_RATE)
-    private String codingRateIdentifier;
+    private String codingRate;
     @JsonProperty(LoraConstants.ADAPTIVE_DATA_RATE_ENABLED)
     private Boolean adaptiveDataRateEnabled;
     @JsonProperty(LoraConstants.APP_PROPERTY_SPREADING_FACTOR)
@@ -148,18 +148,23 @@ public final class LoraMetaData {
     }
 
     /**
-     * @return The codingRateIdentifier.
+     * Gets the coding rate used by the device to send the data.
+     *
+     * @return The coding rate or {@code null} if unknown.
+     * @see <a href="https://en.wikipedia.org/wiki/Code_rate">Code Rate</a>
      */
-    public String getCodingRateIdentifier() {
-        return codingRateIdentifier;
+    public String getCodingRate() {
+        return codingRate;
     }
 
     /**
-     * @param codingRateIdentifier The codingRateIdentifier to set.
+     * Sets the coding rate used by the device to send the data.
+     *
+     * @param codingRate The coding rate or {@code null} if unknown.
      * @return This object for command chaining.
      */
-    public LoraMetaData setCodingRateIdentifier(final String codingRateIdentifier) {
-        this.codingRateIdentifier = codingRateIdentifier;
+    public LoraMetaData setCodingRate(final String codingRate) {
+        this.codingRate = codingRate;
         return this;
     }
 
