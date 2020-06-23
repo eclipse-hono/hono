@@ -90,7 +90,6 @@ public class CredentialsTest {
                 credential.setSecrets(List.of(new PskSecret().setKey(new byte[] { 0x00, 0x01 })));
 
         final JsonObject json = JsonObject.mapFrom(credential);
-        System.out.println(json);
         assertNotNull(json);
         assertEquals("psk", json.getString(RegistryManagementConstants.FIELD_TYPE));
         assertThat(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS)).hasSize(1);
