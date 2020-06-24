@@ -1,7 +1,9 @@
-+++
-title = "Multi-Tenancy"
-weight = 185
-+++
+---
+title: "Multi-Tenancy"
+weight: 185
+resources:
+  - src: tenants-devices-credentials.svg
+---
 
 Hono is designed to structure the set of all internally managed data and data streams into strictly isolated subsets. 
 This includes the registration data and credentials of devices, internal users that are used for authentication, 
@@ -54,14 +56,13 @@ The AMQP 1.0 endpoints for all APIs of Hono are scoped to a tenant, by using the
 *Examples*:
 
 - `telemetry/TENANT`
+- `event/TENANT`
 - `registration/TENANT`
-
-etc.
 
 This separates the AMQP endpoints from each other on a tenant level.
 
-The only exception to this is the [Tenant API]({{< relref "/api/tenant" >}}), which does not follow this scheme since it
-is addressing the tenants themselves.   
+The only exception to this is the [Tenant API]({{< relref "/api/tenant" >}}) which does not follow this scheme since it
+is addressing the tenants themselves.
 
 ## Devices and Tenants
 
@@ -71,7 +72,7 @@ is therefore treated as belonging to the corresponding tenant.
 
 The following diagram shows the relation between tenants, devices and their credentials:
 
-{{< figure src="../Tenants_Devices_Credentials.png" title="Tenants, Devices and Credentials">}}
+{{< figure src="tenants-devices-credentials.svg" title="Tenants, Devices and Credentials" width="60%">}}
 
 
 ## Tenant based Flow Control
