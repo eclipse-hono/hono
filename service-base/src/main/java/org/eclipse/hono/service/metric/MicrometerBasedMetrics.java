@@ -30,6 +30,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -60,6 +61,10 @@ public class MicrometerBasedMetrics implements Metrics {
      * The name of the meter for unauthenticated connections.
      */
     public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
+    /**
+     * The name of the meter for connection attempts. The outcome is signaled by the accordingly named tag.
+     */
+    public static final String METER_CONNECTIONS_ATTEMPTS = "hono.connections.attempts";
     /**
      * The name of the meter for recording message payload size.
      */
@@ -166,6 +171,16 @@ public class MicrometerBasedMetrics implements Metrics {
     public final void decrementUnauthenticatedConnections() {
         this.unauthenticatedConnections.decrementAndGet();
         this.totalCurrentConnections.decrementAndGet();
+    }
+
+    @Override
+    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome) {
+        Objects.requireNonNull(outcome);
+
+        Counter.builder(METER_CONNECTIONS_ATTEMPTS)
+            .tags(Tags.of(outcome.asTag()))
+            .register(this.registry)
+            .increment();
     }
 
     @Override

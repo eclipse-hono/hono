@@ -55,6 +55,7 @@ import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
+import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
@@ -388,7 +389,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
                                 .compose(tenantConfig -> CompositeFuture.all(
                                         isAdapterEnabled(tenantConfig),
-                                        checkConnectionLimitForAdapter(),
+                                        checkConnectionLimitForAdapter()
+                                            .onFailure(ex -> {
+                                                metrics.reportConnectionAttempt(
+                                                        ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
+                                            }),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                         .map(ok -> {
                             log.debug("{} is registered and enabled", authenticatedDevice);

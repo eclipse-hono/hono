@@ -30,6 +30,30 @@ import io.micrometer.core.instrument.Tags;
 public final class MetricsTags {
 
     /**
+     * The outcome of a connection attempt to a protocol adapter.
+     */
+    public enum ConnectionAttemptOutcome {
+        ADAPTER_CONNECTION_LIMIT_EXCEEDED("adapter-connection-limit-exceeded");
+
+        static final String TAG_NAME = "outcome";
+
+        private final Tag tag;
+
+        ConnectionAttemptOutcome(final String tagValue) {
+            this.tag = Tag.of(TAG_NAME, tagValue);
+        }
+
+        /**
+         * Gets a <em>Micrometer</em> tag for the outcome.
+         *
+         * @return The tag.
+         */
+        public Tag asTag() {
+            return tag;
+        }
+    }
+
+    /**
      * The type of endpoint that a message is published to.
      */
     public enum EndpointType {

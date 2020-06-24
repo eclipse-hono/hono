@@ -49,6 +49,13 @@ public interface Metrics {
     void decrementUnauthenticatedConnections();
 
     /**
+     * Reports a connection attempt.
+     *
+     * @param outcome The outcome of the connection attempt.
+     */
+    void reportConnectionAttempt(MetricsTags.ConnectionAttemptOutcome outcome);
+
+    /**
      * Gets the total number of current connections - authenticated for all tenants and unauthenticated.
      *
      * @return total number of connections.

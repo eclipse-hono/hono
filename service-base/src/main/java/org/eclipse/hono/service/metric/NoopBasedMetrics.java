@@ -43,6 +43,10 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
+    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome) {
+    }
+
+    @Override
     public void decrementConnections(final String tenantId) {
     }
 
