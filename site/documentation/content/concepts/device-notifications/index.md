@@ -1,7 +1,10 @@
-+++
-title = "Device Notifications"
-weight = 192
-+++
+---
+title: "Device Notifications"
+weight: 192
+resources:
+- src: device_commandReadinessImplicit.svg
+- src: device_commandReadinessExplicit.svg
+---
 
 *Business Applications* need to know when an attempt to send a command to device is feasible, e.g. because the device is then known to be connected to a protocol adapter. *Devices* and *Protocol Adapters* can indicate to *Business Applications* a device's intent to e.g. receive commands using specific *notifications*.
   
@@ -71,9 +74,9 @@ When a device unsubscribes again, the adapter automatically sends a *Time until 
 The following sequence diagram shows a *Time until disconnect notification* while sending a telemetry message downstream
 via the HTTP protocol adapter:
 
-{{< figure src="../device_commandReadinessImplicit.svg" title="Device command readiness with telemetry data" >}}
+{{< figure src="device_commandReadinessImplicit.svg" title="Device command readiness with telemetry data" >}}
 
 The following sequence diagram shows a *Time until disconnect notification* by sending an empty event message downstream
 via the HTTP protocol adapter:
 
-{{< figure src="../device_commandReadinessExplicit.svg" title="Device command readiness with explicit event" >}}
+{{< figure src="device_commandReadinessExplicit.svg" title="Device command readiness with explicit event" >}}
