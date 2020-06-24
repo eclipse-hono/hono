@@ -46,6 +46,7 @@ import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -397,7 +398,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         // the ConnectionLimitManager is null in some unit tests
         if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
             currentSpan.log("connection limit exceeded, reject connection request");
-            metrics.incrementRejectedConnectionsDueToAdapterConnectionLimit();
+            metrics.reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
             return Future.failedFuture(new MqttConnectionException(
                     MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
         }

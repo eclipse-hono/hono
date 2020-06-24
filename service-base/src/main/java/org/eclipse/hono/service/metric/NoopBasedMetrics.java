@@ -43,7 +43,7 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementRejectedConnectionsDueToAdapterConnectionLimit() {
+    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome) {
     }
 
     @Override

@@ -57,6 +57,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Adapter;
@@ -396,7 +397,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
             // THEN the connection is not established
             ctx.verify(() -> verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
-            ctx.verify(() -> verify(metrics).incrementRejectedConnectionsDueToAdapterConnectionLimit());
+            ctx.verify(() -> verify(metrics).reportConnectionAttempt(
+                    ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED));
             ctx.completeNow();
         }));
     }

@@ -99,7 +99,6 @@ public class MicrometerBasedMetrics implements Metrics {
     private final Map<String, DeviceConnectionDurationTracker> connectionDurationTrackers = new ConcurrentHashMap<>();
     private final Map<String, Long> lastSeenTimestampPerTenant = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
-    private final Counter rejectedConnections;
     private final AtomicInteger totalCurrentConnections = new AtomicInteger();
     private final Vertx vertx;
     private long tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
@@ -126,10 +125,6 @@ public class MicrometerBasedMetrics implements Metrics {
             }
         });
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
-
-        this.rejectedConnections = Counter.builder(METER_CONNECTIONS_ATTEMPTS)
-            .tag(METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME, "adapter-connection-limit-exceeded")
-            .register(registry);
     }
 
     /**
@@ -183,8 +178,13 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementRejectedConnectionsDueToAdapterConnectionLimit() {
-        this.rejectedConnections.increment();
+    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome) {
+        Objects.requireNonNull(outcome);
+
+        Counter.builder(METER_CONNECTIONS_ATTEMPTS)
+            .tags(Tags.of(outcome.asTag()))
+            .register(this.registry)
+            .increment();
     }
 
     @Override
