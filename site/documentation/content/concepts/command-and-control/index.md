@@ -1,7 +1,17 @@
-+++
-title = "Command & Control"
-weight = 196
-+++
+---
+title: "Command & Control"
+weight: 196
+resources:
+- src: command_control_concept.svg
+- src: command_control_concept_delegate_1.svg
+- src: command_control_concept_delegate_2.svg
+- src: command_control_concept_delegate_3.svg
+- src: command_control_concept_gateway_1.svg
+- src: command_control_concept_gateway_2.svg
+- src: command_control_concept_gateway_3.svg
+- src: command_control_concept_gateway_all_devices_1.svg
+- src: command_control_concept_gateway_all_devices_2.svg
+---
 
 *Business applications* can send commands to devices following the [Command & Control API]({{< relref "/api/command-and-control" >}}). This concept page describes how this API is used by applications to send commands and describes how Hono's protocol adapters process the commands so that they reach their target device.
  
@@ -15,7 +25,7 @@ The following sequence diagram gives an overview of a device indicating its avai
 
 The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram below. 
 
-{{< figure src="../command_control_concept.svg" title="Request/Response Command overview" >}}
+{{< figure src="command_control_concept.svg" title="Request/Response Command overview" >}}
 
 In (1) the device subscribes for commands (if connecting to the AMQP or MQTT adapter) or indicates that it will stay connected for a given amount of time to receive a command (if connecting to the HTTP adapter), using the `ttd` ("time till disconnect") parameter.
 
@@ -51,17 +61,17 @@ On this link, commands will be received that have been forwarded from another pr
 
 The following diagrams show the message flow if the command message is first received on a protocol adapter instance that the target device is *not* connected to.
 
-{{< figure src="../command_control_concept_delegate_1.svg" title="Command subscription" >}}
+{{< figure src="command_control_concept_delegate_1.svg" title="Command subscription" >}}
 
 In the scenario here there is a protocol adapter instance #2 through which a command subscription for the example tenant was already made (0). 
 
 The device subscribes for commands (1) and the protocol adapter creates the receiver link (2) on the tenant-scoped link. The protocol adapter then updates the [command-handling protocol adapter instance for device]({{< relref "/api/device-connection#set-command-handling-protocol-adapter-instance-for-device" >}}) information (3), assigning the device 4711 to adapter instance id #1. Following that, the notification about the device subscription is sent to the application via the AMQP messaging network (4).
 
-{{< figure src="../command_control_concept_delegate_2.svg" title="Command handling" >}}
+{{< figure src="command_control_concept_delegate_2.svg" title="Command handling" >}}
 
 Upon receiving the notification, the application prepares sender and command response receiver links (1,2) and sends the command message to the AMQP messaging network. Here it is received by protocol adapter instance #2. The protocol adapter then queries the [command-handling protocol adapter instances]({{< relref "/api/device-connection#get-command-handling-protocol-adapter-instances-for-device" >}}) information for the device id of the command message (4). In this case here, the protocol adapter instance #1 is returned (5). The command then gets forwarded to the AMQP messaging network on the address for adapter instance #1 (6). The protocol adapter instance #1 will receive the message (7) and forward it to the device (8). As the last step, an "accepted" disposition will be sent back to the application (9).
 
-{{< figure src="../command_control_concept_delegate_3.svg" title="Command response handling" >}}
+{{< figure src="command_control_concept_delegate_3.svg" title="Command response handling" >}}
 
 The command response message is sent back to the application from the protocol adapter via the AMQP messaging network.
 
@@ -72,7 +82,7 @@ The command response message is sent back to the application from the protocol a
 
 The following sequence diagrams show the different steps involved in having a gateway subscribe for commands of a particular device.
 
-{{< figure src="../command_control_concept_gateway_1.svg" title="Command subscription" >}}
+{{< figure src="command_control_concept_gateway_1.svg" title="Command subscription" >}}
 
 The gateway "gw-1" is connected to a protocol adapter and subscribes to commands for a device 4711 (1). This device has to be configured so that the gateway may act on its behalf (see [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details).
 
@@ -80,11 +90,11 @@ The protocol adapter creates the tenant-scoped consumer link on the `command/TEN
 
 Just like it is done when a protocol adapter handles any kind of message from a gateway acting on behalf of a device, the protocol adapter updates the [last-known gateway]({{< relref "/api/device-connection#set-last-known-gateway-for-device" >}}) information here, sending a request to the device connection service (4). The notification event is then sent containing the device id 4711 (5)
 
-{{< figure src="../command_control_concept_gateway_2.svg" title="Command handling" >}}
+{{< figure src="command_control_concept_gateway_2.svg" title="Command handling" >}}
 
 After the application has prepared the sender and consumer links (1,2), it sends the command message on the `command/TENANT` link with the AMQP message `to` property set to `command/TENANT/4711` and `reply-to` set to the address of the command response consumer link (`command_response/TENANT/${replyId}` with `replyId` being an arbitrary identifier chosen by the application) (3). After receiving the command message, the protocol adapter determines the [command-handling protocol adapter instances]({{< relref "/api/device-connection#get-command-handling-protocol-adapter-instances-for-device" >}}) information for the device id of the command message (4). In this case here, the protocol adapter instance #1 is returned (5), meaning that the command is already at the right adapter instance. As the subscription for commands to device 4711 was done by gateway "gw-1", the command gets forwarded to that gateway (6). It is then the responsibility of the gateway to forward the command to the device `4711`. After the gateway has acknowledged the command message, an "accepted" disposition will be sent back to the application (7). 
 
-{{< figure src="../command_control_concept_gateway_3.svg" title="Command response handling" >}}
+{{< figure src="command_control_concept_gateway_3.svg" title="Command response handling" >}}
 
 When the device sends a command response via the gateway (1), the protocol adapter forwards the command message on the `command_response/TENANT/${replyId}` link to the application (2).
 
@@ -93,12 +103,12 @@ When the device sends a command response via the gateway (1), the protocol adapt
 
 A gateway may also subscribe for commands sent to all the different devices that the gateway acts on behalf of. Such a scenario is shown in the following sequence diagram.
 
-{{< figure src="../command_control_concept_gateway_all_devices_1.svg" title="Command subscription" >}}
+{{< figure src="command_control_concept_gateway_all_devices_1.svg" title="Command subscription" >}}
 
 The gateway subscribes for commands just like a normal device would, only using its id `gw-1` (1). The protocol adapter creates the tenant-scoped consumer link on the `command/TENANT` address (if it doesn't already exist) (2) and then updates the [command-handling protocol adapter instance for device]({{< relref "/api/device-connection#set-command-handling-protocol-adapter-instance-for-device" >}}) information (3), assigning the device 'gw-1' to adapter instance id #1.
 The subscription notification sent to the application contains the gateway id `gw-1`. That means that either the application has to know about the gateway, or that it just assumes that the devices it sends commands to (and that are connected to the gateway) are always available for receiving commands. This may especially be the case for long-lasting command subscriptions (with the MQTT or AMQP adapter).
 
-{{< figure src="../command_control_concept_gateway_all_devices_2.svg" title="Command handling" >}}
+{{< figure src="command_control_concept_gateway_all_devices_2.svg" title="Command handling" >}}
 
 After the application has prepared the sender and consumer links (1,2), it sends the command message on the `command/TENANT` link with the AMQP message `to` property set to `command/TENANT/4711` and `reply-to` set to the address of the command response consumer link (`command_response/TENANT/${replyId}` with `replyId` being an arbitrary identifier chosen by the application) (3). After receiving the command message, the protocol adapter determines the [command-handling protocol adapter instances]({{< relref "/api/device-connection#get-command-handling-protocol-adapter-instances-for-device" >}}) information for the device id of the command message (4).
 
