@@ -1191,16 +1191,17 @@ public class VertxBasedAmqpProtocolAdapterTest {
                 .forClass(Handler.class);
         verify(deviceConnection).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
-        // THEN the adapter closes the connection right after it opened it
+        // THEN the connection count should be incremented when the connection is opened
+        final InOrder metricsInOrderVerifier = inOrder(metrics);
+        metricsInOrderVerifier.verify(metrics).incrementConnections(TEST_TENANT_ID);
+        // AND the adapter should close the connection right after it opened it
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture());
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
         verify(deviceConnection).setCondition(errorConditionCaptor.capture());
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
-        // AND increments and decrements the connection count accordingly
-        final InOrder metricsInOrderVerifier = inOrder(metrics);
-        metricsInOrderVerifier.verify(metrics).incrementConnections(TEST_TENANT_ID);
+        // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementConnections(TEST_TENANT_ID);
         verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
     }
