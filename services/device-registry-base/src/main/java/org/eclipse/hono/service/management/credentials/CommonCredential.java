@@ -173,39 +173,52 @@ public abstract class CommonCredential {
     }
 
     /**
-     * Merges the secrets of the given credential with that of the current one based on the secret ids.
+     * Merges another set of credentials into this one.
+     * <p>
+     * The secrets of the other credentials are merged into this one's
+     * by means of the {@link CommonSecret#merge(CommonSecret)} method.
      *
-     * @param credential The credential to be merged.
-     * @return a reference to this for fluent use.
-     * @throws IllegalArgumentException if the given credential is invalid and cannot be merged.
-     * @throws NullPointerException if the given credential is {@code null}.
+     * @param other The credentials to be merged.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if the given credentials are {@code null}.
+     * @throws IllegalArgumentException if the other credentials are of a different type than this one's
+     *                                  or if the other credentials do not contain secrets with the
+     *                                  same identifiers as this one's.
      */
     @JsonIgnore
-    public CommonCredential merge(final CommonCredential credential) {
+    public CommonCredential merge(final CommonCredential other) {
 
-        Objects.requireNonNull(credential);
+        Objects.requireNonNull(other);
 
-        if (!getType().equals(credential.getType())) {
-            throw new IllegalArgumentException("credential to be merged must be of the same type");
+        if (!getType().equals(other.getType())) {
+            throw new IllegalArgumentException("credentials to be merged must be of the same type");
         }
 
-        getSecrets()
-                .forEach(secret -> Optional.ofNullable(secret.getId())
-                        .ifPresent(secretId -> credential.findSecretById(secretId)
-                                .ifPresentOrElse(secret::merge, () -> {
+        getSecrets().forEach(secret -> {
+            Optional.ofNullable(secret.getId())
+                .ifPresent(id -> {
+                    other.findSecretById(id)
+                        .ifPresentOrElse(
+                                secret::merge,
+                                () -> {
                                     throw new IllegalArgumentException(
-                                            String.format("secret [id: %s] not found", secret.getId()));
-                                })));
+                                            "other credential has no secret with id: " + secret.getId());
+                                });
+                });
+        });
 
         return this;
     }
 
-
     private Optional<? extends CommonSecret> findSecretById(final String secretId) {
-        return getSecrets()
-                .stream()
-                .filter(secret -> secret.getId() != null)
-                .filter(secret -> secret.getId().equals(secretId))
-                .findFirst();
+
+        if (secretId == null) {
+            return Optional.empty();
+        } else {
+            return getSecrets()
+                    .stream()
+                    .filter(secret -> secretId.equals(secret.getId()))
+                    .findFirst();
+        }
     }
 }

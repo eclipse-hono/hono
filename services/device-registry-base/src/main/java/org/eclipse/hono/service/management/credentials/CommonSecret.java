@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.hono.service.management.credentials;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -21,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.base.Strings;
 
 /**
  * This class encapsulates common secrets shared across all credential types used in Hono.
@@ -53,12 +55,12 @@ public abstract class CommonSecret {
      * @param enabled  Whether this secret type should be used to authenticate devices.
      * @return         a reference to this for fluent use.
      */
-    public CommonSecret setEnabled(final Boolean enabled) {
+    public final CommonSecret setEnabled(final Boolean enabled) {
         this.enabled = enabled;
         return this;
     }
 
-    public String getId() {
+    public final String getId() {
         return id;
     }
 
@@ -69,7 +71,7 @@ public abstract class CommonSecret {
      * @param id The string to set as the id.
      * @return   a reference to this for fluent use.
      */
-    public CommonSecret setId(final String id) {
+    public final CommonSecret setId(final String id) {
         this.id = id;
         return this;
     }
@@ -79,7 +81,7 @@ public abstract class CommonSecret {
      *
      * @return The instant.
      */
-    public Instant getNotBefore() {
+    public final Instant getNotBefore() {
         return notBefore;
     }
 
@@ -88,7 +90,7 @@ public abstract class CommonSecret {
      *
      * @return The end date/time in which this secret is valid.
      */
-    public Instant getNotAfter() {
+    public final Instant getNotAfter() {
         return notAfter;
     }
 
@@ -98,7 +100,7 @@ public abstract class CommonSecret {
      * @param notBefore The start date/time in which this secret is valid.
      * @return          a reference to this for fluent use.
      */
-    public CommonSecret setNotBefore(final Instant notBefore) {
+    public final CommonSecret setNotBefore(final Instant notBefore) {
         this.notBefore = notBefore;
         return this;
     }
@@ -109,12 +111,12 @@ public abstract class CommonSecret {
      * @param notAfter The end date/time in which this secret is valid.
      * @return         a reference to this for fluent use.
      */
-    public CommonSecret setNotAfter(final Instant notAfter) {
+    public final CommonSecret setNotAfter(final Instant notAfter) {
         this.notAfter = notAfter;
         return this;
     }
 
-    public String getComment() {
+    public final String getComment() {
         return comment;
     }
 
@@ -124,7 +126,7 @@ public abstract class CommonSecret {
      * @param comment The human readable description for this secret.
      * @return        a reference to this for fluent use.
      */
-    public CommonSecret setComment(final String comment) {
+    public final CommonSecret setComment(final String comment) {
         this.comment = comment;
         return this;
     }
@@ -149,26 +151,78 @@ public abstract class CommonSecret {
     }
 
     /**
-     * Check if the secret is valid.
+     * Checks if this secret is valid.
+     * <p>
+     * Verifies that the notBefore instant is not after the
+     * notAfter instant, if both values are not {@code null},
+     * and then invokes {@link #checkValidityOfSpecificProperties()}.
      *
      * @throws IllegalStateException if the secret is not valid.
      */
-    public void checkValidity() {
+    public final void checkValidity() {
         if (this.notBefore != null && this.notAfter != null) {
             if (this.notBefore.isAfter(this.notAfter)) {
-                throw new IllegalStateException("'not-before' must be before 'not-after'");
+                throw new IllegalStateException("'not-before' must not be after 'not-after'");
             }
+        }
+        checkValidityOfSpecificProperties();
+    }
+
+    /**
+     * Checks if this secret's non-common properties are valid.
+     * <p>
+     * Subclasses should override this method in order to verify that
+     * the values of properties other than notBefore and notAfter are valid.
+     *
+     * @throws IllegalStateException if any of the secret's properties are not valid.
+     */
+    protected void checkValidityOfSpecificProperties() {
+        // empty default implementation
+    }
+
+    /**
+     * Merges another secret's properties into this one's.
+     * <p>
+     * This method merges the other secret's comment, enabled, notBefore and notAfter
+     * properties into this secret and then invokes {@link #mergeCommonProperties(CommonSecret)}.
+     *
+     * @param otherSecret The secret to be merged.
+     * @throws NullPointerException if the given secret is {@code null}.
+     * @throws IllegalStateException if this secret's id property is {@code null} or empty.
+     * @throws IllegalArgumentException if the other secret cannot be merged into this one.
+     */
+    void merge(final CommonSecret otherSecret) {
+
+        Objects.requireNonNull(otherSecret);
+
+        // we only merge if this secret has an ID and thus is being used for
+        // updating the other secret which is supposed to have the same ID and type
+        // in this case
+
+        if (Strings.isNullOrEmpty(this.getId())) {
+
+            throw new IllegalStateException("this secret has no ID and therefore cannot be used to update another secret");
+
+        } else if (!this.getClass().equals(otherSecret.getClass())) {
+
+            throw new IllegalArgumentException("other secret must be a " + this.getClass() +
+                    " but is a " + otherSecret.getClass());
+
+        } else if (!this.getId().equals(otherSecret.getId())) {
+
+            throw new IllegalArgumentException("other secret must have same ID as this secret");
+
+        } else {
+
+            // merge other secret's properties into this one's
+            mergeProperties(otherSecret);
         }
     }
 
     /**
-     * Merges the given secret with that of the current one.
-     * <p>
-     * The default implementation in {@link CommonSecret} does nothing.
+     * Merges another secret's properties into this one's.
      *
-     * @param secret The secret to be merged.
-     * @throws NullPointerException if the given secret is {@code null}.
+     * @param otherSecret The secret to be merged into this one.
      */
-    void merge(final CommonSecret secret) {
-    }
+    protected abstract void mergeProperties(CommonSecret otherSecret);
 }

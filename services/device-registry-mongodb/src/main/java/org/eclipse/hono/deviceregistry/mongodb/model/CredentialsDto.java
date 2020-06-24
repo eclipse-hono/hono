@@ -161,15 +161,15 @@ public final class CredentialsDto extends BaseDto {
     /**
      * Merges the secrets of the given credential DTO with that of the current one.
      *
-     * @param credentialsDto The credential DTO to be merged.
+     * @param otherCredentialsDto The credential DTO to be merged.
      * @return  a reference to this for fluent use.
-     * @throws NullPointerException if the given credential DTO is {@code null}.
+     * @throws NullPointerException if the given credentials DTO is {@code null}.
      */
     @JsonIgnore
-    public CredentialsDto merge(final CredentialsDto credentialsDto) {
-        Objects.requireNonNull(credentialsDto);
+    public CredentialsDto merge(final CredentialsDto otherCredentialsDto) {
+        Objects.requireNonNull(otherCredentialsDto);
 
-        Optional.ofNullable(credentialsDto.getCredentials())
+        Optional.ofNullable(otherCredentialsDto.getCredentials())
                 .ifPresent(credentialsToMerge -> this.credentials
                         .forEach(credential -> findCredentialByIdAndType(credential.getAuthId(), credential.getType(),
                                 credentialsToMerge)

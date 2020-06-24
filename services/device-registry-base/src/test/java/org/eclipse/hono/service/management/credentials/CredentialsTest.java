@@ -13,11 +13,15 @@
 package org.eclipse.hono.service.management.credentials;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -28,7 +32,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
@@ -83,12 +86,13 @@ public class CredentialsTest {
     @Test
     public void testEncodePskCredential() {
         final PskCredential credential = new PskCredential();
+                credential.setAuthId("psk-device");
+                credential.setSecrets(List.of(new PskSecret().setKey(new byte[] { 0x00, 0x01 })));
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertNotNull(json);
-        assertNull(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
-
         assertEquals("psk", json.getString(RegistryManagementConstants.FIELD_TYPE));
+        assertThat(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS)).hasSize(1);
 
         final CommonCredential decodedCredential = json.mapTo(CommonCredential.class);
         assertTrue(decodedCredential instanceof PskCredential);
@@ -244,129 +248,62 @@ public class CredentialsTest {
     }
 
     /**
-     * Test merging of two password credentials.
+     * Verifies that merging other credentials fails if they are of a different
+     * type.
      */
     @Test
-    public void testMergingOfPasswordCredential() {
-        final String authId = "test-auth-1";
-        final String secretId = DeviceRegistryUtils.getUniqueIdentifier();
-        final Instant date = Instant.parse("2020-09-11T11:38:00.123456Z");
+    public void testMergeFailsForDifferentType() {
 
-        //Create password credential 1
-        final PasswordSecret secret1 = new PasswordSecret();
-        secret1.setId(secretId);
-        secret1.setPasswordHash("hash-1");
-        secret1.setSalt("salt-1");
-        secret1.setNotAfter(date);
-
-        final PasswordCredential credential1 = new PasswordCredential();
-        credential1.setAuthId(authId);
-        credential1.setSecrets(Arrays.asList(secret1));
-        credential1.setComment("Comment-1");
-
-        //Create PSK credential 2 with a secret having an id and another without id
-        final PasswordSecret secret2 = new PasswordSecret();
-        secret2.setId(secretId);
-
-        final PasswordSecret secret3 = new PasswordSecret();
-        secret3.setPasswordHash("hash-3");
-        secret3.setSalt("salt-3");
-        secret3.setNotBefore(date);
-
-        final PasswordCredential credential2 = new PasswordCredential();
-        credential2.setAuthId(authId);
-        credential2.setSecrets(Arrays.asList(secret2, secret3));
-        credential2.setComment("Comment-2");
-
-        //Merge those two credentials
-        final CommonCredential mergedCredential = credential2.merge(credential1);
-
-        //verify the result
-        assertEquals(2, mergedCredential.getSecrets().size());
-        assertEquals("Comment-2", mergedCredential.getComment());
-        final PasswordSecret mergedSecret = (PasswordSecret) mergedCredential.getSecrets().get(0);
-        assertEquals(secretId, mergedSecret.getId());
-        assertEquals("hash-1", mergedSecret.getPasswordHash());
-        assertEquals("salt-1", mergedSecret.getSalt());
-        assertNull(mergedSecret.getNotAfter());
+        final PasswordCredential pwdCredentials = new PasswordCredential();
+        assertThatThrownBy(() -> pwdCredentials.merge(new PskCredential()))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
-     * Test merging of two PSK credentials.
+     * Verifies that merging other credentials fails if they do not contain
+     * secrets of matching IDs.
      */
     @Test
-    public void testMergingOfPskCredential() {
-        final String authId = "test-auth-1";
-        final String secretId = DeviceRegistryUtils.getUniqueIdentifier();
-        final Instant date = Instant.parse("1992-09-11T11:38:00.123456Z");
+    public void testMergeFailsForNonMatchingSecretId() {
 
-        //Create PSK credential 1
-        final PskSecret secret1 = new PskSecret();
-        secret1.setId(secretId);
-        secret1.setKey("key-1".getBytes(StandardCharsets.UTF_8));
-        secret1.setNotAfter(date);
+        final PasswordSecret existingSecret = spy(PasswordSecret.class);
+        existingSecret.setId("two");
+        final PasswordCredential existingCredentials = new PasswordCredential();
+        existingCredentials.setSecrets(List.of(existingSecret));
 
-        final PskCredential credential1 = new PskCredential();
-        credential1.setAuthId(authId);
-        credential1.setSecrets(Arrays.asList(secret1));
-        credential1.setComment("Comment-1");
+        final PasswordSecret newSecret = spy(PasswordSecret.class);
+        newSecret.setId("one");
+        final PasswordCredential newCredentials = new PasswordCredential();
+        newCredentials.setSecrets(List.of(newSecret));
 
-        //Create PSK credential 2 with a secret having an id and another without id
-        final PskSecret secret2 = new PskSecret();
-        secret2.setId(secretId);
-
-        final PskSecret secret3 = new PskSecret();
-        secret3.setKey("key-3".getBytes(StandardCharsets.UTF_8));
-        secret3.setNotBefore(date);
-
-        final PskCredential credential2 = new PskCredential();
-        credential2.setAuthId(authId);
-        credential2.setSecrets(Arrays.asList(secret2, secret3));
-        credential2.setComment("Comment-2");
-
-        //Merge those two credentials
-        final CommonCredential mergedCredential = credential2.merge(credential1);
-
-        //verify the result
-        assertEquals(2, mergedCredential.getSecrets().size());
-        assertEquals("Comment-2", mergedCredential.getComment());
-        final PskSecret mergedSecret = (PskSecret) mergedCredential.getSecrets().get(0);
-        assertEquals(secretId, mergedSecret.getId());
-        assertEquals("key-1", new String(mergedSecret.getKey()));
-        assertNull(mergedSecret.getNotBefore());
+        assertThatThrownBy(() -> newCredentials.merge(existingCredentials))
+            .isInstanceOf(IllegalArgumentException.class);
+        verify(existingSecret, never()).merge(any(PasswordSecret.class));
+        verify(newSecret, never()).merge(any(PasswordSecret.class));
     }
 
     /**
-     * Test merging two credentials of different types fails.
+     * Verifies that merging other credentials succeeds if they contain
+     * secrets of matching IDs.
      */
     @Test
-    public void testMergingCredentialsOfDifferentType() {
-        final String authId = "test-auth-1";
-        final String secretId = DeviceRegistryUtils.getUniqueIdentifier();
-        final Instant date = Instant.parse("2020-09-11T11:38:00.123456Z");
+    public void testMergeSucceedsForMatchingSecretIds() {
 
-        // Create password credential 1
-        final PasswordSecret secret1 = new PasswordSecret();
-        secret1.setId(secretId);
-        secret1.setPasswordHash("hash-1");
-        secret1.setSalt("salt-1");
-        secret1.setNotAfter(date);
+        final PskSecret existingSecret = spy(PskSecret.class);
+        existingSecret.setId("one");
+        final PskCredential existingCredentials = new PskCredential();
+        existingCredentials.setSecrets(List.of(existingSecret));
 
-        final PasswordCredential credential1 = new PasswordCredential();
-        credential1.setAuthId(authId);
-        credential1.setSecrets(Arrays.asList(secret1));
-        credential1.setComment("Comment-1");
+        final PskSecret updatedSecret = spy(PskSecret.class);
+        updatedSecret.setId("one");
+        final PskSecret newSecret = spy(PskSecret.class);
+        final PskCredential updatedCredentials = new PskCredential();
+        updatedCredentials.setSecrets(List.of(updatedSecret, newSecret));
 
-        // Create PSK credential 2
-        final PskSecret secret2 = new PskSecret();
-        secret2.setId(secretId);
-
-        final PskCredential credential2 = new PskCredential();
-        credential2.setAuthId(authId);
-        credential2.setSecrets(Arrays.asList(secret2));
-        credential2.setComment("Comment-2");
-
-        //Merge those two credentials and verify the result
-        assertThrows(IllegalArgumentException.class, () -> credential2.merge(credential1));
+        updatedCredentials.merge(existingCredentials);
+        verify(updatedSecret).merge(existingSecret);
+        verify(existingSecret, never()).merge(any(CommonSecret.class));
+        verify(newSecret, never()).merge(any(CommonSecret.class));
+        assertThat(updatedCredentials.getSecrets()).hasSize(2);
     }
 }

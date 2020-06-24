@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,4 +16,14 @@ package org.eclipse.hono.service.management.credentials;
  * This class encapsulates secret information for an X509 certificate credentials type.
  */
 public class X509CertificateSecret extends CommonSecret {
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method does nothing because this secret has no X.509 specific properties.
+     */
+    @Override
+    protected void mergeProperties(final CommonSecret otherSecret) {
+        // nothing to merge
+    }
 }

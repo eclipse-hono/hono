@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.service.management.credentials;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -34,5 +35,22 @@ public class GenericSecret extends CommonSecret {
     @JsonAnyGetter
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Sets this secret's additional properties to the value of the other secret's corresponding
+     * properties if this secret's additionalProperties map is empty.
+     */
+    @Override
+    protected void mergeProperties(final CommonSecret otherSecret) {
+
+        Objects.requireNonNull(otherSecret);
+
+        final GenericSecret otherGenericSecret = (GenericSecret) otherSecret;
+        if (this.additionalProperties.isEmpty()) {
+            this.additionalProperties.putAll(otherGenericSecret.additionalProperties);
+        }
     }
 }
