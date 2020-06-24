@@ -15,6 +15,9 @@ package org.eclipse.hono.service.management;
 
 import java.util.Objects;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 /**
  * An ID used in results.
  */
@@ -44,5 +47,26 @@ public final class Id {
         }
 
         return new Id(id);
+    }
+
+    /**
+     * Create {@link ToStringHelper} for this instance. <br>
+     * Derived classes should call the super method, and add their own fields. Following this pattern derived classes do
+     * not need to implement {@link #toString()}.
+     *
+     * @return A new instance of a {@link ToStringHelper}, filled with fields from this instance.
+     */
+    protected ToStringHelper toStringHelper() {
+        return MoreObjects
+                .toStringHelper(this)
+                .add("id", this.id);
+    }
+
+    /**
+     * {@code toString} method implemented based on {@link #toStringHelper()}.
+     */
+    @Override
+    public String toString() {
+        return toStringHelper().toString();
     }
 }

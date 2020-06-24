@@ -31,7 +31,6 @@ import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -42,7 +41,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Represents the <em>Tenant</em> schema object defined in the
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(value = Include.NON_NULL)
 public class Tenant {
 
@@ -85,7 +83,7 @@ public class Tenant {
     public final boolean isValid() {
 
         return Optional.ofNullable(trustedCertificateAuthorities)
-                .map(list -> list.stream().allMatch(ca -> ca.isValid()))
+                .map(list -> list.stream().allMatch(TrustedCertificateAuthority::isValid))
                 .orElse(true);
     }
 
@@ -198,13 +196,13 @@ public class Tenant {
 
         if (adapters != null) {
             if (adapters.isEmpty()) {
-                throw new IllegalArgumentException("Atleast one adapter must be configured");
+                throw new IllegalArgumentException("At least one adapter must be configured");
             }
 
             final Set<String> uniqueAdapterTypes = adapters.stream()
                     .map(Adapter::getType)
                     .collect(Collectors.toSet());
-            if (adapters.size() != uniqueAdapterTypes.size()) {
+            if (adapters.size() > uniqueAdapterTypes.size()) {
                 throw new IllegalArgumentException("Each adapter must have a unique type");
             }
         }

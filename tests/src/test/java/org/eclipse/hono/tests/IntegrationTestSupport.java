@@ -661,6 +661,17 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Adds a tenant identifier to the list
+     * of tenants to be deleted after the current test has finished.
+     *
+     * @param tenantId The identifier.
+     * @see #deleteObjects(VertxTestContext)
+     */
+    public void addTenantIdForRemoval(final String tenantId) {
+        tenantsToDelete.add(tenantId);
+    }
+
+    /**
      * Gets a random device identifier and adds it to the list
      * of devices to be deleted after the current test has finished.
      *

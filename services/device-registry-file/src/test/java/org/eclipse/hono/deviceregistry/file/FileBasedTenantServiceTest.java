@@ -221,12 +221,11 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().compose(ok -> {
+        svc.start().compose(ok -> {
             // THEN the credentials from the file are loaded
             return assertTenantExists(svc, Constants.DEFAULT_TENANT);
         })
-        .map(getResult -> {
+        .onComplete(ctx.succeeding(getResult -> {
             ctx.verify(() -> {
                 final Tenant tenant = getResult.getPayload();
                 assertThat(tenant.getTrustedCertificateAuthorities()).isNotEmpty();
@@ -235,11 +234,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 assertThat(ca.getNotBefore()).isNotNull();
                 assertThat(ca.getNotAfter()).isNotNull();
             });
-            return getResult;
-        })
-        .onComplete(ctx.completing());
-
-        svc.start().onComplete(startupTracker);
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -285,36 +281,36 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
 
         addTenant(Constants.DEFAULT_TENANT)
-        .compose(ok -> addTenant("OTHER_TENANT"))
-        .compose(ok -> {
-            // WHEN saving the content to the file
-            doAnswer(invocation -> {
-                final Handler<AsyncResult<Void>> handler = invocation.getArgument(2);
-                handler.handle(Future.succeededFuture());
-                return null;
-            }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
+            .compose(ok -> addTenant("OTHER_TENANT"))
+            .compose(ok -> {
+                // WHEN saving the content to the file
+                doAnswer(invocation -> {
+                    final Handler<AsyncResult<Void>> handler = invocation.getArgument(2);
+                    handler.handle(Future.succeededFuture());
+                    return null;
+                }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
 
-            return svc.saveToFile();
-        })
-        .compose(ok -> {
-            verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
-            // and clearing the tenant registry
-            svc.clear();
-            return assertTenantDoesNotExist(svc, Constants.DEFAULT_TENANT);
-        })
-        .compose(ok -> {
-            // THEN the tenants can be loaded back in from the file
-            doAnswer(invocation -> {
-                final Handler<AsyncResult<Buffer>> handler = invocation.getArgument(1);
-                handler.handle(Future.succeededFuture(buffer.getValue()));
-                return null;
-            }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
-            return svc.loadTenantData();
-        })
-        // and the loaded tenants can be retrieved from the service 
-        .compose(ok -> assertTenantExists(svc, Constants.DEFAULT_TENANT))
-        .compose(ok -> assertTenantExists(svc, "OTHER_TENANT"))
-        .onComplete(ctx.completing());
+                return svc.saveToFile();
+            })
+            .compose(ok -> {
+                verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
+                // and clearing the tenant registry
+                svc.clear();
+                return assertTenantDoesNotExist(svc, Constants.DEFAULT_TENANT);
+            })
+            .compose(ok -> {
+                // THEN the tenants can be loaded back in from the file
+                doAnswer(invocation -> {
+                    final Handler<AsyncResult<Buffer>> handler = invocation.getArgument(1);
+                    handler.handle(Future.succeededFuture(buffer.getValue()));
+                    return null;
+                }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
+                return svc.loadTenantData();
+            })
+            // and the loaded tenants can be retrieved from the service 
+            .compose(ok -> assertTenantExists(svc, Constants.DEFAULT_TENANT))
+            .compose(ok -> assertTenantExists(svc, "OTHER_TENANT"))
+            .onComplete(ctx.completing());
     }
 
     /**

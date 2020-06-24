@@ -18,9 +18,11 @@ import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -31,6 +33,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -202,6 +206,57 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
     }
 
     /**
+     * Gets the value of a request parameter.
+     *
+     * @param ctx The routing context to get the parameter from.
+     * @param paramName The name of the parameter.
+     * @param validator A predicate to use for validating the parameter value.
+     *                  The predicate may throw an {@code IllegalArgumentException}
+     *                  instead of returning {@code false} in order to convey additional
+     *                  information about why the test failed.
+     * @return A future indicating the outcome of the operation.
+     *         If the request does not contain a parameter with the given name, the future will be
+     *         <ul>
+     *         <li>completed with an empty optional if the <em>optional</em> flag is {@code true}, or</li>
+     *         <li>failed with a {@link ClientErrorException} with status 400 if the flag is {@code false}.</li>
+     *         </ul>
+     *         If the request does contain a parameter with the given name, the future will be
+     *         <ul>
+     *         <li>failed with a {@link ClientErrorException} with status 400 if a predicate has been
+     *         given and the predicate evaluates to {@code false}, or</li>
+     *         <li>otherwise be completed with the parameter value.</li>
+     *         </ul>
+     * @throws NullPointerException If ctx, paramName or validator are {@code null}.
+     */
+    protected final Future<String> getRequestParameter(
+            final RoutingContext ctx,
+            final String paramName,
+            final Predicate<String> validator) {
+
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(paramName);
+        Objects.requireNonNull(validator);
+
+        final Promise<String> result = Promise.promise();
+        final String value = ctx.request().getParam(paramName);
+
+        try {
+            if (validator.test(value)) {
+                result.complete(value);
+            } else {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        String.format("request parameter [name: %s, value: %s] failed validation", paramName, value)));
+            }
+        } catch (final IllegalArgumentException e) {
+            result.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("request parameter [name: %s, value: %s] failed validation: %s", paramName, value, e.getMessage()),
+                    e));
+        }
+        return result.future();
+    }
+
+    /**
      * Get request parameter value and check if it has been set. If it's not set, fail the request.
      *
      * @param paramName The name of the parameter to get.
@@ -210,7 +265,9 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      *             Otherwise, the parameter is set as a span tag.
      * @return The value of the parameter if it's set or {@code null} otherwise.
      * @throws NullPointerException If ctx or paramName are {@code null}.
+     * @deprecated Use {@link #getRequestIdParam(String, RoutingContext, Span, boolean)} instead.
      */
+    @Deprecated
     protected final String getMandatoryIdRequestParam(final String paramName, final RoutingContext ctx, final Span span) {
         return getRequestIdParam(paramName, ctx, span, false);
     }
@@ -225,7 +282,9 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @param optional Whether to check if parameter has been set or not.
      * @return The value of the parameter if it's set or {@code null} otherwise.
      * @throws NullPointerException If ctx or paramName are {@code null}.
+     * @deprecated Use {@link #getRequestIdParam(String, RoutingContext, Span, boolean)} instead.
      */
+    @Deprecated
     protected final String getRequestIdParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
 
         final String value = ctx.request().getParam(paramName);
@@ -276,11 +335,41 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @param span The nspan to finish.
      * @param httpErrorCode The HTTP Error code to use.
      * @param errorMessage A string containing a message describing the error.
+     * @deprecated Use {@link #failRequest(RoutingContext, Throwable, Span)} instead.
      */
+    @Deprecated
     protected final void finishSpanWithError(final Span span, final int httpErrorCode, final String errorMessage) {
         TracingHelper.logError(span, errorMessage);
         Tags.HTTP_STATUS.set(span, httpErrorCode);
         span.finish();
+    }
+
+    /**
+     * Fails a request with a given error.
+     * <p>
+     * This method
+     * <ul>
+     * <li>logs the error to the given span,</li>
+     * <li>sets the span's <em>http.status</em> tag to the HTTP status code corresponding to the error and</li>
+     * <li>fails the context with the error.</li>
+     * </ul>
+     *
+     * @param ctx The context to fail the request for.
+     * @param error The cause for the failed request.
+     * @param span The OpenTracing span to log the error to. The span will be finished after
+     *             the request has been failed.
+     */
+    protected final void failRequest(final RoutingContext ctx, final Throwable error, final Span span) {
+
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(error);
+        Objects.requireNonNull(span);
+
+        final String msg = "error processing request";
+        logger.debug(msg, error);
+        TracingHelper.logError(span, msg, error);
+        Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(error));
+        ctx.fail(error);
     }
 
     /**

@@ -29,6 +29,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -257,7 +258,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
         getService().deleteDevice(tenantId, deviceId, resourceVersion, span)
-                .onComplete(handler -> writeResponse(ctx, handler.result(), null, span));
+                .onComplete(handler -> writeResponse(ctx, handler.result(), (Handler<HttpServerResponse>) null, span));
     }
 
     private static Device fromPayload(final JsonObject payload) throws ClientErrorException {
