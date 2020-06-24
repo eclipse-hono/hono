@@ -66,10 +66,6 @@ public class MicrometerBasedMetrics implements Metrics {
      */
     public static final String METER_CONNECTIONS_ATTEMPTS = "hono.connections.attempts";
     /**
-     * The key for the meter connection attempt tag holding the outcome of the connection attempt.
-     */
-    public static final String METER_CONNECTION_ATTEMPTS_TAG_KEY_OUTCOME = "outcome";
-    /**
      * The name of the meter for recording message payload size.
      */
     public static final String METER_MESSAGES_PAYLOAD = "hono.messages.payload";
