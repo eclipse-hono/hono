@@ -3,7 +3,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-services</artifactId>
-    <version>1.3.0-M3</version>
+    <version>1.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>hono-service-device-connection</artifactId>
   <name>Hono Device Connection service</name>
