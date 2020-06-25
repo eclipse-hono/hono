@@ -183,6 +183,7 @@ paths:
                               some resource limits have been defined.
                            value: |
                               {
+                                 "enabled": true,
                                  "resource-limits": {
                                     "max-connections": 1000,
                                     "max-ttl": 3600,
@@ -382,6 +383,7 @@ paths:
                               has been configured extensively.
                            value: |
                               {
+                                 "enabled": true,
                                  "defaults": {
                                     "ttl": 300,
                                     "content-type": "application/vnd.acme+json"
@@ -1298,9 +1300,9 @@ components:
             existing secrets (if any) will be replaced with the hashed password secret.
          value:
             [{
-                auth-id: sensor1,
-                type: hashed-password,
-                secrets: [{
+                "auth-id": "sensor1",
+                "type": "hashed-password",
+                "secrets": [{
                    "pwd-hash": "AQIDBAUGBwg=",
                    "salt": "Mq7wFw==",
                    "hash-function": "sha-512",
@@ -1332,9 +1334,12 @@ components:
             or salt. Instead, the secrets contain an identifier which can be
             used to refer to the secret in a subsequent update operation.
          value:
-            auth-id: sensor1
-            type: hashed-password
-            secrets: [{
-               "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
-               "not-after": "2027-12-24T19:00:00Z",
+           [{
+               "enabled": true,
+               "auth-id": "sensor1",
+               "type": "hashed-password",
+               "secrets": [{
+                  "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
+                  "not-after": "2027-12-24T19:00:00Z",
+               }]
             }]
