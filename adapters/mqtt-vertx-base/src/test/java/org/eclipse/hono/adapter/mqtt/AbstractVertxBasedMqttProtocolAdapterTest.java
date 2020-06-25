@@ -427,7 +427,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(authHandler).authenticateDevice(any(MqttContext.class));
         verify(endpoint).accept(false);
         verify(endpoint).publishHandler(any(Handler.class));
-        verify(endpoint).closeHandler(any(Handler.class));
+        verify(endpoint, times(2)).closeHandler(any(Handler.class));
     }
 
     /**
@@ -480,7 +480,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // THEN the connection is established and handlers are registered
         verify(authHandler, never()).authenticateDevice(any(MqttContext.class));
         verify(endpoint).publishHandler(any(Handler.class));
-        verify(endpoint).closeHandler(any(Handler.class));
+        verify(endpoint, times(2)).closeHandler(any(Handler.class));
         verify(endpoint).accept(false);
     }
 
@@ -1095,7 +1095,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         verify(metrics).incrementConnections("DEFAULT_TENANT");
         final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        verify(endpoint, times(2)).closeHandler(closeHandlerCaptor.capture());
         closeHandlerCaptor.getValue().handle(null);
         verify(metrics).decrementConnections("DEFAULT_TENANT");
     }
@@ -1126,7 +1126,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics).incrementUnauthenticatedConnections();
         // and when the device closes the connection
         final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        verify(endpoint, times(2)).closeHandler(closeHandlerCaptor.capture());
         closeHandlerCaptor.getValue().handle(null);
         // the number of unauthenticated connections is decremented again
         verify(metrics).decrementUnauthenticatedConnections();
