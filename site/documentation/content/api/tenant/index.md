@@ -13,7 +13,7 @@ determine if devices belonging to the tenant are allowed to connect to a certain
 <!--more-->
 
 This document *describes* the Tenant API's operations and the payload data format used by them.
-Please refer to [Multi Tenancy]({{< relref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
+Please refer to [Multi Tenancy]({{< relref "/concepts/tenancy/index.md" >}}) for details regarding the way Hono supports multiple tenants.
 
 The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
