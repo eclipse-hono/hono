@@ -34,6 +34,7 @@ Please note that these milestones represent the latest *state of development* wh
 change from one milestone to the other. Milestones are mainly intended for testing purposes and should generally not
 be used in a production environment.
 
+* [Eclipse Hono 1.3.0-M3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.3.0-M3-exec.jar)
 * [Eclipse Hono 1.3.0-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.3.0-M2-exec.jar)
 * [Eclipse Hono 1.3.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.3.0-M1-exec.jar)
 
