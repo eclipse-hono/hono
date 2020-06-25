@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
  * A LoRaWAN provider with API for Kerlink.
  */
 @Component
-public class KerlinkProvider extends BaseLoraProvider {
+public class KerlinkProvider extends JsonBasedLoraProvider {
 
     static final String FIELD_KERLINK_CLUSTER_ID = "cluster-id";
     static final String FIELD_KERLINK_CUSTOMER_ID = "customer-id";
@@ -53,7 +53,7 @@ public class KerlinkProvider extends BaseLoraProvider {
      * This method always returns {@link LoraMessageType#UPLINK}.
      */
     @Override
-    public LoraMessageType extractMessageType(final JsonObject loraMessage) {
+    public LoraMessageType getMessageType(final JsonObject loraMessage) {
         return LoraMessageType.UPLINK;
     }
 
@@ -68,7 +68,7 @@ public class KerlinkProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected String extractDevEui(final JsonObject loraMessage) {
+    protected String getDevEui(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_UPLINK_DEVICE_EUI, String.class)
@@ -76,7 +76,7 @@ public class KerlinkProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected Buffer extractPayload(final JsonObject loraMessage) {
+    protected Buffer getPayload(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_UPLINK_USER_DATA, JsonObject.class)

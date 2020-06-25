@@ -15,11 +15,8 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
-
-import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
-import org.junit.jupiter.api.Test;
 
 /**
  * Verifies behavior of {@link FireflyProvider}.
@@ -35,14 +32,25 @@ public class FireflyProviderTest extends LoraProviderTestBase<FireflyProvider> {
     }
 
     /**
-     * Verifies that properties are parsed correctly from the lora message.
+     * {@inheritDoc}
      */
-    @Test
-    public void testGetMessageParsesNormalizedData() {
+    @Override
+    protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
 
-        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(uplinkMessageBuffer);
-
-        final Map<String, Object> map = loraMessage.getNormalizedData();
-        assertThat(map.get(LoraConstants.APP_PROPERTY_MIC)).isEqualTo(Boolean.TRUE);
+        final LoraMetaData metaData = loraMessage.getMetaData();
+        assertThat(metaData.getAdaptiveDataRateEnabled());
+        assertThat(metaData.getBandwidth()).isEqualTo(125);
+        assertThat(metaData.getCodingRate()).isEqualTo("4/5");
+        assertThat(metaData.getFrameCount()).isEqualTo(2602);
+        assertThat(metaData.getFrequency()).isEqualTo(868.3);
+        assertThat(metaData.getFunctionPort()).isEqualTo(2);
+        assertThat(metaData.getSpreadingFactor()).isEqualTo(7);
+        assertThat(metaData.getGatewayInfo()).hasSize(2);
+        assertThat(metaData.getGatewayInfo().get(0).getGatewayId()).isEqualTo("0101010101010101");
+        assertThat(metaData.getGatewayInfo().get(0).getRssi()).isEqualTo(-84);
+        assertThat(metaData.getGatewayInfo().get(0).getSnr()).isEqualTo(9.8);
+        assertThat(metaData.getGatewayInfo().get(1).getGatewayId()).isEqualTo("0202020202020202");
+        assertThat(metaData.getGatewayInfo().get(1).getRssi()).isEqualTo(-116);
+        assertThat(metaData.getGatewayInfo().get(1).getSnr()).isEqualTo(-3.2);
     }
 }

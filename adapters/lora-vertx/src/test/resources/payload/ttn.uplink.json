@@ -18,7 +18,7 @@
     "coding_rate": "4/5",
     "gateways": [
       {
-        "gtw_id": "ttn-test-gtw",
+        "gtw_id": "0203040506070809",
         "timestamp": 12345,
         "time": "2019-03-03T04:19:32Z",
         "channel": 0,

@@ -16,8 +16,8 @@ package org.eclipse.hono.adapter.lora.providers;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.service.http.HttpUtils;
 
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.RoutingContext;
 
 /**
  * A LoraWAN provider which can send and receive messages from and to LoRa devices.
@@ -61,10 +61,10 @@ public interface LoraProvider {
      * Gets the object representation of a message payload sent by
      * the provider.
      *
-     * @param body The raw request body.
+     * @param request The HTTP request containing the message.
      * @return The request object.
      * @throws NullPointerException if body is {@code null}.
-     * @throws LoraProviderMalformedPayloadException if the body cannot be decoded.
+     * @throws LoraProviderMalformedPayloadException if the request body cannot be decoded.
      */
-    LoraMessage getMessage(Buffer body);
+    LoraMessage getMessage(RoutingContext request);
 }

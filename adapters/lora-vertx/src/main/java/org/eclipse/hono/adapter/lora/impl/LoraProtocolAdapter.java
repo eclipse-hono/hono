@@ -24,6 +24,7 @@ import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
@@ -54,6 +55,8 @@ import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tag;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.ChainAuthHandler;
@@ -154,23 +157,22 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         router.route().handler(authHandler);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
 
         MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
 
-        Optional.ofNullable(ctx.get(LoraConstants.NORMALIZED_PROPERTIES))
-            .filter(Map.class::isInstance)
-            .map(Map.class::cast)
-            .ifPresent(properties -> {
-                ((Map<String, Object>) properties).entrySet()
-                    .forEach(entry -> MessageHelper.addProperty(downstreamMessage, entry.getKey(), entry.getValue()));
+        Optional.ofNullable(ctx.get(LoraConstants.META_DATA))
+            .map(LoraMetaData.class::cast)
+            .ifPresent(metaData -> {
+                final String json = Json.encode(metaData);
+                MessageHelper.addProperty(downstreamMessage, LoraConstants.META_DATA, json);
             });
 
         Optional.ofNullable(ctx.get(LoraConstants.ADDITIONAL_DATA))
-            .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, data));
+            .map(JsonObject.class::cast)
+            .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, data.encode()));
     }
 
     void handleProviderRoute(final RoutingContext ctx, final LoraProvider provider) {
@@ -191,7 +193,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
 
             try {
-                final LoraMessage loraMessage = provider.getMessage(ctx.getBody());
+                final LoraMessage loraMessage = provider.getMessage(ctx);
                 final LoraMessageType type = loraMessage.getType();
                 currentSpan.log(Map.of("message type", type));
                 final String deviceId = loraMessage.getDevEUIAsString();
@@ -202,8 +204,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     final UplinkLoraMessage uplinkMessage = (UplinkLoraMessage) loraMessage;
                     final Buffer payload = uplinkMessage.getPayload();
 
-                    Optional.ofNullable(uplinkMessage.getNormalizedData())
-                            .ifPresent(data -> ctx.put(LoraConstants.NORMALIZED_PROPERTIES, data));
+                    Optional.ofNullable(uplinkMessage.getMetaData())
+                        .ifPresent(data -> ctx.put(LoraConstants.META_DATA, data));
 
                     Optional.ofNullable(uplinkMessage.getAdditionalData())
                             .ifPresent(data -> ctx.put(LoraConstants.ADDITIONAL_DATA, data));

@@ -14,12 +14,11 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.buffer.Buffer;
@@ -34,26 +33,28 @@ import io.vertx.core.json.JsonObject;
  * Protobuf based JSON format</a>.
  */
 @Component
-public class ChirpStackProvider extends BaseLoraProvider {
+public class ChirpStackProvider extends JsonBasedLoraProvider {
 
-    private static final String FIELD_CHIRPSTACK_PAYLOAD = "data";
-    private static final String FIELD_CHIRPSTACK_DEVICE = "devEUI";
-    private static final String FIELD_CHIRPSTACK_TX_INFO = "txInfo";
-    private static final String FIELD_CHIRPSTACK_SPREADING_FACTOR = "spreadingFactor";
+    private static final String FIELD_CHIRPSTACK_ADR = "adr";
+    private static final String FIELD_CHIRPSTACK_ALTITUDE = "altitude";
     private static final String FIELD_CHIRPSTACK_BANDWIDTH = "bandwidth";
-    private static final String FIELD_CHIRPSTACK_FUNCTION_PORT = "fPort";
-    private static final String FIELD_CHIRPSTACK_CODE_RATE = "codeRate";
-    private static final String FIELD_CHIRPSTACK_LORA_MODULATION_INFO = "loRaModulationInfo";
-    private static final String FIELD_CHIRPSTACK_FREQUENCY = "frequency";
-    private static final String FIELD_CHIRPSTACK_FRAME_COUNT = "fCnt";
-    private static final String FIELD_CHIRPSTACK_RX_INFO = "rxInfo";
-    private static final String FIELD_CHIRPSTACK_GATEWAY_ID = "gatewayID";
-    private static final String FIELD_CHIRPSTACK_RSSI = "rssi";
-    private static final String FIELD_CHIRPSTACK_LSNR = "loRaSNR";
     private static final String FIELD_CHIRPSTACK_CHANNEL = "channel";
-    private static final String FIELD_CHIRPSTACK_LOCATION = "location";
+    private static final String FIELD_CHIRPSTACK_CODE_RATE = "codeRate";
+    private static final String FIELD_CHIRPSTACK_DEVICE = "devEUI";
+    private static final String FIELD_CHIRPSTACK_FRAME_COUNT = "fCnt";
+    private static final String FIELD_CHIRPSTACK_FREQUENCY = "frequency";
+    private static final String FIELD_CHIRPSTACK_FUNCTION_PORT = "fPort";
+    private static final String FIELD_CHIRPSTACK_GATEWAY_ID = "gatewayID";
     private static final String FIELD_CHIRPSTACK_LATITUDE = "latitude";
+    private static final String FIELD_CHIRPSTACK_LOCATION = "location";
     private static final String FIELD_CHIRPSTACK_LONGITUDE = "longitude";
+    private static final String FIELD_CHIRPSTACK_LORA_MODULATION_INFO = "loRaModulationInfo";
+    private static final String FIELD_CHIRPSTACK_LSNR = "loRaSNR";
+    private static final String FIELD_CHIRPSTACK_PAYLOAD = "data";
+    private static final String FIELD_CHIRPSTACK_RSSI = "rssi";
+    private static final String FIELD_CHIRPSTACK_RX_INFO = "rxInfo";
+    private static final String FIELD_CHIRPSTACK_SPREADING_FACTOR = "spreadingFactor";
+    private static final String FIELD_CHIRPSTACK_TX_INFO = "txInfo";
 
     @Override
     public String getProviderName() {
@@ -67,7 +68,7 @@ public class ChirpStackProvider extends BaseLoraProvider {
 
 
     @Override
-    protected String extractDevEui(final JsonObject loraMessage) {
+    protected String getDevEui(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DEVICE, String.class)
                 .map(s -> LoraUtils.convertFromBase64ToHex(s))
@@ -75,7 +76,7 @@ public class ChirpStackProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected Buffer extractPayload(final JsonObject loraMessage) {
+    protected Buffer getPayload(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_PAYLOAD, String.class)
                 .map(s -> Buffer.buffer(Base64.getDecoder().decode(s)))
@@ -83,7 +84,7 @@ public class ChirpStackProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+    protected LoraMessageType getMessageType(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         if (loraMessage.containsKey(FIELD_CHIRPSTACK_PAYLOAD)) {
@@ -94,103 +95,62 @@ public class ChirpStackProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
+    protected LoraMetaData getMetaData(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
 
-        final Map<String, Object> data = new HashMap<>();
+        final LoraMetaData data = new LoraMetaData();
 
-        LoraUtils.addNormalizedValue(
-                loraMessage,
-                FIELD_CHIRPSTACK_FUNCTION_PORT,
-                Integer.class,
-                LoraConstants.APP_PROPERTY_FUNCTION_PORT,
-                n -> n,
-                data);
-        LoraUtils.addNormalizedValue(
-                loraMessage,
-                FIELD_CHIRPSTACK_FRAME_COUNT,
-                Integer.class,
-                LoraConstants.FRAME_COUNT,
-                n -> n,
-                data);
+        LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_FUNCTION_PORT, Integer.class)
+            .ifPresent(data::setFunctionPort);
+        LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_FRAME_COUNT, Integer.class)
+            .ifPresent(data::setFrameCount);
+        LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_ADR, Boolean.class)
+            .ifPresent(data::setAdaptiveDataRateEnabled);
 
         LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_TX_INFO, JsonObject.class)
             .map(txInfo -> {
-                LoraUtils.addNormalizedValue(
-                        txInfo,
-                        FIELD_CHIRPSTACK_FREQUENCY,
-                        Integer.class,
-                        LoraConstants.FREQUENCY,
-                        v -> v,
-                        data);
+                LoraUtils.getChildObject(txInfo, FIELD_CHIRPSTACK_FREQUENCY, Integer.class)
+                    .ifPresent(v -> data.setFrequency(v.doubleValue() / 1_000_000));
                 return txInfo.getValue(FIELD_CHIRPSTACK_LORA_MODULATION_INFO);
             })
             .filter(JsonObject.class::isInstance)
             .map(JsonObject.class::cast)
             .ifPresent(modulationInfo -> {
-                LoraUtils.addNormalizedValue(
-                        modulationInfo,
-                        FIELD_CHIRPSTACK_SPREADING_FACTOR,
-                        Integer.class,
-                        LoraConstants.APP_PROPERTY_SPREADING_FACTOR,
-                        v -> v,
-                        data);
-                LoraUtils.addNormalizedValue(
-                        modulationInfo,
-                        FIELD_CHIRPSTACK_BANDWIDTH,
-                        Integer.class,
-                        LoraConstants.APP_PROPERTY_BANDWIDTH,
-                        v -> v,
-                        data);
-                LoraUtils.addNormalizedValue(
-                        modulationInfo,
-                        FIELD_CHIRPSTACK_CODE_RATE,
-                        String.class,
-                        LoraConstants.CODING_RATE,
-                        v -> v,
-                        data);
+                LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_SPREADING_FACTOR, Integer.class)
+                    .ifPresent(data::setSpreadingFactor);
+                LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_BANDWIDTH, Integer.class)
+                    .ifPresent(data::setBandwidth);
+                LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_CODE_RATE, String.class)
+                    .ifPresent(data::setCodingRate);
             });
 
         LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_RX_INFO, JsonArray.class)
             .ifPresent(rxInfoList -> {
-                final JsonArray normalizedGateways = rxInfoList.stream()
-                        .filter(JsonObject.class::isInstance)
-                        .map(JsonObject.class::cast)
-                        .map(rxInfo -> {
-                            final JsonObject normalizedGateway = new JsonObject();
-                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_GATEWAY_ID, String.class)
-                                .ifPresent(v -> normalizedGateway.put(LoraConstants.GATEWAY_ID, LoraUtils.convertFromBase64ToHex(v)));
-                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_RSSI, Integer.class)
-                                .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_RSS, v));
-                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LSNR, Double.class)
-                                .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_SNR, v));
-                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_CHANNEL, Integer.class)
-                                .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_CHANNEL, v));
+                rxInfoList.stream()
+                    .filter(JsonObject.class::isInstance)
+                    .map(JsonObject.class::cast)
+                    .forEach(rxInfo -> {
+                        final GatewayInfo gateway = new GatewayInfo();
+                        LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_GATEWAY_ID, String.class)
+                            .ifPresent(v -> gateway.setGatewayId(LoraUtils.convertFromBase64ToHex(v)));
+                        LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_RSSI, Integer.class)
+                            .ifPresent(gateway::setRssi);
+                        LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LSNR, Double.class)
+                            .ifPresent(gateway::setSnr);
+                        LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_CHANNEL, Integer.class)
+                            .ifPresent(gateway::setChannel);
 
-                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LOCATION, JsonObject.class)
-                                .ifPresent(loc -> {
-                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_LATITUDE, Double.class)
-                                        .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_FUNCTION_LATITUDE, v));
-                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_LONGITUDE, Double.class)
-                                        .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_FUNCTION_LONGITUDE, v));
-                                });
-                            return normalizedGateway;
-                        })
-                        .collect(() -> new JsonArray(), (array, value) -> array.add(value), (array1, array2) -> array1.addAll(array2));
-                data.put(LoraConstants.GATEWAYS, normalizedGateways.toString());
+                        LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LOCATION, JsonObject.class)
+                            .map(loc -> LoraUtils.newLocation(
+                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_LONGITUDE, Double.class),
+                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_LATITUDE, Double.class),
+                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_ALTITUDE, Double.class)))
+                            .ifPresent(gateway::setLocation);
+                        data.addGatewayInfo(gateway);
+                    });
             });
 
         return data;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return Always {@code null}.
-     */
-    @Override
-    protected JsonObject extractAdditionalData(final JsonObject loraMessage) {
-        return null;
     }
 }

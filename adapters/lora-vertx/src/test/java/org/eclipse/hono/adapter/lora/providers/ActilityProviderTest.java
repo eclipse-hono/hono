@@ -15,14 +15,8 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
-
-import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies behavior of {@link ActilityProvider}.
@@ -39,21 +33,19 @@ public class ActilityProviderTest extends LoraProviderTestBase<ActilityProvider>
     }
 
     /**
-     * Verifies that properties are parsed correctly from the lora message.
+     * {@inheritDoc}
      */
-    @Test
-    public void testGetMessageParsesNormalizedProperties() {
+    @Override
+    protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
 
-        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(uplinkMessageBuffer);
+        final LoraMetaData data = loraMessage.getMetaData();
 
-        final Map<String, Object> map = loraMessage.getNormalizedData();
-
-        assertThat(map.get(LoraConstants.APP_PROPERTY_RSS)).isEqualTo(48.0);
-
-        final JsonArray expectedArray = new JsonArray();
-        expectedArray.add(new JsonObject().put("gateway_id", "18035559").put("rss", 48.0).put("snr", 3.0));
-        expectedArray.add(new JsonObject().put("gateway_id", "18035560").put("rss", 49.0).put("snr", 4.0));
-
-        assertThat(new JsonArray((String) map.get(LoraConstants.GATEWAYS))).isEqualTo(expectedArray);
+        assertThat(data.getGatewayInfo()).hasSize(2);
+        assertThat(data.getGatewayInfo().get(0).getGatewayId()).isEqualTo("18035559");
+        assertThat(data.getGatewayInfo().get(0).getRssi()).isEqualTo(-48);
+        assertThat(data.getGatewayInfo().get(0).getSnr()).isEqualTo(3.0);
+        assertThat(data.getGatewayInfo().get(1).getGatewayId()).isEqualTo("18035560");
+        assertThat(data.getGatewayInfo().get(1).getRssi()).isEqualTo(-49);
+        assertThat(data.getGatewayInfo().get(1).getSnr()).isEqualTo(4.0);
     }
 }

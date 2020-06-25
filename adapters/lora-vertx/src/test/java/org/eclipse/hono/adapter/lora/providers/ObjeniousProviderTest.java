@@ -13,6 +13,11 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.eclipse.hono.adapter.lora.LoraMetaData;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
+
 /**
  * Verifies behavior of {@link ObjeniousProvider}.
  */
@@ -25,5 +30,22 @@ public class ObjeniousProviderTest extends LoraProviderTestBase<ObjeniousProvide
     @Override
     protected ObjeniousProvider newProvider() {
         return new ObjeniousProvider();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
+
+        final LoraMetaData metaData = loraMessage.getMetaData();
+        assertThat(metaData.getFrameCount()).isEqualTo(7);
+        assertThat(metaData.getFunctionPort()).isEqualTo(1);
+        assertThat(metaData.getLocation().getLatitude()).isEqualTo(53.108805);
+        assertThat(metaData.getLocation().getLongitude()).isEqualTo(9.193430);
+        assertThat(metaData.getSpreadingFactor()).isEqualTo(11);
+        assertThat(metaData.getGatewayInfo()).hasSize(1);
+        assertThat(metaData.getGatewayInfo().get(0).getSnr()).isEqualTo(1.0);
+        assertThat(metaData.getGatewayInfo().get(0).getRssi()).isEqualTo(-103);
     }
 }

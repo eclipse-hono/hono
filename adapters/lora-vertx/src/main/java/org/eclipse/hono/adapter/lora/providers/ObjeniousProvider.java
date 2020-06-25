@@ -14,8 +14,11 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.springframework.stereotype.Component;
 
 import com.google.common.io.BaseEncoding;
@@ -31,12 +34,21 @@ import io.vertx.core.json.JsonObject;
  * uplink messages</a> only.
  */
 @Component
-public class ObjeniousProvider extends BaseLoraProvider {
+public class ObjeniousProvider extends JsonBasedLoraProvider {
 
-    private static final String FIELD_DEVICE_PROPERTIES = "device_properties";
     private static final String FIELD_DEVICE_ID = "deveui";
+    private static final String FIELD_FRAME_COUNT = "count";
+    private static final String FIELD_LATITUDE = "lat";
+    private static final String FIELD_LONGITUDE = "lng";
     private static final String FIELD_PAYLOAD = "payload_cleartext";
+    private static final String FIELD_PORT = "port";
+    private static final String FIELD_RSSI = "rssi";
+    private static final String FIELD_SNR = "snr";
+    private static final String FIELD_SPREADING_FACTOR = "sf";
     private static final String FIELD_TYPE = "type";
+
+    private static final String OBJECT_DEVICE_PROPERTIES = "device_properties";
+    private static final String OBJECT_PROTOCOL_DATA = "protocol_data";
 
     @Override
     public String getProviderName() {
@@ -49,10 +61,10 @@ public class ObjeniousProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected String extractDevEui(final JsonObject loraMessage) {
+    protected String getDevEui(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
-        return LoraUtils.getChildObject(loraMessage, FIELD_DEVICE_PROPERTIES, JsonObject.class)
+        return LoraUtils.getChildObject(loraMessage, OBJECT_DEVICE_PROPERTIES, JsonObject.class)
                 .map(props -> props.getValue(FIELD_DEVICE_ID))
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
@@ -60,7 +72,7 @@ public class ObjeniousProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected Buffer extractPayload(final JsonObject loraMessage) {
+    protected Buffer getPayload(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_PAYLOAD, String.class)
@@ -69,7 +81,7 @@ public class ObjeniousProvider extends BaseLoraProvider {
     }
 
     @Override
-    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+    protected LoraMessageType getMessageType(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_TYPE, String.class)
@@ -86,5 +98,41 @@ public class ObjeniousProvider extends BaseLoraProvider {
                     }
                 })
                 .orElse(LoraMessageType.UNKNOWN);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected LoraMetaData getMetaData(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+
+        final LoraMetaData data = new LoraMetaData();
+
+        LoraUtils.getChildObject(loraMessage, FIELD_FRAME_COUNT, Integer.class)
+            .ifPresent(data::setFrameCount);
+        Optional.ofNullable(LoraUtils.newLocation(
+                LoraUtils.getChildObject(loraMessage, FIELD_LONGITUDE, Double.class),
+                LoraUtils.getChildObject(loraMessage, FIELD_LATITUDE, Double.class),
+                Optional.empty()))
+            .ifPresent(data::setLocation);
+
+        LoraUtils.getChildObject(loraMessage, OBJECT_PROTOCOL_DATA, JsonObject.class)
+            .map(prot -> {
+                LoraUtils.getChildObject(prot, FIELD_PORT, Integer.class)
+                    .ifPresent(data::setFunctionPort);
+                LoraUtils.getChildObject(prot, FIELD_SPREADING_FACTOR, Integer.class)
+                    .ifPresent(data::setSpreadingFactor);
+                final GatewayInfo gwInfo = new GatewayInfo();
+                LoraUtils.getChildObject(prot, FIELD_RSSI, Integer.class)
+                    .ifPresent(gwInfo::setRssi);
+                LoraUtils.getChildObject(prot, FIELD_SNR, Double.class)
+                    .ifPresent(gwInfo::setSnr);
+                return gwInfo;
+            })
+            .ifPresent(data::addGatewayInfo);
+
+        return data;
     }
 }

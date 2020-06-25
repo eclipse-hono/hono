@@ -285,7 +285,7 @@ public class LoraProtocolAdapterTest {
     public void handleProviderRouteCausesBadRequestForFailureToParseBody() {
 
         final LoraProvider providerMock = getLoraProviderMock();
-        when(providerMock.getMessage(any(Buffer.class))).thenThrow(new LoraProviderMalformedPayloadException("no device ID"));
+        when(providerMock.getMessage(any(RoutingContext.class))).thenThrow(new LoraProviderMalformedPayloadException("no device ID"));
         final RoutingContext routingContextMock = getRoutingContextMock();
 
         adapter.handleProviderRoute(routingContextMock, providerMock);
@@ -321,7 +321,7 @@ public class LoraProtocolAdapterTest {
         final LoraProvider provider = mock(LoraProvider.class);
         when(provider.getProviderName()).thenReturn(TEST_PROVIDER);
         when(provider.pathPrefix()).thenReturn("/bumlux");
-        when(provider.getMessage(any(Buffer.class))).thenReturn(message);
+        when(provider.getMessage(any(RoutingContext.class))).thenReturn(message);
 
         return provider;
     }
