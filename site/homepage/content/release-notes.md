@@ -53,6 +53,12 @@ title = "Release Notes"
   no global expiration configuration is needed anymore for the cache.
 * Protocol adapters failed to re-establish receiver links for commands to be routed after loss
   of connection to the AMQP Messaging Network. This has been fixed.
+* The AMQP adapter reported an incorrect number of connections if resource limits had been
+  defined and exceeded. This has been fixed.
+* The device registry management HTTP endpoints now reject requests to register or update objects
+  containing unknown properties. In the past such properties had been simply ignored.
+* The Device Registry Management API has been amended with example messages and more thorough
+  description of operations.
 
 ### API Changes
 
