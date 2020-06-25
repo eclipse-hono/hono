@@ -24,7 +24,6 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -284,7 +283,7 @@ public class VertxBasedMqttProtocolAdapterTest {
     }
 
     private void givenAnAdapter() {
-        config = new MqttProtocolAdapterProperties(new ClientConfigProperties());
+        config = new MqttProtocolAdapterProperties();
         adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setConfig(config);
     }

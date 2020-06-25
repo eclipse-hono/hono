@@ -53,7 +53,6 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -139,7 +138,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             return null;
         }).when(context).runOnContext(any(Handler.class));
 
-        config = new MqttProtocolAdapterProperties(new ClientConfigProperties());
+        config = new MqttProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
         config.setMaxConnections(Integer.MAX_VALUE);
 

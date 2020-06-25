@@ -195,7 +195,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
 
     private long startTimer(final Integer msgId) {
 
-        return vertx.setTimer(config.getCommandAckTimeout(), timerId -> {
+        return vertx.setTimer(config.getEffectiveSendMessageToDeviceTimeout(), timerId -> {
             Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
                     .ifPresent(value -> value.onAckTimeoutHandler.handle(null));
         });

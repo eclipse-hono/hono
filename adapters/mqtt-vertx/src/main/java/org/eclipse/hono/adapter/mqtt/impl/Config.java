@@ -99,7 +99,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.mqtt")
     public MqttProtocolAdapterProperties adapterProperties() {
-        return new MqttProtocolAdapterProperties(downstreamSenderFactoryConfig());
+        return new MqttProtocolAdapterProperties();
     }
 
     /**

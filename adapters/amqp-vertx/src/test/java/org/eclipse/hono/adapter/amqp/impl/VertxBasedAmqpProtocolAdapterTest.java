@@ -67,7 +67,6 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -197,7 +196,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
 
-        config = new AmqpAdapterProperties(new ClientConfigProperties());
+        config = new AmqpAdapterProperties();
         config.setAuthenticationRequired(false);
         config.setInsecurePort(5672);
     }

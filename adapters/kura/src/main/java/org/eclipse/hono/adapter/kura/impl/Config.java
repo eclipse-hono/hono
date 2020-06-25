@@ -98,7 +98,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.kura")
     public KuraAdapterProperties adapterProperties() {
-        return new KuraAdapterProperties(downstreamSenderFactoryConfig());
+        return new KuraAdapterProperties();
     }
 
     /**
