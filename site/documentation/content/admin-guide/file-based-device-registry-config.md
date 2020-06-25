@@ -1,6 +1,6 @@
 +++
 title = "File Based Device Registry Configuration"
-weight = 315
+weight = 316
 +++
 
 The File based Device Registry component provides an exemplary implementation of Eclipse Hono&trade;'s [Device Registration]({{< relref "/api/device-registration" >}}), [Credentials]({{< relref "/api/credentials" >}}), [Tenant]({{< relref "/api/tenant" >}}) and [Device Connection]({{< relref "/api/device-connection" >}}) APIs.
