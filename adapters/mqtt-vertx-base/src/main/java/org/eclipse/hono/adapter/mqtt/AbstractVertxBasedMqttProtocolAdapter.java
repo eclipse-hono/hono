@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.message.Message;
@@ -386,10 +387,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         if (endpoint.will() != null) {
             span.log("ignoring client's last will");
         }
+        final AtomicBoolean connectionClosedPrematurely = new AtomicBoolean(false);
+        // set a preliminary close handler, will be overwritten at the end of handleConnectionRequest()
+        endpoint.closeHandler(v -> {
+            log.debug("client closed connection before CONNACK got sent to client [client-id: {}]", endpoint.clientIdentifier());
+            TracingHelper.logError(span, "client closed connection");
+            connectionClosedPrematurely.set(true);
+        });
 
         isConnected()
                 .compose(v -> handleConnectionRequest(endpoint, span))
-                .onComplete(result -> handleConnectionRequestResult(endpoint, span, result));
+                .onComplete(result -> handleConnectionRequestResult(endpoint, span, result, connectionClosedPrematurely));
 
     }
 
@@ -412,50 +420,68 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private void handleConnectionRequestResult(final MqttEndpoint endpoint,
             final Span currentSpan,
-            final AsyncResult<Device> authenticationAttempt) {
+            final AsyncResult<Device> connectionAttemptResult,
+            final AtomicBoolean connectionClosedPrematurely) {
 
-        if (authenticationAttempt.succeeded()) {
+        final Device authenticatedDevice = connectionAttemptResult.result();
+        TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
+        if (authenticatedDevice != null) {
+            TracingHelper.setDeviceTags(currentSpan, authenticatedDevice.getTenantId(),
+                    authenticatedDevice.getDeviceId());
+        }
 
-            final Device authenticatedDevice = authenticationAttempt.result();
-            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
+        if (connectionClosedPrematurely.get()) {
+            log.debug("abort handling connection request, connection already closed [clientId: {}]",
+                    endpoint.clientIdentifier());
+            currentSpan.log("abort connection request processing, connection already closed");
+            currentSpan.finish();
+        } else if (connectionAttemptResult.succeeded()) {
 
             sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
                     .onComplete(sendAttempt -> {
                         if (sendAttempt.succeeded()) {
                             // we NEVER maintain session state
                             endpoint.accept(false);
-                            if (authenticatedDevice != null) {
-                                TracingHelper.setDeviceTags(
-                                        currentSpan,
-                                        authenticationAttempt.result().getTenantId(),
-                                        authenticationAttempt.result().getDeviceId());
-                            }
                             currentSpan.log("connection accepted");
                         } else {
-                            log.warn(
-                                    "connection request from client [clientId: {}] rejected due to connection event "
-                                            + "failure: {}",
+                            log.warn("rejecting connection request from client [clientId: {}] with code {} due to connection event failure",
                                     endpoint.clientIdentifier(),
                                     MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
                                     sendAttempt.cause());
-                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
                             TracingHelper.logError(currentSpan, sendAttempt.cause());
+                            rejectConnectionRequest(endpoint,
+                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, currentSpan);
                         }
+                        currentSpan.finish();
                     });
 
         } else {
-
-            final Throwable t = authenticationAttempt.cause();
-            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
-            log.debug("connection request from client [clientId: {}] rejected due to {} ",
-                    endpoint.clientIdentifier(), t.getMessage());
-
-            final MqttConnectReturnCode code = getConnectReturnCode(t);
-            endpoint.reject(code);
-            currentSpan.log("connection rejected");
-            TracingHelper.logError(currentSpan, authenticationAttempt.cause());
+            final Throwable connectError = connectionAttemptResult.cause();
+            log.debug("rejecting connection request from client [clientId: {}], cause:",
+                    endpoint.clientIdentifier(), connectError);
+            TracingHelper.logError(currentSpan, connectError);
+            rejectConnectionRequest(endpoint, getConnectReturnCode(connectError), currentSpan);
+            currentSpan.finish();
         }
-        currentSpan.finish();
+    }
+
+    private void rejectConnectionRequest(final MqttEndpoint endpoint, final MqttConnectReturnCode errorCode,
+            final Span currentSpan) {
+        // MqttEndpointImpl.isClosed==true leads to an IllegalStateException here; try-catch block needed since there is no getter for that field
+        try {
+            endpoint.reject(errorCode);
+            currentSpan.log("connection request rejected");
+        } catch (final IllegalStateException ex) {
+            if ("MQTT endpoint is closed".equals(ex.getMessage())) {
+                log.debug("skipped rejecting connection request, connection already closed [clientId: {}]",
+                        endpoint.clientIdentifier());
+                currentSpan.log("skipped rejecting connection request, connection already closed");
+            } else {
+                log.debug("could not reject connection request from client [clientId: {}]: {}",
+                        endpoint.clientIdentifier(), ex.toString());
+                TracingHelper.logError(currentSpan, "could not reject connection request from client", ex);
+            }
+        }
     }
 
     /**
