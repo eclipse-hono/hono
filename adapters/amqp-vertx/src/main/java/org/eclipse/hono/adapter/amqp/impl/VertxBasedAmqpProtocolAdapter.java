@@ -324,6 +324,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             handleRemoteSenderOpenForCommands(con, sender);
         });
         con.openHandler(remoteOpen -> {
+            final Device authenticatedDevice = getAuthenticatedDevice(con);
+            if (authenticatedDevice == null) {
+                metrics.incrementUnauthenticatedConnections();
+            } else {
+                metrics.incrementConnections(authenticatedDevice.getTenantId());
+            }
+
             if (remoteOpen.failed()) {
                 log.debug("ignoring device's open frame containing error", remoteOpen.cause());
             } else {
@@ -385,11 +392,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             con.open();
             log.debug("connection with device [container: {}] established", con.getRemoteContainer());
             span.log("connection established");
-            if (authenticatedDevice == null) {
-                metrics.incrementUnauthenticatedConnections();
-            } else {
-                metrics.incrementConnections(authenticatedDevice.getTenantId());
-            }
             return null;
         }).otherwise(t -> {
             con.setCondition(getErrorCondition(t));
