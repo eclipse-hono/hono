@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -87,7 +88,7 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
 /**
  * A base class for implementing Vert.x based Hono protocol adapters for publishing events &amp; telemetry data using
  * MQTT.
- * 
+ *
  * @param <T> The type of configuration properties this adapter supports/requires.
  */
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtocolAdapterProperties>
@@ -117,7 +118,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Sets the authentication handler to use for authenticating devices.
-     * 
+     *
      * @param authHandler The handler to use.
      * @throws NullPointerException if handler is {@code null}.
      */
@@ -184,7 +185,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Subclasses may either set the auth handler explicitly using
      * {@link #setAuthHandler(AuthHandler)} or override this method in order to
      * create a custom auth handler.
-     * 
+     *
      * @return The handler.
      */
     protected AuthHandler<MqttContext> createAuthHandler() {
@@ -215,7 +216,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Sets the MQTT server to use for handling secure MQTT connections.
-     * 
+     *
      * @param server The server.
      * @throws NullPointerException if the server is {@code null}.
      */
@@ -230,7 +231,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Sets the MQTT server to use for handling non-secure MQTT connections.
-     * 
+     *
      * @param server The server.
      * @throws NullPointerException if the server is {@code null}.
      */
@@ -370,7 +371,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
      * Authenticates the client (if required) and registers handlers for processing messages published by the client.
-     * 
+     *
      * @param endpoint The MQTT endpoint representing the client.
      */
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
@@ -389,10 +390,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         if (endpoint.will() != null) {
             span.log("ignoring client's last will");
         }
+        final AtomicBoolean connectionClosedPrematurely = new AtomicBoolean(false);
+        // set a preliminary close handler, will be overwritten at the end of handleConnectionRequest()
+        endpoint.closeHandler(v -> {
+            log.debug("client closed connection before CONNACK got sent to client [client-id: {}]", endpoint.clientIdentifier());
+            TracingHelper.logError(span, "client closed connection");
+            connectionClosedPrematurely.set(true);
+        });
 
         isConnected()
                 .compose(v -> handleConnectionRequest(endpoint, span))
-                .setHandler(result -> handleConnectionRequestResult(endpoint, span, result));
+                .setHandler(result -> handleConnectionRequestResult(endpoint, span, result, connectionClosedPrematurely));
 
     }
 
@@ -414,48 +422,68 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private void handleConnectionRequestResult(final MqttEndpoint endpoint,
             final Span currentSpan,
-            final AsyncResult<Device> authenticationAttempt) {
+            final AsyncResult<Device> connectionAttemptResult,
+            final AtomicBoolean connectionClosedPrematurely) {
 
-        if (authenticationAttempt.succeeded()) {
+        final Device authenticatedDevice = connectionAttemptResult.result();
+        TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
+        if (authenticatedDevice != null) {
+            TracingHelper.setDeviceTags(currentSpan, authenticatedDevice.getTenantId(),
+                    authenticatedDevice.getDeviceId());
+        }
 
-            final Device authenticatedDevice = authenticationAttempt.result();
-            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
+        if (connectionClosedPrematurely.get()) {
+            log.debug("abort handling connection request, connection already closed [clientId: {}]",
+                    endpoint.clientIdentifier());
+            currentSpan.log("abort connection request processing, connection already closed");
+            currentSpan.finish();
+        } else if (connectionAttemptResult.succeeded()) {
 
             sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
                     .setHandler(sendAttempt -> {
                         if (sendAttempt.succeeded()) {
                             // we NEVER maintain session state
                             endpoint.accept(false);
-                            if (authenticatedDevice != null) {
-                                currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticationAttempt.result().getTenantId());
-                                currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticationAttempt.result().getDeviceId());
-                            }
                             currentSpan.log("connection accepted");
                         } else {
-                            log.warn(
-                                    "connection request from client [clientId: {}] rejected due to connection event "
-                                            + "failure: {}",
+                            log.warn("rejecting connection request from client [clientId: {}] with code {} due to connection event failure",
                                     endpoint.clientIdentifier(),
                                     MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
                                     sendAttempt.cause());
-                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
                             TracingHelper.logError(currentSpan, sendAttempt.cause());
+                            rejectConnectionRequest(endpoint,
+                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, currentSpan);
                         }
+                        currentSpan.finish();
                     });
 
         } else {
-
-            final Throwable t = authenticationAttempt.cause();
-            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
-            log.debug("connection request from client [clientId: {}] rejected due to {} ",
-                    endpoint.clientIdentifier(), t.getMessage());
-
-            final MqttConnectReturnCode code = getConnectReturnCode(t);
-            endpoint.reject(code);
-            currentSpan.log("connection rejected");
-            TracingHelper.logError(currentSpan, authenticationAttempt.cause());
+            final Throwable connectError = connectionAttemptResult.cause();
+            log.debug("rejecting connection request from client [clientId: {}], cause:",
+                    endpoint.clientIdentifier(), connectError);
+            TracingHelper.logError(currentSpan, connectError);
+            rejectConnectionRequest(endpoint, getConnectReturnCode(connectError), currentSpan);
+            currentSpan.finish();
         }
-        currentSpan.finish();
+    }
+
+    private void rejectConnectionRequest(final MqttEndpoint endpoint, final MqttConnectReturnCode errorCode,
+            final Span currentSpan) {
+        // MqttEndpointImpl.isClosed==true leads to an IllegalStateException here; try-catch block needed since there is no getter for that field
+        try {
+            endpoint.reject(errorCode);
+            currentSpan.log("connection request rejected");
+        } catch (final IllegalStateException ex) {
+            if ("MQTT endpoint is closed".equals(ex.getMessage())) {
+                log.debug("skipped rejecting connection request, connection already closed [clientId: {}]",
+                        endpoint.clientIdentifier());
+                currentSpan.log("skipped rejecting connection request, connection already closed");
+            } else {
+                log.debug("could not reject connection request from client [clientId: {}]: {}",
+                        endpoint.clientIdentifier(), ex.toString());
+                TracingHelper.logError(currentSpan, "could not reject connection request from client", ex);
+            }
+        }
     }
 
     /**
@@ -466,7 +494,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device, CommandHandler, OptionalInt)}. Registers a publish
      * handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published
      * by the client. Accepts the connection request.
-     * 
+     *
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
@@ -837,7 +865,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Forwards a message to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @param resource The resource that the message should be forwarded to.
      * @param message The message to send.
@@ -881,7 +909,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Forwards a telemetry message to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
@@ -941,7 +969,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Forwards an event to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
@@ -1179,7 +1207,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Closes a connection to a client.
-     * 
+     *
      * @param endpoint The connection to close.
      * @param authenticatedDevice Optional authenticated device information, may be {@code null}.
      * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
@@ -1226,7 +1254,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Subclasses should override this method in order to release any device specific resources.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param endpoint The connection to be closed.
      */
     protected void onClose(final MqttEndpoint endpoint) {
@@ -1282,7 +1310,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * <li>the content type of the payload</li>
      * </ul>
      * and then invoke one of the <em>upload*</em> methods to send the message downstream.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published. The
      *            {@link MqttContext#topic()} method will return a non-null resource identifier
      *            for the topic that the message has been published to.
@@ -1300,7 +1328,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * <p>
      * Subclasses may override this method in order to customize the message before it is sent, e.g. adding custom
      * properties.
-     * 
+     *
      * @param downstreamMessage The message that will be sent downstream.
      * @param ctx The context in which the MQTT message has been published.
      */
@@ -1313,7 +1341,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * This default implementation does nothing.
      * <p>
      * Subclasses should override this method in order to e.g. update metrics counters.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      */
     protected void onMessageSent(final MqttContext ctx) {
@@ -1329,7 +1357,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * This default implementation does nothing.
      * <p>
      * Subclasses should override this method in order to e.g. update metrics counters.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      */
     protected void onMessageUndeliverable(final MqttContext ctx) {
