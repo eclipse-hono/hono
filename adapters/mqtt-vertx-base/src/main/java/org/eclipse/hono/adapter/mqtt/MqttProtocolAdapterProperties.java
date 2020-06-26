@@ -34,16 +34,16 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
     private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
 
     /**
-     * Gets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
      * @deprecated Use {@link #getSendMessageToDeviceTimeout()} instead.
      *
-     * @return The time out in milliseconds.
+     * @return The timeout in milliseconds.
      */
     @Deprecated(forRemoval = true)
     public final int getCommandAckTimeout() {
@@ -51,16 +51,16 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
     }
 
     /**
-     * Sets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * Sets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
      * @deprecated Use {@link #setSendMessageToDeviceTimeout(long)} ()} instead.
      *
-     * @param timeout The time out in milliseconds.
+     * @param timeout The timeout in milliseconds.
      * @throws IllegalArgumentException if the timeout is negative.
      */
     @Deprecated(forRemoval = true)
@@ -72,28 +72,28 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
     }
 
     /**
-     * Gets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
      *
-     * @return The time out in milliseconds.
+     * @return The timeout in milliseconds.
      */
     public long getSendMessageToDeviceTimeout() {
         return sendMessageToDeviceTimeout;
     }
 
     /**
-     * Sets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * Sets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
      *
-     * @param sendMessageToDeviceTimeout The time out in milliseconds.
+     * @param sendMessageToDeviceTimeout The timeout in milliseconds.
      * @throws IllegalArgumentException if the timeout is negative.
      */
     public void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {
@@ -110,7 +110,7 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      *
      * Can be removed when the deprecated {@link #commandAckTimeout} property is removed.
      *
-     * @return The time out in milliseconds.
+     * @return The timeout in milliseconds.
      */
     long getEffectiveSendMessageToDeviceTimeout() {
         if (sendMessageToDeviceTimeout == DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT

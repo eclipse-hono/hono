@@ -72,7 +72,9 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
         Objects.requireNonNull(msgId);
         LOG.trace("Acknowledgement received for command [Msg-id: {}] that has been sent to device", msgId);
         Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
-            cancelTimer(value.timerId);
+            if (value.timerId != null) {
+                cancelTimer(value.timerId);
+            }
             value.onAckHandler.handle(msgId);
         });
     }
@@ -193,7 +195,10 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
                 });
     }
 
-    private long startTimer(final Integer msgId) {
+    private Long startTimer(final Integer msgId) {
+        if (config.getEffectiveSendMessageToDeviceTimeout() < 1) {
+            return null;
+        }
 
         return vertx.setTimer(config.getEffectiveSendMessageToDeviceTimeout(), timerId -> {
             Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
@@ -218,7 +223,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
 
         private PendingCommandRequest(final Long timerId, final Handler<Integer> onAckHandler,
                 final Handler<Void> onAckTimeoutHandler) {
-            this.timerId = Objects.requireNonNull(timerId);
+            this.timerId = timerId;
             this.onAckHandler = Objects.requireNonNull(onAckHandler);
             this.onAckTimeoutHandler = Objects.requireNonNull(onAckTimeoutHandler);
         }
