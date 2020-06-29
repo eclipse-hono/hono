@@ -63,4 +63,11 @@ public interface ExecutionContext {
      * @return The context or {@code null} if no tracing context is set.
      */
     SpanContext getTracingContext();
+
+    /**
+     * Gets the QoS level as set in the request by the device.
+     *
+     * @return The QoS level requested by the device.
+     */
+    QoS getRequestedQos();
 }

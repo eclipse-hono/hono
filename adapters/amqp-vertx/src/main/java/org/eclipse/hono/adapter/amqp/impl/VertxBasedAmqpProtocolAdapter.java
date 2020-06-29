@@ -1088,6 +1088,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     final DownstreamSender sender = senderFuture.result();
                     final Message downstreamMessage = addProperties(
                             context.getMessage(),
+                            context.getRequestedQos(),
                             ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
                             context.getAddress().toString(),
                             tenantValidationTracker.result(),

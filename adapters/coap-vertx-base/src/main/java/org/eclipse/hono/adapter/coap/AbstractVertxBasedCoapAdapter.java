@@ -747,6 +747,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 final DownstreamSender sender = senderTracker.result();
                 final Integer ttd = ttdTracker.result();
                 final Message downstreamMessage = newMessage(
+                        context.getRequestedQos(),
                         ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(),
                                 device.getDeviceId()),
                         "/" + context.getExchange().getRequestOptions().getUriPathString(),

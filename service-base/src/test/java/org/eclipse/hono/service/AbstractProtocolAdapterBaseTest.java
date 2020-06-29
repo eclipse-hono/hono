@@ -57,6 +57,7 @@ import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
@@ -282,7 +283,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
-        adapter.addProperties(message, target, "/status", tenant, newRegistrationAssertionResult(), 15);
+        adapter.addProperties(message, QoS.AT_MOST_ONCE, target, "/status", tenant, newRegistrationAssertionResult(), 15);
 
         assertThat(
                 MessageHelper.getApplicationProperty(
@@ -317,7 +318,7 @@ public class AbstractProtocolAdapterBaseTest {
                     .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
                     .put("custom-device", true));
 
-        adapter.addProperties(message, target, null, null, assertion, null);
+        adapter.addProperties(message, QoS.AT_LEAST_ONCE, target, null, null, assertion, null);
 
         assertThat(
                 MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class),
@@ -338,7 +339,7 @@ public class AbstractProtocolAdapterBaseTest {
                 .setResourceLimits(new ResourceLimits().setMaxTtl(15L));
         final JsonObject assertion = newRegistrationAssertionResult();
 
-        adapter.addProperties(message, target, null, tenant, assertion, null);
+        adapter.addProperties(message, QoS.AT_LEAST_ONCE, target, null, tenant, assertion, null);
 
         assertThat(message.getTtl(), is(15000L));
     }
