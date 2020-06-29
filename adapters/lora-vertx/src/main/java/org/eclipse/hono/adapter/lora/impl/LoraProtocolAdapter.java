@@ -38,6 +38,7 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
+import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.http.X509AuthHandler;
@@ -133,7 +134,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
             router.route(provider.acceptedHttpMethod(), provider.pathPrefix())
                 .consumes(provider.acceptedContentType())
-                .handler(ctx -> this.handleProviderRoute(ctx, provider));
+                .handler(ctx -> this.handleProviderRoute(HttpContext.from(ctx), provider));
 
             router.route(provider.acceptedHttpMethod(), provider.pathPrefix()).handler(ctx -> {
                 LOG.debug("request does not contain content-type header, will return 400 ...");
@@ -158,7 +159,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     @Override
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final HttpContext ctx) {
 
         MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
@@ -175,12 +176,12 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, data.encode()));
     }
 
-    void handleProviderRoute(final RoutingContext ctx, final LoraProvider provider) {
+    void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {
 
         LOG.debug("processing request from provider [name: {}, URI: {}", provider.getProviderName(), provider.pathPrefix());
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                TracingHandler.serverSpanContext(ctx.getRoutingContext()),
                 "process message",
                 getClass().getSimpleName())
                 .start();
@@ -188,12 +189,12 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         TAG_LORA_PROVIDER.set(currentSpan, provider.getProviderName());
         ctx.put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, provider.getProviderName());
 
-        if (ctx.user() instanceof Device) {
-            final Device gatewayDevice = (Device) ctx.user();
+        if (ctx.getRoutingContext().user() instanceof Device) {
+            final Device gatewayDevice = (Device) ctx.getRoutingContext().user();
             TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
 
             try {
-                final LoraMessage loraMessage = provider.getMessage(ctx);
+                final LoraMessage loraMessage = provider.getMessage(ctx.getRoutingContext());
                 final LoraMessageType type = loraMessage.getType();
                 currentSpan.log(Map.of("message type", type));
                 final String deviceId = loraMessage.getDevEUIAsString();
@@ -227,15 +228,15 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                             gatewayDevice.getTenantId(), deviceId, type);
                     currentSpan.log("discarding message of unsupported type");
                     // discard the message but return 202 to not cause errors on the LoRa provider side
-                    handle202(ctx);
+                    handle202(ctx.getRoutingContext());
                 }
             } catch (final LoraProviderMalformedPayloadException e) {
                 LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
                 TracingHelper.logError(currentSpan, "error processing request", e);
-                handle400(ctx, ERROR_MSG_INVALID_PAYLOAD);
+                handle400(ctx.getRoutingContext(), ERROR_MSG_INVALID_PAYLOAD);
             }
         } else {
-            handleUnsupportedUserType(ctx, currentSpan);
+            handleUnsupportedUserType(ctx.getRoutingContext(), currentSpan);
         }
         currentSpan.finish();
     }

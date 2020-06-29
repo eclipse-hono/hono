@@ -13,11 +13,19 @@
 
 package org.eclipse.hono.service.http;
 
+import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ExecutionContext;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -29,14 +37,20 @@ public class HttpContext implements ExecutionContext {
     private final RoutingContext routingContext;
     private SpanContext spanContext;
 
+    private HttpContext(final RoutingContext routingContext) {
+        this.routingContext = Objects.requireNonNull(routingContext);
+    }
+
     /**
      * Creates a new HttpContext.
      *
      * @param routingContext The RoutingContext to wrap.
+     *
+     * @return The created HttpContext.
      * @throws NullPointerException if routingContext is {@code null}.
      */
-    public HttpContext(final RoutingContext routingContext) {
-        this.routingContext = Objects.requireNonNull(routingContext);
+    public static HttpContext from(final RoutingContext routingContext) {
+        return new HttpContext(routingContext);
     }
 
     /**
@@ -72,5 +86,123 @@ public class HttpContext implements ExecutionContext {
     @Override
     public SpanContext getTracingContext() {
         return spanContext;
+    }
+
+    /**
+     * Returns the underlying {@link RoutingContext}'s request.
+     *
+     * @return The underlying {@link RoutingContext}'s request.
+     */
+    public HttpServerRequest request() {
+        return routingContext.request();
+    }
+
+    /**
+     * Returns the underlying {@link RoutingContext}'s response.
+     *
+     * @return The underlying {@link RoutingContext}'s response.
+     */
+    public HttpServerResponse response() {
+        return routingContext.response();
+    }
+
+    /**
+     * Fails the underlying {@link RoutingContext} with the given cause.
+     *
+     * @param throwable The cause by which the underlying {@link RoutingContext} shall be failed.
+     */
+    public void fail(final Throwable throwable) {
+        routingContext.fail(throwable);
+    }
+
+    /**
+     * Gets the value of the <em>Content-Type</em> HTTP header for a request.
+     *
+     * @return The content type or {@code null} if the request doesn't contain a
+     *         <em>Content-Type</em> header.
+     */
+    public String getContentType() {
+
+        return routingContext.parsedHeaders().contentType().value();
+    }
+
+    /**
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} HTTP header for a request.
+     * If no such header can be found, the query is searched for containing a query parameter with the same key.
+     *
+     * @return The <em>time-to-live</em> duration or {@code null} if
+     * <ul>
+     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} header
+     *     or query parameter.</li>
+     *     <li>the contained value cannot be parsed as a Long</li>
+     * </ul>
+     */
+    public Duration getTimeToLive() {
+
+        try {
+            return Optional.ofNullable(routingContext.request().getHeader(Constants.HEADER_TIME_TO_LIVE))
+                    .map(ttlInHeader -> Long.parseLong(ttlInHeader))
+                    .map(ttl -> Duration.ofSeconds(ttl))
+                    .orElse(Optional.ofNullable(routingContext.request().getParam(Constants.HEADER_TIME_TO_LIVE))
+                            .map(ttlInParam -> Long.parseLong(ttlInParam))
+                            .map(ttl -> Duration.ofSeconds(ttl))
+                            .orElse(null));
+        } catch (final NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the authenticated device identity from the routing context.
+     *
+     * @return The device or {@code null} if the device has not been authenticated.
+     */
+    public Device getAuthenticatedDevice() {
+
+        return Optional.ofNullable(routingContext.user()).map(user -> {
+            if (DeviceUser.class.isInstance(user)) {
+                return (Device) user;
+            } else {
+                return null;
+            }
+        }).orElse(null);
+    }
+
+    /**
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} HTTP header for a request.
+     * If no such header can be found, the query is searched for containing a query parameter with the same key.
+     *
+     * @return The time til disconnect or {@code null} if
+     * <ul>
+     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} header or query parameter.</li>
+     *     <li>the contained value cannot be parsed as an Integer</li>
+     * </ul>
+     */
+    public Integer getTimeTillDisconnect() {
+
+        try {
+            Optional<String> timeTilDisconnectHeader = Optional.ofNullable(request().getHeader(Constants.HEADER_TIME_TILL_DISCONNECT));
+
+            if (timeTilDisconnectHeader.isEmpty()) {
+                timeTilDisconnectHeader = Optional.ofNullable(request().getParam(Constants.HEADER_TIME_TILL_DISCONNECT));
+            }
+
+            if (timeTilDisconnectHeader.isPresent()) {
+                return Integer.parseInt(timeTilDisconnectHeader.get());
+            }
+        } catch (final NumberFormatException e) {
+        }
+
+        return null;
+    }
+
+    /**
+     * Gets the TTD value contained in a message received from a device.
+     *
+     * @return The TTD value
+     */
+    public MetricsTags.TtdStatus getTtdStatus() {
+        return Optional.ofNullable((MetricsTags.TtdStatus) routingContext.get(MetricsTags.TtdStatus.class.getName()))
+                .orElse(MetricsTags.TtdStatus.NONE);
     }
 }

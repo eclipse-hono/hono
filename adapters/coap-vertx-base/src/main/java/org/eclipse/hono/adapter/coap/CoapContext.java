@@ -306,5 +306,4 @@ public final class CoapContext extends MapBasedExecutionContext {
                 })
                 .orElse(null);
     }
-
 }

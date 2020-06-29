@@ -185,7 +185,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // route for uploading telemetry data
         router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
+                .handler(ctx -> uploadTelemetryMessage(HttpContext.from(ctx), getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
     private void addEventApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
@@ -226,7 +226,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // route for sending event messages
         router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(ctx -> uploadEventMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
+                .handler(ctx -> uploadEventMessage(HttpContext.from(ctx), getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
     private void addCommandResponseRoutes(final String commandResponsePrefix, final Router router,
@@ -271,7 +271,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         router.route(
                 HttpMethod.PUT,
                 String.format("/%s/res/:%s/:%s/:%s", commandResponsePrefix, PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
-            .handler(ctx -> uploadCommandResponseMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx),
+            .handler(ctx -> uploadCommandResponseMessage(HttpContext.from(ctx), getTenantParam(ctx), getDeviceIdParam(ctx),
                     getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx)));
     }
 
@@ -301,7 +301,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (Device.class.isInstance(ctx.user())) {
             final Device device = (Device) ctx.user();
-            uploadTelemetryMessage(ctx, device.getTenantId(), device.getDeviceId());
+            uploadTelemetryMessage(HttpContext.from(ctx), device.getTenantId(), device.getDeviceId());
         } else {
             handle401(ctx);
         }
@@ -311,7 +311,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (Device.class.isInstance(ctx.user())) {
             final Device device = (Device) ctx.user();
-            uploadEventMessage(ctx, device.getTenantId(), device.getDeviceId());
+            uploadEventMessage(HttpContext.from(ctx), device.getTenantId(), device.getDeviceId());
         } else {
             handle401(ctx);
         }
@@ -321,7 +321,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (Device.class.isInstance(ctx.user())) {
             final Device device = (Device) ctx.user();
-            uploadCommandResponseMessage(ctx, device.getTenantId(), device.getDeviceId(),
+            uploadCommandResponseMessage(HttpContext.from(ctx), device.getTenantId(), device.getDeviceId(),
                     getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx));
         } else {
             handle401(ctx);

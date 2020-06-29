@@ -88,7 +88,7 @@ public final class SigfoxProtocolAdapter
      */
     @FunctionalInterface
     private interface UploadHandler {
-        void upload(RoutingContext ctx, String tenant, String deviceId, Buffer payload, String contentType);
+        void upload(HttpContext ctx, String tenant, String deviceId, Buffer payload, String contentType);
     }
 
     /**
@@ -151,12 +151,12 @@ public final class SigfoxProtocolAdapter
         router.route("/data/telemetry/:" + SIGFOX_PARAM_TENANT)
                 .method(HttpMethod.GET)
                 .handler(dataCorsHandler())
-                .handler(ctx -> dataHandler(ctx, this::uploadTelemetryMessage));
+                .handler(ctx -> dataHandler(HttpContext.from(ctx), this::uploadTelemetryMessage));
 
         router.route("/data/event/:" + SIGFOX_PARAM_TENANT)
                 .method(HttpMethod.GET)
                 .handler(dataCorsHandler())
-                .handler(ctx -> dataHandler(ctx, this::uploadEventMessage));
+                .handler(ctx -> dataHandler(HttpContext.from(ctx), this::uploadEventMessage));
 
         router.errorHandler(500, t -> LOG.warn("Unhandled exception", t.failure()));
     }
@@ -171,20 +171,20 @@ public final class SigfoxProtocolAdapter
                 .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID);
     }
 
-    private void dataHandler(final RoutingContext ctx, final UploadHandler uploadHandler) {
+    private void dataHandler(final HttpContext ctx, final UploadHandler uploadHandler) {
 
-        if (!(ctx.user() instanceof Device)) {
+        if (!(ctx.getRoutingContext().user() instanceof Device)) {
             LOG.warn("Not a device");
             return;
         }
 
-        final Device gatewayDevice = (Device) ctx.user();
+        final Device gatewayDevice = (Device) ctx.getRoutingContext().user();
 
         final String deviceTenant = gatewayDevice.getTenantId();
-        final String requestTenant = ctx.pathParam(SIGFOX_PARAM_TENANT);
+        final String requestTenant = ctx.getRoutingContext().pathParam(SIGFOX_PARAM_TENANT);
 
-        final String deviceId = ctx.queryParams().get(SIGFOX_PARAM_DEVICE_ID);
-        final String strData = ctx.queryParams().get(SIGFOX_PARAM_DATA);
+        final String deviceId = ctx.getRoutingContext().queryParams().get(SIGFOX_PARAM_DEVICE_ID);
+        final String strData = ctx.getRoutingContext().queryParams().get(SIGFOX_PARAM_DATA);
         final Buffer data = decodeData(strData);
 
         LOG.debug("{} handler - deviceTenant: {}, requestTenant: {}, deviceId: {}, data: {}",
@@ -209,13 +209,13 @@ public final class SigfoxProtocolAdapter
     }
 
     @Override
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final HttpContext ctx) {
         super.customizeDownstreamMessage(downstreamMessage, ctx);
 
         // pass along all query parameters that start with 'sigfox.'
         // If a key has multiple values, then only one of them will be mapped.
 
-        for (final var entry : ctx.queryParams()) {
+        for (final var entry : ctx.getRoutingContext().queryParams()) {
             if (entry.getKey() == null || !entry.getKey().startsWith(SIGFOX_PROPERTY_PREFIX)) {
                 continue;
             }
@@ -232,9 +232,9 @@ public final class SigfoxProtocolAdapter
     }
 
     @Override
-    protected Integer getTimeUntilDisconnectFromRequest(final RoutingContext ctx) {
+    protected Integer getTimeUntilDisconnectFromRequest(final HttpContext ctx) {
 
-        String ack = ctx.queryParams().get(SIGFOX_QUERY_PARAM_ACK);
+        String ack = ctx.getRoutingContext().queryParams().get(SIGFOX_QUERY_PARAM_ACK);
 
         if (ack == null) {
             ack = ctx.request().getHeader(SIGFOX_HEADER_PARAM_ACK);

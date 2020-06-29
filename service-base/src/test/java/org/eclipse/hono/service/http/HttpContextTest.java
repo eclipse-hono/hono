@@ -27,9 +27,9 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Test verifying functionality of the {@link HttpUtils} class.
+ * Test verifying functionality of the {@link HttpContext} class.
  */
-public class HttpUtilsTest {
+public class HttpContextTest {
 
     @Mock
     private RoutingContext routingContext;
@@ -50,10 +50,11 @@ public class HttpUtilsTest {
 
     /**
      * Verifies that the {@link Constants#HEADER_TIME_TILL_DISCONNECT} header is used by
-     * the {@link HttpUtils#getTimeTillDisconnect(RoutingContext)} method.
+     * the {@link HttpContext#getTimeTillDisconnect()} method.
      */
     @Test
     public void testGetTimeTillDisconnectUsesHeader() {
+        final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time till disconnect
         final Integer timeTillDisconnect = 60;
@@ -62,15 +63,16 @@ public class HttpUtilsTest {
                 .thenReturn(timeTillDisconnect.toString());
 
         // THEN the get method returns this value
-        assertEquals(timeTillDisconnect, HttpUtils.getTimeTillDisconnect(routingContext));
+        assertEquals(timeTillDisconnect, httpContext.getTimeTillDisconnect());
     }
 
     /**
      * Verifies that the {@link Constants#HEADER_TIME_TILL_DISCONNECT} query parameter is used by
-     * the {@link HttpUtils#getTimeTillDisconnect(RoutingContext)} method.
+     * the {@link HttpContext#getTimeTillDisconnect()} method.
      */
     @Test
     public void testGetTimeTillDisconnectUsesQueryParam() {
+        final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time till disconnect
         final Integer timeTillDisconnect = 60;
@@ -79,26 +81,27 @@ public class HttpUtilsTest {
                 .thenReturn(timeTillDisconnect.toString());
 
         // THEN the get method returns this value
-        assertEquals(timeTillDisconnect, HttpUtils.getTimeTillDisconnect(routingContext));
+        assertEquals(timeTillDisconnect, httpContext.getTimeTillDisconnect());
     }
 
     /**
      * Verifies that
-     * the {@link HttpUtils#getTimeTillDisconnect(RoutingContext)} method returns {@code null} if
+     * the {@link HttpContext#getTimeTillDisconnect()} method returns {@code null} if
      * {@link Constants#HEADER_TIME_TILL_DISCONNECT} is neither provided as query parameter nor as requests header.
      */
     @Test
     public void testGetTimeTillDisconnectReturnsNullIfNotSpecified() {
-
-        assertNull(HttpUtils.getTimeTillDisconnect(routingContext));
+        final HttpContext httpContext = HttpContext.from(routingContext);
+        assertNull(httpContext.getTimeTillDisconnect());
     }
 
     /**
      * Verifies that the {@link Constants#HEADER_TIME_TO_LIVE} header is used by
-     * the {@link HttpUtils#getTimeToLive(RoutingContext)} method.
+     * the {@link HttpContext#getTimeToLive()} method.
      */
     @Test
     public void testGetTimeToLiveUsesHeader() {
+        final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds
         final long timeToLive = 60L;
@@ -107,15 +110,16 @@ public class HttpUtilsTest {
                 .thenReturn(String.valueOf(timeToLive));
 
         // THEN the get method returns this value
-        assertEquals(timeToLive, HttpUtils.getTimeToLive(routingContext).toSeconds());
+        assertEquals(timeToLive, httpContext.getTimeToLive().toSeconds());
     }
 
     /**
      * Verifies that the {@link Constants#HEADER_TIME_TO_LIVE} query parameter is used by
-     * the {@link HttpUtils#getTimeToLive(RoutingContext)} method.
+     * the {@link HttpContext#getTimeToLive()} method.
      */
     @Test
     public void testGetTimeToLiveUsesQueryParam() {
+        final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds
         final long timeToLive = 60L;
@@ -124,17 +128,17 @@ public class HttpUtilsTest {
                 .thenReturn(String.valueOf(timeToLive));
 
         // THEN the get method returns this value
-        assertEquals(timeToLive, HttpUtils.getTimeToLive(routingContext).toSeconds());
+        assertEquals(timeToLive, httpContext.getTimeToLive().toSeconds());
     }
 
     /**
-     * Verifies that the {@link HttpUtils#getTimeToLive(RoutingContext)} method 
+     * Verifies that the {@link HttpContext#getTimeToLive()} method
      * returns {@code null} if {@link Constants#HEADER_TIME_TO_LIVE} is neither
      * provided as query parameter nor as header.
      */
     @Test
     public void testGetTimeToLiveReturnsNullIfNotSpecified() {
-
-        assertNull(HttpUtils.getTimeToLive(routingContext));
+        final HttpContext httpContext = HttpContext.from(routingContext);
+        assertNull(httpContext.getTimeToLive());
     }
 }
