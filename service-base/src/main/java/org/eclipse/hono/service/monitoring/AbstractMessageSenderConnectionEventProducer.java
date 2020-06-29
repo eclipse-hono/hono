@@ -110,7 +110,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                     final Duration timeToLive = Duration.ofSeconds(tenant.getResourceLimits().getMaxTtl());
 
                     return MessageHelper.newMessage(
-                            target, 
+                            target,
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE, 
                             payload.toBuffer(), 
                             tenant, 

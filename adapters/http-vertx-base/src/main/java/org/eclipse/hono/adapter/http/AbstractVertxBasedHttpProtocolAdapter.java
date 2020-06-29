@@ -33,9 +33,9 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
+import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
 import org.eclipse.hono.service.http.TracingHandler;
@@ -208,11 +208,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private void setTtdStatus(final RoutingContext ctx, final TtdStatus status) {
         ctx.put(TtdStatus.class.getName(), status);
-    }
-
-    private TtdStatus getTtdStatus(final RoutingContext ctx) {
-        return Optional.ofNullable((TtdStatus) ctx.get(TtdStatus.class.getName()))
-                .orElse(TtdStatus.NONE);
     }
 
     private TracingHandler createTracingHandler() {
@@ -400,25 +395,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param downstreamMessage The message that will be sent downstream.
      * @param ctx The routing context.
      */
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final HttpContext ctx) {
         // this default implementation does nothing
-    }
-
-    /**
-     * Gets the authenticated device identity from the routing context.
-     *
-     * @param ctx The routing context.
-     * @return The device or {@code null} if the device has not been authenticated.
-     */
-    protected final Device getAuthenticatedDevice(final RoutingContext ctx) {
-
-        return Optional.ofNullable(ctx.user()).map(user -> {
-            if (DeviceUser.class.isInstance(user)) {
-                return (Device) user;
-            } else {
-                return null;
-            }
-        }).orElse(null);
     }
 
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
@@ -516,7 +494,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Uploads the body of an HTTP request as a telemetry message to Hono.
      * <p>
-     * This method simply invokes {@link #uploadTelemetryMessage(RoutingContext, String, String, Buffer, String)}
+     * This method simply invokes {@link #uploadTelemetryMessage(HttpContext, String, String, Buffer, String)}
      * with objects retrieved from the routing context.
      *
      * @param ctx The context to retrieve the message payload and content type from.
@@ -524,14 +502,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param deviceId The id of the device that has produced the data.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final void uploadTelemetryMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
+    public final void uploadTelemetryMessage(final HttpContext ctx, final String tenant, final String deviceId) {
 
         uploadTelemetryMessage(
                 Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
-                ctx.getBody(),
-                HttpUtils.getContentType(ctx));
+                ctx.getRoutingContext().getBody(),
+                ctx.getContentType());
     }
 
     /**
@@ -549,7 +527,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param contentType The content type of the message payload.
      * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
-    public final void uploadTelemetryMessage(final RoutingContext ctx, final String tenant, final String deviceId,
+    public final void uploadTelemetryMessage(final HttpContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
 
         doUploadMessage(
@@ -565,7 +543,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Uploads the body of an HTTP request as an event message to Hono.
      * <p>
-     * This method simply invokes {@link #uploadEventMessage(RoutingContext, String, String, Buffer, String)}
+     * This method simply invokes {@link #uploadEventMessage(HttpContext, String, String, Buffer, String)}
      * with objects retrieved from the routing context.
      *
      * @param ctx The context to retrieve the message payload and content type from.
@@ -573,14 +551,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param deviceId The id of the device that has produced the data.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final void uploadEventMessage(final RoutingContext ctx, final String tenant, final String deviceId) {
+    public final void uploadEventMessage(final HttpContext ctx, final String tenant, final String deviceId) {
 
         uploadEventMessage(
                 Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
-                ctx.getBody(),
-                HttpUtils.getContentType(ctx));
+                ctx.getRoutingContext().getBody(),
+                ctx.getContentType());
     }
 
     /**
@@ -598,7 +576,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param contentType The content type of the message payload.
      * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
-    public final void uploadEventMessage(final RoutingContext ctx, final String tenant, final String deviceId,
+    public final void uploadEventMessage(final HttpContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
 
         doUploadMessage(
@@ -612,7 +590,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     private void doUploadMessage(
-            final RoutingContext ctx,
+            final HttpContext ctx,
             final String tenant,
             final String deviceId,
             final Buffer payload,
@@ -621,22 +599,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final MetricsTags.EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, contentType)) {
-            HttpUtils.badRequest(ctx, String.format("content type [%s] does not match payload", contentType));
+            HttpUtils.badRequest(ctx.getRoutingContext(), String.format("content type [%s] does not match payload", contentType));
             return;
         }
         final String qosHeaderValue = ctx.request().getHeader(Constants.HEADER_QOS_LEVEL);
         final MetricsTags.QoS qos = getQoSLevel(endpoint, qosHeaderValue);
         if (qos == MetricsTags.QoS.UNKNOWN) {
-            HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
+            HttpUtils.badRequest(ctx.getRoutingContext(), "unsupported QoS-Level header value");
             return;
         }
 
-        final Device authenticatedDevice = getAuthenticatedDevice(ctx);
+        final Device authenticatedDevice = ctx.getAuthenticatedDevice();
         final String gatewayId = authenticatedDevice != null && !deviceId.equals(authenticatedDevice.getDeviceId())
                 ? authenticatedDevice.getDeviceId()
                 : null;
         final Span currentSpan = TracingHelper
-                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx),
+                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx.getRoutingContext()),
                         "upload " + endpoint.getCanonicalName(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenant)
@@ -679,7 +657,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         tenantTracker.result(),
                         deviceId,
                         gatewayId,
-                        ctx,
+                        ctx.getRoutingContext(),
                         responseReady,
                         currentSpan));
 
@@ -701,10 +679,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     tenantTracker.result(),
                     tokenTracker.result(),
                     ttd,
-                    EndpointType.EVENT.equals(endpoint) ? HttpUtils.getTimeToLive(ctx) : null);
+                    EndpointType.EVENT.equals(endpoint) ? ctx.getTimeToLive() : null);
             customizeDownstreamMessage(downstreamMessage, ctx);
 
-            setTtdRequestConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
+            setTtdRequestConnectionCloseHandler(ctx.getRoutingContext(), commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
             if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
                 return CompositeFuture.all(
@@ -730,7 +708,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                 setResponsePayload(ctx.response(), commandContext, currentSpan);
-                ctx.addBodyEndHandler(ok -> {
+                ctx.getRoutingContext().addBodyEndHandler(ok -> {
                     log.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId);
                     if (commandContext != null) {
@@ -751,8 +729,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ProcessingOutcome.FORWARDED,
                             qos,
                             payloadSize,
-                            getTtdStatus(ctx),
-                            getMicrometerSample(ctx));
+                            ctx.getTtdStatus(),
+                            getMicrometerSample(ctx.getRoutingContext()));
                     // Before Hono 1.2, closing the consumer needed to be done AFTER having accepted a command (consumer used for single request only);
                     // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
                     Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
@@ -805,7 +783,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 ctx.fail(t);
             } else {
                 outcome = ProcessingOutcome.UNDELIVERABLE;
-                HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
+                HttpUtils.serviceUnavailable(ctx.getRoutingContext(), 2, "temporarily unavailable");
             }
             if (responseClosedPrematurely) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
@@ -819,8 +797,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     outcome,
                     qos,
                     payloadSize,
-                    getTtdStatus(ctx),
-                    getMicrometerSample(ctx));
+                    ctx.getTtdStatus(),
+                    getMicrometerSample(ctx.getRoutingContext()));
             TracingHelper.logError(currentSpan, t);
             // Before Hono 1.2, closing the consumer needed to be done AFTER having released a command (consumer used for single request only);
             // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
@@ -847,14 +825,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Extract the "time till disconnect" from the provided request.
      * <p>
-     * The default behavior is to call {@link HttpUtils#getTimeTillDisconnect(RoutingContext)}. The method may be
+     * The default behavior is to call {@link HttpContext#getTimeTillDisconnect()}. The method may be
      * overridden by protocol adapters that which not to use the default behavior.
      *
      * @param ctx The context to extract the TTD from.
      * @return The TTD in seconds, or {@code null} in case none is set, or it could not be parsed to an integer.
      */
-    protected Integer getTimeUntilDisconnectFromRequest(final RoutingContext ctx) {
-        return HttpUtils.getTimeTillDisconnect(ctx);
+    protected Integer getTimeUntilDisconnectFromRequest(final HttpContext ctx) {
+        return ctx.getTimeTillDisconnect();
     }
 
     /**
@@ -1158,7 +1136,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @throws NullPointerException if ctx, tenant or deviceId are {@code null}.
      */
     public final void uploadCommandResponseMessage(
-            final RoutingContext ctx,
+            final HttpContext ctx,
             final String tenant,
             final String deviceId,
             final String commandRequestId,
@@ -1168,15 +1146,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
 
-        final Buffer payload = ctx.getBody();
-        final String contentType = HttpUtils.getContentType(ctx);
+        final Buffer payload = ctx.getRoutingContext().getBody();
+        final String contentType = ctx.getContentType();
 
         log.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 tenant, deviceId, commandRequestId, responseStatus);
 
-        final Device authenticatedDevice = getAuthenticatedDevice(ctx);
+        final Device authenticatedDevice = ctx.getAuthenticatedDevice();
         final Span currentSpan = TracingHelper
-                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx),
+                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx.getRoutingContext()),
                         "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenant)
@@ -1222,7 +1200,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                         tenantTracker.result(),
                                         ProcessingOutcome.FORWARDED,
                                         payloadSize,
-                                        getMicrometerSample(ctx));
+                                        getMicrometerSample(ctx.getRoutingContext()));
                                 ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                                 ctx.response().end();
                                 return delivery;
@@ -1238,7 +1216,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             tenantTracker.result(),
                             ProcessingOutcome.from(t),
                             payloadSize,
-                            getMicrometerSample(ctx));
+                            getMicrometerSample(ctx.getRoutingContext()));
                     ctx.fail(t);
                     return null;
                 });

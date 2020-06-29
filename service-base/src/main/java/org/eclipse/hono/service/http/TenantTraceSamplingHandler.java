@@ -49,7 +49,7 @@ public class TenantTraceSamplingHandler implements Handler<RoutingContext> {
             return;
         }
         final Span span = getTracingHandlerServerSpan(ctx);
-        tenantObjectWithAuthIdProvider.get(new HttpContext(ctx), span.context())
+        tenantObjectWithAuthIdProvider.get(HttpContext.from(ctx), span.context())
                 .compose(tenantObjectWithAuthId -> {
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObjectWithAuthId, span);
                     return Future.succeededFuture(tenantObjectWithAuthId);
