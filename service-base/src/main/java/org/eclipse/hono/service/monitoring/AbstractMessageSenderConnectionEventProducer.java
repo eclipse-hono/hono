@@ -22,6 +22,7 @@ import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 
@@ -110,8 +111,9 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                     final Duration timeToLive = Duration.ofSeconds(tenant.getResourceLimits().getMaxTtl());
 
                     return MessageHelper.newMessage(
+                            QoS.AT_LEAST_ONCE,
                             target,
-                            EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE, 
+                            EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
                             payload.toBuffer(), 
                             tenant, 
                             timeToLive,

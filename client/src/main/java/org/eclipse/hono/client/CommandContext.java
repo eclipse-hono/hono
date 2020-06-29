@@ -24,6 +24,7 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.QoS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -206,5 +207,10 @@ public class CommandContext extends MapBasedExecutionContext {
             TracingHelper.logError(currentSpan, "unexpected delivery state: " + deliveryState);
         }
         currentSpan.finish();
+    }
+
+    @Override
+    public QoS getRequestedQos() {
+        return delivery.remotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE;
     }
 }

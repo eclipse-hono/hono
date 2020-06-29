@@ -60,6 +60,7 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
@@ -1171,9 +1172,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
      * order to have required Hono specific properties being set on the message automatically.
      * <p>
-     * This method simply delegates to {@link #newMessage(ResourceIdentifier, String, String, Buffer, TenantObject,
+     * This method simply delegates to {@link #newMessage(QoS, ResourceIdentifier, String, String, Buffer, TenantObject,
      * JsonObject, Integer, Duration)}.
      *
+     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
      *               address is used to determine if the message represents an event or not.
@@ -1198,6 +1201,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if target or registration info are {@code null}.
      */
     protected final Message newMessage(
+            final QoS qos,
             final ResourceIdentifier target,
             final String publishAddress,
             final String contentType,
@@ -1206,7 +1210,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
 
-        return newMessage(target, publishAddress, contentType, payload, tenant, registrationInfo, timeUntilDisconnect,
+        return newMessage(qos, target, publishAddress, contentType, payload, tenant, registrationInfo, timeUntilDisconnect,
                 null);
     }
 
@@ -1216,9 +1220,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
      * order to have required Hono specific properties being set on the message automatically.
      * <p>
-     * This method simply delegates to {@link MessageHelper#newMessage(ResourceIdentifier, String, String, Buffer,
+     * This method simply delegates to {@link MessageHelper#newMessage(QoS, ResourceIdentifier, String, String, Buffer,
      * TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}.
      *
+     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
      *               address is used to determine if the message represents an event or not.
@@ -1245,6 +1251,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if registration info is {@code null}.
      */
     protected final Message newMessage(
+            final QoS qos,
             final ResourceIdentifier target,
             final String publishAddress,
             final String contentType,
@@ -1257,6 +1264,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(registrationInfo);
 
         return MessageHelper.newMessage(
+                qos,
                 target,
                 publishAddress,
                 contentType,
@@ -1273,9 +1281,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Adds Hono specific properties to an AMQP 1.0 message.
      * <p>
-     * This method simply delegates to {@link #addProperties(Message, ResourceIdentifier, String, TenantObject, JsonObject, Integer, Duration)}.
+     * This method simply delegates to {@link #addProperties(Message, QoS, ResourceIdentifier, String, TenantObject, JsonObject, Integer, Duration)}.
      *
      * @param msg The message to add the properties to.
+     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
      *               address is used to determine if the message represents an event or not.
@@ -1298,22 +1308,25 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Message addProperties(
             final Message msg,
+            final QoS qos,
             final ResourceIdentifier target,
             final String publishAddress,
             final TenantObject tenant,
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
 
-        return addProperties(msg, target, publishAddress, tenant, registrationInfo, timeUntilDisconnect, null);
+        return addProperties(msg, qos, target, publishAddress, tenant, registrationInfo, timeUntilDisconnect, null);
     }
 
     /**
      * Adds Hono specific properties to an AMQP 1.0 message.
      * <p>
-     * This method simply delegates to {@link MessageHelper#addProperties(Message, ResourceIdentifier,
+     * This method simply delegates to {@link MessageHelper#addProperties(Message, QoS, ResourceIdentifier,
      * String, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}.
      *
      * @param msg The message to add the properties to.
+     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
      *               address is used to determine if the message represents an event or not.
@@ -1338,6 +1351,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Message addProperties(
             final Message msg,
+            final QoS qos,
             final ResourceIdentifier target,
             final String publishAddress,
             final TenantObject tenant,
@@ -1351,6 +1365,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return MessageHelper.addProperties(
                 msg,
+                qos,
                 target,
                 publishAddress,
                 tenant,
@@ -1513,6 +1528,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                 final DownstreamSender sender = senderTracker.result();
                 final Message msg = newMessage(
+                        QoS.AT_LEAST_ONCE,
                         ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
                         EventConstants.EVENT_ENDPOINT,
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,

@@ -17,14 +17,13 @@ import java.security.cert.Certificate;
 import java.util.Objects;
 
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.eclipse.hono.util.MapBasedExecutionContext;
 
 import io.vertx.proton.ProtonConnection;
 
 /**
  * Keeps information about the SASL handshake.
  */
-public final class SaslResponseContext extends MapBasedExecutionContext {
+public final class SaslResponseContext {
 
     private final ProtonConnection protonConnection;
     private final Certificate[] peerCertificateChain;

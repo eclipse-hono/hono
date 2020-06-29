@@ -91,6 +91,11 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_ORIG_ADAPTER = "orig_adapter";
     /**
+     * The name of the AMQP 1.0 message application property containing the QoS level of the message as set by the
+     * device.
+     */
+    public static final String APP_PROPERTY_QOS = "qos";
+    /**
      * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration
      * status.
      */
@@ -922,9 +927,11 @@ public final class MessageHelper {
      * Creates an AMQP 1.0 message.
      * <p>
      * This method simply calls
-     * {@link #newMessage(ResourceIdentifier, String, String, Buffer, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}
+     * {@link #newMessage(QoS, ResourceIdentifier, String, String, Buffer, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}
      * to create the AMQP 1.0 message.
      *
+     * @param qos          The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *                     if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target       The target address of the message or {@code null} if the message's
      *                     <em>to</em> property contains the target address.
      * @param contentType  The content type describing the message's payload or {@code null} if no content type
@@ -939,6 +946,7 @@ public final class MessageHelper {
      * @return  The AMQP 1.0 message.
      */
     public static Message newMessage(
+            final QoS qos,
             final ResourceIdentifier target,
             final String contentType,
             final Buffer payload,
@@ -946,7 +954,7 @@ public final class MessageHelper {
             final Duration timeToLive,
             final String adapterName) {
 
-        return MessageHelper.newMessage(target, null, contentType, payload, tenant, null, null, timeToLive, adapterName, false,
+        return MessageHelper.newMessage(qos, target, null, contentType, payload, tenant, null, null, timeToLive, adapterName, false,
                 false);
     }
     /**
@@ -958,9 +966,11 @@ public final class MessageHelper {
      * <li>its <em>content-type</em> to the given value,</li>
      * <li>its payload as an AMQP <em>Data</em> section</li>
      * </ul>
-     * The message is then passed to {@link #addProperties(Message, ResourceIdentifier, String, TenantObject,
+     * The message is then passed to {@link #addProperties(Message, QoS, ResourceIdentifier, String, TenantObject,
      * JsonObject, Integer, Duration, String, boolean, boolean)}.
      *
+     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
      *               address is used to determine if the message represents an event or not.
@@ -995,6 +1005,7 @@ public final class MessageHelper {
      * @throws NullPointerException if adapterTypeName is {@code null}.
      */
     public static Message newMessage(
+            final QoS qos,
             final ResourceIdentifier target,
             final String publishAddress,
             final String contentType,
@@ -1015,6 +1026,7 @@ public final class MessageHelper {
 
         return addProperties(
                 msg,
+                qos,
                 target,
                 publishAddress,
                 tenant,
@@ -1054,6 +1066,8 @@ public final class MessageHelper {
      * </ul>
      *
      * @param msg The message to add the properties to.
+     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
+     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
      *               address is used to determine if the message represents an event or not.
@@ -1086,6 +1100,7 @@ public final class MessageHelper {
      */
     public static Message addProperties(
             final Message msg,
+            final QoS qos,
             final ResourceIdentifier target,
             final String publishAddress,
             final TenantObject tenant,
@@ -1109,6 +1124,9 @@ public final class MessageHelper {
         msg.setAddress(ri.getBasePath());
         addDeviceId(msg, ri.getResourceId());
         addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
+        if (qos != null && qos != QoS.UNKNOWN) {
+            addProperty(msg, MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
+        }
         annotate(msg, ri);
         if (publishAddress != null) {
             addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);

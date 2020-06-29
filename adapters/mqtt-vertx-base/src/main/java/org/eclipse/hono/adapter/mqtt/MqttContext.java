@@ -19,6 +19,7 @@ import java.util.Optional;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
@@ -43,6 +44,19 @@ public final class MqttContext extends MapBasedExecutionContext {
     private PropertyBag propertyBag;
 
     private MqttContext() {
+    }
+
+    @Override
+    public QoS getRequestedQos() {
+
+        switch (message.qosLevel()) {
+            case AT_LEAST_ONCE:
+                return QoS.AT_LEAST_ONCE;
+            case AT_MOST_ONCE:
+                return QoS.AT_MOST_ONCE;
+            default:
+                return QoS.UNKNOWN;
+        }
     }
 
     /**

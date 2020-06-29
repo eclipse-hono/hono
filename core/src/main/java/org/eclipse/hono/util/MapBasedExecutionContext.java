@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -23,31 +22,10 @@ import io.opentracing.SpanContext;
  * An execution context that stores properties in a {@code Map}.
  *
  */
-public class MapBasedExecutionContext implements ExecutionContext {
+public abstract class MapBasedExecutionContext implements ExecutionContext {
 
     private Map<String, Object> data;
     private SpanContext spanContext;
-
-    /**
-     * Creates an empty execution context.
-     *
-     * @return The new context.
-     */
-    public static ExecutionContext empty() {
-        return new MapBasedExecutionContext();
-    }
-
-    /**
-     * Creates an execution context for given set of properties.
-     *
-     * @param props The properties to add to the new context.
-     * @return The new context.
-     */
-    public static ExecutionContext of(final Map<String, Object> props) {
-        final MapBasedExecutionContext result = new MapBasedExecutionContext();
-        result.data = new HashMap<>(props);
-        return result;
-    }
 
     @Override
     public final <T> T get(final String key) {
@@ -76,15 +54,6 @@ public class MapBasedExecutionContext implements ExecutionContext {
     @Override
     public void setTracingContext(final SpanContext spanContext) {
         this.spanContext = spanContext;
-    }
-
-    /**
-     * Gets the properties stored in this context.
-     *
-     * @return An unmodifiable view on this context's properties.
-     */
-    public final Map<String, Object> asMap() {
-        return Collections.unmodifiableMap(getData());
     }
 
     private Map<String, Object> getData() {

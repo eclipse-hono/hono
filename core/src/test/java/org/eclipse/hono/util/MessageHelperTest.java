@@ -167,6 +167,7 @@ public class MessageHelperTest {
         message.setAddress("telemetry/DEFAULT_TENANT/4711");
         MessageHelper.addProperties(
                 message,
+                QoS.AT_MOST_ONCE,
                 null,
                 null,
                 null,
@@ -218,6 +219,7 @@ public class MessageHelperTest {
 
         MessageHelper.addProperties(
                 message,
+                QoS.AT_LEAST_ONCE,
                 target,
                 null,
                 tenant,
@@ -267,6 +269,7 @@ public class MessageHelperTest {
         final JsonObject defaults = new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15);
 
         final Message message = MessageHelper.newMessage(
+                QoS.AT_LEAST_ONCE,
                 target,
                 null,
                 "application/text",
@@ -297,6 +300,7 @@ public class MessageHelperTest {
         tenant.setResourceLimits(new ResourceLimits().setMaxTtl(15));
 
         final Message message = MessageHelper.newMessage(
+                QoS.AT_LEAST_ONCE,
                 target,
                 null,
                 "application/text",
@@ -324,6 +328,7 @@ public class MessageHelperTest {
 
         MessageHelper.addProperties(
                 message,
+                QoS.AT_MOST_ONCE,
                 ResourceIdentifier.fromString("telemetry/DEFAULT_TENANT/4711"),
                 null,
                 null,

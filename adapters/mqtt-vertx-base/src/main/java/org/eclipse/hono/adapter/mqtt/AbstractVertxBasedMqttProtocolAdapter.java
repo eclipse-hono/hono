@@ -1135,6 +1135,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             final DownstreamSender sender = senderTracker.result();
             final Message downstreamMessage = newMessage(
+                    ctx.getRequestedQos(),
                     ResourceIdentifier.from(endpoint.getCanonicalName(), tenantObject.getTenantId(), deviceId),
                     ctx.message().topicName(),
                     ctx.contentType(),

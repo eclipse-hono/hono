@@ -22,6 +22,8 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.Strings;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.http.HttpServerRequest;
@@ -32,7 +34,7 @@ import io.vertx.ext.web.RoutingContext;
  * Represents the context for the handling of a Vert.x HTTP request, wrapping the Vert.x {@link RoutingContext} as well
  * as implementing the {@link ExecutionContext} interface.
  */
-public class HttpContext implements ExecutionContext {
+public final class HttpContext implements ExecutionContext {
 
     private final RoutingContext routingContext;
     private SpanContext spanContext;
@@ -86,6 +88,31 @@ public class HttpContext implements ExecutionContext {
     @Override
     public SpanContext getTracingContext() {
         return spanContext;
+    }
+
+    @Override
+    public QoS getRequestedQos() {
+        final String qos = routingContext.request().getHeader(Constants.HEADER_QOS_LEVEL);
+
+        if (Strings.isNullOrEmpty(qos)) {
+            return QoS.AT_MOST_ONCE;
+        }
+
+        final int qosLevel;
+        try {
+            qosLevel = Integer.parseInt(qos);
+        } catch (final NumberFormatException e) {
+            return QoS.UNKNOWN;
+        }
+
+        switch (qosLevel) {
+            case 0:
+                return QoS.AT_MOST_ONCE;
+            case 1:
+                return QoS.AT_LEAST_ONCE;
+            default:
+                return QoS.UNKNOWN;
+        }
     }
 
     /**

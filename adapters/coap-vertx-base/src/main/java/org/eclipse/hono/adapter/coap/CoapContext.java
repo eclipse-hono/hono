@@ -25,6 +25,7 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.QoS;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.vertx.core.Vertx;
@@ -306,4 +307,10 @@ public final class CoapContext extends MapBasedExecutionContext {
                 })
                 .orElse(null);
     }
+
+    @Override
+    public QoS getRequestedQos() {
+        return isConfirmable() ? QoS.AT_LEAST_ONCE : QoS.AT_MOST_ONCE;
+    }
+
 }

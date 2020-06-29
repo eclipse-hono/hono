@@ -20,6 +20,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
@@ -204,5 +205,10 @@ public class AmqpContext extends MapBasedExecutionContext {
      */
     final void setTraceSamplingPriority(final OptionalInt traceSamplingPriority) {
         this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
+    }
+
+    @Override
+    public QoS getRequestedQos() {
+        return isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE;
     }
 }
