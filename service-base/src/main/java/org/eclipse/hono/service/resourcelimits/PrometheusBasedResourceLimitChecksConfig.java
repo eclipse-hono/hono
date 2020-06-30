@@ -135,7 +135,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * The default value of this property is {@link #DEFAULT_CACHE_TIMEOUT}.
      *
      * @param timeout The timeout in seconds.
-     * @throws IllegalArgumentException if size is &lt;= 0.
+     * @throws IllegalArgumentException if timeout is &lt;= 0.
      */
     public void setCacheTimeout(final long timeout) {
         if (timeout <= 0) {

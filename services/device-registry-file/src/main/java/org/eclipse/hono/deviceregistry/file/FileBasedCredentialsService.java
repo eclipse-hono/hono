@@ -690,6 +690,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
      * @param deviceId the id of the device that is deleted.
      * @param span The active OpenTracing span for this operation.
      * @param resultHandler the operation result.
+     * @throws NullPointerException if any of the parameters except span is {@code null}.
      */
     public void remove(final String tenantId, final String deviceId,
             final Span span, final Handler<AsyncResult<Result<Void>>> resultHandler) {

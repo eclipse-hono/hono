@@ -121,7 +121,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * The default value of this property is {@link #DEFAULT_RESPONSE_CACHE_TIMEOUT}.
      *
      * @param timeout The timeout in seconds.
-     * @throws IllegalArgumentException if size is &lt;= 0.
+     * @throws IllegalArgumentException if timeout is &lt;= 0.
      */
     public final void setResponseCacheDefaultTimeout(final long timeout) {
         if (timeout <= 0) {

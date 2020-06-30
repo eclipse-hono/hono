@@ -197,7 +197,7 @@ public abstract class CommonCredential {
     }
 
     /**
-     * Checks if these credentials' properties represent a consisten state.
+     * Checks if this credential object is in a consistent state.
      * <p>
      * The check succeeds if the authId and type properties are neither {@code null} nor empty.
      *
