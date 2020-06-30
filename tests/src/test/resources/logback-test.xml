@@ -36,10 +36,10 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
   <logger name="org.eclipse.hono" level="INFO"/>
   <logger name="org.eclipse.hono.client" level="INFO"/>
   <logger name="org.eclipse.hono.client.impl" level="INFO"/>
+  <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
   <logger name="org.eclipse.hono.connection" level="INFO"/>
   <logger name="org.eclipse.hono.tests" level="INFO"/>
   <logger name="org.eclipse.hono.tests.CrudHttpClient" level="INFO"/>
@@ -50,9 +50,6 @@
   <logger name="org.eclipse.hono.tests.mqtt" level="INFO"/>
   <logger name="org.eclipse.hono.tests.registry" level="INFO"/>
 
-  <logger name="org.eclipse.californium" level="WARN"/>
-  <logger name="org.eclipse.californium.core" level="WARN"/>
-  <logger name="org.eclipse.californium.scandium" level="WARN"/>
   <logger name="org.apache.qpid.jms" level="INFO"/>
   <!-- 
     Set the following logger to level TRACE and add a "amqp.traceFrames=true" option to the connection URI
@@ -61,5 +58,9 @@
   <logger name="org.apache.qpid.jms.provider.amqp.FRAMES" level="INFO"/>
   <logger name="io.netty.resolver.dns" level="INFO"/>
   <logger name="io.vertx.proton.impl" level="INFO"/>
+  <logger name="org.eclipse.californium" level="WARN"/>
+  <logger name="org.eclipse.californium.core" level="WARN"/>
+  <logger name="org.eclipse.californium.scandium" level="WARN"/>
+  <logger name="org.mongodb.driver" level="INFO"/>
 
 </configuration>
