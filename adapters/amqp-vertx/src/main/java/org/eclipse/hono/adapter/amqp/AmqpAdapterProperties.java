@@ -38,7 +38,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      */
     public static final int DEFAULT_IDLE_TIMEOUT_MILLIS = 60_000;
     /**
-     * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message. 
+     * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message.
      */
     public static final long DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT = 1000L; // ms
 

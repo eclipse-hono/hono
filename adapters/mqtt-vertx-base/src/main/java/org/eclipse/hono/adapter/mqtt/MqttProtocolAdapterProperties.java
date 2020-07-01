@@ -25,37 +25,100 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      * The default number of milliseconds to wait for PUBACK.
      */
     protected static final int DEFAULT_COMMAND_ACK_TIMEOUT = 100;
+    /**
+     * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message.
+     */
+    protected static final long DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT = 1000L; // ms
+
     private int commandAckTimeout = DEFAULT_COMMAND_ACK_TIMEOUT;
+    private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
 
     /**
-     * Gets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
-     * @return The time out in milliseconds.
+     * @deprecated Use {@link #getSendMessageToDeviceTimeout()} instead.
+     *
+     * @return The timeout in milliseconds.
      */
+    @Deprecated(forRemoval = true)
     public final int getCommandAckTimeout() {
         return commandAckTimeout;
     }
 
     /**
-     * Sets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * Sets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
-     * @param timeout The time out in milliseconds.
+     * @deprecated Use {@link #setSendMessageToDeviceTimeout(long)} ()} instead.
+     *
+     * @param timeout The timeout in milliseconds.
      * @throws IllegalArgumentException if the timeout is negative.
      */
+    @Deprecated(forRemoval = true)
     public final void setCommandAckTimeout(final int timeout) {
         if (timeout < 0) {
             throw new IllegalArgumentException("timeout must not be negative");
         }
         this.commandAckTimeout = timeout;
     }
+
+    /**
+     * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
+     * <p>
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * within this time limit, then the command is settled with the <em>released</em> outcome.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
+     *
+     * @return The timeout in milliseconds.
+     */
+    public long getSendMessageToDeviceTimeout() {
+        return sendMessageToDeviceTimeout;
+    }
+
+    /**
+     * Sets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
+     * <p>
+     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
+     * within this time limit, then the command is settled with the <em>released</em> outcome.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
+     *
+     * @param sendMessageToDeviceTimeout The timeout in milliseconds.
+     * @throws IllegalArgumentException if the timeout is negative.
+     */
+    public void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {
+        if (sendMessageToDeviceTimeout < 0) {
+            throw new IllegalArgumentException("timeout must not be negative");
+        }
+
+        this.sendMessageToDeviceTimeout = sendMessageToDeviceTimeout;
+    }
+
+    /**
+     * Gets the effective timeout for waiting for acknowledgement in milliseconds for commands published with QoS 1
+     * by taking the {@link #sendMessageToDeviceTimeout} and {@link #commandAckTimeout} properties into account.
+     *
+     * Can be removed when the deprecated {@link #commandAckTimeout} property is removed.
+     *
+     * @return The timeout in milliseconds.
+     */
+    long getEffectiveSendMessageToDeviceTimeout() {
+        if (sendMessageToDeviceTimeout == DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT
+                && commandAckTimeout != DEFAULT_COMMAND_ACK_TIMEOUT) {
+            return commandAckTimeout;
+        } else {
+            return sendMessageToDeviceTimeout;
+        }
+    }
+
 }

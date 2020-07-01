@@ -44,6 +44,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_KURA_PORT`<br>`--hono.kura.port` | no | `8883` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_KURA_SECURE_PROTOCOLS`<br>`--hono.kura.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 | `HONO_KURA_TENANT_IDLE_TIMEOUT`<br>`--hono.kura.tenantIdleTimeout` | no | `0ms` | The duration after which the protocol adapter removes local state of the tenant (e.g. open AMQP links) with an amount and a unit, e.g. `2h` for 2 hours. See the [Spring Boot documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config-conversion-duration) for an explanation of the format. The value `0ms` disables the timeout. |
+| `HONO_KURA_SEND_MESSAGE_TO_DEVICE_TIMEOUT`<br>`--hono.kura.sendMessageToDeviceTimeout` | no | `1000` | The amount of time (milliseconds) after which the sending of a command to a device using QoS 1 is considered to be failed. The value of this variable should be increased in cases where devices are connected over a network with high latency. |
 
 The variables only need to be set if the default values do not match your environment.
 
