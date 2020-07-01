@@ -75,7 +75,7 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
                         LOG.info("started cache manager, now connecting to remote cache");
                     }
                     LOG.debug("trying to connect to remote cache");
-                    setCache(cacheManager.getCache(cacheName, cacheManager.getConfiguration().forceReturnValues()));
+                    setCache(cacheManager.getCache(cacheName));
                     if (getCache() == null) {
                         r.fail(new IllegalStateException("remote cache [" + cacheName + "] does not exist"));
                     } else {
