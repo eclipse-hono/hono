@@ -28,7 +28,6 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.Futures;
-import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.commons.api.BasicCache;
 import org.slf4j.Logger;
@@ -173,11 +172,7 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
 
         } else {
 
-            return Futures.create(() -> {
-                return cache
-                    .withFlags(Flag.FORCE_RETURN_VALUE)
-                    .putAsync(key, value);
-            });
+            return Futures.create(() -> cache.putAsync(key, value));
 
         }
 
@@ -207,11 +202,7 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
 
         } else {
 
-            return Futures.create(() -> {
-                return cache
-                        .withFlags(Flag.FORCE_RETURN_VALUE)
-                        .putAsync(key, value, lifespan, lifespanUnit);
-            });
+            return Futures.create(() -> cache.putAsync(key, value, lifespan, lifespanUnit));
 
         }
 
@@ -227,11 +218,7 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
 
         } else {
 
-            return Futures.create(() -> {
-                return cache
-                    .withFlags(Flag.FORCE_RETURN_VALUE)
-                    .removeWithVersionAsync(key, version);
-            });
+            return Futures.create(() -> cache.removeWithVersionAsync(key, version));
 
         }
 
