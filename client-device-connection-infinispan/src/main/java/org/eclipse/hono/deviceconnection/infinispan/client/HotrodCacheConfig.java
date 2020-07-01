@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -74,7 +75,7 @@ public class HotrodCacheConfig {
                 vertx,
                 remoteCacheManager(),
                 DeviceConnectionConstants.CACHE_NAME,
-                "KEY_CHECK_CONNECTION",
+                UUID.randomUUID().toString(),
                 "VALUE_CHECK_CONNECTION");
     }
 

@@ -10,6 +10,8 @@ title = "Release Notes"
   a certain number of reconnnect attempts (58 with the default configuration) had already
   failed. This has been fixed.
 * An error when freeing Command & Control related resources of an idle tenant has been fixed.
+* The Hotrod based DeviceConnectionClientFactory has been improved to prevent locking of
+  objects in a clustered cache.
 
 ## 1.2.3
 
