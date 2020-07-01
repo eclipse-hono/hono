@@ -70,9 +70,10 @@ title = "Release Notes"
   Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
   method has been removed.
  
- ### Deprecations
+### Deprecations
  
- * The configuration property `HONO_MQTT_COMMAND_ACK_TIMEOUT` of the MQTT adapter is now deprecated and planned to be removed in a future release. Use `HONO_MQTT_SEND_MESSAGE_TO_DEVICE_TIMEOUT` instead.
+ * The configuration property `HONO_MQTT_COMMAND_ACK_TIMEOUT` of the MQTT adapter is now deprecated
+   and planned to be removed in a future release. Use `HONO_MQTT_SEND_MESSAGE_TO_DEVICE_TIMEOUT` instead.
 
 ## 1.2.3
 
