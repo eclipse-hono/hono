@@ -449,6 +449,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         networkConfig.setInt(Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
         networkConfig.setInt(Keys.EXCHANGE_LIFETIME, getConfig().getExchangeLifetime());
         networkConfig.setBoolean(Keys.USE_MESSAGE_OFFLOADING, getConfig().isMessageOffloadingEnabled());
+        networkConfig.setString(Keys.DEDUPLICATOR, Keys.DEDUPLICATOR_PEERS_MARK_AND_SWEEP);
         final int maxConnections = getConfig().getMaxConnections();
         if (maxConnections == 0) {
             final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION);
