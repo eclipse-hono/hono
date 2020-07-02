@@ -71,6 +71,8 @@
     <!-- The port at which the health check server should expose its resources -->
     <vertx.health.port>8088</vertx.health.port>
 
+    <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
+
   </properties>
 
   <dependencyManagement>
@@ -619,4 +621,28 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+              <configuration>
+                <attach>false</attach>
+                <classifier>${classifier.spring.boot.artifact}</classifier>
+                <excludeArtifactIds>hono-legal,hono-demo-certs</excludeArtifactIds>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>

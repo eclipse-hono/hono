@@ -165,8 +165,6 @@
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
 
-    <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
-
     <!-- configure timestamp format to be injected into legal docs -->
     <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
     <timestamp>${maven.build.timestamp}</timestamp>
@@ -335,23 +333,6 @@
                 <includeArtifactIds>hono-legal</includeArtifactIds>
                 <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
                 <includes>legal/**</includes>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-maven-plugin</artifactId>
-          <version>2.1.11.RELEASE</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>repackage</goal>
-              </goals>
-              <configuration>
-                <attach>false</attach>
-                <classifier>${classifier.spring.boot.artifact}</classifier>
-                <excludeArtifactIds>hono-legal,hono-demo-certs</excludeArtifactIds>
               </configuration>
             </execution>
           </executions>
