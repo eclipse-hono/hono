@@ -216,7 +216,7 @@ public class CacheBasedDeviceConnectionServiceTest {
                 .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
+                        assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                         verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(Span.class));
                     });
                     ctx.completeNow();

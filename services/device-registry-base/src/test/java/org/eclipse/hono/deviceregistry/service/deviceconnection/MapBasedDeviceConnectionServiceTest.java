@@ -24,6 +24,7 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -38,6 +39,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -46,6 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MapBasedDeviceConnectionServiceTest {
 
     private MapBasedDeviceConnectionService svc;
@@ -228,26 +231,21 @@ public class MapBasedDeviceConnectionServiceTest {
 
     /**
      * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a NOT_FOUND status if no
-     * entry was registered for the device. Only an adapter instance for another device of the tenant was registered.
+     * entry was registered for the device.
      *
      * @param ctx The vert.x context.
      */
     @Test
-    public void testRemoveCommandHandlingAdapterInstanceFailsForOtherDevice(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-                .compose(deviceConnectionResult -> {
+    public void testRemoveCommandHandlingAdapterInstanceFailsForNonExistingEntry(final VertxTestContext ctx) {
+
+        svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "non-existing", "adapterInstance", span)
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                        assertNull(result.getPayload());
                     });
-                    return svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice",
-                            adapterInstance, span);
-                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
-                    assertNull(result.getPayload());
                     ctx.completeNow();
-                })));
+                }));
     }
 
     /**
@@ -267,11 +265,13 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                             "otherAdapterInstance", span);
-                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
-                    assertNull(result.getPayload());
+                }).onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
+                        assertNull(result.getPayload());
+                    });
                     ctx.completeNow();
-                })));
+                }));
     }
 
 
@@ -293,17 +293,19 @@ public class MapBasedDeviceConnectionServiceTest {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     final Promise<DeviceConnectionResult> instancesPromise = Promise.promise();
-                    // wait 2ms so that the lifespan has elapsed
-                    vertx.setTimer(2, tid -> {
+                    // make sure that the life span has elapsed
+                    vertx.setTimer(200, tid -> {
                         svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance,
-                                span).onComplete(instancesPromise.future());
+                                span).onComplete(instancesPromise);
                     });
                     return instancesPromise.future();
-                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
-                    assertNull(result.getPayload());
+                }).onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                        assertNull(result.getPayload());
+                    });
                     ctx.completeNow();
-                })));
+                }));
     }
 
     /**

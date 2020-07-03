@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.Expiry;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -168,8 +169,12 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
     }
 
     @Override
-    public final Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Span span) {
+    public final Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
@@ -178,22 +183,22 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
                 k -> buildAdapterInstancesForTenantMap());
 
         final ExpiringValue<JsonObject> adapterInstanceIdJsonHolder = adapterInstancesForTenantMap.get(deviceId);
-        final Future<DeviceConnectionResult> resultFuture;
-        if (adapterInstanceIdJsonHolder != null) {
+        final Promise<DeviceConnectionResult> result = Promise.promise();
+        if (adapterInstanceIdJsonHolder == null) {
+            result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+        } else {
             // remove entry only if existing value contains matching adapterInstanceId
             final boolean removed = adapterInstanceId.equals(getAdapterInstanceIdFromJson(adapterInstanceIdJsonHolder.getValue()))
                     && adapterInstancesForTenantMap.remove(deviceId, adapterInstanceIdJsonHolder);
             if (removed) {
-                resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT));
+                result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT));
             } else {
                 log.debug("cannot remove command handling adapter instance for device [{}], tenant [{}] - given value does not match current",
                         deviceId, tenantId);
-                resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED));
+                result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED));
             }
-        } else {
-            resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED));
         }
-        return resultFuture;
+        return result.future();
     }
 
     @Override
