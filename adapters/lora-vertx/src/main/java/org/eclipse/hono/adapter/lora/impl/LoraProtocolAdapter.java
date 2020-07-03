@@ -164,16 +164,18 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
 
-        Optional.ofNullable(ctx.get(LoraConstants.META_DATA))
+        Optional.ofNullable(ctx.get(LoraConstants.APP_PROPERTY_META_DATA))
             .map(LoraMetaData.class::cast)
             .ifPresent(metaData -> {
+                Optional.ofNullable(metaData.getFunctionPort())
+                    .ifPresent(port -> MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_FUNCTION_PORT, port));
                 final String json = Json.encode(metaData);
-                MessageHelper.addProperty(downstreamMessage, LoraConstants.META_DATA, json);
+                MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_META_DATA, json);
             });
 
-        Optional.ofNullable(ctx.get(LoraConstants.ADDITIONAL_DATA))
+        Optional.ofNullable(ctx.get(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA))
             .map(JsonObject.class::cast)
-            .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, data.encode()));
+            .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, data.encode()));
     }
 
     void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {
@@ -206,10 +208,10 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     final Buffer payload = uplinkMessage.getPayload();
 
                     Optional.ofNullable(uplinkMessage.getMetaData())
-                        .ifPresent(data -> ctx.put(LoraConstants.META_DATA, data));
+                        .ifPresent(metaData -> ctx.put(LoraConstants.APP_PROPERTY_META_DATA, metaData));
 
                     Optional.ofNullable(uplinkMessage.getAdditionalData())
-                            .ifPresent(data -> ctx.put(LoraConstants.ADDITIONAL_DATA, data));
+                            .ifPresent(additionalData -> ctx.put(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, additionalData));
 
                     final String contentType;
                     if (payload.length() > 0) {
