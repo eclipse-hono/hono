@@ -14,18 +14,13 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 import org.eclipse.hono.adapter.lora.Location;
-import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.util.RegistrationConstants;
 
 import com.google.common.io.BaseEncoding;
 
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -123,115 +118,6 @@ public class LoraUtils {
         }
     }
 
-
-    /**
-     * Extracts a property from a JSON object, applies a normalization function to
-     * it and adds it to a map.
-     * <p>
-     * This method does nothing if the given JSON object does not contain a property
-     * of the given name and type.
-     *
-     * @param <T> The expected type of the property.
-     * @param parent The JSON object to retrieve the property from.
-     * @param propertyName The name of the property.
-     * @param expectedType The expected type of the property.
-     * @param normalizedProperyName The key under which the normalized value should be put into the map.
-     * @param valueMapper A function for normalizing the extracted property.
-     * @param normalizedValues The target map to put the normalized value to.
-     */
-    public static <T> void addNormalizedValue(
-            final JsonObject parent,
-            final String propertyName,
-            final Class<T> expectedType,
-            final String normalizedProperyName,
-            final Function<T, Object> valueMapper,
-            final Map<String, Object> normalizedValues) {
-        getChildObject(parent, propertyName, expectedType)
-            .map(valueMapper)
-            .ifPresent(v -> normalizedValues.put(normalizedProperyName, v));
-    }
-
-    /**
-     * Checks if the given json is a valid LoRa gateway.
-     *
-     * @param gateway the gateway as json
-     * @return {@code true} if the input is in a valid format
-     */
-    public static boolean isValidLoraGateway(final JsonObject gateway) {
-        final JsonObject data = gateway.getJsonObject(RegistrationConstants.FIELD_DATA);
-        if (data == null) {
-            return false;
-        }
-
-        final JsonObject loraConfig = data.getJsonObject(LoraConstants.FIELD_LORA_CONFIG);
-        if (loraConfig == null) {
-            return false;
-        }
-
-        try {
-            final String provider = loraConfig.getString(LoraConstants.FIELD_LORA_PROVIDER);
-            if (isBlank(provider)) {
-                return false;
-            }
-
-            final String authId = loraConfig.getString(LoraConstants.FIELD_AUTH_ID);
-            if (isBlank(authId)) {
-                return false;
-            }
-
-            final int port = loraConfig.getInteger(LoraConstants.FIELD_LORA_DEVICE_PORT);
-            if (port < 0 || port > 65535) {
-                return false;
-            }
-
-            final String url = loraConfig.getString(LoraConstants.FIELD_LORA_URL);
-            if (isBlank(url)) {
-                return false;
-            }
-        } catch (final ClassCastException | DecodeException e) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Extract the uri of the lora provider server from the gateway device. Result will *not* contain a trailing slash.
-     *
-     * @param gatewayDevice the gateway device
-     * @return the user configured lora provider
-     */
-    public static String getNormalizedProviderUrlFromGatewayDevice(final JsonObject gatewayDevice) {
-        final JsonObject loraNetworkData = LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice);
-
-        // Remove trailing slash at the end, if any. Makes it easier to concat
-        String url = loraNetworkData.getString(LoraConstants.FIELD_LORA_URL);
-        if (url.endsWith("/")) {
-            url = url.substring(0, url.length() - 1);
-        }
-        return url;
-    }
-
-    /**
-     * Converts the hex encoding of a byte array to its Base64 encoding.
-     *
-     * @param hex The hex string to convert.
-     * @return The Base64 encoding.
-     * @throws NullPointerException if hex string is {@code null}.
-     * @throws LoraProviderMalformedPayloadException if the given string is not a valid hex encoding.
-     */
-    public static String convertFromHexToBase64(final String hex) {
-
-        Objects.requireNonNull(hex);
-        try {
-            final byte[] decodedBytes = BaseEncoding.base16().decode(hex.toUpperCase());
-            return Base64.getEncoder().encodeToString(decodedBytes);
-        } catch (final IllegalArgumentException e) {
-            // malformed hex encoding
-            throw new LoraProviderMalformedPayloadException("cannot decode hex data", e);
-        }
-    }
-
     /**
      * Converts the Base64 encoding of a byte array to its hex encoding.
      *
@@ -261,36 +147,5 @@ public class LoraUtils {
     public static String convertToHexString(final byte[] data) {
         Objects.requireNonNull(data);
         return BaseEncoding.base16().encode(data);
-    }
-
-    /**
-     * Gets the LoRa config from the gateway device.
-     *
-     * @param gatewayDevice the gateway device
-     * @return the configuration as json
-     */
-    public static JsonObject getLoraConfigFromLoraGatewayDevice(final JsonObject gatewayDevice) {
-        return gatewayDevice.getJsonObject(RegistrationConstants.FIELD_DATA)
-                .getJsonObject(LoraConstants.FIELD_LORA_CONFIG);
-    }
-
-    /**
-     * Checks the status code for success. A status of 2xx is defined as successful.
-     *
-     * @param statusCode the status code to check
-     * @return boolean {@code true} if the status code is successful
-     */
-    public static boolean isHttpSuccessStatusCode(final int statusCode) {
-        return statusCode >= 200 && statusCode <= 299;
-    }
-
-    /**
-     * Checks if the given string is null, empty or consists only of whitespace.
-     *
-     * @param message the string to check
-     * @return boolean {@code true} if the message is a blank
-     */
-    public static boolean isBlank(final String message) {
-        return message == null || message.trim().isEmpty();
     }
 }
