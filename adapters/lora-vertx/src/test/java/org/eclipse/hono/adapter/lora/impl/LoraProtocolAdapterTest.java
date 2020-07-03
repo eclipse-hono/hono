@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,10 +29,12 @@ import static org.mockito.Mockito.withSettings;
 
 import java.nio.charset.StandardCharsets;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
@@ -48,6 +51,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +78,7 @@ import io.vertx.proton.ProtonDelivery;
  */
 public class LoraProtocolAdapterTest {
 
+    private static final int TEST_FUNCTION_PORT = 2;
     private static final String TEST_TENANT_ID = "myTenant";
     private static final String TEST_GATEWAY_ID = "myLoraGateway";
     private static final String TEST_DEVICE_ID = "0102030405060708";
@@ -184,8 +189,17 @@ public class LoraProtocolAdapterTest {
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
 
-        verify(telemetrySender).send(any(Message.class), any(SpanContext.class));
-
+        final ArgumentCaptor<Message> message = ArgumentCaptor.forClass(Message.class);
+        verify(telemetrySender).send(message.capture(), any(SpanContext.class));
+        assertThat(MessageHelper.getPayload(message.getValue())).isEqualTo(Buffer.buffer(TEST_PAYLOAD));
+        assertThat(message.getValue().getContentType()).isEqualTo(LoraConstants.CONTENT_TYPE_LORA_BASE + providerMock.getProviderName());
+        final ApplicationProperties props = message.getValue().getApplicationProperties();
+        assertThat(MessageHelper.getApplicationProperty(props, LoraConstants.APP_PROPERTY_FUNCTION_PORT, Integer.class))
+            .isEqualTo(TEST_FUNCTION_PORT);
+        final String metaData = MessageHelper.getApplicationProperty(props, LoraConstants.APP_PROPERTY_META_DATA, String.class);
+        assertThat(metaData).isNotNull();
+        final JsonObject metaDataJson = new JsonObject(metaData);
+        assertThat(metaDataJson.getInteger(LoraConstants.APP_PROPERTY_FUNCTION_PORT)).isEqualTo(TEST_FUNCTION_PORT);
         verify(httpContext.getRoutingContext().response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
         verify(currentSpan).finish();
     }
@@ -328,11 +342,16 @@ public class LoraProtocolAdapterTest {
     }
 
     private HttpContext newHttpContext() {
+
+        final LoraMetaData metaData = new LoraMetaData();
+        metaData.setFunctionPort(TEST_FUNCTION_PORT);
+
         final RoutingContext context = mock(RoutingContext.class);
         when(context.getBody()).thenReturn(Buffer.buffer());
         when(context.user()).thenReturn(new DeviceUser(TEST_TENANT_ID, TEST_GATEWAY_ID));
         when(context.response()).thenReturn(mock(HttpServerResponse.class));
         when(context.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER)).thenReturn(TEST_PROVIDER);
+        when(context.get(LoraConstants.APP_PROPERTY_META_DATA)).thenReturn(metaData);
         final Span parentSpan = mock(Span.class);
         when(parentSpan.context()).thenReturn(mock(SpanContext.class));
         when(context.get(TracingHandler.CURRENT_SPAN)).thenReturn(parentSpan);
