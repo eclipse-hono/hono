@@ -59,6 +59,10 @@ title = "Release Notes"
   containing unknown properties. In the past such properties had been simply ignored.
 * The Device Registry Management API has been amended with example messages and more thorough
   description of operations.
+* The CoAP adapter has been enhanced to asynchronously look up a device's PSK during the
+  DTLS handshake. This will allow the adapter to handle a lot more handshakes concurrently.
+  The adapter also employs a more efficient message de-duplicator which reduces the adapter's
+  memory footprint.
 
 ### API Changes
 

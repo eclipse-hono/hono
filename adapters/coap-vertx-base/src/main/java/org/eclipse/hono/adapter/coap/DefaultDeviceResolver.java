@@ -143,18 +143,16 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         if (clientIdentity instanceof PreSharedKeyIdentity) {
             final Span span = newSpan("PSK-getDeviceIdentityInfo");
             final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
+            TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
+            TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
             if (customArgument instanceof String) {
                 // device id from previous lookup
                 final String deviceId = (String) customArgument;
                 result.put("hono-device", new Device(deviceIdentity.getTenantId(), deviceId));
-                TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
-                TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
                 TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
                 span.log("successfully recovered device identity");
             } else {
-                // session resumption, so no custom-argument, because there was no previous lookup 
-                TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
-                TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
+                // session resumption, so no custom-argument, because there was no previous lookup
                 final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
                 context.runOnContext(go -> {
                     credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
@@ -207,38 +205,33 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         TracingHelper.TAG_AUTH_ID.set(span, handshakeIdentity.getAuthId());
 
         credentialsClientFactory
-                .getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
-                .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId(),
-                        new JsonObject(), span.context()))
-                .onComplete(credentialsResult -> {
-
-                    SecretKey key = null;
-                    String deviceId = null;
-
-                    if (credentialsResult.succeeded()) {
-                        final CredentialsObject credentials = credentialsResult.result();
-                        deviceId = credentials.getDeviceId();
-                        TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
-                        key = getCandidateKey(credentials);
-                    }
-                    if (key != null && deviceId != null) {
-                        span.log("successfully retrieved PSK for device");
-                    } else {
-                        final Throwable cause = credentialsResult.cause();
-                        if (cause != null) {
-                            TracingHelper.logError(span, "could not find PSK for device", cause);
-                        } else {
-                            TracingHelper.logError(span, "could not find PSK for device");
-                        }
-                        LOG.debug("error retrieving credentials for PSK identity [{}]",
-                                publicInfo);
-                        SecretUtil.destroy(key);
-                        key = null;
-                        deviceId = null;
-                    }
-                    span.finish();
-                    californiumResultHandler.apply(new PskSecretResult(cid, identity, key, deviceId));
-                });
+            .getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
+            .compose(client -> client.get(
+                    handshakeIdentity.getType(),
+                    handshakeIdentity.getAuthId(),
+                    new JsonObject(),
+                    span.context()))
+            .map(credentials -> {
+                final String deviceId = credentials.getDeviceId();
+                TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+                final SecretKey key = getCandidateKey(credentials);
+                if (key == null) {
+                    TracingHelper.logError(span, "PSK credentials for device do not contain proper key");
+                    return new PskSecretResult(cid, identity, null, null);
+                } else {
+                    span.log("successfully retrieved PSK for device");
+                    return new PskSecretResult(cid, identity, key, deviceId);
+                }
+            })
+            .otherwise(t -> {
+                TracingHelper.logError(span, "could not retrieve PSK credentials for device", t);
+                LOG.debug("error retrieving credentials for PSK identity [{}]", publicInfo, t);
+                return new PskSecretResult(cid, identity, null, null);
+            })
+            .onSuccess(result -> {
+                span.finish();
+                californiumResultHandler.apply(result);
+            });
     }
 
     @Override
@@ -263,8 +256,12 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     }
 
     @Override
-    public PskSecretResult requestPskSecretResult(final ConnectionId cid, final ServerNames serverName,
-            final PskPublicInformation identity, final String hmacAlgorithm, final SecretKey otherSecret,
+    public PskSecretResult requestPskSecretResult(
+            final ConnectionId cid,
+            final ServerNames serverName,
+            final PskPublicInformation identity,
+            final String hmacAlgorithm,
+            final SecretKey otherSecret,
             final byte[] seed) {
 
         context.runOnContext((v) -> loadCredentialsForDevice(cid, identity));
@@ -275,5 +272,4 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     public void setResultHandler(final PskSecretResultHandler resultHandler) {
         californiumResultHandler = resultHandler;
     }
-
 }
