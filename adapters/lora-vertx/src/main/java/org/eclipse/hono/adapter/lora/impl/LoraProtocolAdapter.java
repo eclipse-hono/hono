@@ -213,10 +213,9 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     final String contentType;
                     if (payload.length() > 0) {
                         contentType = String.format(
-                                "%s%s%s",
+                                "%s%s",
                                 LoraConstants.CONTENT_TYPE_LORA_BASE,
-                                provider.getProviderName(),
-                                LoraConstants.CONTENT_TYPE_LORA_POST_FIX);
+                                provider.getProviderName());
                     } else {
                         contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
                     }
