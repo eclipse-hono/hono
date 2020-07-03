@@ -222,10 +222,29 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     @Test
     public void testRemoveCommandHandlingAdapterInstanceFailsForNonExistingEntry(final VertxTestContext ctx) {
 
+        getClient(Constants.DEFAULT_TENANT)
+            .compose(client -> client.removeCommandHandlingAdapterInstance("non-existing-device", "adapterOne", null))
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> assertThat(result).isFalse());
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to remove the command-handling adapter instance for a device succeeds with
+     * a <em>false</em> value if the device is mapped to a different adapter instance ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testRemoveCommandHandlingAdapterInstanceFailsForNonMatchingAdapterInstanceId(final VertxTestContext ctx) {
+
         final String deviceId = randomId();
 
         getClient(Constants.DEFAULT_TENANT)
-            .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "", null))
+            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, "adapterOne", Duration.ofMinutes(5), null).map(client))
+            .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "notAdapterOne", null))
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> assertThat(result).isFalse());
                 ctx.completeNow();
