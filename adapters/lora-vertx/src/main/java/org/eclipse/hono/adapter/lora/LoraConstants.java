@@ -36,7 +36,6 @@ public class LoraConstants {
     public static final String FIELD_LORA_DEVICE_PORT = "lora-port";
     public static final String FIELD_LORA_DOWNLINK_PAYLOAD = "payload";
     public static final String EMPTY = "";
-    public static final String CONTENT_TYPE_LORA_POST_FIX = "+json";
     public static final String CONTENT_TYPE_LORA_BASE = "application/vnd.eclipse-hono.lora.";
     public static final String META_DATA = "meta_data";
     public static final String ADDITIONAL_DATA = "additional_data";
