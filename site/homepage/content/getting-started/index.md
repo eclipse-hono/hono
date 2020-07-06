@@ -103,9 +103,9 @@ For evaluation purposes a single node *Minikube* cluster is sufficient to deploy
 Once Hono has been deployed to your local cluster, run the following commands to set some environment variables which will be used during the guide
 
 ~~~sh
-export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-registry-ext --output=jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
+export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-registry-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http-vertx --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
-export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt-vertx --output="jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
+export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt-vertx --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 ~~~
 
 Verify the last step with
