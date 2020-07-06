@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
@@ -93,21 +94,6 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         this.receiver = Objects.requireNonNull(receiver);
     }
 
-    /**
-     * Gets the AMQP <em>target</em> address to use for sending command requests
-     * to Hono's Command &amp; Control API endpoint.
-     *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @return The target address.
-     * @throws NullPointerException if tenant or device is {@code null}.
-     */
-    public static final String getTargetAddress(final String tenantId, final String deviceId) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId);
-    }
-
     @Override
     protected String getName() {
         return CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT;
@@ -172,7 +158,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
         final Promise<BufferResult> resultTracker = Promise.promise();
 
-        final String messageTargetAddress = getTargetAddress(getTenantId(), deviceId);
+        final String messageTargetAddress = AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, getTenantId(), deviceId, connection.getConfig());
         createAndSendRequest(command, messageTargetAddress, properties, data, contentType, resultTracker,
                 null, currentSpan);
 
@@ -217,7 +203,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             AbstractHonoClient.setApplicationProperties(request, properties);
 
             final String messageId = createMessageId();
-            request.setAddress(getTargetAddress(getTenantId(), deviceId));
+            request.setAddress(AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, getTenantId(), deviceId, connection.getConfig()));
             request.setMessageId(messageId);
             request.setSubject(command);
 

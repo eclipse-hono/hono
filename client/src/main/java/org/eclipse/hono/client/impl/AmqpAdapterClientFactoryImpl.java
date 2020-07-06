@@ -28,7 +28,10 @@ import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientCommandCons
 import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientCommandResponseSender;
 import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientEventSenderImpl;
 import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientTelemetrySenderImpl;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.vertx.core.Future;
 
@@ -80,7 +83,7 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
     @Override
     public Future<TelemetrySender> getOrCreateTelemetrySender() {
 
-        final String cacheKey = TelemetrySenderImpl.getTargetAddress(tenantId, null);
+        final String cacheKey = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, null);
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     telemetrySenderClientFactory.getOrCreateClient(
@@ -98,7 +101,7 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
     @Override
     public Future<EventSender> getOrCreateEventSender() {
 
-        final String cacheKey = EventSenderImpl.getTargetAddress(tenantId, null);
+        final String cacheKey = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, null);
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     eventSenderClientFactory.getOrCreateClient(

@@ -31,9 +31,9 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
@@ -223,7 +223,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     private Future<MessageConsumer> newMappingAndDelegatingCommandConsumer(final String tenantId) {
         log.trace("creating new MappingAndDelegatingCommandConsumer [tenant-id: {}]", tenantId);
-        final String address = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
+        final String address = AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null, connection.getConfig());
         return connection.createReceiver(
                 address,
                 ProtonQoS.AT_LEAST_ONCE,

@@ -84,3 +84,17 @@ In order to authenticate the server by means of the server's certificate, the fa
 The client can also be configured to authenticate to the server by means of an X.509 client certificate if the server is configured to support this. The `${PREFIX}_CERTPATH` and `${PREFIX}_KEYPATH` variables can be used to set the paths to PEM files containing the certificate and private key. Alternatively, the `${PREFIX}_KEYSTOREPATH` and `${PREFIX}_KEYSTOREPASSWORD` variables can be used to set the path and password of a key store which contains both the certificate as well as the private key.
 
 The factory supports TLS 1.2 only by default for negotiating TLS sessions with servers. Additional protocols can be enabled by setting the `${PREFIX}_SECUREPROTOCOLS` variable to a comma separated list of protocol names as defined in the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl). However, great care should be taken when enabling older protocols because most of them are vulnerable to attacks.
+
+## Address rewriting
+
+In some multi-tenant messaging environments external can have their addresses internally mapped to enforce consistent namespaces. For example, the addresses can be prefixed by the virtual host the client uses to connect or some other internal identifier. So address like `telemetry/DEFAULT_TENANT` would be internally represented as `test-vhost/telemetry/DEFAULT_TENANT` for example.
+
+To successfully address those external clients, infrastructure Hono components need to apply the same mapping rules. The client factory can be configured to automatically rewrite addresses when opening links to the AMQP network. The `${PREFIX}_ADDRESSREWRITERULE` variable contains rewrite rule for addresses based on the regular expressions.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `${PREFIX}_ADDRESSREWRITERULE`<br>`--${prefix}.addressRewriteRule` | no | - | The address rewrite rule in the `"$PATTERN $REPLACEMENT"` format. |
+
+The rule is defined in the `"$PATTERN $REPLACEMENT"` format, where the pattern and replacement use the standard [Java regular expression](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) syntax. The pattern should match the address or otherwise the original address will be used.
+
+For example, setting `HONO_ADDRESSREWRITERULE` to `([a-z_]+)/([\\w-]+) test-vhost/$1/$2` would result in adding the `test-vhost/` prefix to all addresses used by the client.
