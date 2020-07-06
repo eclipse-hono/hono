@@ -19,7 +19,10 @@ import java.util.Objects;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
@@ -61,10 +64,10 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     clientFactory.getOrCreateClient(
-                            TelemetrySenderImpl.getTargetAddress(tenantId, null),
+                            AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, connection.getConfig()),
                             () -> TelemetrySenderImpl.create(connection, tenantId,
                                     onSenderClosed -> {
-                                        clientFactory.removeClient(TelemetrySenderImpl.getTargetAddress(tenantId, null));
+                                        clientFactory.removeClient(AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, connection.getConfig()));
                                     }),
                             result);
                 }));
@@ -80,23 +83,23 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     clientFactory.getOrCreateClient(
-                            EventSenderImpl.getTargetAddress(tenantId, null),
+                            AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, connection.getConfig()),
                             () -> EventSenderImpl.create(connection, tenantId,
                                     onSenderClosed -> {
-                                        clientFactory.removeClient(EventSenderImpl.getTargetAddress(tenantId, null));
+                                        clientFactory.removeClient(AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, connection.getConfig()));
                                     }),
                             result);
                 }));
     }
 
     private void handleTenantTimeout(final Message<String> msg) {
-        final String telemetryAddress = TelemetrySenderImpl.getTargetAddress(msg.body(), null);
+        final String telemetryAddress = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, msg.body(), null, connection.getConfig());
         final DownstreamSender telemetryClient = clientFactory.getClient(telemetryAddress);
         if (telemetryClient != null) {
             telemetryClient.close(v -> clientFactory.removeClient(telemetryAddress));
         }
 
-        final String eventAddress = EventSenderImpl.getTargetAddress(msg.body(), null);
+        final String eventAddress = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, msg.body(), null, connection.getConfig());
         final DownstreamSender eventClient = clientFactory.getClient(eventAddress);
         if (eventClient != null) {
             eventClient.close(v -> clientFactory.removeClient(eventAddress));

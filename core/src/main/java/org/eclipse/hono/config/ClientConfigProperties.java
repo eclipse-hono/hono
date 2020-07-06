@@ -13,7 +13,11 @@
 
 package org.eclipse.hono.config;
 
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.Strings;
 
 /**
  * Common configuration properties required for accessing an AMQP 1.0 container.
@@ -81,6 +85,9 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     private long reconnectDelayIncrementMillis = DEFAULT_RECONNECT_DELAY_INCREMENT;
     private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
     private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
+    private String addressRewriteRule;
+    private Pattern addressRewritePattern;
+    private String addressRewriteReplacement;
 
     /**
      * Creates new properties with default values.
@@ -517,5 +524,55 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         } else {
             this.idleTimeoutMillis = idleTimeoutMillis;
         }
+    }
+
+    /**
+     * Gets the rewrite rule for downstream addresses.
+     * See {@link org.eclipse.hono.util.AddressHelper#rewrite(String, ClientConfigProperties)} for more information about syntax and behavior of this property.
+     *
+     * @return The rewrite rule to be applied to the address.
+     */
+    public final String getAddressRewriteRule() {
+        return addressRewriteRule;
+    }
+
+    /**
+     * Sets the rewrite rule for downstream addresses.
+     * This method parses the rule and tries to precompile the pattern to be used.
+     * The pattern and replacement can be obtained by {@link #getAddressRewritePattern()} and {@link #getAddressRewriteReplacement()} methods.
+     *
+     * For more information about syntax and behavior of this property see {@link org.eclipse.hono.util.AddressHelper#rewrite(String, ClientConfigProperties)} method.
+     *
+     * @param addressRewriteRule The rewrite rule to be applied to the address.
+     */
+    public final void setAddressRewriteRule(final String addressRewriteRule) {
+        this.addressRewriteRule = addressRewriteRule;
+        if (!Strings.isNullOrEmpty(addressRewriteRule)) {
+            final String[] elements = addressRewriteRule.split(" ", 2);
+            if (elements.length == 2) {
+                try {
+                    addressRewritePattern = Pattern.compile(elements[0]);
+                    addressRewriteReplacement = elements[1];
+                } catch (PatternSyntaxException pe) { }
+            }
+        }
+    }
+
+    /**
+     * Gets precompiled address rewrite pattern.
+     *
+     * @return The precompiled address rewrite pattern.
+     */
+    public final Pattern getAddressRewritePattern() {
+        return addressRewritePattern;
+    }
+
+    /**
+     * Gets address rewrite replacement.
+     *
+     * @return The address rewrite replacement.
+     */
+    public final String getAddressRewriteReplacement() {
+        return addressRewriteReplacement;
     }
 }

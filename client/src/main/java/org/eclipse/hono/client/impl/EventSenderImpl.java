@@ -20,6 +20,7 @@ import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.EventConstants;
 
 import io.opentracing.Span;
@@ -53,23 +54,6 @@ public class EventSenderImpl extends AbstractDownstreamSender {
         super(con, sender, tenantId, targetAddress);
     }
 
-    /**
-     * Gets the AMQP <em>target</em> address to use for sending messages to Hono's event endpoint.
-     *
-     * @param tenantId The tenant to send events for.
-     * @param deviceId The device to send events for. If {@code null}, the target address can be used
-     *                 to send events for arbitrary devices belonging to the tenant.
-     * @return The target address.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    public static String getTargetAddress(final String tenantId, final String deviceId) {
-        final StringBuilder address = new StringBuilder(EventConstants.EVENT_ENDPOINT).append("/").append(tenantId);
-        if (deviceId != null && deviceId.length() > 0) {
-            address.append("/").append(deviceId);
-        }
-        return address.toString();
-    }
-
     @Override
     public String getEndpoint() {
         return EventConstants.EVENT_ENDPOINT;
@@ -77,7 +61,7 @@ public class EventSenderImpl extends AbstractDownstreamSender {
 
     @Override
     protected String getTo(final String deviceId) {
-        return getTargetAddress(tenantId, deviceId);
+        return AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, deviceId, null);
     }
 
     /**
@@ -98,7 +82,7 @@ public class EventSenderImpl extends AbstractDownstreamSender {
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
 
-        final String targetAddress = getTargetAddress(tenantId, null);
+        final String targetAddress = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, con.getConfig());
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
                 .compose(sender -> Future.succeededFuture(new EventSenderImpl(con, sender, tenantId, targetAddress)));
     }

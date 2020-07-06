@@ -19,6 +19,7 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 
 import io.opentracing.Span;
@@ -84,10 +85,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         return send(message, context);
     }
 
-    static final String getTargetAddress(final String tenantId, final String replyId) {
-        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId);
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -98,7 +95,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         Objects.requireNonNull(commandResponse);
         final Message message = commandResponse.toMessage();
         Objects.requireNonNull(message);
-        message.setAddress(targetAddress);
+        message.setAddress(AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, commandResponse.getReplyToId(), null));
         return sendAndWaitForOutcome(message, context);
     }
 
@@ -128,7 +125,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
 
-        final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, replyId);
+        final String targetAddress = AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId, con.getConfig());
         final ClientConfigProperties props = new ClientConfigProperties(con.getConfig());
         if (props.getFlowLatency() < DEFAULT_COMMAND_FLOW_LATENCY) {
             props.setFlowLatency(DEFAULT_COMMAND_FLOW_LATENCY);

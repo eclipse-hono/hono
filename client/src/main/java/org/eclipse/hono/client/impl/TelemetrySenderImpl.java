@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 
@@ -59,24 +60,6 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         super(con, sender, tenantId, targetAddress);
     }
 
-    /**
-     * Gets the AMQP <em>target</em> address to use for uploading data to Hono's telemetry endpoint.
-     *
-     * @param tenantId The tenant to upload data for.
-     * @param deviceId The device to upload data for. If {@code null}, the target address can be used
-     *                 to upload data for arbitrary devices belonging to the tenant.
-     * @return The target address.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    public static String getTargetAddress(final String tenantId, final String deviceId) {
-        final StringBuilder targetAddress = new StringBuilder(TelemetryConstants.TELEMETRY_ENDPOINT)
-                .append("/").append(Objects.requireNonNull(tenantId));
-        if (deviceId != null && deviceId.length() > 0) {
-            targetAddress.append("/").append(deviceId);
-        }
-        return targetAddress.toString();
-    }
-
     @Override
     public String getEndpoint() {
         return TelemetryConstants.TELEMETRY_ENDPOINT;
@@ -84,7 +67,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
 
     @Override
     protected String getTo(final String deviceId) {
-        return getTargetAddress(tenantId, deviceId);
+        return AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId, null);
     }
 
     /**
@@ -105,7 +88,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
 
-        final String targetAddress = getTargetAddress(tenantId, null);
+        final String targetAddress = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, con.getConfig());
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
                 .compose(sender -> Future
                         .succeededFuture(new TelemetrySenderImpl(con, sender, tenantId, targetAddress)));
