@@ -14,14 +14,19 @@
 package org.eclipse.hono.service.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+
 import org.eclipse.hono.cache.ExpiringValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.cache.Cache;
 
 
@@ -84,6 +89,53 @@ public class SpringBasedExpiringValueCacheTest {
         assertThat(result).isNull();
         // and the expired value has been evicted from the cache
         verify(springCache).evict("key");
+    }
+
+    /**
+     * Verifies that a cache entry is not expired if the corresponding put method without an expiry is called.
+     */
+    @Test
+    public void testPutWithoutExpiryDoesNotChangeExpiry() {
+        final Instant expectedExpiry = Instant.now().plusSeconds(60);
+        final String expectedValue = "4712";
+
+        // GIVEN a cache that contains a non-expired value
+        final ExpiringValue<String> value = mock(ExpiringValue.class);
+        when(value.isExpired()).thenReturn(Boolean.FALSE);
+        when(value.getValue()).thenReturn("4711");
+        when(value.getExpirationTime()).thenReturn(expectedExpiry);
+        when(springCache.get("key", ExpiringValue.class)).thenReturn(value);
+
+        // WHEN trying to put a value for the key without a new expiry
+        cache.put("key", expectedValue);
+
+        // THEN the new cache value has the expiration time of the value it replaced
+        final ArgumentCaptor<ExpiringValue<String>> captor = ArgumentCaptor.forClass(ExpiringValue.class);
+        verify(springCache).put(eq("key"), captor.capture());
+
+        final ExpiringValue<String> actualValue = captor.getValue();
+        assertThat(actualValue.getValue()).isEqualTo(expectedValue);
+        assertThat(actualValue.getExpirationTime()).isEqualTo(expectedExpiry);
+
+        verify(springCache, never()).evict("key");
+    }
+
+    /**
+     * Verifies that an evicted entry is not overwritten if a new value without an expiry being set is put into the
+     * cache.
+     */
+    @Test
+    public void testPutWithoutExpiryDoesNotReplaceAnEvictedEntry() {
+        // GIVEN a cache that contains an expired value
+        final ExpiringValue<String> value = mock(ExpiringValue.class);
+        when(value.isExpired()).thenReturn(Boolean.TRUE);
+        when(springCache.get("key", ExpiringValue.class)).thenReturn(value);
+
+        // WHEN trying to put a value for the key without a new expiry
+        cache.put("key", "4712");
+
+        // THEN the cache should not be updated
+        verify(springCache, never()).put(eq("key"), any());
     }
 
 }

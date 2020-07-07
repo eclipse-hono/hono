@@ -53,6 +53,18 @@ public interface ExpiringValueCache<K, V> {
     void put(K key, V value, Duration maxAge);
 
     /**
+     * Puts a value to the cache but does not change the expiration time of the present value.
+     * <p>
+     * Any previous value for the key will be replaced with the new one.
+     *
+     * @param key The key under which the value is stored.
+     * @param value The value to store.
+     *
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    void put(K key, V value);
+
+    /**
      * Gets a value from the cache.
      *
      * @param key The key to get the value for.

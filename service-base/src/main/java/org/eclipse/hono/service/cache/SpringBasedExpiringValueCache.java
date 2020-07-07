@@ -73,8 +73,21 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
     }
 
     @Override
-    public V get(final K key) {
+    public void put(final K key, final V value) {
 
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+
+        final ExpiringValue<V> presentValue = getExpiringValue(key);
+
+        if (presentValue == null) {
+            return;
+        }
+
+        put(key, value, presentValue.getExpirationTime());
+    }
+
+    ExpiringValue<V> getExpiringValue(final K key) {
         if (key == null) {
             return null;
         } else {
@@ -90,9 +103,16 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
                 return null;
             } else {
                 LOG.trace("cache hit [key: {}]", key);
-                return value.getValue();
+                return value;
             }
         }
+    }
+
+    @Override
+    public V get(final K key) {
+        final ExpiringValue<V> expiringValue = getExpiringValue(key);
+
+        return expiringValue != null ? expiringValue.getValue() : null;
     }
 
 }

@@ -30,6 +30,13 @@ public interface ExpiringValue<T> {
     T getValue();
 
     /**
+     * Gets the instant after which the value will be considered expired.
+     *
+     * @return The instant after which the value will be considered expired.
+     */
+    Instant getExpirationTime();
+
+    /**
      * Checks if the value has already expired.
      *
      * @return {@code true} if the value has expired based on the current system time,
