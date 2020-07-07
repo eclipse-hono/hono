@@ -37,9 +37,9 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,8 +133,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
         if (clientIdentity instanceof PreSharedKeyIdentity) {
             final Span span = newSpan("PSK-getDeviceIdentityInfo");
             final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceIdentity.getTenantId())
-                .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdentity.getAuthId());
+            span.setTag(TracingHelper.TAG_TENANT_ID, deviceIdentity.getTenantId())
+                .setTag(TracingHelper.TAG_AUTH_ID, deviceIdentity.getAuthId());
             final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
             context.runOnContext(go -> {
                 credentialsClientFactory
@@ -153,7 +153,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
                 // so no need to use get(Long, TimeUnit) here
                 final CredentialsObject credentials = credentialsResult.join();
                 result.put("hono-device", new Device(deviceIdentity.getTenantId(), credentials.getDeviceId()));
-                span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, credentials.getDeviceId());
+                span.setTag(TracingHelper.TAG_DEVICE_ID, credentials.getDeviceId());
             } catch (final CompletionException e) {
                 LOG.debug("could not resolve authenticated principal [type: {}, tenant-id: {}, auth-id: {}]",
                         clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
@@ -174,8 +174,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             span.finish();
             return null;
         }
-        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, handshakeIdentity.getTenantId())
-            .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, handshakeIdentity.getAuthId());
+        span.setTag(TracingHelper.TAG_TENANT_ID, handshakeIdentity.getTenantId())
+            .setTag(TracingHelper.TAG_AUTH_ID, handshakeIdentity.getAuthId());
 
         final CompletableFuture<SecretKey> secret = new CompletableFuture<>();
         context.runOnContext((v) -> {
