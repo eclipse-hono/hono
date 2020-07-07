@@ -168,7 +168,7 @@ public final class DeviceRegistryHttpClient {
      * {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
      *
      * @return A future indicating the outcome of the operation. The future will succeed if the tenant has been created
-     *         successfully. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         successfully. Otherwise the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<MultiMap> addTenant() {
         return addTenant(null, (Tenant) null, null, HttpURLConnection.HTTP_CREATED);
@@ -182,7 +182,7 @@ public final class DeviceRegistryHttpClient {
      *
      * @param tenantId The id of the tenant to add.
      * @return A future indicating the outcome of the operation. The future will succeed if the tenant has been created
-     *         successfully. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         successfully. Otherwise the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<MultiMap> addTenant(final String tenantId) {
         return addTenant(tenantId, (Tenant) null, null, HttpURLConnection.HTTP_CREATED);
@@ -248,7 +248,7 @@ public final class DeviceRegistryHttpClient {
      * @param contentType The content type to set in the request.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
-     *         expected status code. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         expected status code. Otherwise the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<MultiMap> addTenant(final String tenantId, final JsonObject requestPayload, final String contentType,
             final int expectedStatusCode) {
@@ -345,7 +345,7 @@ public final class DeviceRegistryHttpClient {
      *
      * @param tenantId The tenant that the device belongs to.
      * @return A future indicating the outcome of the operation. The future will succeed if the registration information
-     *         has been added successfully. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         has been added successfully. Otherwise the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if the tenant is {@code null}.
      */
     public Future<MultiMap> registerDevice(final String tenantId) {
@@ -445,7 +445,7 @@ public final class DeviceRegistryHttpClient {
      * @param contentType The content type to set on the request.
      * @param expectedStatus The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
-     *         expected status code. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         expected status code. Otherwise the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if the tenant is {@code null}.
      */
     public Future<MultiMap> registerDevice(
