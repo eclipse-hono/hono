@@ -371,12 +371,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that an adapter rejects connections when the connection limit is exceeded.
+     * Verifies that an adapter rejects connections when the adapter's connection limit is exceeded.
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testEndpointHandlerRejectsConnectionsAboveLimit(final VertxTestContext ctx) {
+    public void testEndpointHandlerRejectsConnectionsExceedingAdapterLimit(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         final MqttServer server = getMqttServer(false);

@@ -1169,11 +1169,12 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the connection is rejected as the connection limit for 
-     * the adapter is exceeded.
+     * Verifies that an authenticated device's attempt to establish a connection fails if
+     * the adapter's connection limit is exceeded.
      */
     @Test
-    public void testConnectionFailsIfAdapterLevelConnectionLimitIsExceeded() {
+    public void testConnectionFailsForAuthenticatedDeviceIfAdapterLevelConnectionLimitIsExceeded() {
+
         // GIVEN an AMQP adapter that requires devices to authenticate
         config.setAuthenticationRequired(true);
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -1195,6 +1196,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final InOrder metricsInOrderVerifier = inOrder(metrics);
         metricsInOrderVerifier.verify(metrics).incrementConnections(TEST_TENANT_ID);
         // AND the adapter should close the connection right after it opened it
+        @SuppressWarnings("unchecked")
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture());
@@ -1203,6 +1205,43 @@ public class VertxBasedAmqpProtocolAdapterTest {
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementConnections(TEST_TENANT_ID);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
+    }
+
+    /**
+     * Verifies that an unauthenticated device's attempt to establish a connection fails if
+     * the adapter's connection limit is exceeded.
+     */
+    @Test
+    public void testConnectionFailsForUnauthenticatedDeviceIfAdapterLevelConnectionLimitIsExceeded() {
+
+        // GIVEN an AMQP adapter that does not require devices to authenticate
+        config.setAuthenticationRequired(false);
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        // WHEN the adapter's connection limit exceeds
+        when(connectionLimitManager.isLimitExceeded()).thenReturn(true);
+        // WHEN a device connects
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(new RecordImpl());
+        adapter.onConnectRequest(deviceConnection);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor
+                .forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+        // THEN the connection count should be incremented when the connection is opened
+        final InOrder metricsInOrderVerifier = inOrder(metrics);
+        metricsInOrderVerifier.verify(metrics).incrementUnauthenticatedConnections();
+        // AND the adapter should close the connection right after it opened it
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).closeHandler(closeHandler.capture());
+        closeHandler.getValue().handle(Future.succeededFuture());
+        final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
+        verify(deviceConnection).setCondition(errorConditionCaptor.capture());
+        assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+        // AND the connection count should be decremented accordingly when the connection is closed
+        metricsInOrderVerifier.verify(metrics).decrementUnauthenticatedConnections();
         verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
     }
 
