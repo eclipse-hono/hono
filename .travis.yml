@@ -16,7 +16,7 @@ install: true # no need to call 'mvn install'
 
 jobs:
   include:
-  - script: mvn verify -B -e -DcreateJavadoc=true -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Dmsg.count=400 -Dtest.env=true -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+  - script: mvn verify -B -e -DcreateJavadoc=true -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Dmsg.count=400 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
     name: "file based registry"
-  - script: mvn verify -B -e -DcreateJavadoc=true -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Dmsg.count=400 -Dtest.env=true -Pbuild-docker-image,run-tests,device-registry-mongodb -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+  - script: mvn verify -B -e -DcreateJavadoc=true -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Dmsg.count=400 -Pbuild-docker-image,run-tests,device-registry-mongodb -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
     name: "MongoDB based registry"

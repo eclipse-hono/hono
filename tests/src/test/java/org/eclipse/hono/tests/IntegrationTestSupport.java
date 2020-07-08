@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
@@ -417,7 +418,6 @@ public final class IntegrationTestSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
-    private static boolean testEnv = Boolean.parseBoolean(System.getProperty("test.env", "false"));
 
     /**
      * A client for managing tenants/devices/credentials.
@@ -433,6 +433,7 @@ public final class IntegrationTestSupport {
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
     private final boolean gatewayModeSupported;
+    private final boolean testEnv;
 
     /**
      * Creates a new helper instance.
@@ -444,17 +445,21 @@ public final class IntegrationTestSupport {
         this.vertx = Objects.requireNonNull(vertx);
         final String gatewayModeFlag = System.getProperty(PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE, "true");
         gatewayModeSupported = Boolean.parseBoolean(gatewayModeFlag);
-    }
-
-    /**
-     * Checks if this method is executed on a test environment.
-     * <p>
-     * Evaluates system property <em>test.env</em>.
-     *
-     * @return {@code true} if this is a test environment.
-     */
-    public static boolean isTestEnvironment() {
-        return testEnv;
+        testEnv = Optional.ofNullable(System.getenv("CI"))
+            .map(s -> {
+                final boolean runningOnCiEnvironment = Boolean.parseBoolean(s);
+                if (runningOnCiEnvironment) {
+                    LOGGER.info("running on CI environment");
+                }
+                return runningOnCiEnvironment;
+            })
+            .orElseGet(() -> {
+                final boolean runningOnTestEnvironment = Boolean.getBoolean("test.env");
+                if (runningOnTestEnvironment) {
+                    LOGGER.info("running on test environment");
+                }
+                return runningOnTestEnvironment;
+            });
     }
 
     private static ClientConfigProperties getClientConfigProperties(
@@ -592,6 +597,17 @@ public final class IntegrationTestSupport {
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+    }
+
+    /**
+     * Checks if this method is executed on a test environment.
+     * <p>
+     * Evaluates system property <em>test.env</em> and environment variable <em>CI</em>.
+     *
+     * @return {@code true} if this is a test environment.
+     */
+    public boolean isTestEnvironment() {
+        return testEnv;
     }
 
     /**
