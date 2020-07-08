@@ -50,6 +50,8 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.AdapterConnectionsExceededException;
+import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
@@ -175,6 +177,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
                         getTenantClientFactory(),
                         getConfig(),
+                        getMetrics(),
                         () -> tracer.buildSpan("open connection")
                             .ignoreActiveSpan()
                             .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
@@ -378,9 +381,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
 
         checkConnectionLimitForAdapter()
-            .onFailure(ex -> {
-                metrics.reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
-            })
             .compose(ok -> checkAuthorizationAndResourceLimits(authenticatedDevice, con, span))
             .compose(ok -> sendConnectedEvent(
                     Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
@@ -391,12 +391,18 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 con.open();
                 log.debug("connection with device [container: {}] established", con.getRemoteContainer());
                 span.log("connection established");
+                metrics.reportConnectionAttempt(
+                        ConnectionAttemptOutcome.SUCCEEDED,
+                        Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
                 return null;
             })
             .otherwise(t -> {
-                con.setCondition(getErrorCondition(t));
+                con.setCondition(AbstractProtocolAdapterBase.getErrorCondition(t));
                 con.close();
                 TracingHelper.logError(span, t);
+                metrics.reportConnectionAttempt(
+                        AbstractProtocolAdapterBase.getOutcome(t),
+                        Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
                 return null;
             })
             .onComplete(s -> span.finish());
@@ -426,7 +432,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         checkDeviceRegistration(authenticatedDevice, span.context()),
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
                                 .compose(tenantConfig -> CompositeFuture.all(
-                                        isAdapterEnabled(tenantConfig),
+                                        isAdapterEnabled(tenantConfig).recover(t -> Future.failedFuture(
+                                                new AdapterDisabledException(
+                                                        authenticatedDevice.getTenantId(),
+                                                        "adapter is disabled for tenant",
+                                                        t))),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                     .map(ok -> {
                         log.debug("{} is registered and enabled", authenticatedDevice);
@@ -438,8 +448,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         } else {
             log.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
-            span.log(Map.of(Fields.EVENT, "connection request from anonymous device",
-                    "container ID", con.getRemoteContainer()));
             connectAuthorizationCheck.complete();
         }
 
@@ -710,7 +718,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return d;
         }).recover(t -> {
             if (t instanceof ClientErrorException) {
-                final ErrorCondition condition = getErrorCondition(t);
+                final ErrorCondition condition = AbstractProtocolAdapterBase.getErrorCondition(t);
                 MessageHelper.rejected(ctx.delivery(), condition);
             } else {
                 ProtonHelper.released(ctx.delivery(), true);
@@ -1315,12 +1323,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private Future<Void> checkConnectionLimitForAdapter() {
+        final Promise<Void> result = Promise.promise();
         if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
-            //The error code is set so to be in sync with that of the tenant level connection limit.
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                    "connection limit for the adapter exceeded"));
+            result.fail(new AdapterConnectionsExceededException(null, "connection limit for the adapter exceeded", null));
+        } else {
+            result.complete();
         }
-        return Future.succeededFuture();
+        return result.future();
     }
     // -------------------------------------------< AbstractServiceBase >---
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,17 @@ public class ResourceConflictException extends ClientErrorException {
      * @param msg The detail message.
      */
     public ResourceConflictException(final String msg) {
-        super(HttpURLConnection.HTTP_CONFLICT, msg);
+        super(null, HttpURLConnection.HTTP_CONFLICT, msg);
+    }
+
+    /**
+     * Creates a new exception for a detail message.
+     *
+     * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
+     * @param msg The detail message.
+     */
+    public ResourceConflictException(final String tenant, final String msg) {
+        super(tenant, HttpURLConnection.HTTP_CONFLICT, msg);
     }
 
     /**
@@ -40,16 +50,27 @@ public class ResourceConflictException extends ClientErrorException {
      * @param cause The root cause.
      */
     public ResourceConflictException(final Throwable cause) {
-        super(HttpURLConnection.HTTP_CONFLICT, cause);
+        super(null, HttpURLConnection.HTTP_CONFLICT, cause);
+    }
+
+    /**
+     * Creates a new exception for a root cause.
+     *
+     * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
+     * @param cause The root cause.
+     */
+    public ResourceConflictException(final String tenant, final Throwable cause) {
+        super(tenant, HttpURLConnection.HTTP_CONFLICT, cause);
     }
 
     /**
      * Creates a new exception for a detail message and a root cause.
      *
+     * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
      * @param msg The detail message.
      * @param cause The root cause.
      */
-    public ResourceConflictException(final String msg, final Throwable cause) {
-        super(HttpURLConnection.HTTP_CONFLICT, msg, cause);
+    public ResourceConflictException(final String tenant, final String msg, final Throwable cause) {
+        super(tenant, HttpURLConnection.HTTP_CONFLICT, msg, cause);
     }
 }

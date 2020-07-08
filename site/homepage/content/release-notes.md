@@ -2,6 +2,15 @@
 title = "Release Notes"
 +++
 
+## 1.4.0 (not yet released)
+
+### New Features
+
+* The protocol adapters now report connection attempts made by devices
+  in a new metric. In particular, the metric includes a tag reflecting the outcome
+  of the attempt to establish a connection and the reason for failure.
+  Please refer to the [Metrics API]({{% doclink "/api/metrics" %}}) for details.
+
 ## 1.3.0
 
 ### New Features

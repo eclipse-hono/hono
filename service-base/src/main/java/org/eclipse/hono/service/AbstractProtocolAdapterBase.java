@@ -46,11 +46,11 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
-import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
@@ -423,6 +423,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Sets the manager to use for connection limits.
+     *
+     * @param connectionLimitManager The implementation that manages the connection limit.
+     */
+    public final void setConnectionLimitManager(final ConnectionLimitManager connectionLimitManager) {
+        this.connectionLimitManager = connectionLimitManager;
+    }
+
+    /**
+     * Gets the manager to use for connection limits.
+     *
+     * @return The manager. May be {@code null}.
+     */
+    protected final ConnectionLimitManager getConnectionLimitManager() {
+        return connectionLimitManager;
+    }
+
+    /**
      * Establishes the connections to the services this adapter depends on.
      * <p>
      * Note that the connections will most likely not have been established when the
@@ -561,7 +579,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return A succeeded future if this adapter is enabled for the tenant.
      *         Otherwise the future will be failed with a {@link ClientErrorException}
      *         containing the 403 Forbidden status code.
-     * @throws NullPointerException if tenant is {@code null}.
+     * @throws NullPointerException if tenant config is {@code null}.
      */
     protected final Future<TenantObject> isAdapterEnabled(final TenantObject tenantConfig) {
 
@@ -596,20 +614,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *                    if no span is currently active.
      * @return A succeeded future if the connection and message limits have not been reached yet
      *         or if the limits could not be checked.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}
-     *         containing the 403 Forbidden status code.
+     *         Otherwise the future will be failed with a {@link AuthorizationException}.
      * @throws NullPointerException if tenant is {@code null}.
      */
     protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig, final SpanContext spanContext) {
 
         Objects.requireNonNull(tenantConfig);
 
-        final Future<Void> connectionLimitCheckResult = resourceLimitChecks
-                .isConnectionLimitReached(tenantConfig, spanContext)
+        final Future<Void> connectionLimitCheckResult = resourceLimitChecks.isConnectionLimitReached(tenantConfig, spanContext)
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                        return Future.failedFuture(new TenantConnectionsExceededException(tenantConfig.getTenantId(), null, null));
                     } else {
                         return Future.succeededFuture();
                     }
@@ -617,15 +633,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final Future<Void> messageLimitCheckResult = checkMessageLimit(tenantConfig, 1, spanContext)
                 .recover(t -> {
                     if (t instanceof ClientErrorException) {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                        return Future.failedFuture(new DataVolumeExceededException(tenantConfig.getTenantId(), null, null));
                     }
                     return Future.failedFuture(t);
                 });
 
-        return CompositeFuture
-                .all(connectionLimitCheckResult, checkConnectionDurationLimit(tenantConfig, spanContext),
-                        messageLimitCheckResult)
-                .map(ok -> null);
+        return CompositeFuture.all(
+                connectionLimitCheckResult,
+                checkConnectionDurationLimit(tenantConfig, spanContext),
+                messageLimitCheckResult).mapEmpty();
     }
 
     /**
@@ -667,7 +683,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if the maximum connection duration across all protocol adapters 
+     * Checks if the maximum connection duration across all protocol adapters
      * for a particular tenant has been reached.
      * <p>
      * This default implementation uses the
@@ -681,8 +697,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *                    if no span is currently active.
      * @return A succeeded future if the connection duration limit has not yet been reached
      *         or if the limit could not be checked.
-     *         Otherwise, the future will be failed with a {@link ClientErrorException}
-     *         containing the 403 Forbidden status code.
+     *         Otherwise, the future will be failed with a {@link AuthorizationException}.
      * @throws NullPointerException if tenantConfig is {@code null}.
      */
     protected Future<Void> checkConnectionDurationLimit(final TenantObject tenantConfig,
@@ -694,7 +709,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                        return Future.failedFuture(new ConnectionDurationExceededException(tenantConfig.getTenantId(), null, null));
                     } else {
                         return Future.succeededFuture();
                     }
@@ -760,7 +775,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *                    if no span is currently active.
      * @return A future indicating the outcome.
      *         The future will be succeeded if the device is registered and enabled.
-     *         Otherwise, the future will be failed with a {@link ServiceInvocationException}.
+     *         Otherwise, the future will be failed with a {@link RegistrationAssertionException}
+     *         containing the root cause of the failure to assert the registration.
      */
     protected final Future<Void> checkDeviceRegistration(final Device device, final SpanContext context) {
 
@@ -770,7 +786,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 device.getTenantId(),
                 device.getDeviceId(),
                 null,
-                context).map(assertion -> null);
+                context)
+                .recover(t -> Future.failedFuture(new RegistrationAssertionException(
+                        device.getTenantId(),
+                        "failed to assert registration status of " + device, t)))
+                .mapEmpty();
     }
 
     /**
@@ -1591,7 +1611,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets the options for configuring the server side trust anchor.
      * <p>
-     * This implementation returns the options returned by {@link AbstractConfig#getTrustOptions()} if not {@code null}.
+     * This implementation returns the options returned by
+     * {@link org.eclipse.hono.config.AbstractConfig#getTrustOptions()} if not {@code null}.
      * Otherwise, it returns trust options for verifying a client certificate's validity period.
      *
      * @return The trust options.
@@ -1612,13 +1633,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Creates an AMQP error condition for an throwable.
      * <p>
-     * Non {@link ServiceInvocationException} instances are mapped to {@link AmqpError#PRECONDITION_FAILED}.
+     * Unknown error types are mapped to {@link AmqpError#PRECONDITION_FAILED}.
      *
      * @param t The throwable to map to an error condition.
      * @return The error condition.
      */
-    protected final ErrorCondition getErrorCondition(final Throwable t) {
-        if (ServiceInvocationException.class.isInstance(t)) {
+    public static ErrorCondition getErrorCondition(final Throwable t) {
+
+        if (t instanceof AuthorizationException) {
+            return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, t.getMessage());
+        } else if (ServiceInvocationException.class.isInstance(t)) {
             final ServiceInvocationException error = (ServiceInvocationException) t;
             switch (error.getErrorCode()) {
             case HttpURLConnection.HTTP_BAD_REQUEST:
@@ -1634,21 +1658,47 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, t.getMessage());
         }
     }
-    /**
-     * Gets the manager to use for connection limits.
-     *
-     * @return The manager. May be {@code null}.
-     */
-    public final ConnectionLimitManager getConnectionLimitManager() {
-        return connectionLimitManager;
-    }
 
     /**
-     * Sets the manager to use for connection limits.
+     * Maps an error that occurred during a device's connection attempt to a
+     * corresponding outcome.
      *
-     * @param connectionLimitManager The implementation that manages the connection limit.
+     * @param e The error that has occurred.
+     * @return The outcome.
      */
-    public final void setConnectionLimitManager(final ConnectionLimitManager connectionLimitManager) {
-        this.connectionLimitManager = connectionLimitManager;
+    public static ConnectionAttemptOutcome getOutcome(final Throwable e) {
+
+        if (e instanceof AuthorizationException) {
+            if (e instanceof AdapterDisabledException) {
+                return ConnectionAttemptOutcome.ADAPTER_DISABLED;
+            }
+            if (e instanceof AdapterConnectionsExceededException) {
+                return ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED;
+            }
+            if (e instanceof ConnectionDurationExceededException) {
+                return ConnectionAttemptOutcome.CONNECTION_DURATION_EXCEEDED;
+            }
+            if (e instanceof DataVolumeExceededException) {
+                return ConnectionAttemptOutcome.DATA_VOLUME_EXCEEDED;
+            }
+            if (e instanceof RegistrationAssertionException) {
+                return ConnectionAttemptOutcome.REGISTRATION_ASSERTION_FAILURE;
+            }
+            if (e instanceof TenantConnectionsExceededException) {
+                return ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED;
+            }
+            return ConnectionAttemptOutcome.UNAUTHORIZED;
+        } else if (e instanceof ServiceInvocationException) {
+            switch (((ServiceInvocationException) e).getErrorCode()) {
+            case HttpURLConnection.HTTP_UNAUTHORIZED:
+                return ConnectionAttemptOutcome.UNAUTHORIZED;
+            case HttpURLConnection.HTTP_UNAVAILABLE:
+                return ConnectionAttemptOutcome.UNAVAILABLE;
+            default:
+                return ConnectionAttemptOutcome.UNKNOWN;
+            }
+        } else {
+            return ConnectionAttemptOutcome.UNKNOWN;
+        }
     }
 }

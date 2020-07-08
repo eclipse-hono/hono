@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.service.metric;
 
+import java.util.Objects;
+
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.util.TenantObject;
 
@@ -35,19 +38,22 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementConnections(final String tenantId) {
-    }
-
-    @Override
     public void decrementUnauthenticatedConnections() {
     }
 
     @Override
-    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome) {
+    public void incrementConnections(final String tenantId) {
+        Objects.requireNonNull(tenantId);
     }
 
     @Override
     public void decrementConnections(final String tenantId) {
+        Objects.requireNonNull(tenantId);
+    }
+
+    @Override
+    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome, final String tenantId) {
+        Objects.requireNonNull(outcome);
     }
 
     @Override
@@ -69,6 +75,19 @@ public class NoopBasedMetrics implements Metrics {
             final MetricsTags.QoS qos,
             final int payloadSize,
             final Sample timer) {
+
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(outcome);
+        Objects.requireNonNull(qos);
+        Objects.requireNonNull(timer);
+
+        if (EndpointType.TELEMETRY != type && EndpointType.EVENT != type) {
+            throw new IllegalArgumentException("type must be either TELEMETRY or EVENT");
+        }
+        if (payloadSize < 0) {
+            throw new IllegalArgumentException("payload size must not be negative");
+        }
     }
 
     @Override
@@ -81,6 +100,7 @@ public class NoopBasedMetrics implements Metrics {
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
             final Sample timer) {
+        reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, timer);
     }
 
     @Override
@@ -91,5 +111,14 @@ public class NoopBasedMetrics implements Metrics {
             final ProcessingOutcome outcome,
             final int payloadSize,
             final Sample timer) {
+
+        Objects.requireNonNull(direction);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(outcome);
+        Objects.requireNonNull(timer);
+
+        if (payloadSize < 0) {
+            throw new IllegalArgumentException("payload size must not be negative");
+        }
     }
 }

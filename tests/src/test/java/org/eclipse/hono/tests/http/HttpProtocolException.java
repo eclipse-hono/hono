@@ -36,7 +36,7 @@ public class HttpProtocolException extends ServiceInvocationException {
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
      */
     public HttpProtocolException(final int errorCode, final String msg, final Throwable cause) {
-        super(errorCode, msg, cause);
+        super(null, errorCode, msg, cause);
     }
 
     /**

@@ -62,6 +62,7 @@ import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.MessageHelper;
@@ -296,6 +297,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the connection is established
         verify(endpoint).accept(false);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.SUCCEEDED, null);
     }
 
     /**
@@ -322,6 +324,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the connection is not established
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_DISABLED, "my-tenant");
     }
 
     /**
@@ -387,6 +390,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
         startupTracker.future().onComplete(ctx.succeeding(s -> {
+
             forceClientMocksToConnected();
             // which already has 1 connection open
             when(metrics.getNumberOfConnections()).thenReturn(1);
@@ -396,9 +400,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             adapter.handleEndpointConnection(endpoint);
 
             // THEN the connection is not established
-            ctx.verify(() -> verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
-            ctx.verify(() -> verify(metrics).reportConnectionAttempt(
-                    ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED));
+            ctx.verify(() -> {
+                verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                verify(metrics).reportConnectionAttempt(
+                        ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED,
+                        null);
+            });
             ctx.completeNow();
         }));
     }
@@ -416,7 +423,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
         when(authHandler.authenticateDevice(any(MqttContext.class)))
-                .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
+                .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "4711")));
 
         // WHEN a device tries to connect with valid credentials
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -428,6 +435,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(endpoint).accept(false);
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint, times(2)).closeHandler(any(Handler.class));
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.SUCCEEDED, Constants.DEFAULT_TENANT);
     }
 
     /**
@@ -442,7 +450,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         forceClientMocksToConnected();
         // which is connected to a Credentials service that has credentials on record for device 9999
         when(authHandler.authenticateDevice(any(MqttContext.class)))
-                .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "9999")));
+                .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "9999")));
         // but for which no registration information is available
         when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
@@ -455,7 +463,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // THEN the device's credentials are verified successfully
         verify(authHandler).authenticateDevice(any(MqttContext.class));
         // but the connection is refused
-        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.REGISTRATION_ASSERTION_FAILURE,
+                Constants.DEFAULT_TENANT);
     }
 
     /**
@@ -1146,7 +1157,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttContext.class)))
-                .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
+                .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "4711")));
         when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -1156,6 +1167,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(authHandler).authenticateDevice(any(MqttContext.class));
         // THEN the connection request is rejected
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED,
+                Constants.DEFAULT_TENANT);
     }
 
     /**
@@ -1172,7 +1186,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttContext.class)))
-                .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
+                .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "4711")));
         when(resourceLimitChecks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -1182,6 +1196,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(authHandler).authenticateDevice(any(MqttContext.class));
         // THEN the connection request is rejected
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.CONNECTION_DURATION_EXCEEDED,
+                Constants.DEFAULT_TENANT);
     }
 
     /**

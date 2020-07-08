@@ -14,6 +14,7 @@
 package org.eclipse.hono.service;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -574,7 +575,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN a device tries to connect
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
-            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            ctx.verify(() -> assertThat(t, instanceOf(TenantConnectionsExceededException.class)));
             ctx.completeNow();
         }));
     }
@@ -638,7 +639,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN a device tries to connect
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
-            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            ctx.verify(() -> assertThat(t, instanceOf(DataVolumeExceededException.class)));
             ctx.completeNow();
         }));
     }
@@ -666,7 +667,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(
-                    () -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+                    () -> assertThat(t, instanceOf(ConnectionDurationExceededException.class)));
             ctx.completeNow();
         }));
     }
@@ -678,7 +679,7 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void verifyConnectionDurationLimitIsReached(final VertxTestContext ctx) {
+    public void testCheckConnectionDurationLimit(final VertxTestContext ctx) {
 
         //Given a tenant for which the maximum connection duration usage already exceeds the limit.
         final TenantObject tenant = TenantObject.from("tenant", Boolean.TRUE);
@@ -691,8 +692,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.checkConnectionDurationLimit(tenant, mock(SpanContext.class))
                 .onComplete(ctx.failing(t -> {
                     //Then the connection duration limit check fails
-                    ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(),
-                            is(HttpURLConnection.HTTP_FORBIDDEN)));
+                    ctx.verify(() -> assertThat(t, instanceOf(ConnectionDurationExceededException.class)));
                     ctx.completeNow();
                 }));
     }
