@@ -270,7 +270,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
-                            200);
+                            IntegrationTestSupport.isTestEnvironment() ? 1000 : 200);
                 }, commandsToSend);
     }
 
@@ -400,7 +400,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
-                            200)
+                            IntegrationTestSupport.isTestEnvironment() ? 1000 : 200)
                             .map(response -> {
                                 ctx.verify(() -> {
                                     assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
