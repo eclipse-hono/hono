@@ -369,7 +369,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
                     });
                     ctx.completeNow();
                 }));

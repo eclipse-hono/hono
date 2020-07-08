@@ -34,8 +34,12 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.AdapterConnectionsExceededException;
+import org.eclipse.hono.service.AdapterDisabledException;
+import org.eclipse.hono.service.AuthorizationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.auth.device.ChainAuthHandler;
@@ -68,7 +72,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -397,18 +400,46 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         isConnected()
                 .compose(v -> handleConnectionRequest(endpoint, span))
-                .onComplete(result -> handleConnectionRequestResult(endpoint, span, result, connectionClosedPrematurely));
+                .compose(authenticatedDevice -> handleConnectionRequestResult(endpoint, authenticatedDevice, connectionClosedPrematurely, span))
+                .onSuccess(authenticatedDevice -> {
+                    // we NEVER maintain session state
+                    endpoint.accept(false);
+                    span.log("connection accepted");
+                    metrics.reportConnectionAttempt(
+                            ConnectionAttemptOutcome.SUCCEEDED,
+                            Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
+                })
+                .onFailure(t -> {
+                    log.debug("rejecting connection request from client [clientId: {}], cause:",
+                            endpoint.clientIdentifier(), t);
 
+                    final MqttConnectReturnCode code = getConnectReturnCode(t);
+                    rejectConnectionRequest(endpoint, code, span);
+                    TracingHelper.logError(span, t);
+                    reportFailedConnectionAttempt(t);
+                })
+                .onComplete(result -> span.finish());
+
+    }
+
+    private void reportFailedConnectionAttempt(final Throwable error) {
+
+        final String tenant;
+        if (error instanceof ServiceInvocationException) {
+            tenant = ((ServiceInvocationException) error).getTenant();
+        } else {
+            tenant = null;
+        }
+        final ConnectionAttemptOutcome outcome = AbstractProtocolAdapterBase.getOutcome(error);
+        metrics.reportConnectionAttempt(outcome, tenant);
     }
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
 
         // the ConnectionLimitManager is null in some unit tests
         if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
-            currentSpan.log("connection limit exceeded, reject connection request");
-            metrics.reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
-            return Future.failedFuture(new MqttConnectionException(
-                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
+            currentSpan.log("adapter's connection limit exceeded");
+            return Future.failedFuture(new AdapterConnectionsExceededException(null, "adapter's connection limit is exceeded", null));
         }
 
         if (getConfig().isAuthenticationRequired()) {
@@ -418,51 +449,39 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    private void handleConnectionRequestResult(final MqttEndpoint endpoint,
-            final Span currentSpan,
-            final AsyncResult<Device> connectionAttemptResult,
-            final AtomicBoolean connectionClosedPrematurely) {
+    private Future<Device> handleConnectionRequestResult(
+            final MqttEndpoint endpoint,
+            final Device authenticatedDevice,
+            final AtomicBoolean connectionClosedPrematurely,
+            final Span currentSpan) {
 
-        final Device authenticatedDevice = connectionAttemptResult.result();
         TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
         if (authenticatedDevice != null) {
             TracingHelper.setDeviceTags(currentSpan, authenticatedDevice.getTenantId(),
                     authenticatedDevice.getDeviceId());
         }
 
+        final Promise<Device> result = Promise.promise();
+
         if (connectionClosedPrematurely.get()) {
             log.debug("abort handling connection request, connection already closed [clientId: {}]",
                     endpoint.clientIdentifier());
             currentSpan.log("abort connection request processing, connection already closed");
-            currentSpan.finish();
-        } else if (connectionAttemptResult.succeeded()) {
-
-            sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
-                    .onComplete(sendAttempt -> {
-                        if (sendAttempt.succeeded()) {
-                            // we NEVER maintain session state
-                            endpoint.accept(false);
-                            currentSpan.log("connection accepted");
-                        } else {
-                            log.warn("rejecting connection request from client [clientId: {}] with code {} due to connection event failure",
-                                    endpoint.clientIdentifier(),
-                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
-                                    sendAttempt.cause());
-                            TracingHelper.logError(currentSpan, sendAttempt.cause());
-                            rejectConnectionRequest(endpoint,
-                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, currentSpan);
-                        }
-                        currentSpan.finish();
-                    });
-
+            result.fail(new IllegalStateException("connection already closed"));
         } else {
-            final Throwable connectError = connectionAttemptResult.cause();
-            log.debug("rejecting connection request from client [clientId: {}], cause:",
-                    endpoint.clientIdentifier(), connectError);
-            TracingHelper.logError(currentSpan, connectError);
-            rejectConnectionRequest(endpoint, getConnectReturnCode(connectError), currentSpan);
-            currentSpan.finish();
+            sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
+                .map(authenticatedDevice)
+                .recover(t -> {
+                    log.warn("failed to send connection event for client [clientId: {}]",
+                            endpoint.clientIdentifier(), t);
+                    return Future.failedFuture(new ServerErrorException(
+                            HttpURLConnection.HTTP_UNAVAILABLE,
+                            "failed to send connection event",
+                            t));
+                })
+                .onComplete(result);
         }
+        return result.future();
     }
 
     private void rejectConnectionRequest(final MqttEndpoint endpoint, final MqttConnectReturnCode errorCode,
@@ -497,9 +516,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
+
         registerHandlers(endpoint, null, OptionalInt.empty());
         log.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
-        return Future.succeededFuture();
+        return Future.succeededFuture(null);
     }
 
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
@@ -515,10 +535,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
                             .compose(tenantObj -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObj),
+                                    isAdapterEnabled(tenantObj).recover(t -> Future.failedFuture(
+                                            new AdapterDisabledException(
+                                                    authenticatedDevice.getTenantId(),
+                                                    "adapter is disabled for tenant",
+                                                    t))),
                                     checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
-                        .map(ok -> authenticatedDevice))
+                        .map(authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
                 .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, traceSamplingPriority.result()))
                 .recover(t -> {
@@ -1575,6 +1599,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         if (e instanceof MqttConnectionException) {
             return ((MqttConnectionException) e).code();
+        } else if (e instanceof AuthorizationException) {
+            if (e instanceof AdapterConnectionsExceededException) {
+                return MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
+            } else {
+                return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+            }
         } else if (e instanceof ServiceInvocationException) {
             switch (((ServiceInvocationException) e).getErrorCode()) {
             case HttpURLConnection.HTTP_UNAUTHORIZED:

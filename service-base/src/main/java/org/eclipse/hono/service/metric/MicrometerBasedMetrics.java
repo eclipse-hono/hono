@@ -173,12 +173,24 @@ public class MicrometerBasedMetrics implements Metrics {
         this.totalCurrentConnections.decrementAndGet();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The tenant tag will be set to value <em>UNKNOWN</em> if the
+     * given tenant ID is {@code null}.
+     */
     @Override
-    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome) {
+    public void reportConnectionAttempt(
+            final MetricsTags.ConnectionAttemptOutcome outcome,
+            final String tenantId) {
+
         Objects.requireNonNull(outcome);
 
+        final Tags tags = Tags.of(outcome.asTag())
+                .and(MetricsTags.getTenantTag(Optional.ofNullable(tenantId).orElse("UNKNOWN")));
+
         Counter.builder(METER_CONNECTIONS_ATTEMPTS)
-            .tags(Tags.of(outcome.asTag()))
+            .tags(tags)
             .register(this.registry)
             .increment();
     }

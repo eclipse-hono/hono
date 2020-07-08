@@ -789,7 +789,7 @@ public abstract class CoapTestBase {
                                             // not the preceding telemetry/event message
                                             final String msg = "Error sending command response: " + thr.getMessage();
                                             return Future.failedFuture(thr instanceof ServiceInvocationException
-                                                    ? new ServiceInvocationException(((ServiceInvocationException) thr).getErrorCode(), msg, thr)
+                                                    ? new ServiceInvocationException(tenantId, ((ServiceInvocationException) thr).getErrorCode(), msg, thr)
                                                     : new RuntimeException(msg, thr));
                                         });
                             });

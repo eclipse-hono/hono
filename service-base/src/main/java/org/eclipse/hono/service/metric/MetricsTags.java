@@ -33,7 +33,16 @@ public final class MetricsTags {
      * The outcome of a connection attempt to a protocol adapter.
      */
     public enum ConnectionAttemptOutcome {
-        ADAPTER_CONNECTION_LIMIT_EXCEEDED("adapter-connection-limit-exceeded");
+        ADAPTER_CONNECTIONS_EXCEEDED("adapter-connections-exceeded"),
+        ADAPTER_DISABLED("adapter-disabled"),
+        CONNECTION_DURATION_EXCEEDED("connection-duration-exceeded"),
+        DATA_VOLUME_EXCEEDED("data-volume-exceeded"),
+        REGISTRATION_ASSERTION_FAILURE("registration-assertion-failure"),
+        SUCCEEDED("succeeded"),
+        TENANT_CONNECTIONS_EXCEEDED("tenant-connections-exceeded"),
+        UNAUTHORIZED("unauthorized"),
+        UNAVAILABLE("unavailable"),
+        UNKNOWN("unknown");
 
         static final String TAG_NAME = "outcome";
 

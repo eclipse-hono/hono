@@ -1138,6 +1138,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
         verify(deviceConnection).setCondition(errorConditionCaptor.capture());
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED,
+                TEST_TENANT_ID);
     }
 
     /**
@@ -1166,6 +1169,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
         verify(deviceConnection).setCondition(errorConditionCaptor.capture());
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.ADAPTER_DISABLED,
+                TEST_TENANT_ID);
     }
 
     /**
@@ -1205,7 +1211,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementConnections(TEST_TENANT_ID);
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED, TEST_TENANT_ID);
     }
 
     /**
@@ -1242,7 +1248,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementUnauthenticatedConnections();
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED, null);
     }
 
     private String getCommandEndpoint() {

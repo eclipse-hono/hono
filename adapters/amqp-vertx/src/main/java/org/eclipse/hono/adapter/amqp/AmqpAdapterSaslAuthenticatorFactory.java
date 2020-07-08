@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp;
 
+import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
@@ -29,19 +30,23 @@ import java.util.function.Supplier;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.security.auth.login.CredentialException;
+import javax.security.auth.login.LoginException;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.AuthorizationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -76,6 +81,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
     private final ProtocolAdapterProperties config;
     private final TenantClientFactory tenantClientFactory;
+    private final AmqpAdapterMetrics metrics;
     private final Supplier<Span> spanFactory;
     private final DeviceCertificateValidator certValidator;
     private final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
@@ -87,6 +93,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      *
      * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @param config The protocol adapter configuration object.
+     * @param metrics The object to use for reporting metrics.
      * @param spanFactory The factory to use for creating and starting an OpenTracing span to
      *                    trace the authentication of the device.
      * @param usernamePasswordAuthProvider The authentication provider to use for validating device credentials.
@@ -102,6 +109,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     public AmqpAdapterSaslAuthenticatorFactory(
             final TenantClientFactory tenantClientFactory,
             final ProtocolAdapterProperties config,
+            final AmqpAdapterMetrics metrics,
             final Supplier<Span> spanFactory,
             final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
             final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider,
@@ -109,6 +117,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
         this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory, "Tenant client factory cannot be null");
         this.config = Objects.requireNonNull(config, "configuration cannot be null");
+        this.metrics = Objects.requireNonNull(metrics);
         this.spanFactory = Objects.requireNonNull(spanFactory);
         this.certValidator = new DeviceCertificateValidator();
         this.usernamePasswordAuthProvider = usernamePasswordAuthProvider;
@@ -183,35 +192,52 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             sasl.recv(saslResponse, 0, saslResponse.length);
 
             buildSaslResponseContext(remoteMechanism, saslResponse)
-                    .compose(saslResponseContext -> invokePreAuthenticationHandler(saslResponseContext, currentSpan))
-                    .compose(saslResponseContext -> verify(saslResponseContext))
-                    .onComplete(outcome -> {
-                        if (outcome.succeeded()) {
-                            currentSpan.log("credentials verified successfully");
-                            // add span to connection so that it can be used during the
-                            // remaining connection establishment process
-                            protonConnection.attachments().set(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class,
-                                    currentSpan);
-                            final Device authenticatedDevice = outcome.result();
-                            protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
-                                    authenticatedDevice);
-                            succeeded = true;
-                            sasl.done(SaslOutcome.PN_SASL_OK);
-
-                        } else {
-                            TracingHelper.logError(currentSpan, outcome.cause());
-                            currentSpan.finish();
-                            LOG.debug("SASL handshake failed: {}", outcome.cause().getMessage());
+                .compose(saslResponseContext -> invokePreAuthenticationHandler(saslResponseContext, currentSpan))
+                .compose(saslResponseContext -> verify(saslResponseContext))
+                .onSuccess(deviceUser -> {
+                    currentSpan.log("credentials verified successfully");
+                    // do not finish span here
+                    // instead, we add the span to the connection so that it can be used during the
+                    // remaining connection establishment process
+                    protonConnection.attachments().set(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class,
+                            currentSpan);
+                    protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
+                            deviceUser);
+                    // we do not report a succeeded authentication here already because some
+                    // additional checks regarding resource limits need to be passed
+                    // before we can consider connection establishment a success
+                    succeeded = true;
+                    sasl.done(SaslOutcome.PN_SASL_OK);
+                })
+                .onFailure(t -> {
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
+                    LOG.debug("SASL handshake failed", t);
+                    if (t instanceof ClientErrorException) {
+                        metrics.reportConnectionAttempt(
+                                ConnectionAttemptOutcome.UNAUTHORIZED,
+                                ((ClientErrorException) t).getTenant());
+                        sasl.done(SaslOutcome.PN_SASL_AUTH);
+                    } else if (t instanceof LoginException) {
+                            metrics.reportConnectionAttempt(
+                                    ConnectionAttemptOutcome.UNAUTHORIZED,
+                                    null);
                             sasl.done(SaslOutcome.PN_SASL_AUTH);
-                        }
-
-                        if (currentContext == null) {
-                            completionHandler.handle(Boolean.TRUE);
-                        } else {
-                            // invoke the completion handler on the calling context.
-                            currentContext.runOnContext(action -> completionHandler.handle(Boolean.TRUE));
-                        }
-                    });
+                    } else {
+                        metrics.reportConnectionAttempt(
+                                ConnectionAttemptOutcome.UNAVAILABLE,
+                                null);
+                        sasl.done(SaslOutcome.PN_SASL_TEMP);
+                    }
+                })
+                .onComplete(outcome -> {
+                    if (currentContext == null) {
+                        completionHandler.handle(Boolean.TRUE);
+                    } else {
+                        // invoke the completion handler on the calling context.
+                        currentContext.runOnContext(action -> completionHandler.handle(Boolean.TRUE));
+                    }
+                });
         }
 
         private Future<SaslResponseContext> buildSaslResponseContext(final String remoteMechanism,
@@ -262,7 +288,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(ctx.getRemoteMechanism())) {
                 return verifyExternal(ctx.getPeerCertificateChain());
             } else {
-                return Future.failedFuture("Unsupported SASL mechanism: " + ctx.getRemoteMechanism());
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "Unsupported SASL mechanism: " + ctx.getRemoteMechanism()));
             }
         }
 
@@ -286,7 +313,11 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
             final Promise<DeviceUser> authResult = Promise.promise();
             usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
-            return authResult.future();
+            return authResult.future()
+                    .recover(t -> Future.failedFuture(new AuthorizationException(
+                            credentials.getTenantId(),
+                            "validation of credentials using SASL PLAIN failed",
+                            t)));
         }
 
         private Future<DeviceUser> verifyExternal(final Certificate[] peerCertificateChain) {
@@ -331,7 +362,11 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenant.getTenantId(),
                                 deviceCert.getSubjectX500Principal(), clientContext);
                         clientCertAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
-                        return authResult.future();
+                        return authResult.future()
+                                .recover(t -> Future.failedFuture(new AuthorizationException(
+                                        credentials.getTenantId(),
+                                        "validation of credentials using SASL EXTERNAL failed",
+                                        t)));
                     });
         }
 

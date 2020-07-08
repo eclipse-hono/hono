@@ -25,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
@@ -62,6 +63,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
@@ -180,6 +182,9 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
+        final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
+        when(metrics.startTimer()).thenReturn(Timer.start());
+
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePort(0);
         config.setInsecurePortBindAddress(HOST);
@@ -195,6 +200,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         httpAdapter.setCommandTargetMapper(commandTargetMapper);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
+        httpAdapter.setMetrics(metrics);
 
         vertx.deployVerticle(httpAdapter, ctx.succeeding(deploymentId -> {
             final WebClientOptions options = new WebClientOptions()

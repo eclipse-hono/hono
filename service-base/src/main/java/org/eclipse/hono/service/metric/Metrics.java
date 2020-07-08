@@ -49,11 +49,15 @@ public interface Metrics {
     void decrementUnauthenticatedConnections();
 
     /**
-     * Reports a connection attempt.
+     * Reports the outcome of an authenticated device's attempt to establish a connection
+     * to a protocol adapter.
      *
      * @param outcome The outcome of the connection attempt.
+     * @param tenantId The tenant that the device belongs to or {@code null} if
+     *                 the tenant could not (yet) be determined.
+     * @throws NullPointerException if outcome is {@code null}.
      */
-    void reportConnectionAttempt(MetricsTags.ConnectionAttemptOutcome outcome);
+    void reportConnectionAttempt(MetricsTags.ConnectionAttemptOutcome outcome, String tenantId);
 
     /**
      * Gets the total number of current connections - authenticated for all tenants and unauthenticated.
