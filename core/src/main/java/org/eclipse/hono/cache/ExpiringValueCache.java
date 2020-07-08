@@ -60,9 +60,11 @@ public interface ExpiringValueCache<K, V> {
      * @param key The key under which the value is stored.
      * @param value The value to store.
      *
+     * @return true, if the value was updated, false if not (in that case it was expired)
+     *
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void put(K key, V value);
+    boolean update(K key, V value);
 
     /**
      * Gets a value from the cache.

@@ -73,7 +73,7 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
     }
 
     @Override
-    public void put(final K key, final V value) {
+    public boolean update(final K key, final V value) {
 
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
@@ -81,10 +81,11 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
         final ExpiringValue<V> presentValue = getExpiringValue(key);
 
         if (presentValue == null) {
-            return;
+            return false;
         }
 
         put(key, value, presentValue.getExpirationTime());
+        return true;
     }
 
     ExpiringValue<V> getExpiringValue(final K key) {

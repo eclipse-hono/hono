@@ -107,7 +107,7 @@ public class SpringBasedExpiringValueCacheTest {
         when(springCache.get("key", ExpiringValue.class)).thenReturn(value);
 
         // WHEN trying to put a value for the key without a new expiry
-        cache.put("key", expectedValue);
+        final boolean result = cache.update("key", expectedValue);
 
         // THEN the new cache value has the expiration time of the value it replaced
         final ArgumentCaptor<ExpiringValue<String>> captor = ArgumentCaptor.forClass(ExpiringValue.class);
@@ -117,6 +117,7 @@ public class SpringBasedExpiringValueCacheTest {
         assertThat(actualValue.getValue()).isEqualTo(expectedValue);
         assertThat(actualValue.getExpirationTime()).isEqualTo(expectedExpiry);
 
+        assertThat(result).isTrue();
         verify(springCache, never()).evict("key");
     }
 
@@ -132,9 +133,10 @@ public class SpringBasedExpiringValueCacheTest {
         when(springCache.get("key", ExpiringValue.class)).thenReturn(value);
 
         // WHEN trying to put a value for the key without a new expiry
-        cache.put("key", "4712");
+        final boolean result = cache.update("key", "4712");
 
         // THEN the cache should not be updated
+        assertThat(result).isFalse();
         verify(springCache, never()).put(eq("key"), any());
     }
 
