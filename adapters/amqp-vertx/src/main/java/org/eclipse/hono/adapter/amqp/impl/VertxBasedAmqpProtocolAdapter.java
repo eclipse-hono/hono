@@ -377,6 +377,36 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
         }
 
+        checkConnectionLimitForAdapter()
+            .onFailure(ex -> {
+                metrics.reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
+            })
+            .compose(ok -> checkAuthorizationAndResourceLimits(authenticatedDevice, con, span))
+            .compose(ok -> sendConnectedEvent(
+                    Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
+                    authenticatedDevice))
+            .map(ok -> {
+                con.setContainer(getTypeName());
+                con.setOfferedCapabilities(new Symbol[] {Constants.CAP_ANONYMOUS_RELAY});
+                con.open();
+                log.debug("connection with device [container: {}] established", con.getRemoteContainer());
+                span.log("connection established");
+                return null;
+            })
+            .otherwise(t -> {
+                con.setCondition(getErrorCondition(t));
+                con.close();
+                TracingHelper.logError(span, t);
+                return null;
+            })
+            .onComplete(s -> span.finish());
+    }
+
+    private Future<Void> checkAuthorizationAndResourceLimits(
+            final Device authenticatedDevice,
+            final ProtonConnection con,
+            final Span span) {
+
         final Promise<Void> connectAuthorizationCheck = Promise.promise();
 
         if (getConfig().isAuthenticationRequired()) {
@@ -390,47 +420,30 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 // we still need to verify that
                 // the adapter is enabled for the tenant,
                 // the device/gateway exists and is enabled and
-                // that the connection limit for the tenant and the adapter are not exceeded.
+                // that the connection limit for the tenant is not exceeded.
 
-                CompositeFuture.all(checkDeviceRegistration(authenticatedDevice, span.context()),
+                CompositeFuture.all(
+                        checkDeviceRegistration(authenticatedDevice, span.context()),
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
                                 .compose(tenantConfig -> CompositeFuture.all(
                                         isAdapterEnabled(tenantConfig),
-                                        checkConnectionLimitForAdapter()
-                                            .onFailure(ex -> {
-                                                metrics.reportConnectionAttempt(
-                                                        ConnectionAttemptOutcome.ADAPTER_CONNECTION_LIMIT_EXCEEDED);
-                                            }),
                                         checkConnectionLimit(tenantConfig, span.context()))))
-                        .map(ok -> {
-                            log.debug("{} is registered and enabled", authenticatedDevice);
-                            span.log(String.format("device [%s] is registered and enabled", authenticatedDevice));
-                            return (Void) null;
-                        }).onComplete(connectAuthorizationCheck);
+                    .map(ok -> {
+                        log.debug("{} is registered and enabled", authenticatedDevice);
+                        span.log(String.format("device [%s] is registered and enabled", authenticatedDevice));
+                        return (Void) null;
+                    })
+                    .onComplete(connectAuthorizationCheck);
             }
 
         } else {
             log.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
+            span.log(Map.of(Fields.EVENT, "connection request from anonymous device",
+                    "container ID", con.getRemoteContainer()));
             connectAuthorizationCheck.complete();
         }
 
-        connectAuthorizationCheck.future()
-        .compose(ok -> sendConnectedEvent(
-                Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
-                authenticatedDevice))
-        .map(ok -> {
-            con.setContainer(getTypeName());
-            con.setOfferedCapabilities(new Symbol[] {Constants.CAP_ANONYMOUS_RELAY});
-            con.open();
-            log.debug("connection with device [container: {}] established", con.getRemoteContainer());
-            span.log("connection established");
-            return null;
-        }).otherwise(t -> {
-            con.setCondition(getErrorCondition(t));
-            con.close();
-            TracingHelper.logError(span, t);
-            return null;
-        }).onComplete(s -> span.finish());
+        return connectAuthorizationCheck.future();
     }
 
     /**
@@ -1293,8 +1306,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private static Device getAuthenticatedDevice(final ProtonConnection con) {
-        return Optional.ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class))
-                .orElse(null);
+        return con.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
     }
 
     private static OptionalInt getTraceSamplingPriority(final ProtonConnection con) {
