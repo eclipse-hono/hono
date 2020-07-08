@@ -342,7 +342,7 @@ public class MapBasedDeviceConnectionServiceTest {
      * @param ctx The vert.x context.
      */
     @Test
-    public void testGetCommandHandlingAdapterInstancesForExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
+    public void testGetCommandHandlingAdapterInstancesFailsForExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final Duration lifespan = Duration.ofMillis(1);
@@ -352,11 +352,11 @@ public class MapBasedDeviceConnectionServiceTest {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     final Promise<DeviceConnectionResult> instancesPromise = Promise.promise();
-                    // wait 2ms so that the lifespan has elapsed
-                    vertx.setTimer(2, tid -> {
+                    // make sure that the life span has elapsed
+                    vertx.setTimer(200, tid -> {
                         svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
                                 Collections.emptyList(), span)
-                                .onComplete(instancesPromise.future());
+                                .onComplete(instancesPromise);
                     });
                     return instancesPromise.future();
                 }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
