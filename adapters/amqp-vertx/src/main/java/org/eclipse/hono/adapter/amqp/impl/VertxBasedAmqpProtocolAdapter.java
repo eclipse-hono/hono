@@ -379,7 +379,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         } else {
             log.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
-            connectAuthorizationCheck.complete();
+            span.log(Map.of(Fields.EVENT, "connection request from anonymous device",
+                    "container ID", Optional.ofNullable(con.getRemoteContainer()).orElse("unknown")));
+            checkConnectionLimitForAdapter().onComplete(connectAuthorizationCheck);
         }
 
         connectAuthorizationCheck.future()
@@ -1224,6 +1226,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .orElse(null);
     }
 
+    private Future<Void> checkConnectionLimitForAdapter() {
+        if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
+            //The error code is set so to be in sync with that of the tenant level connection limit.
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                    "connection limit for the adapter exceeded"));
+        }
+        return Future.succeededFuture();
+    }
     // -------------------------------------------< AbstractServiceBase >---
 
     /**

@@ -64,6 +64,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -132,6 +133,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private AmqpAdapterProperties config;
     private AmqpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
+    private ConnectionLimitManager connectionLimitManager;
 
     /**
      * Setups the protocol adapter.
@@ -177,6 +179,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
+
+        connectionLimitManager = mock(ConnectionLimitManager.class);
+        when(connectionLimitManager.isLimitExceeded()).thenReturn(false);
 
         config = new AmqpAdapterProperties();
         config.setAuthenticationRequired(false);
@@ -1163,6 +1168,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        adapter.setConnectionLimitManager(connectionLimitManager);
         return adapter;
     }
 
