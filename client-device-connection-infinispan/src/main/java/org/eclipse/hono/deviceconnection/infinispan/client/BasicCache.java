@@ -49,10 +49,20 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
 
     private static final Logger LOG = LoggerFactory.getLogger(BasicCache.class);
 
+    /**
+     * Maximum age for a cached connection check result to be used in {@link #isConnected()}.
+     * Value is chosen to be a bit longer than the default Kubernetes readiness probe interval, so that
+     * the periodic invocations of {@link #checkForCacheAvailability()} as part of the readiness check
+     * keep the cached connection check result up to date.
+     */
+    private static final long CACHED_CONNECTION_CHECK_RESULT_MAX_AGE_MILLIS = TimeUnit.SECONDS.toMillis(11);
+
     protected final Vertx vertx;
     private final BasicCacheContainer cacheManager;
     private final K connectionCheckKey;
     private final V connectionCheckValue;
+
+    private ConnectionCheckResult lastConnectionCheckResult;
 
     private org.infinispan.commons.api.BasicCache<K, V> cache;
 
@@ -104,6 +114,11 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      */
     @Override
     public Future<Void> isConnected() {
+        // used cached connection check result if last connection check is recent enough
+        final ConnectionCheckResult lastResult = lastConnectionCheckResult;
+        if (lastResult != null && !lastResult.isOlderThan(CACHED_CONNECTION_CHECK_RESULT_MAX_AGE_MILLIS)) {
+            return lastResult.asFuture();
+        }
         return checkForCacheAvailability().mapEmpty();
     }
 
@@ -309,6 +324,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
             final Instant start = Instant.now();
             put(connectionCheckKey, connectionCheckValue)
                     .onComplete(r -> {
+                        lastConnectionCheckResult = new ConnectionCheckResult(System.currentTimeMillis(), r.cause());
                         if (r.succeeded()) {
                             final long requestDuration = Duration.between(start, Instant.now()).toMillis();
                             result.complete(new JsonObject().put("grid-response-time", requestDuration));
@@ -318,11 +334,53 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
                         }
                     });
         } else {
+            lastConnectionCheckResult = null;
             // try to (re-)establish connection
             connectToGrid();
             result.fail("not connected to data grid");
         }
         return result.future();
+    }
+
+    /**
+     * Keeps the result of a connection check.
+     */
+    private static class ConnectionCheckResult {
+        private final long timestamp;
+        private final Throwable errorResult;
+
+        /**
+         * Creates a new ConnectionCheckResult.
+         *
+         * @param timestamp The timestamp when the result was determined.
+         * @param errorResult The error in case the check failed; use {@code null} if the check succeeded.
+         */
+        ConnectionCheckResult(final long timestamp, final Throwable errorResult) {
+            this.timestamp = timestamp;
+            this.errorResult = errorResult;
+        }
+
+        /**
+         * Checks if the result is older than the given time span, determined from the current point in time.
+         *
+         * @param millis The time span in milliseconds.
+         * @return {@code true} if the result is older.
+         */
+        public boolean isOlderThan(final long millis) {
+            return timestamp < (System.currentTimeMillis() - millis);
+        }
+
+        /**
+         * Gets a future indicating the connection check outcome.
+         *
+         * @return A succeeded future if the check succeeded, otherwise a failed future.
+         */
+        public Future<Void> asFuture() {
+            if (errorResult != null) {
+                return Future.failedFuture(errorResult);
+            }
+            return Future.succeededFuture();
+        }
     }
 
 }

@@ -44,7 +44,7 @@ import io.vertx.junit5.VertxTestContext;
 
 
 /**
- * Tests verifying behavior of the {@link HotrodCache}.
+ * Tests verifying behavior of the {@link BasicCache}.
  *
  */
 @ExtendWith(VertxExtension.class)
@@ -272,6 +272,29 @@ abstract class AbstractBasicCacheTest {
                     ctx.verify(() -> {
                         verify(grid).getAllAsync(keys);
                         assertThat(t).isInstanceOf(IllegalStateException.class);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the <em>isConnected</em> check uses a cached connection
+     * check result value if invoked shortly after a previous invocation.
+     *
+     * @param ctx The vert.x text context.
+     */
+    @Test
+    void testIsConnectedUsesCachedResult(final VertxTestContext ctx) {
+        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
+        when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
+        cache.connect()
+                .compose(c -> cache.isConnected())
+                // 2nd invocation is supposed to use cached value
+                .compose(c -> cache.isConnected())
+                .onComplete(ctx.succeeding(v -> {
+                    ctx.verify(() -> {
+                        // putAsync() must have only been called once
+                        verify(grid).putAsync(anyString(), anyString());
                     });
                     ctx.completeNow();
                 }));

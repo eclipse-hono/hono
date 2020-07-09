@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 
 import org.infinispan.Cache;
+import org.infinispan.lifecycle.ComponentStatus;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +54,7 @@ class EmbeddedCacheTest extends AbstractBasicCacheTest {
         @SuppressWarnings("unchecked")
         final Cache<Object, Object> result = mock(Cache.class);
         when(remoteCacheManager.getCache(anyString())).thenReturn(result);
+        when(remoteCacheManager.getStatus()).thenReturn(ComponentStatus.RUNNING);
         return result;
     }
 }

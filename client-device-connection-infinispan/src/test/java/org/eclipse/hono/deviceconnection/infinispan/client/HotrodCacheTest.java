@@ -64,6 +64,7 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> result = mock(org.infinispan.client.hotrod.RemoteCache.class);
         when(remoteCacheManager.getCache(anyString(), anyBoolean())).thenReturn(result);
         when(remoteCacheManager.getConfiguration()).thenReturn(configuration);
+        when(remoteCacheManager.isStarted()).thenReturn(true);
         when(configuration.forceReturnValues()).thenReturn(false);
         when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
         return result;
