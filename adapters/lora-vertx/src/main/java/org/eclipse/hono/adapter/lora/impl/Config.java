@@ -17,8 +17,6 @@ import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -65,44 +63,8 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_LORA_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeRegistrationClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_LORA_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_LORA_ADAPTER);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_LORA_ADAPTER);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_LORA_ADAPTER);
-        }
+    protected String getAdapterName() {
+        return CONTAINER_ID_HONO_LORA_ADAPTER;
     }
 
     /**

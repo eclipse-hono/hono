@@ -82,6 +82,12 @@ title = "Release Notes"
   because the Device Registration API does not define a corresponding operation.
   Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
   method has been removed.
+* Protocol adapters implementing the `org.eclipse.hono.service.AbstractAdapterConfig` class
+  now need to implement the `getAdapterName` method. The `customizeDownstreamSenderFactoryConfig`
+  method has been renamed to `getDownstreamSenderFactoryConfigDefaults`, while now returning
+  properties instead of working on given ones. The new method name now more accurately conveys
+  what the method is used for. The same change has been applied to the other `customize[*]Config`
+  methods in the `AbstractAdapterConfig` class.
  
 ### Deprecations
  

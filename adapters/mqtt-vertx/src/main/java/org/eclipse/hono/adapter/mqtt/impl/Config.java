@@ -15,8 +15,6 @@ package org.eclipse.hono.adapter.mqtt.impl;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -51,44 +49,8 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeRegistrationClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties props) {
-        if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
-        }
+    protected String getAdapterName() {
+        return CONTAINER_ID_HONO_MQTT_ADAPTER;
     }
 
     /**
