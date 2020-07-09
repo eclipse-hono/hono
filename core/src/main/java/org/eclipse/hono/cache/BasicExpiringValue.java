@@ -43,11 +43,6 @@ public class BasicExpiringValue<T> implements ExpiringValue<T> {
     }
 
     @Override
-    public Instant getExpirationTime() {
-        return this.expirationTime;
-    }
-
-    @Override
     public boolean isExpired() {
         return isExpired(Instant.now());
     }

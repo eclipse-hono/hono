@@ -582,7 +582,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
-        // and the response has been reported as undeliverable
+        // and the response has been reported as unprocessable
         verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),

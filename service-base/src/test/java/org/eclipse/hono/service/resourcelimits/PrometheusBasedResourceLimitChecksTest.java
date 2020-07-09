@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
@@ -50,6 +51,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 
@@ -69,6 +71,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -715,6 +718,63 @@ public class PrometheusBasedResourceLimitChecksTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the cache update is done properly according to the given processing outcome.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCacheUpdateByProcessingOutcome(final VertxTestContext ctx) {
+
+        final Checkpoint checkpoint1 = ctx.checkpoint();
+        final Checkpoint checkpoint2 = ctx.checkpoint();
+        final Checkpoint checkpoint3 = ctx.checkpoint();
+
+        when(dataVolumeCache.getIfPresent(anyString())).thenReturn(CompletableFuture.completedFuture(new LimitedResource<>(42L, 0L)));
+
+        limitChecksImpl.addMessageBytes(Constants.DEFAULT_TENANT, 4711L, MetricsTags.ProcessingOutcome.UNDELIVERABLE)
+            .onComplete(r -> ctx.verify(() -> {
+                verify(dataVolumeCache, never()).put(eq(Constants.DEFAULT_TENANT), any());
+                checkpoint1.flag();
+            }));
+
+        limitChecksImpl.addMessageBytes(Constants.DEFAULT_TENANT, 4711L, MetricsTags.ProcessingOutcome.UNPROCESSABLE)
+            .onComplete(r -> ctx.verify(() -> {
+                final ArgumentCaptor<CompletableFuture<LimitedResource<Long>>> futureCaptor = ArgumentCaptor.forClass(CompletableFuture.class);
+                verify(dataVolumeCache).put(eq(Constants.DEFAULT_TENANT), futureCaptor.capture());
+
+                final LimitedResource<Long> value = futureCaptor.getValue().get();
+                assertEquals(value.getCurrentValue(), 4711L);
+                checkpoint2.flag();
+            }));
+
+        limitChecksImpl.addMessageBytes("tenant2", 4712L, MetricsTags.ProcessingOutcome.FORWARDED)
+            .onComplete(r -> ctx.verify(() -> {
+                final ArgumentCaptor<CompletableFuture<LimitedResource<Long>>> futureCaptor = ArgumentCaptor.forClass(CompletableFuture.class);
+                verify(dataVolumeCache).put(eq("tenant2"), futureCaptor.capture());
+
+                final LimitedResource<Long> value = futureCaptor.getValue().get();
+                assertEquals(value.getCurrentValue(), 4712L);
+                checkpoint3.flag();
+            }));
+    }
+
+    /**
+     * Verifies that the cache update does nothing if the resource limit is not set.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCacheUpdateWhenResourceLimitIsNotSet(final VertxTestContext ctx) {
+
+        when(dataVolumeCache.getIfPresent(anyString())).thenReturn(null);
+        limitChecksImpl.addMessageBytes(Constants.DEFAULT_TENANT, 4711L, MetricsTags.ProcessingOutcome.UNPROCESSABLE)
+            .onComplete(r -> ctx.verify(() -> {
+                verify(dataVolumeCache, never()).put(eq(Constants.DEFAULT_TENANT), any());
+                ctx.completeNow();
+            }));
     }
 
     private void givenCurrentConnections(final Integer currentConnections) {

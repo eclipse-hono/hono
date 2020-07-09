@@ -588,6 +588,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t/my-tenant/unknown");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
+        when(msg.payload()).thenReturn(Buffer.buffer("test"));
 
         messageHandler.getValue().handle(msg);
 
@@ -635,6 +636,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t/my-tenant/the-device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        when(msg.payload()).thenReturn(Buffer.buffer("test"));
         messageHandler.getValue().handle(msg);
 
         // THEN the message has not been sent downstream

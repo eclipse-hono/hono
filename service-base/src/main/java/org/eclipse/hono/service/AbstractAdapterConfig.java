@@ -57,6 +57,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
@@ -636,6 +637,25 @@ public abstract class AbstractAdapterConfig {
                 .initialCapacity(config.getCacheMinSize())
                 .maximumSize(config.getCacheMaxSize())
                 .expireAfterWrite(Duration.ofSeconds(config.getCacheTimeout()));
+        final Caffeine<Object, Object> dataVolumeCacheBuilder = Caffeine.newBuilder()
+                .initialCapacity(config.getCacheMinSize())
+                .maximumSize(config.getCacheMaxSize())
+                .expireAfter(new Expiry<>() {
+                    @Override
+                    public long expireAfterCreate(final Object key, final Object value, final long currentTime) {
+                        return Duration.ofSeconds(config.getCacheTimeout()).toNanos();
+                    }
+
+                    @Override
+                    public long expireAfterUpdate(final Object key, final Object value, final long currentTime, final long currentDuration) {
+                        return currentDuration;
+                    }
+
+                    @Override
+                    public long expireAfterRead(final Object key, final Object value, final long currentTime, final long currentDuration) {
+                        return currentDuration;
+                    }
+                });
         final WebClientOptions webClientOptions = new WebClientOptions();
         webClientOptions.setDefaultHost(config.getHost());
         webClientOptions.setDefaultPort(config.getPort());
@@ -647,7 +667,7 @@ public abstract class AbstractAdapterConfig {
                 config,
                 builder.buildAsync(),
                 builder.buildAsync(),
-                builder.buildAsync(),
+                dataVolumeCacheBuilder.buildAsync(),
                 getTracer());
     }
 }

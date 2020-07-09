@@ -97,6 +97,7 @@ public class MicrometerBasedMetrics implements Metrics {
     private final AtomicLong unauthenticatedConnections;
     private final AtomicInteger totalCurrentConnections = new AtomicInteger();
     private final Vertx vertx;
+    private MetricsCache metricsCache = new NoopMetricsCache();
     private long tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
 
     /**
@@ -133,6 +134,17 @@ public class MicrometerBasedMetrics implements Metrics {
     public void setProtocolAdapterProperties(final ProtocolAdapterProperties config) {
         Objects.requireNonNull(config);
         this.tenantIdleTimeout = config.getTenantIdleTimeout().toMillis();
+    }
+
+    /**
+     * Sets the metrics cache to be used.
+     *
+     * @param metricsCache The metrics cache.
+     */
+    @Autowired(required = false)
+    public void setMetricsCache(final MetricsCache metricsCache) {
+        Objects.requireNonNull(metricsCache);
+        this.metricsCache = metricsCache;
     }
 
     @Override
@@ -238,14 +250,17 @@ public class MicrometerBasedMetrics implements Metrics {
         timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, tags));
 
         // record payload size
+        final long calculatedPayloadSize = ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject);
         DistributionSummary.builder(METER_MESSAGES_PAYLOAD)
             .baseUnit("bytes")
             .minimumExpectedValue(0L)
             .tags(tags)
             .register(this.registry)
-            .record(ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
+            .record(calculatedPayloadSize);
 
         updateLastSeenTimestamp(tenantId);
+
+        metricsCache.addMessageBytes(tenantId, calculatedPayloadSize, outcome);
     }
 
     @Override
@@ -273,14 +288,17 @@ public class MicrometerBasedMetrics implements Metrics {
         timer.stop(this.registry.timer(METER_COMMANDS_RECEIVED, tags));
 
         // record payload size
+        final long calculatedPayloadSize = ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject);
         DistributionSummary.builder(METER_COMMANDS_PAYLOAD)
             .baseUnit("bytes")
             .minimumExpectedValue(0L)
             .tags(tags)
             .register(this.registry)
-            .record(ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
+            .record(calculatedPayloadSize);
 
         updateLastSeenTimestamp(tenantId);
+
+        metricsCache.addMessageBytes(tenantId, calculatedPayloadSize, outcome);
     }
 
     /**

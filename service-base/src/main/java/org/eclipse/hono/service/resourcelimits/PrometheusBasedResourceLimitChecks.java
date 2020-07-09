@@ -330,6 +330,29 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 });
     }
 
+    @Override
+    public Future<Void> addMessageBytes(final String tenant, final long payloadSize, final MetricsTags.ProcessingOutcome outcome) {
+        final Promise<Void> result = Promise.promise();
+        if (outcome == MetricsTags.ProcessingOutcome.UNDELIVERABLE || payloadSize <= 0) {
+            result.complete();
+        } else {
+            Optional.ofNullable(dataVolumeCache.getIfPresent(tenant))
+                //No data volume resource limit set
+                .orElse(CompletableFuture.completedFuture(null))
+                .whenComplete((value, error) -> {
+                    if (value != null) {
+                        dataVolumeCache.put(tenant, CompletableFuture.completedFuture(
+                                new LimitedResource<>(value.getCurrentLimit(), value.getCurrentValue() + payloadSize))
+                        );
+                    }
+
+                    result.complete();
+                });
+        }
+
+        return result.future();
+    }
+
     private void checkMessageLimit(
             final TenantObject tenant,
             final long payloadSize,

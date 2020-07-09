@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.resourcelimits;
 
+import org.eclipse.hono.service.metric.NoopMetricsCache;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
@@ -20,7 +21,7 @@ import io.vertx.core.Future;
 /**
  * A no-op implementation for the limit check which always passes all checks.
  */
-public class NoopResourceLimitChecks implements ResourceLimitChecks {
+public class NoopResourceLimitChecks extends NoopMetricsCache implements ResourceLimitChecks {
 
     @Override
     public Future<Boolean> isConnectionLimitReached(final TenantObject tenantObject, final SpanContext spanContext) {

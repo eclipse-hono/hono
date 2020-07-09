@@ -162,7 +162,10 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testPayloadSizeForTelemetryMessages(final MeterRegistry registry) {
 
-        final Metrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        final MetricsCache metricsCacheMock = mock(MetricsCache.class);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        metrics.setMetricsCache(metricsCacheMock);
+
         final TenantObject tenantObject = TenantObject.from("TEST_TENANT", true)
                 .setMinimumMessageSize(4 * 1024);
 
@@ -178,6 +181,7 @@ public class MicrometerBasedMetricsTest {
 
         assertEquals(4 * 1024,
                 registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).summary().totalAmount());
+        verify(metricsCacheMock).addMessageBytes("tenant", 4 * 1024, MetricsTags.ProcessingOutcome.FORWARDED);
     }
 
     /**
@@ -190,7 +194,9 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testPayloadSizeForCommandMessages(final MeterRegistry registry) {
 
-        final Metrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        final MetricsCache metricsCacheMock = mock(MetricsCache.class);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        metrics.setMetricsCache(metricsCacheMock);
         final TenantObject tenantObject = TenantObject.from("TEST_TENANT", true)
                 .setMinimumMessageSize(4 * 1024);
 
@@ -204,6 +210,7 @@ public class MicrometerBasedMetricsTest {
 
         assertEquals(4 * 1024,
                 registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).summary().totalAmount());
+        verify(metricsCacheMock).addMessageBytes("tenant", 4 * 1024, MetricsTags.ProcessingOutcome.FORWARDED);
     }
 
     /**
