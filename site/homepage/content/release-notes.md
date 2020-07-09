@@ -94,6 +94,19 @@ title = "Release Notes"
  * The configuration property `HONO_MQTT_COMMAND_ACK_TIMEOUT` of the MQTT adapter is now deprecated
    and planned to be removed in a future release. Use `HONO_MQTT_SEND_MESSAGE_TO_DEVICE_TIMEOUT` instead.
 
+## 1.2.4
+
+### Fixes & Enhancements
+
+* The `HonoConnection` implementation didn't use a delay before a reconnect attempt after
+  a certain number of reconnnect attempts (58 with the default configuration) had already
+  failed. This has been fixed.
+* An error when freeing Command & Control related resources of an idle tenant has been fixed.
+* The Hotrod based DeviceConnectionClientFactory has been improved to prevent locking of
+  objects in a clustered cache.
+* The AMQP adapter reported an incorrect number of connections if resource limits had been
+  defined and exceeded. This has been fixed.
+
 ## 1.2.3
 
 ### Fixes & Enhancements
