@@ -27,12 +27,14 @@ import org.eclipse.hono.util.Constants;
  */
 public class AuthenticatingClientConfigProperties extends AbstractConfig {
 
+    public static final String SERVER_ROLE_UNKNOWN = "unknown";
+
     private String credentialsPath;
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
     private char[] password;
     private int port;
-    private String serverRole = "unknown";
+    private String serverRole = SERVER_ROLE_UNKNOWN;
     private boolean tlsEnabled = false;
     private String username;
 
@@ -287,7 +289,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
     /**
      * Sets the name of the role that the server plays from the client's perspective.
      * <p>
-     * The default value of this property is <em>unknown</em>.
+     * The default value of this property is {@link #SERVER_ROLE_UNKNOWN}.
      *
      * @param roleName The name.
      * @throws NullPointerException if name is {@code null}.
@@ -299,7 +301,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
     /**
      * Gets the name of the role that the server plays from the client's perspective.
      * <p>
-     * The default value of this property is <em>unknown</em>.
+     * The default value of this property is {@link #SERVER_ROLE_UNKNOWN}.
      *
      * @return The name.
      */

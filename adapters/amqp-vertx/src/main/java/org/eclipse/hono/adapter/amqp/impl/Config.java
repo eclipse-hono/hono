@@ -13,8 +13,6 @@
 package org.eclipse.hono.adapter.amqp.impl;
 
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -48,38 +46,8 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties config) {
-        if (config.getName() == null) {
-            config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeRegistrationClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        if (config.getName() == null) {
-            config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        if (config.getName() == null) {
-            config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        if (config != null) {
-            config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
-        }
-    }
-
-    @Override
-    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        if (config != null) {
-            config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
-        }
+    protected String getAdapterName() {
+        return CONTAINER_ID_HONO_AMQP_ADAPTER;
     }
 
     /**

@@ -27,6 +27,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
@@ -98,6 +99,17 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
+     * Gets the name of this protocol adapter.
+     * <p>
+     * This name will be used as part of the <em>container-id</em> in the AMQP <em>Open</em> frame sent by the
+     * clients defined in this adapter config.
+     * <p>
+     *
+     * @return The protocol adapter name.
+     */
+    protected abstract String getAdapterName();
+
+    /**
      * Creates properties for configuring the Connection Event producer.
      *
      * @return The properties.
@@ -130,8 +142,8 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
      * <p>
-     * The properties can be customized in subclasses by means of overriding the
-     * {@link #customizeDownstreamSenderFactoryConfig(ClientConfigProperties)} method.
+     * A default set of properties, on top of which the configured properties will by loaded, can be set in subclasses
+     * by means of overriding the {@link #getDownstreamSenderFactoryConfigDefaults()} method.
      *
      * @return The properties.
      */
@@ -139,23 +151,24 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
     public ClientConfigProperties downstreamSenderFactoryConfig() {
-        final ClientConfigProperties config = new ClientConfigProperties();
-        config.setServerRole("AMQP Messaging Network");
-        customizeDownstreamSenderFactoryConfig(config);
+        final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderFactoryConfigDefaults())
+                .orElseGet(ClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "AMQP Messaging Network");
+        setDefaultConfigNameIfNotSet(config);
         return config;
     }
 
     /**
-     * Further customizes the client properties provided by the {@link #downstreamSenderFactoryConfig()}
-     * method.
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #downstreamSenderFactoryConfig()}.
      * <p>
-     * This method does nothing by default. Subclasses may override this method to set additional
-     * properties programmatically.
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
      *
-     * @param config The client configuration to customize.
+     * @return The properties.
      */
-    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties config) {
-        // empty by default
+    protected ClientConfigProperties getDownstreamSenderFactoryConfigDefaults() {
+        return new ClientConfigProperties();
     }
 
     /**
@@ -188,8 +201,6 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes configuration properties for accessing the registration service as a Spring bean.
-     * <p>
-     * Sets the <em>amqpHostname</em> to {@code hono-device-registry} if not set explicitly.
      *
      * @return The properties.
      */
@@ -197,23 +208,24 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.registration")
     @Bean
     public RequestResponseClientConfigProperties registrationClientFactoryConfig() {
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        config.setServerRole("Device Registration");
-        customizeRegistrationClientFactoryConfig(config);
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getRegistrationClientFactoryConfigDefaults())
+                .orElseGet(RequestResponseClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "Device Registration");
+        setDefaultConfigNameIfNotSet(config);
         return config;
     }
 
     /**
-     * Further customizes the properties provided by the {@link #registrationClientFactoryConfig()}
-     * method.
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #registrationClientFactoryConfig()}.
      * <p>
-     * This method does nothing by default. Subclasses may override this method to set additional
-     * properties programmatically.
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
      *
-     * @param config The configuration to customize.
+     * @return The properties.
      */
-    protected void customizeRegistrationClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        // empty by default
+    protected RequestResponseClientConfigProperties getRegistrationClientFactoryConfigDefaults() {
+        return new RequestResponseClientConfigProperties();
     }
 
     /**
@@ -261,23 +273,24 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.credentials")
     @Bean
     public RequestResponseClientConfigProperties credentialsClientFactoryConfig() {
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        config.setServerRole("Credentials");
-        customizeCredentialsClientFactoryConfig(config);
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getCredentialsClientFactoryConfigDefaults())
+                .orElseGet(RequestResponseClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "Credentials");
+        setDefaultConfigNameIfNotSet(config);
         return config;
     }
 
     /**
-     * Further customizes the properties provided by the {@link #credentialsClientFactoryConfig()}
-     * method.
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #credentialsClientFactoryConfig()}.
      * <p>
-     * This method does nothing by default. Subclasses may override this method to set additional
-     * properties programmatically.
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
      *
-     * @param config The configuration to customize.
+     * @return The properties.
      */
-    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        // empty by default
+    protected RequestResponseClientConfigProperties getCredentialsClientFactoryConfigDefaults() {
+        return new RequestResponseClientConfigProperties();
     }
 
     /**
@@ -325,23 +338,24 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.tenant")
     @Bean
     public RequestResponseClientConfigProperties tenantServiceClientConfig() {
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        config.setServerRole("Tenant");
-        customizeTenantClientFactoryConfig(config);
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getTenantClientFactoryConfigDefaults())
+                .orElseGet(RequestResponseClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "Tenant");
+        setDefaultConfigNameIfNotSet(config);
         return config;
     }
 
     /**
-     * Further customizes the properties provided by the {@link #tenantServiceClientConfig()}
-     * method.
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #tenantServiceClientConfig()}.
      * <p>
-     * This method does nothing by default. Subclasses may override this method to set additional
-     * properties programmatically.
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
      *
-     * @param config The configuration to customize.
+     * @return The properties.
      */
-    protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        // empty by default
+    protected RequestResponseClientConfigProperties getTenantClientFactoryConfigDefaults() {
+        return new RequestResponseClientConfigProperties();
     }
 
     /**
@@ -390,10 +404,24 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.device-connection")
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
     public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        config.setServerRole("Device Connection");
-        customizeDeviceConnectionClientFactoryConfig(config);
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getDeviceConnectionClientFactoryConfigDefaults())
+                .orElseGet(RequestResponseClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "Device Connection");
+        setDefaultConfigNameIfNotSet(config);
         return config;
+    }
+
+    /**
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #deviceConnectionServiceClientConfig()}.
+     * <p>
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
+     *
+     * @return The properties.
+     */
+    protected RequestResponseClientConfigProperties getDeviceConnectionClientFactoryConfigDefaults() {
+        return new RequestResponseClientConfigProperties();
     }
 
     /**
@@ -423,19 +451,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Further customizes the properties provided by the {@link #deviceConnectionServiceClientConfig()}
-     * method.
-     * <p>
-     * This method does nothing by default. Subclasses may override this method to set additional
-     * properties programmatically.
-     *
-     * @param config The configuration to customize.
-     */
-    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties config) {
-        // empty by default
-    }
-
-    /**
      * Exposes configuration properties for Command and Control.
      *
      * @return The Properties.
@@ -444,23 +459,24 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.command")
     @Bean
     public ClientConfigProperties commandConsumerFactoryConfig() {
-        final ClientConfigProperties config = new ClientConfigProperties();
-        config.setServerRole("Command & Control");
-        customizeCommandConsumerFactoryConfig(config);
+        final ClientConfigProperties config = Optional.ofNullable(getCommandConsumerFactoryConfigDefaults())
+                .orElseGet(ClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "Command & Control");
+        setDefaultConfigNameIfNotSet(config);
         return config;
     }
 
     /**
-     * Further customizes the client properties provided by the {@link #commandConsumerFactoryConfig()}
-     * method.
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #commandConsumerFactoryConfig()}.
      * <p>
-     * This method does nothing by default. Subclasses may override this method to set additional
-     * properties programmatically.
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
      *
-     * @param config The client configuration to customize.
+     * @return The properties.
      */
-    protected void customizeCommandConsumerFactoryConfig(final ClientConfigProperties config) {
-        // empty by default
+    protected ClientConfigProperties getCommandConsumerFactoryConfigDefaults() {
+        return new ClientConfigProperties();
     }
 
     /**
@@ -507,6 +523,19 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public VertxProperties vertxProperties() {
         return new VertxProperties();
+    }
+
+    private static void setConfigServerRoleIfUnknown(final AuthenticatingClientConfigProperties config,
+            final String serverRole) {
+        if (config.getServerRole().equals(AuthenticatingClientConfigProperties.SERVER_ROLE_UNKNOWN)) {
+            config.setServerRole(serverRole);
+        }
+    }
+
+    private void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
+        if (config.getName() == null && getAdapterName() != null) {
+            config.setName(getAdapterName());
+        }
     }
 
     /**
