@@ -877,8 +877,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         currentSpan.log("request accepted by peer");
                         // if no reply-to is set, the request is assumed to be one-way (no response is expected)
                         if (request.getReplyTo() == null) {
-                            replyMap.remove(correlationId);
-                            resultHandler.handle(Future.succeededFuture());
+                            if (replyMap.remove(correlationId) != null) {
+                                resultHandler.handle(Future.succeededFuture());
+                            } else {
+                                LOG.trace("accepted request won't be acted upon, request already cancelled [target address: {}, subject: {}, correlation ID: {}]",
+                                        requestTargetAddress, request.getSubject(), correlationId);
+                            }
                         }
                     } else if (Released.class.isInstance(remoteState)) {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
