@@ -481,9 +481,9 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
     private void checkForCacheAvailability(final Promise<Status> status) {
 
         cache.checkForCacheAvailability()
-            .map(stats -> Status.OK(stats))
+            .map(Status::OK)
             .otherwise(t -> Status.KO())
-            .setHandler(status);
+            .onComplete(ar -> status.tryComplete(ar.result()));
     }
 
     /**

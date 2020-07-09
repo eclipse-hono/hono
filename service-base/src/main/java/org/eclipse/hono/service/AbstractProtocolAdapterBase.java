@@ -1571,11 +1571,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
                     if (currentContext != context) {
                         context.runOnContext(action -> {
-                            procedure.complete(Status.OK());
+                            procedure.tryComplete(Status.OK());
                         });
                     } else {
                         log.debug("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
-                        procedure.complete(Status.OK());
+                        procedure.tryComplete(Status.OK());
                     }
                 });
     }
