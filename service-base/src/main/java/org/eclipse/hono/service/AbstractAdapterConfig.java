@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service;
 
+import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.cache.CacheProvider;
@@ -46,6 +48,7 @@ import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -618,15 +621,21 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Creates a new instance of {@link ResourceLimitChecks} based on prometheus metrics data.
+     * Creates resource limit checks based on data retrieved from a Prometheus server.
      *
-     * @return A ResourceLimitChecks instance.
+     * @param config The configuration properties for the resource limit checks.
+     * @return The resource limit checks.
+     * @throws NullPointerException if config is {@code null}.
      */
     @Bean
-    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
-    @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
-    public ResourceLimitChecks resourceLimitChecks() {
-        final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
+    @ConditionalOnBean(PrometheusBasedResourceLimitChecksConfig.class)
+    public ResourceLimitChecks resourceLimitChecks(final PrometheusBasedResourceLimitChecksConfig config) {
+
+        Objects.requireNonNull(config);
+        final Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                .initialCapacity(config.getCacheMinSize())
+                .maximumSize(config.getCacheMaxSize())
+                .expireAfterWrite(Duration.ofSeconds(config.getCacheTimeout()));
         final WebClientOptions webClientOptions = new WebClientOptions();
         webClientOptions.setDefaultHost(config.getHost());
         webClientOptions.setDefaultPort(config.getPort());
@@ -636,7 +645,9 @@ public abstract class AbstractAdapterConfig {
         return new PrometheusBasedResourceLimitChecks(
                 WebClient.create(vertx(), webClientOptions),
                 config,
-                newCaffeineCache(config.getCacheMinSize(), config.getCacheMaxSize()),
+                builder.buildAsync(),
+                builder.buildAsync(),
+                builder.buildAsync(),
                 getTracer());
     }
 }

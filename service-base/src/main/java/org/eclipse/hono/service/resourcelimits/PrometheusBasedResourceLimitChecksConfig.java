@@ -30,10 +30,11 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
     /**
      * The default timeout for cached data in seconds until they are considered invalid.
      */
-    public static final long DEFAULT_CACHE_TIMEOUT = 600L;
+    public static final long DEFAULT_CACHE_TIMEOUT = 15L;
 
     /**
-     * The default timeout in milliseconds, after the client close the request to a remote server.
+     * The default number of milliseconds after which the client cancels queries to
+     * the Prometheus REST API.
      */
     public static final long DEFAULT_QUERY_TIMEOUT = 500L;
 
@@ -59,7 +60,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * <p>
      * The cache will be initialized with this size upon creation.
      * <p>
-     * The default value is {@link #DEFAULT_CACHE_MIN_SIZE}.
+     * The default value is {@value #DEFAULT_CACHE_MIN_SIZE}.
      *
      * @return The maximum number of results to keep in the cache.
      */
@@ -72,7 +73,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * <p>
      * The cache will be initialized with this size upon creation.
      * <p>
-     * The default value is {@link #DEFAULT_CACHE_MIN_SIZE}.
+     * The default value is {@value #DEFAULT_CACHE_MIN_SIZE}.
      *
      * @param size The maximum number of results to keep in the cache.
      * @throws IllegalArgumentException if size is &lt; 0.
@@ -90,7 +91,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * Once the maximum number of entries is reached, the cache applies an implementation specific policy for handling
      * new entries that are put to the cache.
      * <p>
-     * The default value is {@link #DEFAULT_CACHE_MAX_SIZE}.
+     * The default value is {@value #DEFAULT_CACHE_MAX_SIZE}.
      *
      * @return The maximum number of results to keep in the cache.
      */
@@ -106,7 +107,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * <p>
      * Setting this property to 0 disables caching.
      * <p>
-     * The default value is {@link #DEFAULT_CACHE_MAX_SIZE}.
+     * The default value is {@value #DEFAULT_CACHE_MAX_SIZE}.
      *
      * @param size The maximum number of results to keep in the cache.
      * @throws IllegalArgumentException if size is &lt; 0.
@@ -121,7 +122,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
     /**
      * Gets the period of time after which cached data are considered invalid.
      * <p>
-     * The default value of this property is {@link #DEFAULT_CACHE_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_CACHE_TIMEOUT}.
      *
      * @return The timeout for cached values in seconds.
      */
@@ -132,7 +133,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
     /**
      * Sets the period of time after which cached responses should be considered invalid.
      * <p>
-     * The default value of this property is {@link #DEFAULT_CACHE_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_CACHE_TIMEOUT}.
      *
      * @param timeout The timeout in seconds.
      * @throws IllegalArgumentException if timeout is &lt;= 0.
@@ -147,7 +148,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
     /**
      * Gets the period of time after which a request to a Prometheus server are closed.
      * <p>
-     * The default value of this property is {@link #DEFAULT_QUERY_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_QUERY_TIMEOUT}.
      *
      * @return The timeout for the request to a remote server in milliseconds, zero or negative value is for disabled timeout.
      */
@@ -160,12 +161,11 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * <p>
      * Setting zero or a negative {@code timeout} disables the timeout.
      * <p>
-     * The default value of this property is {@link #DEFAULT_QUERY_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_QUERY_TIMEOUT}.
      *
      * @param timeout The timeout in milliseconds.
      */
     public void setQueryTimeout(final long timeout) {
         this.queryTimeout = timeout;
     }
-
 }

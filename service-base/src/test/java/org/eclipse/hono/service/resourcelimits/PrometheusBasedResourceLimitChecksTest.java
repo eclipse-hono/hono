@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -34,19 +33,25 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import com.github.benmanes.caffeine.cache.AsyncCache;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -71,13 +76,15 @@ import io.vertx.junit5.VertxTestContext;
  * Verifies the behavior of {@link PrometheusBasedResourceLimitChecks}.
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, unit = TimeUnit.SECONDS)
 public class PrometheusBasedResourceLimitChecksTest {
 
     private PrometheusBasedResourceLimitChecks limitChecksImpl;
     private WebClient webClient;
     private HttpRequest<JsonObject> request;
-    private CacheProvider cacheProvider;
-    private ExpiringValueCache<Object, Object> limitsCache;
+    private AsyncCache<String, LimitedResource<Long>> connectionCountCache;
+    private AsyncCache<String, LimitedResource<Duration>> connectionDurationCache;
+    private AsyncCache<String, LimitedResource<Long>> dataVolumeCache;
     private SpanContext spanContext;
     private Span span;
     private Tracer tracer;
@@ -98,11 +105,23 @@ public class PrometheusBasedResourceLimitChecksTest {
         when(request.timeout(anyLong())).thenReturn(request);
 
         webClient = mock(WebClient.class);
-        when(webClient.get(anyInt(), anyString(), anyString())).thenReturn(req);
+        when(webClient.get(anyString())).thenReturn(req);
 
-        limitsCache = mock(ExpiringValueCache.class);
-        cacheProvider = mock(CacheProvider.class);
-        when(cacheProvider.getCache(any())).thenReturn(limitsCache);
+        connectionCountCache = mock(AsyncCache.class);
+        when(connectionCountCache.get(anyString(), any(BiFunction.class))).then(invocation -> {
+            final BiFunction<String, Executor, CompletableFuture<LimitedResource<?>>> provider = invocation.getArgument(1);
+            return provider.apply(invocation.getArgument(0), mock(Executor.class));
+        });
+        connectionDurationCache = mock(AsyncCache.class);
+        when(connectionDurationCache.get(anyString(), any(BiFunction.class))).then(invocation -> {
+            final BiFunction<String, Executor, CompletableFuture<LimitedResource<?>>> provider = invocation.getArgument(1);
+            return provider.apply(invocation.getArgument(0), mock(Executor.class));
+        });
+        dataVolumeCache = mock(AsyncCache.class);
+        when(dataVolumeCache.get(anyString(), any(BiFunction.class))).then(invocation -> {
+            final BiFunction<String, Executor, CompletableFuture<LimitedResource<?>>> provider = invocation.getArgument(1);
+            return provider.apply(invocation.getArgument(0), mock(Executor.class));
+        });
 
         spanContext = mock(SpanContext.class);
 
@@ -117,7 +136,13 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         final PrometheusBasedResourceLimitChecksConfig config = new PrometheusBasedResourceLimitChecksConfig();
 
-        limitChecksImpl = new PrometheusBasedResourceLimitChecks(webClient, config, cacheProvider, tracer);
+        limitChecksImpl = new PrometheusBasedResourceLimitChecks(
+                webClient,
+                config,
+                connectionCountCache,
+                connectionDurationCache,
+                dataVolumeCache,
+                tracer);
     }
 
     /**
@@ -134,7 +159,13 @@ public class PrometheusBasedResourceLimitChecksTest {
         config.setUsername("hono");
         config.setPassword("hono-secret");
 
-        limitChecksImpl = new PrometheusBasedResourceLimitChecks(webClient, config, cacheProvider, tracer);
+        limitChecksImpl = new PrometheusBasedResourceLimitChecks(
+                webClient,
+                config,
+                connectionCountCache,
+                connectionDurationCache,
+                dataVolumeCache,
+                tracer);
 
         givenCurrentConnections(0);
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
@@ -152,14 +183,61 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies that the connection limit check returns {@code false} if the limit
-     * is not yet reached.
+     * Verifies that the connection limit check returns {@code false} if no resource limits
+     * have been defined for the tenant.
      *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testConnectionLimitIsNotReached(final VertxTestContext ctx) {
+    public void testConnectionLimitCheckSucceedsIfNoResourceLimitsAreSet(final VertxTestContext ctx) {
+
+        givenCurrentConnections(9);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).onComplete(
+                ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(request, never()).send(any(Handler.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the connection limit check returns {@code false} if the tenant has been
+     * configured with unlimited connections explicitly.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionLimitCheckSucceedsIfUnlimited(final VertxTestContext ctx) {
+
+        givenCurrentConnections(9);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits().setMaxConnections(TenantConstants.UNLIMITED_CONNECTIONS));
+
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).onComplete(
+                ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(request, never()).send(any(Handler.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the connection limit check returns {@code false} if the tenant's
+     * configured connection limit is not yet reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionLimitCheckSucceeds(final VertxTestContext ctx) {
 
         givenCurrentConnections(9);
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
@@ -176,14 +254,14 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies that the connection limit check returns {@code true} if the limit
-     * is reached.
+     * Verifies that the connection limit check returns {@code true} if the tenant's
+     * configured connection limit is already reached.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     @SuppressWarnings("unchecked")
-    public void testConnectionLimitIsReached(final VertxTestContext ctx) {
+    public void testConnectionLimitCheckFails(final VertxTestContext ctx) {
 
         givenCurrentConnections(10);
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
@@ -200,13 +278,14 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies that the connection limit check returns {@code false} if a timeout occurred.
+     * Verifies that the connection limit check returns {@code false} if the query on
+     * the Prometheus server times out.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     @SuppressWarnings("unchecked")
-    public void testConnectionLimitIsNotReachedWhenTimeOutOccurred(final VertxTestContext ctx) {
+    public void testConnectionLimitCheckSucceedsIfQueryTimesOut(final VertxTestContext ctx) {
 
         givenFailResponseWithTimeoutException();
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
@@ -234,7 +313,7 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(90);
         final long incomingMessageSize = 10;
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
@@ -264,7 +343,7 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(100);
         final long incomingMessageSize = 20;
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
@@ -295,7 +374,7 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(null);
         final long incomingMessageSize = 20;
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
@@ -377,7 +456,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         // The case where the effectiveSince lies on the the same month as of the target date.
         assertEquals(5,
                 limitChecksImpl.calculateResourceUsagePeriod(
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-06T07:15:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                         OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                         PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
                         noOfDays));
@@ -400,8 +479,8 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies that the message limit check returns {@code false} if the limit is not set and no call is made to
-     * retrieve metrics data from the prometheus server.
+     * Verifies that the message limit check returns {@code false} if the limit is not set
+     * and that no call is made to retrieve metrics data from the Prometheus server.
      *
      * @param ctx The vert.x test context.
      */
@@ -409,7 +488,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     @Test
     public void testMessageLimitNotExceededWhenNotConfigured(final VertxTestContext ctx) {
 
-        final TenantObject tenant = TenantObject.from("tenant", true);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
         limitChecksImpl.isMessageLimitReached(tenant, 10, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
@@ -422,7 +501,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies that the consumed bytes value is taken from limitsCache.
+     * Verifies that the consumed bytes value is taken from the data volume cache.
      *
      * @param ctx The vert.x test context.
      */
@@ -430,9 +509,14 @@ public class PrometheusBasedResourceLimitChecksTest {
     @SuppressWarnings("unchecked")
     public void testMessageLimitUsesValueFromCache(final VertxTestContext ctx) {
 
-        when(limitsCache.get(any())).thenReturn(100L);
+        when(dataVolumeCache.get(anyString(), any(BiFunction.class)))
+            .then(invocation -> {
+                final CompletableFuture<LimitedResource<Long>> result = new CompletableFuture<>();
+                result.complete(new LimitedResource<Long>(60L, 100L));
+                return result;
+            });
         final long incomingMessageSize = 20;
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
@@ -442,9 +526,9 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
-                .onComplete(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(exceeded -> {
                     ctx.verify(() -> {
-                        assertTrue(response);
+                        assertTrue(exceeded);
                         verify(request, never()).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -452,8 +536,8 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies that the metrics data retrieved from the prometheus server during message limit check
-     * is saved to the limitsCache.
+     * Verifies that on a data volume cache miss the current data volume consumption is retrieved from
+     * the Prometheus server.
      *
      * @param ctx The vert.x test context.
      */
@@ -463,7 +547,7 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(100);
         final long incomingMessageSize = 20;
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
@@ -471,17 +555,15 @@ public class PrometheusBasedResourceLimitChecksTest {
                                 .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
+        when(dataVolumeCache.get(anyString(), any(BiFunction.class))).then(invocation -> {
+            final BiFunction<String, Executor, CompletableFuture<LimitedResource<Long>>> provider = invocation.getArgument(1);
+            return provider.apply(invocation.getArgument(0), mock(Executor.class));
+        });
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         verify(request).send(any(Handler.class));
-                        verify(cacheProvider.getCache(any())).put(eq("tenant_bytes_consumed"), any(),
-                                any(Duration.class));
-                        verify(cacheProvider.getCache(any())).put(eq("tenant_allowed_max_bytes"), any(),
-                                any(Duration.class));
-                        verify(cacheProvider.getCache(any())).put(eq("tenant_data_usage_period"), any(),
-                                any(Duration.class));
                     });
                     ctx.completeNow();
                 }));
@@ -498,7 +580,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testConnectionDurationLimitNotExceeded(final VertxTestContext ctx) {
 
         givenDeviceConnectionDurationInMinutes(90);
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setConnectionDuration(new ConnectionDuration()
                                 .setMaxDuration(100L)
@@ -527,7 +609,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testConnectionDurationLimitExceeded(final VertxTestContext ctx) {
 
         givenDeviceConnectionDurationInMinutes(100);
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setConnectionDuration(new ConnectionDuration()
                                 .setMaxDuration(100L)
@@ -555,7 +637,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testMessageLimitNotExceededWhenTimeoutOccurred(final VertxTestContext ctx) {
 
         givenFailResponseWithTimeoutException();
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(50L)
@@ -585,7 +667,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testConnectionDurationLimitNotExceededForMissingMetrics(final VertxTestContext ctx) {
 
         givenDeviceConnectionDurationInMinutes(null);
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setConnectionDuration(new ConnectionDuration()
                                 .setMaxDuration(100L)
@@ -617,7 +699,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testConnectionDurationLimitNotExceededWhenTimeoutOccurred(final VertxTestContext ctx) {
 
         givenFailResponseWithTimeoutException();
-        final TenantObject tenant = TenantObject.from("tenant", true)
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setConnectionDuration(new ConnectionDuration()
                                 .setMaxDuration(10L)

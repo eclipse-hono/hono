@@ -23,22 +23,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.concurrent.CompletableFuture;
 
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.DataVolume;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.benmanes.caffeine.cache.AsyncCache;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -62,22 +61,31 @@ import io.vertx.ext.web.codec.BodyCodec;
  */
 public final class PrometheusBasedResourceLimitChecks implements ResourceLimitChecks {
 
-    private static final String CONNECTIONS_METRIC_NAME = MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED
-            .replace(".", "_");
-    private static final String MESSAGES_PAYLOAD_SIZE_METRIC_NAME = String.format("%s_bytes_sum",
-            MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
-    private static final String COMMANDS_PAYLOAD_SIZE_METRIC_NAME = String.format("%s_bytes_sum",
-            MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD.replace(".", "_"));
-    private static final String CONNECTIONS_DURATION_METRIC_NAME = String.format("%s_seconds_sum",
-            MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED_DURATION.replace(".", "_"));
     private static final Logger LOG = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
+
+    private static final String METRIC_NAME_COMMANDS_PAYLOAD_SIZE = String.format("%s_bytes_sum",
+            MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD.replace(".", "_"));
+    private static final String METRIC_NAME_CONNECTIONS = MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED
+            .replace(".", "_");
+    private static final String METRIC_NAME_CONNECTIONS_DURATION = String.format("%s_seconds_sum",
+            MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED_DURATION.replace(".", "_"));
+    private static final String METRIC_NAME_MESSAGES_PAYLOAD_SIZE = String.format("%s_bytes_sum",
+            MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
+
+    private static final String QUERY_TEMPLATE_MESSAGE_LIMIT = String.format(
+            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$sd]) or %2$s*0) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$sd]) or %1$s*0))",
+            METRIC_NAME_MESSAGES_PAYLOAD_SIZE,
+            METRIC_NAME_COMMANDS_PAYLOAD_SIZE,
+            MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
+            MetricsTags.ProcessingOutcome.UNPROCESSABLE.asTag().getValue());
     private static final String QUERY_URI = "/api/v1/query";
-    private static final String LIMITS_CACHE_NAME = "resource-limits";
 
     private final Tracer tracer;
     private final WebClient client;
     private final PrometheusBasedResourceLimitChecksConfig config;
-    private final ExpiringValueCache<Object, Object> limitsCache;
+    private final AsyncCache<String, LimitedResource<Long>> connectionCountCache;
+    private final AsyncCache<String, LimitedResource<Duration>> connectionDurationCache;
+    private final AsyncCache<String, LimitedResource<Long>> dataVolumeCache;
     private final String url;
 
     /**
@@ -136,16 +144,25 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      *
      * @param webClient The client to use for querying the Prometheus server.
      * @param config The PrometheusBasedResourceLimitChecks configuration object.
-     * @param cacheProvider The cache provider to use for creating caches for metrics data retrieved
-     *                      from the prometheus backend or {@code null} if they should not be cached.
-     * @throws NullPointerException if any of the parameters except cacheProvider are {@code null}.
+     * @param connectionCountCache The cache to use for a tenant's overall number of connected devices.
+     * @param connectionDurationCache The cache to use for a tenant's devices' overall connection time.
+     * @param dataVolumeCache The cache to use for a tenant's devices' overall amount of data transferred.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public PrometheusBasedResourceLimitChecks(
             final WebClient webClient,
             final PrometheusBasedResourceLimitChecksConfig config,
-            final CacheProvider cacheProvider) {
+            final AsyncCache<String, LimitedResource<Long>> connectionCountCache,
+            final AsyncCache<String, LimitedResource<Duration>> connectionDurationCache,
+            final AsyncCache<String, LimitedResource<Long>> dataVolumeCache) {
 
-        this(webClient, config, cacheProvider, NoopTracerFactory.create());
+        this(
+                webClient,
+                config,
+                connectionCountCache,
+                connectionDurationCache,
+                dataVolumeCache,
+                NoopTracerFactory.create());
     }
 
     /**
@@ -153,22 +170,25 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      *
      * @param webClient The client to use for querying the Prometheus server.
      * @param config The PrometheusBasedResourceLimitChecks configuration object.
-     * @param cacheProvider The cache provider to use for creating caches for metrics data retrieved
-     *                      from the prometheus backend or {@code null} if they should not be cached.
+     * @param connectionCountCache The cache to use for a tenant's overall number of connected devices.
+     * @param connectionDurationCache The cache to use for a tenant's devices' overall connection time.
+     * @param dataVolumeCache The cache to use for a tenant's devices' overall amount of data transferred.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if any of the parameters except cacheProvider are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public PrometheusBasedResourceLimitChecks(
             final WebClient webClient,
             final PrometheusBasedResourceLimitChecksConfig config,
-            final CacheProvider cacheProvider,
+            final AsyncCache<String, LimitedResource<Long>> connectionCountCache,
+            final AsyncCache<String, LimitedResource<Duration>> connectionDurationCache,
+            final AsyncCache<String, LimitedResource<Long>> dataVolumeCache,
             final Tracer tracer) {
 
         this.client = Objects.requireNonNull(webClient);
         this.config = Objects.requireNonNull(config);
-        this.limitsCache = Optional.ofNullable(cacheProvider)
-                .map(provider -> provider.getCache(LIMITS_CACHE_NAME))
-                .orElse(null);
+        this.connectionCountCache = Objects.requireNonNull(connectionCountCache);
+        this.connectionDurationCache = Objects.requireNonNull(connectionDurationCache);
+        this.dataVolumeCache = Objects.requireNonNull(dataVolumeCache);
         this.tracer = Objects.requireNonNull(tracer);
         this.url = String.format("%s://%s:%d%s",
                 config.isTlsEnabled() ? "https" : "http",
@@ -183,7 +203,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .withTag(Tags.PEER_HOSTNAME.getKey(), config.getHost())
                 .withTag(Tags.PEER_PORT.getKey(), config.getPort())
                 .withTag(Tags.HTTP_URL.getKey(), QUERY_URI)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant.getTenantId())
+                .withTag(TracingHelper.TAG_TENANT_ID.getKey(), tenant.getTenantId())
                 .start();
     }
 
@@ -193,41 +213,53 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         Objects.requireNonNull(tenant);
 
         final Span span = createSpan("verify connection limit", spanContext, tenant);
-        final Map<String, Object> items = new HashMap<>();
+        final Map<String, Object> traceItems = new HashMap<>();
 
         final Promise<Boolean> result = Promise.promise();
 
         if (tenant.getResourceLimits() == null) {
-            items.put(Fields.EVENT, "no resource limits configured");
+            traceItems.put(Fields.EVENT, "no resource limits configured");
             LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
             final long maxConnections = tenant.getResourceLimits().getMaxConnections();
-            items.put(TenantConstants.FIELD_MAX_CONNECTIONS, maxConnections);
             LOG.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), maxConnections);
 
-            if (maxConnections == -1) {
-                items.put(Fields.EVENT, "no connection limit configured");
+            if (maxConnections == TenantConstants.UNLIMITED_CONNECTIONS) {
+                traceItems.put(Fields.EVENT, "no connection limit configured");
                 result.complete(Boolean.FALSE);
             } else {
-                final String queryParams = String.format("sum(%s{tenant=\"%s\"})", CONNECTIONS_METRIC_NAME,
-                        tenant.getTenantId());
-                executeQuery(queryParams, span)
-                    .map(currentConnections -> {
-                        items.put("current-connections", currentConnections);
-                        final boolean isExceeded = currentConnections >= maxConnections;
+                connectionCountCache.get(tenant.getTenantId(), (tenantId, executor) -> {
+                    final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
+                    TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                    final String queryParams = String.format(
+                            "sum(%s{tenant=\"%s\"})",
+                            METRIC_NAME_CONNECTIONS,
+                            tenantId);
+                    executeQuery(queryParams, span)
+                        .onSuccess(currentConnections -> r.complete(new LimitedResource<Long>(maxConnections, currentConnections)))
+                        .onFailure(t -> r.completeExceptionally(t));
+                    return r;
+                })
+                .whenComplete((value, error) -> {
+                    if (error != null) {
+                        TracingHelper.logError(span, error);
+                        result.complete(Boolean.FALSE);
+                    } else {
+                        traceItems.put(TenantConstants.FIELD_MAX_CONNECTIONS, maxConnections);
+                        traceItems.put("current-connections", value.getCurrentValue());
+                        final boolean isExceeded = value.getCurrentValue() >= value.getCurrentLimit();
                         LOG.trace("connection limit {}exceeded [tenant: {}, current connections: {}, max-connections: {}]",
-                                isExceeded ? "" : "not ", tenant.getTenantId(), currentConnections, maxConnections);
-                        return isExceeded;
-                    })
-                    .otherwise(failure -> Boolean.FALSE)
-                    .onComplete(result);
+                                isExceeded ? "" : "not ", tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit());
+                        result.complete(isExceeded);
+                    }
+                });
             }
         }
 
         return result.future().map(b -> {
-            items.put("limit exceeded", b);
-            span.log(items);
+            traceItems.put("limit exceeded", b);
+            span.log(traceItems);
             span.finish();
             return b;
         });
@@ -298,6 +330,81 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 });
     }
 
+    private void checkMessageLimit(
+            final TenantObject tenant,
+            final long payloadSize,
+            final Map<String, Object> items,
+            final Span span,
+            final Promise<Boolean> result) {
+
+        final DataVolume dataVolumeConfig = tenant.getResourceLimits().getDataVolume();
+        final long maxBytes = dataVolumeConfig.getMaxBytes();
+        final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
+        //If the period is not set explicitly, monthly is assumed as the default value
+        final PeriodMode periodMode = Optional.ofNullable(dataVolumeConfig.getPeriod())
+                .map(period -> PeriodMode.from(period.getMode()))
+                .orElse(PeriodMode.MONTHLY);
+        final long periodInDays = Optional.ofNullable(dataVolumeConfig.getPeriod())
+                .map(ResourceLimitsPeriod::getNoOfDays)
+                .orElse(0);
+
+        LOG.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
+                TenantConstants.FIELD_MAX_BYTES, maxBytes,
+                TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                TenantConstants.FIELD_PERIOD_MODE, periodMode,
+                TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
+
+        if (maxBytes == TenantConstants.UNLIMITED_BYTES || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode) || payloadSize <= 0) {
+            result.complete(Boolean.FALSE);
+        } else {
+
+            dataVolumeCache.get(tenant.getTenantId(), (tenantId, executor) -> {
+                final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
+                TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                final Long allowedMaxBytes = calculateEffectiveLimit(
+                        OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                        OffsetDateTime.now(ZoneOffset.UTC),
+                        periodMode,
+                        maxBytes);
+                final long dataUsagePeriod = calculateResourceUsagePeriod(
+                        OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                        OffsetDateTime.now(ZoneOffset.UTC),
+                        periodMode,
+                        periodInDays);
+                if (dataUsagePeriod <= 0) {
+                    r.complete(new LimitedResource<Long>(allowedMaxBytes, 0L));
+                } else {
+                    final String queryParams = String.format(
+                            QUERY_TEMPLATE_MESSAGE_LIMIT,
+                            tenant.getTenantId(),
+                            dataUsagePeriod);
+                    executeQuery(queryParams, span)
+                        .onSuccess(bytesConsumed -> r.complete(new LimitedResource<Long>(allowedMaxBytes, bytesConsumed)))
+                        .onFailure(t -> r.completeExceptionally(t));
+                }
+                return r;
+            })
+            .whenComplete((value, error) -> {
+                if (error != null) {
+                    TracingHelper.logError(span, error);
+                    result.complete(Boolean.FALSE);
+                } else {
+                    items.put("current period bytes limit", value.getCurrentLimit());
+                    items.put("current period bytes consumed", value.getCurrentValue());
+                    final boolean isExceeded = (value.getCurrentValue() + payloadSize) > value.getCurrentLimit();
+                    LOG.trace(
+                            "data limit {}exceeded [tenant: {}, bytes consumed: {}, allowed max-bytes: {}, {}: {}, {}: {}, {}: {}]",
+                            isExceeded ? "" : "not ",
+                            tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit(),
+                            TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                            TenantConstants.FIELD_PERIOD_MODE, periodMode,
+                            TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
+                    result.complete(isExceeded);
+                }
+            });
+        }
+    }
+
     @Override
     public Future<Boolean> isConnectionDurationLimitReached(
             final TenantObject tenant,
@@ -331,8 +438,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 });
     }
 
-    private void checkConnectionDurationLimit(final TenantObject tenant, final Map<String, Object> items,
-            final Span span, final Promise<Boolean> result) {
+    private void checkConnectionDurationLimit(
+            final TenantObject tenant,
+            final Map<String, Object> items,
+            final Span span,
+            final Promise<Boolean> result) {
+
         final ConnectionDuration connectionDurationConfig = tenant.getResourceLimits().getConnectionDuration();
         final long maxConnectionDurationInMinutes = connectionDurationConfig.getMaxMinutes();
         final Instant effectiveSince = connectionDurationConfig.getEffectiveSince();
@@ -354,133 +465,52 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode)) {
             result.complete(Boolean.FALSE);
         } else {
-            final long allowedMaxMinutes = getOrAddToCache(limitsCache,
-                    String.format("%s_allowed_max_minutes", tenant.getTenantId()),
-                    () -> calculateEffectiveLimit(
-                            OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                            OffsetDateTime.now(ZoneOffset.UTC),
-                            periodMode,
-                            maxConnectionDurationInMinutes));
-            final long connectionDurationUsagePeriod = getOrAddToCache(limitsCache,
-                    String.format("%s_conn_duration_usage_period", tenant.getTenantId()),
-                    () -> calculateResourceUsagePeriod(
-                            OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                            OffsetDateTime.now(ZoneOffset.UTC),
-                            periodMode,
-                            periodInDays));
 
-            items.put("current period connection duration limit in minutes", allowedMaxMinutes);
+            connectionDurationCache.get(tenant.getTenantId(), (tenantId, executor) -> {
+                final CompletableFuture<LimitedResource<Duration>> r = new CompletableFuture<>();
+                TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                final Duration allowedMaxMinutes = Duration.ofMinutes(calculateEffectiveLimit(
+                                OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                                OffsetDateTime.now(ZoneOffset.UTC),
+                                periodMode,
+                                maxConnectionDurationInMinutes));
+                final Duration connectionDurationUsagePeriod = Duration.ofDays(calculateResourceUsagePeriod(
+                                OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                                OffsetDateTime.now(ZoneOffset.UTC),
+                                periodMode,
+                                periodInDays));
 
-            if (connectionDurationUsagePeriod <= 0) {
-                result.complete(Boolean.FALSE);
-            } else {
-                final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%sd])))",
-                        CONNECTIONS_DURATION_METRIC_NAME,
-                        tenant.getTenantId(),
-                        connectionDurationUsagePeriod);
-                final String key = String.format("%s_minutes_consumed", tenant.getTenantId());
-
-                Optional.ofNullable(limitsCache)
-                        .map(ok -> limitsCache.get(key))
-                        .map(cachedValue -> Future.succeededFuture((long) cachedValue))
-                        .orElseGet(() -> executeQuery(queryParams, span)
-                                .map(minutesConnected -> addToCache(limitsCache, key, minutesConnected)))
-                        .map(minutesConnected -> {
-                            items.put("current period's connection duration in minutes", minutesConnected);
-                            final boolean isExceeded = minutesConnected >= allowedMaxMinutes;
-                            LOG.trace(
-                                    "connection duration limit {} exceeded [tenant: {}, connection duration consumed: {}, allowed max-duration: {}, {}: {}, {}: {}, {}: {}]",
-                                    isExceeded ? "" : "not ",
-                                    tenant.getTenantId(), minutesConnected, allowedMaxMinutes,
-                                    TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
-                                    TenantConstants.FIELD_PERIOD_MODE, periodMode,
-                                    TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
-                            return isExceeded;
-                        })
-                        .otherwise(failed -> Boolean.FALSE)
-                        .onComplete(result);
-            }
-        }
-    }
-
-    private void checkMessageLimit(
-            final TenantObject tenant,
-            final long payloadSize,
-            final Map<String, Object> items,
-            final Span span,
-            final Promise<Boolean> result) {
-
-        final DataVolume dataVolumeConfig = tenant.getResourceLimits().getDataVolume();
-        final long maxBytes = dataVolumeConfig.getMaxBytes();
-        final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
-        //If the period is not set explicitly, monthly is assumed as the default value
-        final PeriodMode periodMode = Optional.ofNullable(dataVolumeConfig.getPeriod())
-                .map(period -> PeriodMode.from(period.getMode()))
-                .orElse(PeriodMode.MONTHLY);
-        final long periodInDays = Optional.ofNullable(dataVolumeConfig.getPeriod())
-                .map(ResourceLimitsPeriod::getNoOfDays)
-                .orElse(0);
-
-        LOG.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
-                TenantConstants.FIELD_MAX_BYTES, maxBytes,
-                TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
-                TenantConstants.FIELD_PERIOD_MODE, periodMode,
-                TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
-
-        if (maxBytes == -1 || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode) || payloadSize <= 0) {
-            result.complete(Boolean.FALSE);
-        } else {
-
-            final long allowedMaxBytes = getOrAddToCache(limitsCache,
-                    String.format("%s_allowed_max_bytes", tenant.getTenantId()),
-                    () -> calculateEffectiveLimit(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                            OffsetDateTime.now(ZoneOffset.UTC), periodMode, maxBytes));
-            final long dataUsagePeriod = getOrAddToCache(limitsCache,
-                    String.format("%s_data_usage_period", tenant.getTenantId()),
-                    () -> calculateResourceUsagePeriod(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                            OffsetDateTime.now(ZoneOffset.UTC), periodMode, periodInDays));
-
-            items.put("current period bytes limit", allowedMaxBytes);
-
-            if (dataUsagePeriod <= 0) {
-                result.complete(Boolean.FALSE);
-            } else {
-
-                final String queryParams = String.format(
-                        "floor(sum(increase(%s{status=~\"%s|%s\", tenant=\"%s\"} [%sd]) or %s*0) + sum(increase(%s{status=~\"%s|%s\", tenant=\"%s\"} [%sd]) or %s*0))",
-                        MESSAGES_PAYLOAD_SIZE_METRIC_NAME,
-                        MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
-                        MetricsTags.ProcessingOutcome.UNPROCESSABLE.asTag().getValue(),
-                        tenant.getTenantId(),
-                        dataUsagePeriod,
-                        COMMANDS_PAYLOAD_SIZE_METRIC_NAME,
-                        COMMANDS_PAYLOAD_SIZE_METRIC_NAME,
-                        MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
-                        MetricsTags.ProcessingOutcome.UNPROCESSABLE.asTag().getValue(),
-                        tenant.getTenantId(),
-                        dataUsagePeriod,
-                        MESSAGES_PAYLOAD_SIZE_METRIC_NAME);
-                final String key = String.format("%s_bytes_consumed", tenant.getTenantId());
-
-                Optional.ofNullable(limitsCache)
-                        .map(success -> limitsCache.get(key))
-                        .map(cachedValue -> Future.succeededFuture((long) cachedValue))
-                        .orElseGet(() -> executeQuery(queryParams, span).map(bytesConsumed -> addToCache(limitsCache, key, bytesConsumed)))
-                        .map(bytesConsumed -> {
-                            items.put("current period bytes consumed", bytesConsumed);
-                            final boolean isExceeded = (bytesConsumed + payloadSize) > allowedMaxBytes;
-                            LOG.trace(
-                                    "data limit {}exceeded [tenant: {}, bytes consumed: {}, allowed max-bytes: {}, {}: {}, {}: {}, {}: {}]",
-                                    isExceeded ? "" : "not ",
-                                    tenant.getTenantId(), bytesConsumed, allowedMaxBytes,
-                                    TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
-                                    TenantConstants.FIELD_PERIOD_MODE, periodMode,
-                                    TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
-                            return isExceeded;
-                        })
-                        .otherwise(failed -> Boolean.FALSE)
-                        .onComplete(result);
-            }
+                if (connectionDurationUsagePeriod.toDays() <= 0) {
+                    r.complete(new LimitedResource<Duration>(allowedMaxMinutes, Duration.ofMinutes(0)));
+                } else {
+                    final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%sd])))",
+                            METRIC_NAME_CONNECTIONS_DURATION,
+                            tenant.getTenantId(),
+                            connectionDurationUsagePeriod.toDays());
+                    executeQuery(queryParams, span)
+                        .onSuccess(minutesConnected -> r.complete(new LimitedResource<Duration>(allowedMaxMinutes, Duration.ofMinutes(minutesConnected))))
+                        .onFailure(t -> r.completeExceptionally(t));
+                }
+                return r;
+            })
+            .whenComplete((value, error) -> {
+                if (error != null) {
+                    TracingHelper.logError(span, error);
+                    result.complete(Boolean.FALSE);
+                } else {
+                    items.put("current period's connection duration limit", value.getCurrentLimit());
+                    items.put("current period's connection duration consumed", value.getCurrentValue());
+                    final boolean isExceeded = value.getCurrentValue().compareTo(value.getCurrentLimit()) >= 0;
+                    LOG.trace(
+                            "connection duration limit {} exceeded [tenant: {}, connection duration consumed: {}, allowed max-duration: {}, {}: {}, {}: {}, {}: {}]",
+                            isExceeded ? "" : "not ",
+                            tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit(),
+                            TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                            TenantConstants.FIELD_PERIOD_MODE, periodMode,
+                            TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
+                    result.complete(isExceeded);
+                }
+            });
         }
     }
 
@@ -493,14 +523,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 final HttpResponse<JsonObject> response = sendAttempt.result();
                 result.complete(extractLongValue(response.body(), span));
             } else {
-                final Map<String, Object> items = Map.of(
+                final Map<String, Object> traceItems = Map.of(
                         Fields.EVENT, Tags.ERROR.getKey(),
                         Fields.MESSAGE, "failed to run Prometheus query",
                         "URL", url,
                         "query", query,
                         Fields.ERROR_KIND, "Exception",
                         Fields.ERROR_OBJECT, sendAttempt.cause());
-                TracingHelper.logError(span, items);
+                TracingHelper.logError(span, traceItems);
                 LOG.warn("failed to run Prometheus query [URL: {}, query: {}]: {}",
                         url, query, sendAttempt.cause().getMessage());
                 result.fail(sendAttempt.cause());
@@ -510,7 +540,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     private HttpRequest<JsonObject> newQueryRequest(final String query) {
-        final HttpRequest<JsonObject> request = client.get(config.getPort(), config.getHost(), QUERY_URI)
+        final HttpRequest<JsonObject> request = client.get(QUERY_URI)
                 .addQueryParam("query", query)
                 .expect(ResponsePredicate.SC_OK)
                 .as(BodyCodec.jsonObject());
@@ -667,20 +697,5 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         default:
             return 0L;
         }
-    }
-
-    private long getOrAddToCache(final ExpiringValueCache<Object, Object> cache, final String key,
-            final Supplier<Long> valueSupplier) {
-        return Optional.ofNullable(cache)
-                .map(success -> cache.get(key))
-                .map(cachedValue -> (long) cachedValue)
-                .orElseGet(() -> addToCache(cache, key, valueSupplier.get()));
-    }
-
-    private long addToCache(final ExpiringValueCache<Object, Object> cache, final String key, final long result) {
-        Optional.ofNullable(cache)
-                .ifPresent(success -> cache.put(key, result,
-                        Duration.ofSeconds(config.getCacheTimeout())));
-        return result;
     }
 }
