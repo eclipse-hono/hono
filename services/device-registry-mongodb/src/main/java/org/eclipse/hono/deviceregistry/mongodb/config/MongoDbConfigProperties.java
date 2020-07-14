@@ -24,8 +24,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
- * A POJO for configuring mongodb properties used by the
- * {@link org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService}.
+ * A POJO for configuring a connection to a Mongo DB server.
  */
 public final class MongoDbConfigProperties {
 
@@ -43,7 +42,7 @@ public final class MongoDbConfigProperties {
     private Integer connectionTimeoutInMs;
 
     /**
-     * Gets the name or literal IP address of the host the mongodb instance is
+     * Gets the name or literal IP address of the host the Mongo DB instance is
      * running on.
      *
      * @return The host name.
@@ -53,7 +52,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the name or literal IP address of the host the mongodb instance is
+     * Sets the name or literal IP address of the host the Mongo DB instance is
      * running on.
      *
      * @param host host name or IP address
@@ -66,7 +65,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the TCP port that the mongodb is listening on.
+     * Gets the TCP port that the Mongo DB is listening on.
      *
      * @return The port number.
      */
@@ -75,7 +74,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the TCP port that the mongodb is listening on.
+     * Sets the TCP port that the Mongo DB is listening on.
      * <p>
      * The default port value is {@link #DEFAULT_PORT}.
      *
@@ -114,7 +113,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the user name used for authentication.
+     * Gets the user name for authenticating to the Mongo DB.
      *
      * @return The user name.
      */
@@ -123,11 +122,11 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the user name used for authentication.
+     * Sets the user name for authenticating to the Mongo DB.
      *
      * @param username The user name.
      * @return A reference to this for fluent use.
-     * @throws NullPointerException if the username is {@code null}.
+     * @throws NullPointerException if the user name is {@code null}.
      */
     public MongoDbConfigProperties setUsername(final String username) {
         this.username = Objects.requireNonNull(username);
@@ -135,7 +134,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the password used for authentication.
+     * Gets the password for authenticating to the Mongo DB.
      *
      * @return The password.
      */
@@ -144,7 +143,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the password used for authentication.
+     * Sets the password for authenticating to the Mongo DB.
      *
      * @param password the password
      * @return A reference to this for fluent use.
@@ -156,7 +155,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the connection string for the mongodb client.
+     * Gets the connection string for the Mongo DB.
      *
      * @return The connection string.
      */
@@ -165,9 +164,13 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the connection string for the mongodb client. If set, the connection string
-     * overrides the other connection settings. Format:
+     * Sets the connection string for the Mongo DB.
+     * <p>
+     * If set, the connection string overrides the other connection settings.
+     * Format:
+     * <pre>
      * mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+     * </pre>
      *
      * @param connectionString The connection string.
      * @return A reference to this for fluent use.
@@ -180,10 +183,9 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the time in milliseconds that the mongo driver will wait to select a
-     * server for an operation before raising an error.
+     * Gets the timeout for selecting a Mongo DB server for an operation.
      * <p>
-     * When this property is not set, the Vert.x mongodb client uses a default value of 
+     * When this property is not set, the Vert.x Mongo DB client uses a default value of 
      * {@value DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS} ms.
      *
      * @return The server selection timeout in milliseconds.
@@ -193,10 +195,9 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the timeout in milliseconds that the mongo driver will wait to select a server 
-     * for an operation before raising an error.
+     * Sets the timeout for selecting a Mongo DB server for an operation.
      * <p>
-     * When this property is not set, the Vert.x mongodb client uses a default value of 
+     * When this property is not set, the Vert.x Mongo DB client uses a default value of 
      * {@value DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS} ms.
      *
      * @param serverSelectionTimeoutInMs The server selection timeout in milliseconds.
@@ -212,9 +213,9 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the timeout in milliseconds to attempt a connection before timing out.
+     * Gets the timeout for connecting to the Mongo DB.
      * <p>
-     * When this property is not set, the Vert.x mongodb client uses a default value of 10000 ms.
+     * When this property is not set, the Vert.x Mongo DB client uses a default value of 10000 ms.
      *
      * @return The connection timeout in milliseconds.
      */
@@ -223,9 +224,9 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Sets the timeout in milliseconds to attempt a connection before timing out.
+     * Sets the timeout for connecting to the Mongo DB.
      * <p>
-     * When this property is not set, the Vert.x mongodb client uses a default value of 10000 ms.
+     * When this property is not set, the Vert.x Mongo DB client uses a default value of 10000 ms.
      *
      * @param connectionTimeoutInMs The connection timeout in milliseconds.
      * @return A reference to this for fluent use.
@@ -240,17 +241,17 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Returns the mongodb properties as a json object suited to instantiate a #{@link MongoClient}. 
+     * Gets the Mongo DB properties for creating a {@link MongoClient}.
      * <p>
      * If the connectionString is set, it will override all the other connection settings.
      *
-     * @return The mongodb client configuration as a json object.
+     * @return The Mongo DB client configuration.
      */
     public JsonObject getMongoClientConfig() {
         final JsonObject configJson = new JsonObject();
         if (connectionString != null) {
             configJson.put("connection_string", connectionString);
-            LOG.warn("Since connection string is set, the other connection properties if any set, will be ignored");
+            LOG.info("using connection string, ignoring other connection properties");
         } else {
             configJson.put("host", host)
                     .put("port", port)
