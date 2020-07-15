@@ -1,5 +1,5 @@
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -26,4 +26,13 @@
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
+
+  <build>
+    <resources>
+      <resource>
+        <filtering>true</filtering>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+  </build>
 </project>
