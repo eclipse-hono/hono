@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,8 +25,10 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
+import org.infinispan.client.hotrod.configuration.Configuration;
 import org.infinispan.client.hotrod.impl.MetadataValueImpl;
 import org.infinispan.commons.api.BasicCache;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,9 +59,13 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
 
     @Override
     protected org.infinispan.client.hotrod.RemoteCache<Object, Object> givenAConnectedCache() {
+        final Configuration configuration = mock(Configuration.class);
         @SuppressWarnings("unchecked")
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> result = mock(org.infinispan.client.hotrod.RemoteCache.class);
-        when(remoteCacheManager.getCache(anyString())).thenReturn(result);
+        when(remoteCacheManager.getCache(anyString(), anyBoolean())).thenReturn(result);
+        when(remoteCacheManager.getConfiguration()).thenReturn(configuration);
+        when(configuration.forceReturnValues()).thenReturn(false);
+        when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
         return result;
     }
 

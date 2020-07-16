@@ -18,7 +18,6 @@ import java.util.Optional;
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.client.hotrod.RemoteCacheManager;
-import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -58,8 +57,7 @@ public class HotrodCacheConfig {
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public RemoteCacheManager remoteCacheManager() {
         final InfinispanRemoteConfigurationProperties properties = remoteCacheProperties();
-        final ConfigurationBuilder configBuilder = properties.getConfigurationBuilder();
-        return new RemoteCacheManager(configBuilder.build(), false);
+        return new RemoteCacheManager(properties.getConfigurationBuilder().build(), false);
     }
 
     /**

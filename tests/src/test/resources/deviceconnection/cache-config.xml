@@ -10,13 +10,12 @@
    
     SPDX-License-Identifier: EPL-2.0
  -->
-<infinispan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="urn:infinispan:config:11.0 https://infinispan.org/schemas/infinispan-config-11.0.xsd
-                            urn:infinispan:server:11.0 https://infinispan.org/schemas/infinispan-server-11.0.xsd"
-        xmlns="urn:infinispan:config:11.0">
+<infinispan>
   <cache-container default-cache="device-connection">
     <local-cache name="device-connection" simple-cache="true">
-      <memory max-count="100" when-full="REMOVE" />
+      <memory>
+        <object size="100" strategy="REMOVE" />
+      </memory>
     </local-cache>
   </cache-container>
 </infinispan>
