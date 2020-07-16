@@ -400,14 +400,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
-                            helper.isTestEnvironment() ? 1000 : 200)
-                            .map(response -> {
-                                ctx.verify(() -> {
-                                    assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
-                                    assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
-                                });
-                                return response;
+                            helper.getSendCommandTimeout())
+                        .map(response -> {
+                            ctx.verify(() -> {
+                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
+                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
                             });
+                            return response;
+                        });
                 },
                 commandsToSend);
     }
@@ -603,19 +603,25 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         .onComplete(ctx.succeeding(v -> {
             expectedSteps.flag();
             // send second command
-            helper.sendOneWayCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
-                    Buffer.buffer("cmd"), null, 200)
-            // second command shall fail because there's no credit left
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(ServerErrorException.class);
-                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-                    // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
-                    // and the error here would be caused by a request timeout in the sendOneWayCommand() method above (after 200ms already)
-                    assertThat(t.getMessage()).doesNotContain("timed out");
-                });
-                expectedSteps.flag();
-            }));
+            helper.sendOneWayCommand(
+                    tenantId,
+                    commandTargetDeviceId,
+                    "setValue",
+                    "text/plain",
+                    Buffer.buffer("cmd"),
+                    null,
+                    helper.getSendCommandTimeout())
+                // second command shall fail because there's no credit left
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ServerErrorException.class);
+                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                        // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
+                        // and the error here would be caused by a request timeout in the sendOneWayCommand() method above (after 200ms already)
+                        assertThat(t.getMessage()).doesNotContain("timed out");
+                    });
+                    expectedSteps.flag();
+                }));
         }));
     }
 
@@ -830,5 +836,4 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         });
 
     }
-
 }

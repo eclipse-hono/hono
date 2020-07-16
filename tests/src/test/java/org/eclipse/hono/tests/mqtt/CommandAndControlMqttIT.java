@@ -243,7 +243,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                    helper.isTestEnvironment() ? 1000 : 200)
+                    helper.getSendCommandTimeout())
                     .map(response -> {
                         ctx.verify(() -> {
                             assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
@@ -454,7 +454,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             return helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                    200);
+                    helper.getSendCommandTimeout());
         };
 
         helper.registry

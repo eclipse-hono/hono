@@ -611,6 +611,18 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Determines the time to wait before timing out a request to send
+     * a command to a device.
+     *
+     * @return The time out in milli seconds. The value will be 1000 if
+     *         {@link #isTestEnvironment()} returns {@code true}, 200
+     *         otherwise.
+     */
+    public long getSendCommandTimeout() {
+        return isTestEnvironment() ? 1000 : 200;
+    }
+
+    /**
      * Checks if the Device Registry supports devices connecting via gateways.
      *
      * @return {@code true} if the registry supports gateway mode.
