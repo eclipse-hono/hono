@@ -14,6 +14,10 @@ title = "Release Notes"
 * A new Device Registry implementation based on MongoDB database is now available in Hono.
   Please refer to the [MongoDB Device Registry User Guide]({{% doclink "/user-guide/mongodb-based-device-registry" %}})
   for additional information.
+* Hono protocol adapters can now be configured to use address rewriting when opening AMQP 1.0 links to the messaging network.
+  This allows an easier deployment in multi-tenant messaging environments.
+  Please refer to the [Hono Client Configuration Guide]({{% doclink "/admin-guide/hono-client-configuration/#address-rewriting" %}})
+  for additional information.
 
 ### Fixes & Enhancements
 
