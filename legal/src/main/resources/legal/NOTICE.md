@@ -86,11 +86,11 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-cli/tree/cli-1.2).
 
-### GSON 2.8.5
+### Gson 2.8.5
 
 This product includes software developed by the [GSON project](https://github.com/google/gson).
 
-Your use of *GSON* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *Gson* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
@@ -110,7 +110,7 @@ The source code is available from Maven Central:
 * [infinispan-client-hotrod](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-client-hotrod/${infinispan.version}/infinispan-client-hotrod-${infinispan.version}-sources.jar).
 * [infinispan-commons](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-commons/${infinispan.version}/infinispan-commons-${infinispan.version}-sources.jar).
 * [infinispan-core](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-core/${infinispan.version}/infinispan-core-${infinispan.version}-sources.jar).
-* [protostream](https://github.com/infinispan/protostream/tree/4.3.3.Final)
+* [protostream](https://github.com/infinispan/protostream/tree/4.3.2.Final)
 
 ### Jackson ${jackson.version}
 
@@ -132,7 +132,7 @@ A copy of the license is contained in the file [CDDL-1.0.txt](CDDL-1.0.txt).
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/spec/javax/transaction/jboss-transaction-api_1.2_spec/1.1.1.Final/jboss-transaction-api_1.2_spec-1.1.1.Final-sources.jar).
 
-### Javassist 3.26.0
+### Javassist 3.24.1
 
 This product includes software developed by the [Javassist project](http://www.javassist.org/).
 
@@ -140,7 +140,7 @@ The Hono project elects to include the *Javaassist* library in this distribution
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHubl](https://github.com/jboss-javassist/javassist/tree/rel_3_26_0_ga).
+The source code is available from [GitHubl](https://github.com/jboss-javassist/javassist/tree/rel_3_24_1_ga).
 
 ### JBoss Logging 3.3.2.Final
 
@@ -285,14 +285,14 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-vertx-web/${opentracing-vertx-web.version}/opentracing-vertx-web-${opentracing-vertx-web.version}-sources.jar).
 
-### Protobuf 3.12.2
+### Protobuf 3.6.1
 
 This product includes software developed by Google Inc's [Protocol Buffers project](https://developers.google.com/protocol-buffers/).
 
 Your use of *protobuf* is subject to the terms and conditions defined in the file
 [LICENSE.protobuf.txt](LICENSE.protobuf.txt).
 
-The source code is available from [GitHub](https://github.com/protocolbuffers/protobuf/tree/v3.12.2).
+The source code is available from [GitHub](https://github.com/protocolbuffers/protobuf/tree/v3.6.1).
 
 ### Proton-j ${proton.version}
 
