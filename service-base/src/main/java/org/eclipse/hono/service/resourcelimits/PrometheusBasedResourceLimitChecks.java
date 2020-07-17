@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.hono.service.metric.MetricsCache;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -59,7 +60,7 @@ import io.vertx.ext.web.codec.BodyCodec;
  * Resource limit checks which compare configured limits with live metrics retrieved
  * from a <em>Prometheus</em> server.
  */
-public final class PrometheusBasedResourceLimitChecks implements ResourceLimitChecks {
+public final class PrometheusBasedResourceLimitChecks implements ResourceLimitChecks, MetricsCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
 

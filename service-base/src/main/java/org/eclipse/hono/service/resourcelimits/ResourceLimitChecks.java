@@ -13,7 +13,6 @@
 package org.eclipse.hono.service.resourcelimits;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.metric.MetricsCache;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
@@ -22,7 +21,7 @@ import io.vertx.core.Future;
 /**
  * Interface to check if further connections or messages are allowed based on the configured limits.
  */
-public interface ResourceLimitChecks extends MetricsCache {
+public interface ResourceLimitChecks {
 
     /**
      * Checks if the maximum number of connections configured for a tenant
