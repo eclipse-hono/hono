@@ -148,25 +148,15 @@ public class ApplicationConfig {
     //
 
     /**
-     * Gets properties for configuring the in-memory <em>Device Connection</em> service.
-     *
-     * @return The properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.device-connection.svc")
-    public MapBasedDeviceConnectionsConfigProperties deviceConnectionProperties() {
-        return new MapBasedDeviceConnectionsConfigProperties();
-    }
-
-    /**
      * Creates an instance of the file based service for managing device connection information.
      *
+     * @param config Configuration parameters for the service.
      * @return The service.
      */
     @Bean
-    public DeviceConnectionService deviceConnectionService() {
+    public DeviceConnectionService deviceConnectionService(final MapBasedDeviceConnectionsConfigProperties config) {
         final MapBasedDeviceConnectionService service = new MapBasedDeviceConnectionService();
-        service.setConfig(deviceConnectionProperties());
+        service.setConfig(config);
         return service;
     }
 

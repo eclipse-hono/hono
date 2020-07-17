@@ -16,11 +16,13 @@ package org.eclipse.hono.deviceregistry.file;
 
 import org.eclipse.hono.deviceregistry.service.credentials.NoopCredentialsService;
 import org.eclipse.hono.deviceregistry.service.device.NoopRegistrationService;
+import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,6 +34,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
 public class NoopServiceConfig {
+
+    /**
+     * Gets properties for configuring the in-memory <em>Device Connection</em> service.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.device-connection.svc")
+    public MapBasedDeviceConnectionsConfigProperties deviceConnectionProperties() {
+        return new MapBasedDeviceConnectionsConfigProperties();
+    }
 
     /**
      * Creates an instance of the dummy service for managing tenant information.

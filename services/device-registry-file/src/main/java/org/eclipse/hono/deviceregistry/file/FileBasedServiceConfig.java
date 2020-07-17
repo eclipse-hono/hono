@@ -18,6 +18,7 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -80,6 +81,21 @@ public class FileBasedServiceConfig {
     @ConfigurationProperties(prefix = "hono.registry.svc")
     public FileBasedRegistrationConfigProperties registrationProperties() {
         return new FileBasedRegistrationConfigProperties();
+    }
+
+    /**
+     * Gets properties for configuring the in-memory <em>Device Connection</em> service.
+     * <p>
+     * The maximum number of devices per tenant is copied from the configuration for the
+     * Device Registration service in order to use the same capacity limits.
+     *
+     * @return The properties.
+     */
+    @Bean
+    public MapBasedDeviceConnectionsConfigProperties deviceConnectionProperties() {
+        final MapBasedDeviceConnectionsConfigProperties props = new MapBasedDeviceConnectionsConfigProperties();
+        props.setMaxDevicesPerTenant(registrationProperties().getMaxDevicesPerTenant());
+        return props;
     }
 
     /**
