@@ -122,6 +122,17 @@
     </profile>
 
     <profile>
+      <id>netty-native-osx-x86_64</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-x86_64</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
       <id>metrics-graphite</id>
       <dependencies>
         <dependency>
