@@ -141,18 +141,17 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         final Map<String, Object> result = new HashMap<>();
 
         if (clientIdentity instanceof PreSharedKeyIdentity) {
-            final Span span = newSpan("PSK-getDeviceIdentityInfo");
-            final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
-            TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
-            TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
             if (customArgument instanceof String) {
                 // device id from previous lookup
                 final String deviceId = (String) customArgument;
+                final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(clientIdentity.getName(), null);
                 result.put("hono-device", new Device(deviceIdentity.getTenantId(), deviceId));
-                TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
-                span.log("successfully recovered device identity");
             } else {
                 // session resumption, so no custom-argument, because there was no previous lookup
+                final Span span = newSpan("PSK-getDeviceIdentityInfo");
+                final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(clientIdentity.getName(), span);
+                TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
+                TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
                 final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
                 context.runOnContext(go -> {
                     credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
@@ -169,12 +168,12 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
                     span.log("successfully resolved device identity");
                     TracingHelper.TAG_DEVICE_ID.set(span, credentials.getDeviceId());
                 } catch (final CompletionException e) {
-                    TracingHelper.logError(span, "could not resolve auhenticated principal", e);
+                    TracingHelper.logError(span, "could not resolve authenticated principal", e);
                     LOG.debug("could not resolve authenticated principal [type: {}, tenant-id: {}, auth-id: {}]",
                             clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
                 }
+                span.finish();
             }
-            span.finish();
         } else {
             LOG.info("unsupported Principal type: {}", clientIdentity.getClass());
         }
@@ -182,9 +181,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     }
 
     /**
-     * Load credentials for an identity used by a device in a PSK based DTLS
-     * handshake.
-     * <p>
+     * Load credentials for an identity used by a device in a PSK based DTLS handshake.
      *
      * @param cid the connection id to report the result.
      * @param identity the psk identity of the device.
@@ -193,9 +190,9 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         final String publicInfo = identity.getPublicInfoAsString();
         LOG.debug("getting PSK secret for identity [{}]", publicInfo);
 
-        final Span span = newSpan("PSK-getSecretKey");
+        final Span span = newSpan("PSK-getDeviceCredentials");
 
-        final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(span, publicInfo);
+        final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(publicInfo, span);
         if (handshakeIdentity == null) {
             span.finish();
             return;
@@ -243,11 +240,12 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * Create tenant aware identity based on the provided pre-shared-key handshake identity.
      *
      * @param identity pre-shared-key handshake identity.
+     * @param span The current open tracing span or {@code null}.
      * @return tenant aware identity.
      */
-    private PreSharedKeyDeviceIdentity getHandshakeIdentity(final Span span, final String identity) {
+    private PreSharedKeyDeviceIdentity getHandshakeIdentity(final String identity, final Span span) {
         final String splitRegex = config.isSingleTenant() ? null : config.getIdSplitRegex();
-        return PreSharedKeyDeviceIdentity.create(span, identity, splitRegex);
+        return PreSharedKeyDeviceIdentity.create(identity, splitRegex, span);
     }
 
     @Override
