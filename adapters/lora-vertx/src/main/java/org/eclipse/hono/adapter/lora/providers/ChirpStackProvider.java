@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
 import java.util.Objects;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
@@ -62,8 +63,8 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    public String pathPrefix() {
-        return "/chirpstack";
+    public Set<String> pathPrefixes() {
+        return Set.of("/chirpstack");
     }
 
 

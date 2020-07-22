@@ -13,97 +13,36 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.lora.GatewayInfo;
-import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.springframework.stereotype.Component;
 
-import com.google.common.io.BaseEncoding;
-
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A LoRaWAN provider with API for Actility.
+ * A LoRaWAN provider with API for Actility Wireless.
  */
 @Component
-public class ActilityProvider extends JsonBasedLoraProvider {
+public class ActilityWirelessProvider extends ActilityBaseProvider {
 
     private static final String FIELD_ACTILITY_ADR = "ADRbit";
-    private static final String FIELD_ACTILITY_CHANNEL = "Channel";
-    private static final String FIELD_ACTILITY_DEVICE_EUI = "DevEUI";
-    private static final String FIELD_ACTILITY_FPORT = "FPort";
-    private static final String FIELD_ACTILITY_FRAME_COUNT_UPLINK = "FCntUp";
-    private static final String FIELD_ACTILITY_LATITUTDE = "LrrLAT";
-    private static final String FIELD_ACTILITY_LONGITUDE = "LrrLON";
-    private static final String FIELD_ACTILITY_ROOT_OBJECT = "DevEUI_uplink";
-    private static final String FIELD_ACTILITY_PAYLOAD = "payload_hex";
-    private static final String FIELD_ACTILITY_LRR = "Lrr";
-    private static final String FIELD_ACTILITY_LRR_ID = "Lrrid";
-    private static final String FIELD_ACTILITY_LRR_RSSI = "LrrRSSI";
-    private static final String FIELD_ACTILITY_LRR_SNR = "LrrSNR";
-    private static final String FIELD_ACTILITY_LRRS = "Lrrs";
-    private static final String FIELD_ACTILITY_SPREADING_FACTOR = "SpFact";
 
     @Override
     public String getProviderName() {
-        return "actility";
+        return "actilityWireless";
     }
 
     @Override
-    public String pathPrefix() {
-        return "/actility";
-    }
-
-    private Optional<JsonObject> getRootObject(final JsonObject loraMessage) {
-        return LoraUtils.getChildObject(loraMessage, FIELD_ACTILITY_ROOT_OBJECT, JsonObject.class);
+    public Set<String> pathPrefixes() {
+        return Set.of("/actility", "/actilityWireless");
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
-
-        Objects.requireNonNull(loraMessage);
-        return getRootObject(loraMessage)
-                .map(root -> root.getValue(FIELD_ACTILITY_DEVICE_EUI))
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device EUI property"));
-    }
-
-    @Override
-    protected Buffer getPayload(final JsonObject loraMessage) {
-        Objects.requireNonNull(loraMessage);
-        return getRootObject(loraMessage)
-                .map(root -> root.getValue(FIELD_ACTILITY_PAYLOAD))
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .map(s -> Buffer.buffer(BaseEncoding.base16().decode(s.toUpperCase())))
-                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued payload property"));
-    }
-
-    @Override
-    protected LoraMessageType getMessageType(final JsonObject loraMessage) {
-        Objects.requireNonNull(loraMessage);
-        return getRootObject(loraMessage)
-                .map(root -> LoraMessageType.UPLINK)
-                .orElse(LoraMessageType.UNKNOWN);
-    }
-
-    @Override
-    protected LoraMetaData getMetaData(final JsonObject loraMessage) {
-
-        Objects.requireNonNull(loraMessage);
-
-        return getRootObject(loraMessage)
-            .map(this::extractMetaData)
-            .orElse(null);
-    }
-
-    private LoraMetaData extractMetaData(final JsonObject rootObject) {
+    protected LoraMetaData extractMetaData(final JsonObject rootObject) {
 
         final LoraMetaData data = new LoraMetaData();
 
@@ -144,30 +83,6 @@ public class ActilityProvider extends JsonBasedLoraProvider {
                     });
             });
         return data;
-    }
-
-    /**
-     * Gets the frequency corresponding to the channel ID used by Actility/ThingWork
-     * as described in section 2.4 of the
-     * <a href="https://partners.thingpark.com/sites/default/files/2017-11/AdvancedThingParkDeveloperGuide_V4.pdf">
-     * Advanced Developer Guide</a>.
-     *
-     * @param logicalChannelId The channel ID.
-     * @return The frequency in MHz or {@code null} if the identifier is unknown.
-     */
-    private Double getFrequency(final String logicalChannelId) {
-        switch (logicalChannelId) {
-        case "LC1":
-            return 868.1;
-        case "LC2":
-            return 868.3;
-        case "LC3":
-            return 868.5;
-        case "RX2":
-            return 869.525;
-        default:
-            return null;
-        }
     }
 
     private GatewayInfo extractGatewayInfo(final JsonObject lrr) {

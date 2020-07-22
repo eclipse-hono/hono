@@ -129,17 +129,19 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         setupAuthorization(router);
 
         for (final LoraProvider provider : loraProviders) {
-            router.route(HttpMethod.OPTIONS, provider.pathPrefix())
-                .handler(this::handleOptionsRoute);
+            for (final String pathPrefix : provider.pathPrefixes()) {
+                router.route(HttpMethod.OPTIONS, pathPrefix)
+                        .handler(this::handleOptionsRoute);
 
-            router.route(provider.acceptedHttpMethod(), provider.pathPrefix())
-                .consumes(provider.acceptedContentType())
-                .handler(ctx -> this.handleProviderRoute(HttpContext.from(ctx), provider));
+                router.route(provider.acceptedHttpMethod(), pathPrefix)
+                        .consumes(provider.acceptedContentType())
+                        .handler(ctx -> this.handleProviderRoute(HttpContext.from(ctx), provider));
 
-            router.route(provider.acceptedHttpMethod(), provider.pathPrefix()).handler(ctx -> {
-                LOG.debug("request does not contain content-type header, will return 400 ...");
-                handle400(ctx, ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE);
-            });
+                router.route(provider.acceptedHttpMethod(), pathPrefix).handler(ctx -> {
+                    LOG.debug("request does not contain content-type header, will return 400 ...");
+                    handle400(ctx, ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE);
+                });
+            }
         }
     }
 
@@ -180,7 +182,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {
 
-        LOG.debug("processing request from provider [name: {}, URI: {}", provider.getProviderName(), provider.pathPrefix());
+        LOG.debug("processing request from provider [name: {}, URI: {}", provider.getProviderName(),
+                ctx.getRoutingContext().normalisedPath());
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
                 TracingHandler.serverSpanContext(ctx.getRoutingContext()),

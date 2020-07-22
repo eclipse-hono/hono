@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,17 +19,17 @@ import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 
 /**
- * Verifies behavior of {@link ActilityProvider}.
+ * Verifies behavior of {@link OrbiwiseProvider}.
  */
-public class ActilityProviderTest extends LoraProviderTestBase<ActilityProvider> {
+public class OrbiwiseProviderTest extends LoraProviderTestBase<OrbiwiseProvider> {
 
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected ActilityProvider newProvider() {
-        return new ActilityProvider();
+    protected OrbiwiseProvider newProvider() {
+        return new OrbiwiseProvider();
     }
 
     /**
@@ -40,12 +40,14 @@ public class ActilityProviderTest extends LoraProviderTestBase<ActilityProvider>
 
         final LoraMetaData data = loraMessage.getMetaData();
 
-        assertThat(data.getGatewayInfo()).hasSize(2);
-        assertThat(data.getGatewayInfo().get(0).getGatewayId()).isEqualTo("18035559");
-        assertThat(data.getGatewayInfo().get(0).getRssi()).isEqualTo(-48);
-        assertThat(data.getGatewayInfo().get(0).getSnr()).isEqualTo(3.0);
-        assertThat(data.getGatewayInfo().get(1).getGatewayId()).isEqualTo("18035560");
-        assertThat(data.getGatewayInfo().get(1).getRssi()).isEqualTo(-49);
-        assertThat(data.getGatewayInfo().get(1).getSnr()).isEqualTo(4.0);
+        assertThat(data.getGatewayInfo()).hasSize(1);
+        assertThat(data.getGatewayInfo().get(0).getGatewayId()).isEqualTo("10000001");
+        assertThat(data.getGatewayInfo().get(0).getRssi()).isEqualTo(-112);
+        assertThat(data.getGatewayInfo().get(0).getSnr()).isEqualTo(-7.75);
+
+        assertThat(data.getSpreadingFactor()).isEqualTo(10);
+        assertThat(data.getFunctionPort()).isEqualTo(2);
+        assertThat(data.getFrameCount()).isEqualTo(57);
+        assertThat(data.getFrequency()).isEqualTo(868.5);
     }
 }

@@ -14,6 +14,7 @@
 
 TAG=$1
 CR=$2
+NEWTAG=$3
 IMAGES="hono-adapter-amqp-vertx \
         hono-adapter-coap-vertx \
         hono-adapter-http-vertx \
@@ -35,10 +36,10 @@ then
     if [ -n "$CR" ]
     then
       IMAGE_NAME="$CR/$IMAGE_NAME"
-      docker tag $ECLIPSE_IMAGE_NAME:$TAG $IMAGE_NAME:$TAG
+      docker tag $ECLIPSE_IMAGE_NAME:$TAG $IMAGE_NAME:$NEWTAG
     fi
-    echo "pushing image $IMAGE_NAME:$TAG ..."
-    docker push $IMAGE_NAME:$TAG
+    echo "pushing image $IMAGE_NAME:$NEWTAG ..."
+    docker push $IMAGE_NAME:$NEWTAG
   done
 else
   echo "This script can be used to push Hono's images from"

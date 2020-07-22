@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
@@ -53,8 +54,8 @@ public class ProximusProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    public String pathPrefix() {
-        return "/proximus";
+    public Set<String> pathPrefixes() {
+        return Set.of("/proximus");
     }
 
     /**
