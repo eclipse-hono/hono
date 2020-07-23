@@ -38,6 +38,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.config.PemReader.Entry;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,10 +163,10 @@ public final class KeyLoader {
         PrivateKey privateKey = null;
         List<Certificate> certChain = null;
 
-        if (keyPath != null) {
+        if (!Strings.isNullOrEmpty(keyPath)) {
             privateKey = loadPrivateKeyFromFile(vertx, keyPath);
         }
-        if (certPath != null) {
+        if (!Strings.isNullOrEmpty(certPath)) {
             certChain = loadCertsFromFile(vertx, certPath);
         }
 

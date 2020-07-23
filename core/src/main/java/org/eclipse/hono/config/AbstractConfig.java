@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.PortConfigurationHelper;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,23 +44,23 @@ public abstract class AbstractConfig {
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    private String trustStorePath;
-    private char[] trustStorePassword;
-    private TrustOptions trustOptions;
+    private TrustOptions trustOptions = null;
+    private String trustStorePath = null;
+    private String trustStorePassword = null;
     private String pathSeparator = Constants.DEFAULT_PATH_SEPARATOR;
-    private String keyStorePath;
-    private char[] keyStorePassword;
-    private String certPath;
-    private String keyPath;
-    private KeyCertOptions keyCertOptions;
-    private FileFormat trustStoreFormat;
-    private FileFormat keyFormat;
+    private String keyStorePath = null;
+    private String keyStorePassword = null;
+    private String certPath = null;
+    private String keyPath = null;
+    private KeyCertOptions keyCertOptions = null;
+    private FileFormat trustStoreFormat = null;
+    private FileFormat keyFormat = null;
     private List<String> secureProtocols = Collections.singletonList("TLSv1.2");
 
     /**
      * Creates a new empty instance.
      */
-    protected AbstractConfig() {
+    public AbstractConfig() {
     }
 
     /**
@@ -68,9 +69,8 @@ public abstract class AbstractConfig {
      * @param other The other instance. All of the other instance's properties
      *              are copied to the newly created instance.
      */
-    protected AbstractConfig(final AbstractConfig other) {
+    public AbstractConfig(final AbstractConfig other) {
         this.certPath = other.certPath;
-        this.keyCertOptions = other.keyCertOptions;
         this.keyFormat = other.keyFormat;
         this.keyPath = other.keyPath;
         this.keyStorePassword = other.keyStorePassword;
@@ -138,7 +138,7 @@ public abstract class AbstractConfig {
      * @see #getTrustStorePath()
      */
     public final String getTrustStorePassword() {
-        return fromChars(trustStorePassword);
+        return trustStorePassword;
     }
 
     /**
@@ -148,11 +148,7 @@ public abstract class AbstractConfig {
      * @see #setTrustStorePath(String)
      */
     public final void setTrustStorePassword(final String trustStorePassword) {
-        if (trustStorePassword == null) {
-            this.trustStorePassword = null;
-        } else {
-            this.trustStorePassword = trustStorePassword.toCharArray();
-        }
+        this.trustStorePassword = trustStorePassword;
     }
 
     /**
@@ -162,12 +158,21 @@ public abstract class AbstractConfig {
      * @throws IllegalArgumentException In the case the configured trust store is not present in the file system.
      */
     public final TrustOptions getTrustOptions() {
+       if (trustOptions == null) {
+           trustOptions = createTrustOptions();
+       }
+
+       return trustOptions;
+    }
+
+
+    private TrustOptions createTrustOptions() {
 
         if (trustOptions != null) {
             return trustOptions;
         }
 
-        if (this.trustStorePath == null) {
+        if (Strings.isNullOrEmpty(this.trustStorePath)) {
             return null;
         }
 
@@ -186,25 +191,21 @@ public abstract class AbstractConfig {
         switch (format) {
         case PEM:
             LOG.debug("using certificates from file [{}] as trust anchor", this.trustStorePath);
-            trustOptions = new PemTrustOptions().addCertPath(this.trustStorePath);
-            break;
+            return new PemTrustOptions().addCertPath(this.trustStorePath);
         case PKCS12:
             LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", this.trustStorePath);
-            trustOptions = new PfxOptions()
+            return new PfxOptions()
                     .setPath(getTrustStorePath())
                     .setPassword(getTrustStorePassword());
-            break;
         case JKS:
             LOG.debug("using certificates from JKS key store [{}] as trust anchor", this.trustStorePath);
-            trustOptions = new JksOptions()
+            return new JksOptions()
                     .setPath(getTrustStorePath())
                     .setPassword(getTrustStorePassword());
-            break;
         default:
             LOG.debug("unsupported trust store format: {}", format);
             return null;
         }
-        return trustOptions;
     }
 
     /**
@@ -234,7 +235,7 @@ public abstract class AbstractConfig {
      * @return The password or {@code null} if no password has been set.
      */
     public final String getKeyStorePassword() {
-        return fromChars(keyStorePassword);
+        return keyStorePassword;
     }
 
     /**
@@ -244,11 +245,7 @@ public abstract class AbstractConfig {
      * @param keyStorePassword The password.
      */
     public final void setKeyStorePassword(final String keyStorePassword) {
-        if (keyStorePassword == null) {
-            this.keyStorePassword = null;
-        } else {
-            this.keyStorePassword = keyStorePassword.toCharArray();
-        }
+        this.keyStorePassword = keyStorePassword;
     }
 
     /**
@@ -257,13 +254,17 @@ public abstract class AbstractConfig {
      * @return The options or {@code null} if key store path or key path and cert path are not set or not supported.
      * @throws IllegalArgumentException In the case any of the configured files is not present in the file system.
      */
-    public KeyCertOptions getKeyCertOptions() {
-
-        if (keyCertOptions != null) {
-            return keyCertOptions;
+    public final KeyCertOptions getKeyCertOptions() {
+        if (keyCertOptions == null) {
+            keyCertOptions = createKeyCertOptions();
         }
 
-        if (this.keyPath != null && this.certPath != null) {
+        return keyCertOptions;
+    }
+
+    private KeyCertOptions createKeyCertOptions() {
+
+        if (!Strings.isNullOrEmpty(this.keyPath) && !Strings.isNullOrEmpty(this.certPath)) {
 
             if (!Files.exists(Paths.get(this.keyPath))) {
                 throw new IllegalArgumentException(
@@ -300,14 +301,13 @@ public abstract class AbstractConfig {
             switch (format) {
             case PEM:
                 LOG.debug("using key [{}] and certificate [{}] for identity", this.keyPath, this.certPath);
-                keyCertOptions = new PemKeyCertOptions().setKeyPath(this.keyPath).setCertPath(this.certPath);
-                break;
+                return new PemKeyCertOptions().setKeyPath(this.keyPath).setCertPath(this.certPath);
             default:
                 LOG.warn("unsupported key & cert format: {}", format);
                 return null;
             }
 
-        } else if (this.keyStorePath != null) {
+        } else if (!Strings.isNullOrEmpty(this.keyStorePath)) {
 
             if (!Files.exists(Paths.get(this.keyStorePath))) {
                 throw new IllegalArgumentException(
@@ -321,12 +321,10 @@ public abstract class AbstractConfig {
             switch (format) {
             case PKCS12:
                 LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", this.keyStorePath);
-                keyCertOptions = new PfxOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
-                break;
+                return new PfxOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
             case JKS:
                 LOG.debug("using key & certificate from JKS key store [{}] for server identity", this.keyStorePath);
-                keyCertOptions = new JksOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
-                break;
+                return new JksOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
             default:
                 LOG.warn("unsupported key store format: {}", format);
                 return null;
@@ -340,8 +338,6 @@ public abstract class AbstractConfig {
             return null;
 
         }
-
-        return keyCertOptions;
     }
 
     /**
@@ -459,11 +455,4 @@ public abstract class AbstractConfig {
         this.secureProtocols = enabledProtocols;
     }
 
-    private static String fromChars(final char[] chars) {
-        if (chars == null) {
-            return null;
-        } else {
-            return String.valueOf(chars);
-        }
-    }
 }

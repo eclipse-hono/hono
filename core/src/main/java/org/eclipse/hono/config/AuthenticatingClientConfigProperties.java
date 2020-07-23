@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.Properties;
 
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.Strings;
 
 /**
  * Common configuration properties required for accessing and authenticating to a remote server.
@@ -29,14 +30,15 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
 
     public static final String SERVER_ROLE_UNKNOWN = "unknown";
 
-    private String credentialsPath;
+    private String credentialsPath = null;
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
-    private char[] password;
-    private int port;
+    private String password = null;
+    private int port = Constants.PORT_AMQPS;
     private String serverRole = SERVER_ROLE_UNKNOWN;
+
     private boolean tlsEnabled = false;
-    private String username;
+    private String username = null;
 
     /**
      * Creates new properties with default values.
@@ -123,7 +125,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
      * @return The user name or {@code null} if not set.
      */
     public final String getUsername() {
-        if (username == null) {
+        if (Strings.isNullOrEmpty(username)) {
             loadCredentials();
         }
         return username;
@@ -151,10 +153,10 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
      * @return The password or {@code null} if not set.
      */
     public final String getPassword() {
-        if (password == null) {
+        if (Strings.isNullOrEmpty(password)) {
             loadCredentials();
         }
-        return password == null ? null : String.valueOf(password);
+        return password;
     }
 
     /**
@@ -166,11 +168,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
      * @param password The password.
      */
     public final void setPassword(final String password) {
-        if (password != null) {
-            this.password = password.toCharArray();
-        } else {
-            this.password = null;
-        }
+        this.password = password;
     }
 
     /**
@@ -209,7 +207,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
 
     private void loadCredentials() {
 
-        if (username == null && password == null && credentialsPath != null) {
+        if (Strings.isNullOrEmpty(username) && Strings.isNullOrEmpty(password) && !Strings.isNullOrEmpty(credentialsPath)) {
             try (FileInputStream fis = new FileInputStream(credentialsPath)) {
                 LOG.info("loading credentials for [{}:{}, role: {}] from [{}]",
                         host, port, serverRole, credentialsPath);
@@ -217,7 +215,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
                 props.load(fis);
                 this.username = props.getProperty("username");
                 this.password = Optional.ofNullable(props.getProperty("password"))
-                        .map(pwd -> pwd.toCharArray()).orElse(null);
+                        .orElse(null);
             } catch (IOException e) {
                 LOG.warn("could not load client credentials for [{}:{}, role: {}] from file [{}]",
                         host, port, serverRole, credentialsPath, e);

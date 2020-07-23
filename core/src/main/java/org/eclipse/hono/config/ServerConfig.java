@@ -28,7 +28,7 @@ public class ServerConfig extends AbstractConfig {
     private boolean insecurePortEnabled = false;
     private String insecurePortBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
-    private boolean sni;
+    private boolean sni = false;
 
     /**
      * Gets the host name or literal IP address of the network interface that this server's secure port is configured to

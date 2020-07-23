@@ -36,7 +36,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private long eventLoopBlockedCheckTimeout = 5000L;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
-    private Map<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
+    private HashMap<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined

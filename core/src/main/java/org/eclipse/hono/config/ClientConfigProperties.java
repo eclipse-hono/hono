@@ -72,20 +72,20 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public static final long DEFAULT_SEND_MESSAGE_TIMEOUT = 1000L; // ms
 
-    private String amqpHostname;
-    private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
+    private String amqpHostname = null;
+    private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     private long flowLatency = DEFAULT_FLOW_LATENCY;
-    private int idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT;
+    private int idleTimeout = DEFAULT_IDLE_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
-    private String name;
+    private String name = null;
     private int reconnectAttempts = -1;
-    private long reconnectMinDelayMillis = DEFAULT_RECONNECT_MIN_DELAY;
-    private long reconnectMaxDelayMillis = DEFAULT_RECONNECT_MAX_DELAY;
-    private long reconnectDelayIncrementMillis = DEFAULT_RECONNECT_DELAY_INCREMENT;
-    private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
-    private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
-    private String addressRewriteRule;
+    private long reconnectMinDelay = DEFAULT_RECONNECT_MIN_DELAY;
+    private long reconnectMaxDelay = DEFAULT_RECONNECT_MAX_DELAY;
+    private long reconnectDelayIncrement = DEFAULT_RECONNECT_DELAY_INCREMENT;
+    private long requestTimeout = DEFAULT_REQUEST_TIMEOUT;
+    private long sendMessageTimeout = DEFAULT_SEND_MESSAGE_TIMEOUT;
+    private String addressRewriteRule = null;
     private Pattern addressRewritePattern;
     private String addressRewriteReplacement;
 
@@ -105,18 +105,18 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     public ClientConfigProperties(final ClientConfigProperties otherProperties) {
         super(otherProperties);
         this.amqpHostname = otherProperties.amqpHostname;
-        this.connectTimeoutMillis = otherProperties.connectTimeoutMillis;
+        this.connectTimeout = otherProperties.connectTimeout;
         this.flowLatency = otherProperties.flowLatency;
-        this.idleTimeoutMillis = otherProperties.idleTimeoutMillis;
+        this.idleTimeout = otherProperties.idleTimeout;
         this.initialCredits = otherProperties.initialCredits;
         this.linkEstablishmentTimeout = otherProperties.linkEstablishmentTimeout;
         this.name = otherProperties.name;
         this.reconnectAttempts = otherProperties.reconnectAttempts;
-        this.reconnectMinDelayMillis = otherProperties.reconnectMinDelayMillis;
-        this.reconnectMaxDelayMillis = otherProperties.reconnectMaxDelayMillis;
-        this.reconnectDelayIncrementMillis = otherProperties.reconnectDelayIncrementMillis;
-        this.requestTimeoutMillis = otherProperties.requestTimeoutMillis;
-        this.sendMessageTimeoutMillis = otherProperties.sendMessageTimeoutMillis;
+        this.reconnectMinDelay = otherProperties.reconnectMinDelay;
+        this.reconnectMaxDelay = otherProperties.reconnectMaxDelay;
+        this.reconnectDelayIncrement = otherProperties.reconnectDelayIncrement;
+        this.requestTimeout = otherProperties.requestTimeout;
+        this.sendMessageTimeout = otherProperties.sendMessageTimeout;
     }
 
     /**
@@ -275,7 +275,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The maximum number of milliseconds to wait.
      */
     public final long getSendMessageTimeout() {
-        return sendMessageTimeoutMillis;
+        return sendMessageTimeout;
     }
 
     /**
@@ -291,7 +291,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (sendMessageTimeoutMillis < 0) {
             throw new IllegalArgumentException("sendMessageTimeout must not be negative");
         } else {
-            this.sendMessageTimeoutMillis = sendMessageTimeoutMillis;
+            this.sendMessageTimeout = sendMessageTimeoutMillis;
         }
     }
 
@@ -304,7 +304,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The maximum number of milliseconds to wait.
      */
     public final long getRequestTimeout() {
-        return requestTimeoutMillis;
+        return requestTimeout;
     }
 
     /**
@@ -320,7 +320,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (requestTimeoutMillis < 0) {
             throw new IllegalArgumentException("request timeout must not be negative");
         } else {
-            this.requestTimeoutMillis = requestTimeoutMillis;
+            this.requestTimeout = requestTimeoutMillis;
         }
     }
 
@@ -366,7 +366,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The minimum delay in milliseconds.
      */
     public long getReconnectMinDelay() {
-        return reconnectMinDelayMillis;
+        return reconnectMinDelay;
     }
 
     /**
@@ -382,7 +382,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (reconnectMinDelay < 0) {
             throw new IllegalArgumentException("minimum delay must be >= 0");
         } else {
-            this.reconnectMinDelayMillis = reconnectMinDelay;
+            this.reconnectMinDelay = reconnectMinDelay;
         }
     }
 
@@ -395,7 +395,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The maximum delay in milliseconds.
      */
     public long getReconnectMaxDelay() {
-        return reconnectMaxDelayMillis;
+        return reconnectMaxDelay;
     }
 
     /**
@@ -411,7 +411,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (reconnectMaxDelay < 0) {
             throw new IllegalArgumentException("maximum delay must be >= 0");
         } else {
-            this.reconnectMaxDelayMillis = reconnectMaxDelay;
+            this.reconnectMaxDelay = reconnectMaxDelay;
         }
     }
 
@@ -424,7 +424,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The value to exponentially increase the delay by in milliseconds.
      */
     public long getReconnectDelayIncrement() {
-        return reconnectDelayIncrementMillis;
+        return reconnectDelayIncrement;
     }
 
     /**
@@ -440,7 +440,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (reconnectDelayIncrement < 0) {
             throw new IllegalArgumentException("value must be >= 0");
         } else {
-            this.reconnectDelayIncrementMillis = reconnectDelayIncrement;
+            this.reconnectDelayIncrement = reconnectDelayIncrement;
         }
     }
 
@@ -456,7 +456,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The maximum number of milliseconds to wait.
      */
     public final int getConnectTimeout() {
-        return connectTimeoutMillis;
+        return connectTimeout;
     }
 
     /**
@@ -475,7 +475,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (connectTimeoutMillis < 0) {
             throw new IllegalArgumentException("connect timeout must not be negative");
         } else {
-            this.connectTimeoutMillis = connectTimeoutMillis;
+            this.connectTimeout = connectTimeoutMillis;
         }
     }
 
@@ -488,7 +488,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The heartbeatInterval in milliseconds.
      */
     public final int getHeartbeatInterval() {
-        return idleTimeoutMillis / 2;
+        return idleTimeout / 2;
     }
 
     /**
@@ -503,7 +503,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @return The idleTimeout in milliseconds.
      */
     public final int getIdleTimeout() {
-        return idleTimeoutMillis;
+        return idleTimeout;
     }
 
     /**
@@ -522,7 +522,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         if (idleTimeoutMillis < 0) {
             throw new IllegalArgumentException("idleTimeout must not be negative");
         } else {
-            this.idleTimeoutMillis = idleTimeoutMillis;
+            this.idleTimeout = idleTimeoutMillis;
         }
     }
 
