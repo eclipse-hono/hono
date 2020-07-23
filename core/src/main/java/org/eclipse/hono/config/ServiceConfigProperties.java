@@ -44,12 +44,12 @@ public class ServiceConfigProperties extends ServerConfig {
     private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
 
     private boolean singleTenant = false;
-    private boolean networkDebugLogging = false;
-    private boolean waitForDownstreamConnection = false;
+    private boolean networkDebugLoggingEnabled = false;
+    private boolean waitForDownstreamConnectionEnabled = false;
     private int maxPayloadSize = 2048;
     private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
     private String corsAllowedOrigin = "*";
-    private long sendTimeOutInMs = DEFAULT_SEND_TIMEOUT_IN_MS;
+    private long sendTimeOut = DEFAULT_SEND_TIMEOUT_IN_MS;
     private Pattern tenantIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_TENANT_ID_REGEX);
     private Pattern deviceIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_DEVICE_ID_REGEX);
 
@@ -115,7 +115,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * @return {@code true} if TCP traffic gets logged.
      */
     public final boolean isNetworkDebugLoggingEnabled() {
-        return networkDebugLogging;
+        return networkDebugLoggingEnabled;
     }
 
     /**
@@ -123,11 +123,11 @@ public class ServiceConfigProperties extends ServerConfig {
      * <p>
      * The default value of this property is {@code false}.
      *
-     * @param networkDebugLogging {@code true} if TCP traffic should be logged.
+     * @param networkDebugLoggingEnabled {@code true} if TCP traffic should be logged.
      * @return This instance for setter chaining.
      */
-    public final ServiceConfigProperties setNetworkDebugLoggingEnabled(final boolean networkDebugLogging) {
-        this.networkDebugLogging = networkDebugLogging;
+    public final ServiceConfigProperties setNetworkDebugLoggingEnabled(final boolean networkDebugLoggingEnabled) {
+        this.networkDebugLoggingEnabled = networkDebugLoggingEnabled;
         return this;
     }
 
@@ -143,7 +143,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * @return {@code true} if the server will wait for downstream connections to be established during startup.
      */
     public final boolean isWaitForDownstreamConnectionEnabled() {
-        return waitForDownstreamConnection;
+        return waitForDownstreamConnectionEnabled;
     }
 
     /**
@@ -159,7 +159,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * @return This instance for setter chaining.
      */
     public final ServiceConfigProperties setWaitForDownstreamConnectionEnabled(final boolean waitForConnection) {
-        this.waitForDownstreamConnection = waitForConnection;
+        this.waitForDownstreamConnectionEnabled = waitForConnection;
         return this;
     }
 
@@ -232,7 +232,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * @return The send timeout value in milliseconds.
      */
     public final long getSendTimeOut() {
-        return sendTimeOutInMs;
+        return sendTimeOut;
     }
 
     /**
@@ -249,7 +249,7 @@ public class ServiceConfigProperties extends ServerConfig {
             throw new IllegalArgumentException(
                     String.format("send time out value must be >= %sms", MIN_SEND_TIMEOUT_IN_MS));
         }
-        this.sendTimeOutInMs = sendTimeOutInMs;
+        this.sendTimeOut = sendTimeOutInMs;
     }
 
     /**
