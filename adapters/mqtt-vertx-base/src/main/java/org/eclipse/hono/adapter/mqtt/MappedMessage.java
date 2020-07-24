@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.mqtt.impl;
+package org.eclipse.hono.adapter.mqtt;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +25,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * The result of mapping a message using a {@code MessageMapping} service.
  */
-final class MappedMessage {
+public final class MappedMessage {
 
     private final ResourceIdentifier targetAddress;
     private final Buffer payload;
@@ -38,7 +38,7 @@ final class MappedMessage {
      * @param payload The payload that the original message has been mapped to.
      * @throws NullPointerException if targetAddress is {@code null}.
      */
-    MappedMessage(final ResourceIdentifier targetAddress, final Buffer payload) {
+    public MappedMessage(final ResourceIdentifier targetAddress, final Buffer payload) {
         this(targetAddress, payload, null);
     }
 
@@ -50,7 +50,7 @@ final class MappedMessage {
      * @param additionalProperties Extra properties that should be included with the mapped message.
      * @throws NullPointerException if targetAddress is {@code null}.
      */
-    MappedMessage(
+    public MappedMessage(
             final ResourceIdentifier targetAddress,
             final Buffer payload,
             final Map<String, String> additionalProperties) {
@@ -66,7 +66,7 @@ final class MappedMessage {
      *
      * @return The address.
      */
-    ResourceIdentifier getTargetAddress() {
+    public ResourceIdentifier getTargetAddress() {
         return targetAddress;
     }
 
@@ -75,7 +75,7 @@ final class MappedMessage {
      *
      * @return The payload.
      */
-    Buffer getPayload() {
+    public Buffer getPayload() {
         return payload;
     }
 
@@ -85,7 +85,7 @@ final class MappedMessage {
      *
      * @return The properties (may be empty).
      */
-    Map<String, String> getAdditionalProperties() {
+    public Map<String, String> getAdditionalProperties() {
         return additionalProperties;
     }
 }
