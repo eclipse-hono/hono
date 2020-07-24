@@ -151,6 +151,7 @@ public abstract class CoapTestBase {
     static Stream<CoapCommandEndpointConfiguration> commandAndControlVariants() {
         return Stream.of(
                 new CoapCommandEndpointConfiguration(SubscriberRole.DEVICE),
+                new CoapCommandEndpointConfiguration(SubscriberRole.UNAUTHENTICATED_DEVICE),
                 new CoapCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES),
                 new CoapCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
                 );
@@ -702,7 +703,11 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+        if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
+            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+        } else {
+            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+        }
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
@@ -711,11 +716,12 @@ public abstract class CoapTestBase {
         final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
                 : deviceId;
 
-        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+        final CoapClient client = endpointConfig.isSubscribeAsUnauthenticatedDevice() ? getCoapClient()
+                : getCoapsClient(deviceId, tenantId, SECRET);
         final AtomicInteger counter = new AtomicInteger();
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                () -> warmUp(client, createCoapsOrCoapRequest(endpointConfig, deviceId, 0)),
                 msg -> {
 
                     TimeUntilDisconnectNotification.fromMessage(msg)
@@ -748,7 +754,7 @@ public abstract class CoapTestBase {
                 },
                 count -> {
                     final Promise<OptionSet> result = Promise.promise();
-                    final Request request = createCoapsRequest(endpointConfig, commandTargetDeviceId, count);
+                    final Request request = createCoapsOrCoapRequest(endpointConfig, commandTargetDeviceId, count);
                     request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 5));
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
                     return result.future()
@@ -771,13 +777,8 @@ public abstract class CoapTestBase {
 
                                 final Buffer body = Buffer.buffer("ok");
                                 final Promise<OptionSet> commandResponseResult = Promise.promise();
-                                final Request commandResponseRequest;
-                                if (endpointConfig.isSubscribeAsGateway()) {
-                                    // GW uses PUT when acting on behalf of a device
-                                    commandResponseRequest = createCoapsRequest(Code.PUT, Type.CON, responseUri, body.getBytes());
-                                } else {
-                                    commandResponseRequest = createCoapsRequest(Code.POST, Type.CON, responseUri, body.getBytes());
-                                }
+                                final Request commandResponseRequest = createCoapsOrCoapRequest(endpointConfig,
+                                        responseUri, body.getBytes());
                                 commandResponseRequest.getOptions()
                                     .setContentFormat(MediaTypeRegistry.TEXT_PLAIN)
                                     .addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
@@ -836,10 +837,15 @@ public abstract class CoapTestBase {
         final String expectedCommand = String.format("%s=%s", Constants.HEADER_COMMAND, COMMAND_TO_SEND);
 
         final VertxTestContext setup = new VertxTestContext();
-        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+        if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
+            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+        } else {
+            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+        }
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
-        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+        final CoapClient client = endpointConfig.isSubscribeAsUnauthenticatedDevice() ? getCoapClient()
+                : getCoapsClient(deviceId, tenantId, SECRET);
         final AtomicInteger counter = new AtomicInteger();
 
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
@@ -873,7 +879,7 @@ public abstract class CoapTestBase {
                 },
                 count -> {
                     final Promise<OptionSet> result = Promise.promise();
-                    final Request request = createCoapsRequest(endpointConfig, commandTargetDeviceId, count);
+                    final Request request = createCoapsOrCoapRequest(endpointConfig, commandTargetDeviceId, count);
                     request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 4));
                     logger.debug("south-bound send {}", request);
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
@@ -1054,6 +1060,53 @@ public abstract class CoapTestBase {
     }
 
     /**
+     * Creates a CoAP request using either the <em>coaps</em> or <em>coap</em> scheme,
+     * depending on the given endpoint configuration.
+     *
+     * @param endpointConfig The endpoint configuration.
+     * @param requestDeviceId The identifier of the device to publish data for.
+     * @param msgNo The message number.
+     * @return The request to send.
+     */
+    protected Request createCoapsOrCoapRequest(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final String requestDeviceId,
+            final int msgNo) {
+
+        if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
+            return createCoapsRequest(Code.PUT, getMessageType(), getPutResource(tenantId, requestDeviceId), msgNo);
+        } else if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
+            return createCoapRequest(Code.PUT, getMessageType(), getPutResource(tenantId, requestDeviceId), msgNo);
+        } else {
+            return createCoapsRequest(Code.POST, getMessageType(), getPostResource(), msgNo);
+        }
+    }
+
+    /**
+     * Creates a CoAP request using either the <em>coaps</em> or <em>coap</em> scheme,
+     * depending on the given endpoint configuration.
+     *
+     * @param endpointConfig The endpoint configuration.
+     * @param resource the resource path.
+     * @param payload The payload to send in the request body.
+     * @return The request to send.
+     */
+    protected Request createCoapsOrCoapRequest(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final String resource,
+            final byte[] payload) {
+
+        if (endpointConfig.isSubscribeAsGateway()) {
+            // Gateway uses PUT when acting on behalf of a device
+            return createCoapsRequest(Code.PUT, Type.CON, resource, payload);
+        } else if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
+            return createCoapRequest(Code.PUT, Type.CON, resource, payload);
+        } else {
+            return createCoapsRequest(Code.POST, Type.CON, resource, payload);
+        }
+    }
+
+    /**
      * Creates a CoAP request using the <em>coap</em> scheme.
      *
      * @param code The CoAP request code.
@@ -1067,6 +1120,27 @@ public abstract class CoapTestBase {
             final int msgNo) {
 
         return createCoapRequest(code, getMessageType(), resource, msgNo);
+    }
+
+    /**
+     * Creates a CoAP request using the <em>coap</em> scheme.
+     *
+     * @param code The CoAP request code.
+     * @param type The message type.
+     * @param resource the resource path.
+     * @param payload The payload to send in the request body.
+     * @return The request to send.
+     */
+    protected Request createCoapRequest(
+            final Code code,
+            final Type type,
+            final String resource,
+            final byte[] payload) {
+        final Request request = new Request(code, type);
+        request.setURI(getCoapRequestUri(resource));
+        request.setPayload(payload);
+        request.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+        return request;
     }
 
     /**
@@ -1104,25 +1178,6 @@ public abstract class CoapTestBase {
             final int msgNo) {
 
         return createCoapsRequest(code, getMessageType(), resource, msgNo);
-    }
-
-    /**
-     * Creates a CoAP request using the <em>coaps</em> scheme.
-     *
-     * @param endpointConfig The endpoint configuration.
-     * @param requestDeviceId The identifier of the device to publish data for.
-     * @param msgNo The message number.
-     * @return The request to send.
-     */
-    protected Request createCoapsRequest(
-            final CoapCommandEndpointConfiguration endpointConfig,
-            final String requestDeviceId,
-            final int msgNo) {
-
-        if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
-            return createCoapsRequest(Code.PUT, getMessageType(), getPutResource(tenantId, requestDeviceId), msgNo);
-        }
-        return createCoapsRequest(Code.POST, getMessageType(), getPostResource(), msgNo);
     }
 
     /**

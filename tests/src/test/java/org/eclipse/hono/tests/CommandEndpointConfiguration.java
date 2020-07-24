@@ -30,9 +30,13 @@ public class CommandEndpointConfiguration {
      */
     public enum SubscriberRole {
         /**
-         * Subscribe as device.
+         * Subscribe as (authenticated) device.
          */
         DEVICE,
+        /**
+         * Subscribe as unauthenticated device.
+         */
+        UNAUTHENTICATED_DEVICE,
         /**
          * Subscribe as gateway for all devices connected to the gateway.
          */
@@ -77,6 +81,15 @@ public class CommandEndpointConfiguration {
      */
     public SubscriberRole getSubscriberRole() {
         return subscriberRole;
+    }
+
+    /**
+     * Checks whether command subscription shall be done as an unauthenticated device.
+     *
+     * @return {@code true} if to subscribe as an unauthenticated device.
+     */
+    public boolean isSubscribeAsUnauthenticatedDevice() {
+        return subscriberRole == SubscriberRole.UNAUTHENTICATED_DEVICE;
     }
 
     /**
