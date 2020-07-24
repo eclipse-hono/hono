@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;

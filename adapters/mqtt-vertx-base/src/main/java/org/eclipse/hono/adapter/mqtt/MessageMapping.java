@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.mqtt.impl;
+package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
