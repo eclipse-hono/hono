@@ -573,26 +573,20 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Gets an authenticated device's identity for a CoAP request.
      *
-     * @param device The device that the data in the request payload originates from.
-     *               If {@code null}, the origin of the data is assumed to be the authenticated device.
      * @param exchange The CoAP exchange with the authenticated device's principal.
      * @return A future indicating the outcome of the operation.
      *         The future will be succeeded if the authenticated device can be determined from the CoAP exchange,
      *         otherwise the future will be failed with a {@link ClientErrorException}.
      */
-    protected final Future<ExtendedDevice> getAuthenticatedExtendedDevice(
-            final Device device,
-            final CoapExchange exchange) {
+    protected final Future<Device> getAuthenticatedDevice(final CoapExchange exchange) {
 
-        final Promise<ExtendedDevice> result = Promise.promise();
+        final Promise<Device> result = Promise.promise();
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
         if (peerIdentity instanceof ExtensiblePrincipal) {
-            @SuppressWarnings("unchecked")
             final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
             final Device authenticatedDevice = extPrincipal.getExtendedInfo().get("hono-device", Device.class);
             if (authenticatedDevice != null) {
-                final Device originDevice = Optional.ofNullable(device).orElse(authenticatedDevice);
-                result.complete(new ExtendedDevice(authenticatedDevice, originDevice));
+                result.complete(authenticatedDevice);
             } else {
                 result.fail(new ClientErrorException(
                         HttpURLConnection.HTTP_UNAUTHORIZED,
@@ -604,7 +598,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     "DTLS session does not contain ExtensiblePrincipal"));
 
         }
-
         return result.future();
     }
 
@@ -612,23 +605,23 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
      *
      * @param context The context representing the request to be processed.
-     * @param authenticatedDevice authenticated device
-     * @param originDevice message's origin device
+     * @param originDevice The message's origin device.
+     * @param authenticatedDevice The authenticated device or {@code null}.
      * @return A future containing the response code that has been returned to
      *         the device.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if context or originDevice are {@code null}.
      */
     public final Future<ResponseCode> uploadTelemetryMessage(
             final CoapContext context,
-            final Device authenticatedDevice,
-            final Device originDevice) {
+            final Device originDevice,
+            final Device authenticatedDevice) {
 
         return doUploadMessage(
                 Objects.requireNonNull(context),
-                Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice),
+                authenticatedDevice,
                 context.isConfirmable(),
-                getTelemetrySender(authenticatedDevice.getTenantId()),
+                getTelemetrySender(originDevice.getTenantId()),
                 MetricsTags.EndpointType.TELEMETRY);
     }
 
@@ -636,23 +629,26 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Forwards the body of a CoAP request to the south bound Event API of the AMQP 1.0 Messaging Network.
      *
      * @param context The context representing the request to be processed.
-     * @param authenticatedDevice authenticated device
-     * @param originDevice message's origin device
+     * @param originDevice The message's origin device.
+     * @param authenticatedDevice The authenticated device or {@code null}.
      * @return A future containing the response code that has been returned to
      *         the device.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if context or originDevice are {@code null}.
      */
-    public final Future<ResponseCode> uploadEventMessage(final CoapContext context, final Device authenticatedDevice,
-            final Device originDevice) {
+    public final Future<ResponseCode> uploadEventMessage(
+            final CoapContext context,
+            final Device originDevice,
+            final Device authenticatedDevice) {
 
         Objects.requireNonNull(context);
+        Objects.requireNonNull(originDevice);
         if (context.isConfirmable()) {
             return doUploadMessage(
-                    Objects.requireNonNull(context),
-                    Objects.requireNonNull(authenticatedDevice),
-                    Objects.requireNonNull(originDevice),
+                    context,
+                    originDevice,
+                    authenticatedDevice,
                     true,
-                    getEventSender(authenticatedDevice.getTenantId()),
+                    getEventSender(originDevice.getTenantId()),
                     MetricsTags.EndpointType.EVENT);
         } else {
             context.respondWithCode(ResponseCode.BAD_REQUEST, "event endpoint supports confirmable request messages only");
@@ -667,8 +663,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
      * @param context The context representing the request to be processed.
-     * @param authenticatedDevice authenticated device
-     * @param device message's origin device
+     * @param device The message's origin device
+     * @param authenticatedDevice The authenticated device or {@code null}.
      * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
      *            the sent.
      * @param senderTracker hono message sender tracker
@@ -677,8 +673,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     private Future<ResponseCode> doUploadMessage(
             final CoapContext context,
-            final Device authenticatedDevice,
             final Device device,
+            final Device authenticatedDevice,
             final boolean waitForOutcome,
             final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
@@ -1107,19 +1103,17 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Uploads a command response message to Hono.
      *
      * @param context The context representing the request to be processed.
-     * @param authenticatedDevice The device that has sent the request. This might be different from the
-     *                            device that has executed the command, e.g. a gateway.
      * @param device The device that has executed the command.
+     * @param authenticatedDevice The authenticated device or {@code null}.
      * @return A succeeded future containing the CoAP status code that has been returned to the device.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if context or device are {@code null}.
      */
     public final Future<ResponseCode> uploadCommandResponseMessage(
             final CoapContext context,
-            final Device authenticatedDevice,
-            final Device device) {
+            final Device device,
+            final Device authenticatedDevice) {
 
         Objects.requireNonNull(context);
-        Objects.requireNonNull(authenticatedDevice);
         Objects.requireNonNull(device);
 
         if (!context.isConfirmable()) {
