@@ -35,7 +35,7 @@ public final class CoapCommandEndpointConfiguration extends CommandEndpointConfi
     }
 
     String getCommandResponseUri(final String tenantId, final String deviceId, final String reqId) {
-        if (isSubscribeAsGateway()) {
+        if (isSubscribeAsGateway() || isSubscribeAsUnauthenticatedDevice()) {
             return String.format("/%s/%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId, deviceId, reqId);
         }
         return String.format("/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, reqId);
