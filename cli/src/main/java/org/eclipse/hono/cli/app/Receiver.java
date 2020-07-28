@@ -63,7 +63,7 @@ public class Receiver extends AbstractApplicationClient {
      * Set message handler for processing adaption.
      *
      * @param messageHandler message handler.
-     * @throws NullPointerException if message handlerr is {@code null}.
+     * @throws NullPointerException if message handler is {@code null}.
      */
     void setMessageHandler(final BiConsumer<String, Message> messageHandler) {
         this.messageHandler = Objects.requireNonNull(messageHandler);

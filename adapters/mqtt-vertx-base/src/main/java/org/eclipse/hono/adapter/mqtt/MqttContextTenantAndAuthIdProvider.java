@@ -25,12 +25,12 @@ import io.vertx.core.Future;
 import io.vertx.mqtt.MqttAuth;
 
 /**
- * Provides a method to determine the tenant and auth-id of a HTTP request from the given HttpContext.
+ * Provides a method to determine the tenant and auth-id of an MQTT request from the given MqttContext.
  */
 public class MqttContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider<MqttContext> {
 
     /**
-     * Creates a new HttpContextTenantAndAuthIdProvider.
+     * Creates a new MqttContextTenantAndAuthIdProvider.
      *
      * @param config The configuration.
      * @param tenantClientFactory The factory to use for creating a Tenant service client.

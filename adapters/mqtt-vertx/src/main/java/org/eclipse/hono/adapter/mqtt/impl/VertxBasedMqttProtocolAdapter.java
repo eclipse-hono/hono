@@ -60,7 +60,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
      * The service will be invoked after the client device has been authenticated
      * and before the downstream AMQP message is being created.
      *
-     * @param messageMappingService The service to use for mapping mesages.
+     * @param messageMappingService The service to use for mapping messages.
      * @throws NullPointerException if messageMapping is {@code null}.
      */
     @Autowired
