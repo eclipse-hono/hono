@@ -37,6 +37,13 @@ public final class EventConstants {
      */
     public static final String CONTENT_TYPE_EMPTY_NOTIFICATION = "application/vnd.eclipse-hono-empty-notification";
 
+    /**
+     * The registration status of a device.
+     */
+    public enum RegistrationStatus {
+        NEW
+    }
+
     private EventConstants() {
     }
 

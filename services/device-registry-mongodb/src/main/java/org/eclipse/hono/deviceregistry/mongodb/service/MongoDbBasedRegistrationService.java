@@ -112,7 +112,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Future<Void> start() {
+    public Future<Void> startInternal() {
 
         return mongoDbCallExecutor.createCollectionIndex(
                 config.getCollectionName(),
@@ -126,7 +126,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Future<Void> stop() {
+    public Future<Void> stopInternal() {
         mongoClient.close();
         return Future.succeededFuture();
     }
@@ -222,7 +222,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      * {@inheritDoc}
      */
     @Override
-    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
+    public Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
 
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);

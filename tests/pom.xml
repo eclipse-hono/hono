@@ -631,79 +631,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </wait>
                   </run>
                 </image>
-                <!-- ##### Device Registration service ##### -->
-                <image>
-                  <name>${docker.repository}/hono-service-device-registry-test</name>
-                  <alias>device-registry</alias>
-                  <build>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.deviceregistry.image}:${project.version}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}/resources/${hono.deviceregistry.resources.folder}</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
-                            <includes>
-                              <include>*</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
-                            <includes>
-                              <include>device-registry-*.pem</include>
-                              <include>auth-server-cert.pem</include>
-                              <include>trusted-certs.pem</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                  <run>
-                    <ports>
-                      <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
-                      <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
-                      <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
-                    </ports>
-                    <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
-                    <network>
-                      <mode>custom</mode>
-                      <name>hono</name>
-                      <alias>hono-service-device-registry.hono</alias>
-                    </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
-                    <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
-                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
-                    </env>
-                    <log>
-                      <prefix>REGISTRY</prefix>
-                      <color>${log.color.hono-device-registry}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <http>
-                        <method>GET</method>
-                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}/readiness</url>
-                        <status>200..299</status>
-                      </http>
-                    </wait>
-                  </run>
-                </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
                   <name>${docker.repository}/hono-artemis-test:${project.version}</name>
@@ -836,6 +763,79 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
+                  </run>
+                </image>
+                <!-- ##### Device Registration service ##### -->
+                <image>
+                  <name>${docker.repository}/hono-service-device-registry-test</name>
+                  <alias>device-registry</alias>
+                  <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${docker.repository}/${hono.deviceregistry.image}:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/${hono.deviceregistry.resources.folder}</directory>
+                            <outputDirectory>etc/hono</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <includes>
+                              <include>device-registry-*.pem</include>
+                              <include>auth-server-cert.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
+                      <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
+                      <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-service-device-registry.hono</alias>
+                    </network>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
+                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                    </env>
+                    <log>
+                      <prefix>REGISTRY</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
                   </run>
                 </image>
                 <!-- ##### Device Connection service ##### -->

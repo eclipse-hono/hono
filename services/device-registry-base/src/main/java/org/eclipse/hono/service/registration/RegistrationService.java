@@ -114,6 +114,9 @@ public interface RegistrationService {
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
      * <p>
+     * Also they should perform an automatic provisioning of edge devices, if the gateway which sends telemetry on
+     * behalf of the edge device has the corresponding authority.
+     * <p>
      * This default implementation simply returns the result of {@link #assertRegistration(String, String, String)}.
      *
      * @param tenantId The tenant the device belongs to.

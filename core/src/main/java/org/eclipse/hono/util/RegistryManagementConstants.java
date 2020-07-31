@@ -357,6 +357,16 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "auto-provisioning-notification-sent";
 
+    /**
+     * The name of the property that contains the authorities of a device.
+     */
+    public static final String FIELD_AUTHORITIES = "authorities";
+
+    /**
+     * The name of the authority which authorizes a gateway to perform auto-provisioning.
+     */
+    public static final String AUTHORITY_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+
     private RegistryManagementConstants() {
         // prevent instantiation
     }

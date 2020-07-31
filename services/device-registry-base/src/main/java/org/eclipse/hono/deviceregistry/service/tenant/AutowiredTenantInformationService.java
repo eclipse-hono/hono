@@ -19,6 +19,8 @@ import java.util.Optional;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.tenant.TenantService;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +51,18 @@ public class AutowiredTenantInformationService implements TenantInformationServi
                     } else {
                         LOG.debug("tenant [{}] does not exist", tenantId);
                         return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
+                    }
+                });
+    }
+
+    @Override
+    public Future<TenantResult<TenantObject>> getTenant(final String tenantId, final Span span) {
+        return service.get(tenantId, span)
+                .compose(result -> {
+                    if (result.isOk()) {
+                        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, result.getPayload().mapTo(TenantObject.class)));
+                    } else {
+                        return Future.succeededFuture(TenantResult.from(result.getStatus(), null));
                     }
                 });
     }

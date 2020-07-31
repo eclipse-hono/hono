@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,9 +23,12 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
+import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -47,7 +51,7 @@ import io.vertx.core.json.JsonObject;
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
  */
-public abstract class AbstractRegistrationService implements RegistrationService {
+public abstract class AbstractRegistrationService implements RegistrationService, DeviceRegistrationInformationService, Lifecycle {
 
     /**
      * The default number of seconds that information returned by this service's operations may be cached for.
@@ -57,6 +61,40 @@ public abstract class AbstractRegistrationService implements RegistrationService
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRegistrationService.class);
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
+
+    private AutoProvisioner autoProvisioner;
+
+    @Override
+    public final Future<Void> start() {
+        return startInternal()
+            .compose(ok -> supportsAutoProvisioning() ? autoProvisioner.start() : Future.succeededFuture())
+            .mapEmpty();
+    }
+
+    @Override
+    public final Future<Void> stop() {
+        return stopInternal()
+            .compose(ok -> supportsAutoProvisioning() ? autoProvisioner.stop() : Future.succeededFuture())
+            .mapEmpty();
+    }
+
+    /**
+     * Enables subclasses to add custom startup logic, see {@link Lifecycle#start()}.
+     *
+     * @return A future indicating the outcome of the startup process.
+     */
+    protected Future<Void> startInternal() {
+        return Future.succeededFuture();
+    }
+
+    /**
+     * Enables subclasses to add custom shutdown logic, see {@link Lifecycle#stop()}.
+     *
+     * @return A future indicating the outcome of the startup process.
+     */
+    protected Future<Void> stopInternal() {
+        return Future.succeededFuture();
+    }
 
     /**
      * Sets the service to use for checking existence of tenants.
@@ -74,26 +112,19 @@ public abstract class AbstractRegistrationService implements RegistrationService
     }
 
     /**
-     * Gets device registration data by device ID.
+     * Sets the AutoProvisioner to use.
+     * <p>
+     * If set, gateway based auto-provisioning will be performed. Defaults to {@code null} meaning auto-provisioning
+     * is disabled.
      *
-     * @param deviceKey The ID of the device to get registration data for.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. The <em>status</em> will be
-     *            <ul>
-     *            <li><em>200 OK</em>, if a device with the given ID is registered for the tenant.<br>
-     *            The <em>payload</em> will contain a JSON object with the following properties:
-     *              <ul>
-     *              <li><em>device-id</em> - the device identifier</li>
-     *              <li><em>data</em> - the information registered for the device</li>
-     *              </ul>
-     *            </li>
-     *            <li><em>404 Not Found</em>, if no device with the given identifier is registered for the tenant.</li>
-     *            </ul>
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @param autoProvisioner The AutoProvisioner.
+     * @throws NullPointerException if parameter is {@code null};
      */
-    protected abstract Future<RegistrationResult> processAssertRegistration(DeviceKey deviceKey, Span span);
+    @Autowired(required = false)
+    public void setAutoProvisioner(final AutoProvisioner autoProvisioner) {
+        Objects.requireNonNull(autoProvisioner);
+        this.autoProvisioner = autoProvisioner;
+    }
 
     /**
      * Takes the 'viaGroups' list of a device and resolves all group ids with the ids of the devices that are
@@ -227,7 +258,28 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                 final RegistrationResult deviceResult = deviceInfoTracker.result();
                                 final RegistrationResult gatewayResult = gatewayInfoTracker.result();
 
-                                if (!isDeviceEnabled(deviceResult)) {
+                                if (deviceResult.isNotFound() && !gatewayResult.isNotFound()
+                                        && isDeviceEnabled(gatewayResult)
+                                        && hasAuthorityForAutoRegistration(gatewayResult)
+                                        && supportsAutoProvisioning()) {
+
+                                    final Device device = new Device()
+                                            .setEnabled(true)
+                                            .setVia(Collections.singletonList(gatewayId))
+                                            .setStatus(new DeviceStatus().setAutoProvisioned(true));
+
+                                    final JsonArray memberOf = gatewayResult.getPayload()
+                                            .getJsonObject(RegistrationConstants.FIELD_DATA)
+                                            .getJsonArray(RegistryManagementConstants.FIELD_MEMBER_OF);
+                                    if (memberOf != null && !memberOf.isEmpty()) {
+                                        device.setViaGroups(memberOf.getList());
+                                    }
+
+                                    LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
+                                    return autoProvisioner.performAutoProvisioning(tenantId, deviceId, gatewayId, device, span.context())
+                                            .compose(deviceData -> createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span));
+
+                                } else if (!isDeviceEnabled(deviceResult)) {
                                     if (deviceResult.isNotFound()) {
                                         LOG.debug("no such device");
                                         TracingHelper.logError(span, "no such device");
@@ -258,7 +310,12 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                     }
 
                                     if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                                        return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                                        if (supportsAutoProvisioning()) {
+                                            return autoProvisioner.sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, deviceData, span)
+                                                    .compose(v -> createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span));
+                                        } else {
+                                            return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                                        }
                                     } else {
                                         LOG.debug("gateway not authorized");
                                         TracingHelper.logError(span, "gateway not authorized");
@@ -267,6 +324,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                 }
                             });
                 });
+    }
+
+    private boolean supportsAutoProvisioning() {
+        return autoProvisioner != null;
     }
 
     /**
@@ -435,6 +496,13 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
     private boolean isDeviceEnabled(final JsonObject registrationData) {
         return registrationData.getBoolean(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
+    }
+
+    private boolean hasAuthorityForAutoRegistration(final RegistrationResult registrationResult) {
+        final JsonArray authorities = registrationResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)
+                .getJsonArray(RegistryManagementConstants.FIELD_AUTHORITIES);
+
+        return authorities != null && authorities.contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED);
     }
 
     /**

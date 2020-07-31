@@ -101,7 +101,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     }
 
     @Override
-    public Future<Void> start() {
+    protected Future<Void> startInternal() {
 
         final Promise<Void> result = Promise.promise();
 
@@ -236,7 +236,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     }
 
     @Override
-    public Future<Void> stop() {
+    protected Future<Void> stopInternal() {
 
         final Promise<Void> result = Promise.promise();
 
@@ -301,7 +301,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     ///// DEVICES
 
     @Override
-    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey key, final Span span) {
+    public Future<RegistrationResult> processAssertRegistration(final DeviceKey key, final Span span) {
 
         Objects.requireNonNull(key);
         Objects.requireNonNull(span);

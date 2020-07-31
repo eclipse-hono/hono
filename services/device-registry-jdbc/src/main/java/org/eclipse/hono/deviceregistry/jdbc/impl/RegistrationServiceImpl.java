@@ -43,7 +43,7 @@ public class RegistrationServiceImpl extends AbstractRegistrationService {
     }
 
     @Override
-    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
+    public Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
 
         return this.store
                 .readDevice(deviceKey, span.context())
