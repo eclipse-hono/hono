@@ -93,12 +93,12 @@ cat <<EOS >> $WORKSPACE/hono-documentation-assembly/config_version.toml
   [Languages.stable]
     weight = -20000
     languageName = "stable ($VERSION)"
-    contentDir = "content_dirs/$VERSION"
+    contentDir = "content_dirs/stable"
     [Languages.stable.params]
-      honoVersion = "stable ($VERSION)"
+      honoVersion = "stable"
 EOS
                 git checkout $3
-                cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/${VERSION}
+                cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/stable
             }
             
             function prepare_docu_version {
@@ -114,7 +114,7 @@ cat <<EOS >> $WORKSPACE/hono-documentation-assembly/config_version.toml
     languageName = "${VERSION}"
     contentDir = "content_dirs/${VERSION}"
     [Languages."${VERSION}".params]
-      honoVersion = "${VERSION}"
+      honoVersion = "$4"
 EOS
                 git checkout $3
                 cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/${VERSION}
@@ -126,9 +126,10 @@ EOS
             while IFS=";" read -r MAJOR MINOR TAG
             do
               if [[ "${TAG}" == "${TAG_STABLE}" ]]; then
+                prepare_docu_version ${MAJOR} ${MINOR} ${TAG} "stable"
                 prepare_stable ${MAJOR} ${MINOR} ${TAG}
               else
-                prepare_docu_version ${MAJOR} ${MINOR} ${TAG}
+                prepare_docu_version ${MAJOR} ${MINOR} ${TAG} "${MAJOR}.${MINOR}"
               fi
             done < <(tail -n+3 $WORKSPACE/hono-documentation-assembly/versions_supported.csv)  # skip header line and comment
           
