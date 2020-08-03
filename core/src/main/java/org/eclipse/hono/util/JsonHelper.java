@@ -74,6 +74,7 @@ public final class JsonHelper {
     public static <T> T getValue(final JsonArray jsonArray, final int pos, final Class<T> clazz,
                                  final T defaultValue) {
         Objects.requireNonNull(pos);
+        Objects.requireNonNull(jsonArray);
 
         if (pos > jsonArray.size()) {
             LOG.debug("index {} larger than array. Actual size is {}", pos, jsonArray.size());
@@ -141,7 +142,11 @@ public final class JsonHelper {
 
         //exit condition
         if (path.size() == 1) {
-            return getValue(jsonObject.getJsonArray(key), index, clazz, defaultValue);
+            try {
+                return getValue(jsonObject.getJsonArray(key), index, clazz, defaultValue);
+            } catch (NullPointerException e) {
+                return defaultValue;
+            }
         }
 
         return getValueFromJsonPath(

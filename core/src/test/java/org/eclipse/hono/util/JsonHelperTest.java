@@ -113,6 +113,30 @@ public class JsonHelperTest {
     }
 
     /**
+     * Verifies that a too large index for an array returns default value.
+     */
+    @Test
+    public void testInvalidArrayIndexReturnsDefaultValue() {
+        final String path = "fooIntArray[5]";
+        final int value = JsonHelper.getValueFromJsonPath(json, path, Integer.class, 9);
+
+        assertNotNull(value);
+        assertEquals(9, value);
+    }
+
+    /**
+     * Verifies that pointing to a non existing array returns default value.
+     */
+    @Test
+    public void testInvalidArrayNameReturnsDefaultValue() {
+        final String path = "InvalidArray[1]";
+        final int value = JsonHelper.getValueFromJsonPath(json, path, Integer.class, 9);
+
+        assertNotNull(value);
+        assertEquals(9, value);
+    }
+
+    /**
      * Get a value contained in a Json object that is an array.
      */
     @Test
