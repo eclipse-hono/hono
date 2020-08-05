@@ -73,7 +73,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
 
     private static final String QUERY_TEMPLATE_MESSAGE_LIMIT = String.format(
-            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$sd]) or %2$s*0) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$sd]) or %1$s*0))",
+            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dd:%%3$ds]) or %2$s*0) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dd:%%3$ds]) or %1$s*0))",
             METRIC_NAME_MESSAGES_PAYLOAD_SIZE,
             METRIC_NAME_COMMANDS_PAYLOAD_SIZE,
             MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
@@ -377,7 +377,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                     final String queryParams = String.format(
                             QUERY_TEMPLATE_MESSAGE_LIMIT,
                             tenant.getTenantId(),
-                            dataUsagePeriod);
+                            dataUsagePeriod,
+                            config.getCacheTimeout());
                     executeQuery(queryParams, span)
                         .onSuccess(bytesConsumed -> r.complete(new LimitedResource<Long>(allowedMaxBytes, bytesConsumed)))
                         .onFailure(t -> r.completeExceptionally(t));
