@@ -22,9 +22,10 @@ import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.QoS;
 
 import io.micrometer.core.instrument.Timer.Sample;
@@ -35,7 +36,7 @@ import io.vertx.core.buffer.Buffer;
  * A dictionary of relevant information required during the processing of a CoAP request message published by a device.
  *
  */
-public final class CoapContext extends MapBasedExecutionContext {
+public final class CoapContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * The query parameter which is used to indicate an empty notification.
@@ -43,41 +44,85 @@ public final class CoapContext extends MapBasedExecutionContext {
     public static final String PARAM_EMPTY_CONTENT = "empty";
 
     private final CoapExchange exchange;
+    private final Device originDevice;
     private final AtomicBoolean acceptTimerFlag = new AtomicBoolean();
     private final AtomicBoolean acceptFlag = new AtomicBoolean();
     private Sample timer;
 
-    private CoapContext(final CoapExchange exchange) {
+    private CoapContext(final CoapExchange exchange, final Device originDevice, final Device authenticatedDevice) {
+        super(authenticatedDevice);
         this.exchange = exchange;
+        this.originDevice = originDevice;;
     }
 
     /**
      * Creates a new context for a CoAP request.
      *
      * @param request The CoAP exchange representing the request.
+     * @param originDevice The device that the message originates from.
+     * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
+     *                            if the device has not been authenticated.
      * @return The context.
-     * @throws NullPointerException if request is {@code null}.
+     * @throws NullPointerException if request or origin device are {@code null}.
      */
-    public static CoapContext fromRequest(final CoapExchange request) {
+    public static CoapContext fromRequest(
+            final CoapExchange request,
+            final Device originDevice,
+            final Device authenticatedDevice) {
+
         Objects.requireNonNull(request);
-        return new CoapContext(request);
+        Objects.requireNonNull(originDevice);
+        return new CoapContext(request, originDevice, authenticatedDevice);
     }
 
     /**
      * Creates a new context for a CoAP request.
      *
      * @param request The CoAP exchange representing the request.
+     * @param originDevice The device that the message originates from.
+     * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
+     *                            if the device has not been authenticated.
      * @param timer The object to use for measuring the time it takes to process the request.
      * @return The context.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if request, origin device or timer are {@code null}.
      */
-    public static CoapContext fromRequest(final CoapExchange request, final Sample timer) {
+    public static CoapContext fromRequest(
+            final CoapExchange request,
+            final Device originDevice,
+            final Device authenticatedDevice,
+            final Sample timer) {
+
         Objects.requireNonNull(request);
+        Objects.requireNonNull(originDevice);
         Objects.requireNonNull(timer);
 
-        final CoapContext result = new CoapContext(request);
+        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice);
         result.timer = timer;
         return result;
+    }
+
+    /**
+     * Gets the device that the message originates from.
+     *
+     * @return The device.
+     */
+    public Device getOriginDevice() {
+        return originDevice;
+    }
+
+    /**
+     * Gets the identifier of the gateway that has acted on behalf of the device that
+     * the message originates from.
+     *
+     * @return The gateway identifier or {@code null} if the message has not been uploaded
+     *         by a gateway.
+     */
+    public String getGatewayId() {
+        if (isDeviceAuthenticated() && !getOriginDevice().getDeviceId().equals(getAuthenticatedDevice().getDeviceId())) {
+            return getAuthenticatedDevice().getDeviceId();
+        } else {
+            return null;
+        }
     }
 
     /**

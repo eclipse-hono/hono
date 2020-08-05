@@ -191,8 +191,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         TAG_LORA_PROVIDER.set(currentSpan, provider.getProviderName());
         ctx.put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, provider.getProviderName());
 
-        if (ctx.getRoutingContext().user() instanceof Device) {
-            final Device gatewayDevice = (Device) ctx.getRoutingContext().user();
+        if (ctx.isDeviceAuthenticated()) {
+            final Device gatewayDevice = ctx.getAuthenticatedDevice();
             TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
 
             try {

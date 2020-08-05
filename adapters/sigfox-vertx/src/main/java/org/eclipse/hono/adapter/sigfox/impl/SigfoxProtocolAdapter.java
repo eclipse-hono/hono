@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -173,12 +173,12 @@ public final class SigfoxProtocolAdapter
 
     private void dataHandler(final HttpContext ctx, final UploadHandler uploadHandler) {
 
-        if (!(ctx.getRoutingContext().user() instanceof Device)) {
+        if (!ctx.isDeviceAuthenticated()) {
             LOG.warn("Not a device");
             return;
         }
 
-        final Device gatewayDevice = (Device) ctx.getRoutingContext().user();
+        final Device gatewayDevice = ctx.getAuthenticatedDevice();
 
         final String deviceTenant = gatewayDevice.getTenantId();
         final String requestTenant = ctx.getRoutingContext().pathParam(SIGFOX_PARAM_TENANT);

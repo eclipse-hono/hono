@@ -107,8 +107,12 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 .map(authenticatedDevice -> new RequestDeviceAndAuth(authenticatedDevice, authenticatedDevice));
     }
 
-    private CoapContext newContext(final CoapExchange exchange) {
-        return CoapContext.fromRequest(exchange, getMetrics().startTimer());
+    private CoapContext newContext(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth) {
+        return CoapContext.fromRequest(
+                exchange,
+                deviceAndAuth.getOriginDevice(),
+                deviceAndAuth.getAuthenticatedDevice(),
+                getMetrics().startTimer());
     }
 
     @Override
@@ -131,9 +135,9 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
 
             private Future<ResponseCode> upload(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth,
                     final Span currentSpan) {
-                final CoapContext ctx = newContext(exchange);
+                final CoapContext ctx = newContext(exchange, deviceAndAuth);
                 ctx.setTracingContext(currentSpan.context());
-                return uploadTelemetryMessage(ctx, deviceAndAuth.getOriginDevice(), deviceAndAuth.getAuthenticatedDevice());
+                return uploadTelemetryMessage(ctx);
             }
         });
 
@@ -153,9 +157,9 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
 
             private Future<ResponseCode> upload(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth,
                     final Span currentSpan) {
-                final CoapContext ctx = newContext(exchange);
+                final CoapContext ctx = newContext(exchange, deviceAndAuth);
                 ctx.setTracingContext(currentSpan.context());
-                return uploadEventMessage(ctx, deviceAndAuth.getOriginDevice(), deviceAndAuth.getAuthenticatedDevice());
+                return uploadEventMessage(ctx);
             }
         });
         result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName()) {
@@ -174,7 +178,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
 
             private Future<ResponseCode> upload(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth,
                     final Span currentSpan) {
-                final CoapContext ctx = newContext(exchange);
+                final CoapContext ctx = newContext(exchange, deviceAndAuth);
                 ctx.setTracingContext(currentSpan.context());
                 return uploadCommandResponseMessage(ctx, deviceAndAuth.getOriginDevice(), deviceAndAuth.getAuthenticatedDevice());
             }
