@@ -18,7 +18,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -32,7 +32,7 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  * processing of an MQTT message published by a device.
  *
  */
-public final class MqttContext extends MapBasedExecutionContext {
+public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
     private MqttPublishMessage message;
     private MqttEndpoint deviceEndpoint;
@@ -43,7 +43,8 @@ public final class MqttContext extends MapBasedExecutionContext {
     private MetricsTags.EndpointType endpoint;
     private PropertyBag propertyBag;
 
-    private MqttContext() {
+    private MqttContext(final Device authenticatedDevice) {
+        super(authenticatedDevice);
     }
 
     @Override
@@ -93,7 +94,7 @@ public final class MqttContext extends MapBasedExecutionContext {
         Objects.requireNonNull(publishedMessage);
         Objects.requireNonNull(deviceEndpoint);
 
-        final MqttContext result = new MqttContext();
+        final MqttContext result = new MqttContext(authenticatedDevice);
         result.message = publishedMessage;
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
@@ -120,7 +121,7 @@ public final class MqttContext extends MapBasedExecutionContext {
      * @throws NullPointerException if endpoint is {@code null}.
      */
     public static MqttContext fromConnectPacket(final MqttEndpoint endpoint) {
-        final MqttContext result = new MqttContext();
+        final MqttContext result = new MqttContext(null);
         result.deviceEndpoint = endpoint;
         return result;
     }

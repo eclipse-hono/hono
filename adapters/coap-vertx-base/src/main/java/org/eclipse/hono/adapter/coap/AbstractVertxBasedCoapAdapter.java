@@ -605,23 +605,17 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
      *
      * @param context The context representing the request to be processed.
-     * @param originDevice The message's origin device.
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @return A future containing the response code that has been returned to
      *         the device.
      * @throws NullPointerException if context or originDevice are {@code null}.
      */
     public final Future<ResponseCode> uploadTelemetryMessage(
-            final CoapContext context,
-            final Device originDevice,
-            final Device authenticatedDevice) {
+            final CoapContext context) {
 
         return doUploadMessage(
                 Objects.requireNonNull(context),
-                Objects.requireNonNull(originDevice),
-                authenticatedDevice,
                 context.isConfirmable(),
-                getTelemetrySender(originDevice.getTenantId()),
+                getTelemetrySender(context.getOriginDevice().getTenantId()),
                 MetricsTags.EndpointType.TELEMETRY);
     }
 
@@ -629,26 +623,19 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Forwards the body of a CoAP request to the south bound Event API of the AMQP 1.0 Messaging Network.
      *
      * @param context The context representing the request to be processed.
-     * @param originDevice The message's origin device.
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @return A future containing the response code that has been returned to
      *         the device.
      * @throws NullPointerException if context or originDevice are {@code null}.
      */
     public final Future<ResponseCode> uploadEventMessage(
-            final CoapContext context,
-            final Device originDevice,
-            final Device authenticatedDevice) {
+            final CoapContext context) {
 
         Objects.requireNonNull(context);
-        Objects.requireNonNull(originDevice);
         if (context.isConfirmable()) {
             return doUploadMessage(
                     context,
-                    originDevice,
-                    authenticatedDevice,
                     true,
-                    getEventSender(originDevice.getTenantId()),
+                    getEventSender(context.getOriginDevice().getTenantId()),
                     MetricsTags.EndpointType.EVENT);
         } else {
             context.respondWithCode(ResponseCode.BAD_REQUEST, "event endpoint supports confirmable request messages only");
@@ -673,8 +660,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     private Future<ResponseCode> doUploadMessage(
             final CoapContext context,
-            final Device device,
-            final Device authenticatedDevice,
             final boolean waitForOutcome,
             final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
@@ -689,28 +674,25 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             context.respondWithCode(ResponseCode.BAD_REQUEST, "request contains no body but is not marked as empty notification");
             return Future.succeededFuture(ResponseCode.BAD_REQUEST);
         } else {
-            final String gatewayId = 
-                    authenticatedDevice != null && !device.getDeviceId().equals(authenticatedDevice.getDeviceId())
-                            ? authenticatedDevice.getDeviceId()
-                            : null;
+            final String gatewayId = context.getGatewayId();
 
             final Span currentSpan = TracingHelper
                     .buildChildSpan(tracer, context.getTracingContext(),
                             "upload " + endpoint.getCanonicalName(), getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(TracingHelper.TAG_TENANT_ID, device.getTenantId())
-                    .withTag(TracingHelper.TAG_DEVICE_ID, device.getDeviceId())
-                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                    .withTag(TracingHelper.TAG_TENANT_ID, context.getOriginDevice().getTenantId())
+                    .withTag(TracingHelper.TAG_DEVICE_ID, context.getOriginDevice().getDeviceId())
+                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), context.isDeviceAuthenticated())
                     .start();
 
             final Promise<Void> responseReady = Promise.promise();
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(
-                    device.getTenantId(), device.getDeviceId(),
-                    authenticatedDevice,
+                    context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(),
+                    context.getAuthenticatedDevice(),
                     currentSpan.context());
             final Future<TenantObject> tenantTracker = getTenantConfiguration(
-                    device.getTenantId(),
+                    context.getOriginDevice().getTenantId(),
                     currentSpan.context());
             final Future<TenantObject> tenantValidationTracker = tenantTracker
                     .compose(tenantObject ->
@@ -736,7 +718,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     .compose(ttd -> createCommandConsumer(
                             ttd,
                             tenantTracker.result(),
-                            device.getDeviceId(),
+                            context.getOriginDevice().getDeviceId(),
                             gatewayId,
                             context,
                             responseReady,
@@ -747,8 +729,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 final Integer ttd = ttdTracker.result();
                 final Message downstreamMessage = newMessage(
                         context.getRequestedQos(),
-                        ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(),
-                                device.getDeviceId()),
+                        ResourceIdentifier.from(endpoint.getCanonicalName(), context.getOriginDevice().getTenantId(),
+                                context.getOriginDevice().getDeviceId()),
                         "/" + context.getExchange().getRequestOptions().getUriPathString(),
                         contentType,
                         payload,
@@ -790,7 +772,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     commandContext.accept();
                     metrics.reportCommand(
                             commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                            device.getTenantId(),
+                            context.getOriginDevice().getTenantId(),
                             tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
                             commandContext.getCommand().getPayloadSize(),
@@ -798,10 +780,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 }
 
                 log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName());
+                        context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(), endpoint.getCanonicalName());
                 metrics.reportTelemetry(
                         endpoint,
-                        device.getTenantId(),
+                        context.getOriginDevice().getTenantId(),
                         tenantTracker.result(),
                         MetricsTags.ProcessingOutcome.FORWARDED,
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
@@ -821,10 +803,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 return result.future();
             }).recover(t -> {
                 log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName(), t);
+                        context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(), endpoint.getCanonicalName(), t);
                 metrics.reportTelemetry(
                         endpoint,
-                        device.getTenantId(),
+                        context.getOriginDevice().getTenantId(),
                         tenantTracker.result(),
                         ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,

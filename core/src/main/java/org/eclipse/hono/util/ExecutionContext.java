@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,9 @@ package org.eclipse.hono.util;
 import io.opentracing.SpanContext;
 
 /**
- * A context that can be used to pass around arbitrary key/value pairs.
- *
+ * A container for information relevant for processing a message sent by a device.
+ * <p>
+ * Provides means to store arbitrary key/value pairs.
  */
 public interface ExecutionContext {
 

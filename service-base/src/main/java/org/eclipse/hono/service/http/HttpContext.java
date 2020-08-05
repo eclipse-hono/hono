@@ -24,6 +24,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TelemetryExecutionContext;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.http.HttpServerRequest;
@@ -34,7 +35,7 @@ import io.vertx.ext.web.RoutingContext;
  * Represents the context for the handling of a Vert.x HTTP request, wrapping the Vert.x {@link RoutingContext} as well
  * as implementing the {@link ExecutionContext} interface.
  */
-public final class HttpContext implements ExecutionContext {
+public final class HttpContext implements TelemetryExecutionContext {
 
     private final RoutingContext routingContext;
     private SpanContext spanContext;
@@ -180,10 +181,9 @@ public final class HttpContext implements ExecutionContext {
     }
 
     /**
-     * Gets the authenticated device identity from the routing context.
-     *
-     * @return The device or {@code null} if the device has not been authenticated.
+     * {@inheritDoc}
      */
+    @Override
     public Device getAuthenticatedDevice() {
 
         return Optional.ofNullable(routingContext.user()).map(user -> {
