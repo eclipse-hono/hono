@@ -583,7 +583,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Promise<Device> result = Promise.promise();
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
         if (peerIdentity instanceof ExtensiblePrincipal) {
-            final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
+            final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
             final Device authenticatedDevice = extPrincipal.getExtendedInfo().get("hono-device", Device.class);
             if (authenticatedDevice != null) {
                 result.complete(authenticatedDevice);
@@ -689,8 +689,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             context.respondWithCode(ResponseCode.BAD_REQUEST, "request contains no body but is not marked as empty notification");
             return Future.succeededFuture(ResponseCode.BAD_REQUEST);
         } else {
-            final String gatewayId = authenticatedDevice != null
-                    && !device.getDeviceId().equals(authenticatedDevice.getDeviceId())
+            final String gatewayId = 
+                    authenticatedDevice != null && !device.getDeviceId().equals(authenticatedDevice.getDeviceId())
                             ? authenticatedDevice.getDeviceId()
                             : null;
 
@@ -709,25 +709,28 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     device.getTenantId(), device.getDeviceId(),
                     authenticatedDevice,
                     currentSpan.context());
-            final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(),
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(
+                    device.getTenantId(),
                     currentSpan.context());
             final Future<TenantObject> tenantValidationTracker = tenantTracker
-                    .compose(tenantObject -> CompositeFuture
-                            .all(isAdapterEnabled(tenantObject),
-                                    checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
-                            .map(success -> tenantObject));
+                    .compose(tenantObject ->
+                        CompositeFuture.all(
+                            isAdapterEnabled(tenantObject),
+                            checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
+                        .map(tenantObject));
 
             // we only need to consider TTD if the device and tenant are enabled and the adapter
             // is enabled for the tenant
             final Future<Integer> ttdTracker = CompositeFuture.all(tenantValidationTracker, tokenTracker)
                     .compose(ok -> {
                         final Integer ttdParam = context.getTimeUntilDisconnect();
-                        return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
-                            if (effectiveTtd != null) {
-                                currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
-                            }
-                            return effectiveTtd;
-                        });
+                        return getTimeUntilDisconnect(tenantTracker.result(), ttdParam)
+                                .map(effectiveTtd -> {
+                                    if (effectiveTtd != null) {
+                                        currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
+                                    }
+                                    return effectiveTtd;
+                                });
                     });
             final Future<ProtocolAdapterCommandConsumer> commandConsumerTracker = ttdTracker
                     .compose(ttd -> createCommandConsumer(
@@ -993,9 +996,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 log.debug("command message is invalid: {}", command);
                 commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
             }
-            // we do not issue any new credit because the
-            // consumer is supposed to deliver a single command
-            // only per HTTP request
         };
 
         final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
