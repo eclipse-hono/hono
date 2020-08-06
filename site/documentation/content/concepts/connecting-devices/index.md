@@ -132,6 +132,13 @@ data into AMQP 1.0 messages and forwards them to the Hono AMQP adapter using the
 The requirements and prerequisites for this approach are the same as those for the standard device gateway scenario.
 Authentication and authorization of gateways works in the same way.
 
+# Generic MQTT Protocol Gateway Template
+
+The repository [hono-extras](https://github.com/eclipse/hono-extras) contains a generic template for an MQTT protocol gateway. 
+This template allows you to develop a production-ready protocol gateway with minimal effort, with which you can connect 
+existing MQTT-enabled devices to Hono.
+For example, you can use other topic names or structures, or you can transform, enrich, compress, or encrypt the payload.
+
 ### Example Code
 
 Hono's [*examples* module](https://github.com/eclipse/hono/tree/master/examples/protocol-adapter-example) contains code for
