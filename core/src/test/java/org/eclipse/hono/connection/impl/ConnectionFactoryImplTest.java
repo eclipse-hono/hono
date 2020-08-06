@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectTimeoutException;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,7 +54,7 @@ public class ConnectionFactoryImplTest {
 
     private static final String PREFIX_KEY_PATH = "target/certs/";
 
-    private final Vertx vertx = Vertx.vertx();
+    private Vertx vertx;
     private ClientConfigProperties props;
 
     /**
@@ -61,8 +62,9 @@ public class ConnectionFactoryImplTest {
      */
     @BeforeEach
     public void setup() {
+        vertx = Vertx.vertx();
         props = new ClientConfigProperties();
-        props.setHost("127.0.0.1");
+        props.setHost(Constants.LOOPBACK_DEVICE_ADDRESS);
         props.setPort(25673); // no server running on port
         props.setAmqpHostname("hono");
         props.setName("client");
@@ -98,7 +100,7 @@ public class ConnectionFactoryImplTest {
     public void testConnectInvokesHandlerOnConnectTimeout(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
-        props.setConnectTimeout(10);
+        props.setConnectTimeout(200);
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
         final ProtonClient protonClientMock = mock(ProtonClient.class);
         factory.setProtonClient(protonClientMock);
