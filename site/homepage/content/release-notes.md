@@ -10,6 +10,8 @@ title = "Release Notes"
   in a new metric. In particular, the metric includes a tag reflecting the outcome
   of the attempt to establish a connection and the reason for failure.
   Please refer to the [Metrics API]({{% doclink "/api/metrics" %}}) for details.
+* A new Quarkus based HTTP protocol adapter is now available. This adapter version provides better memory consumption and
+  startup times comparing to the existing one.
 
 ## 1.3.0
 

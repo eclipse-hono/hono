@@ -56,6 +56,13 @@ If you plan to build the Docker images more frequently, e.g. because you want to
 The first build might take several minutes because Docker will need to download all the base images that Hono is relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
 {{% /note %}}
 
+You can create _native_ Docker images for some of the Hono services. In order to do so, you need to use `native` Maven profile:
+
+```sh
+# in the "hono" folder containing the source code
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,native
+```
+
 ## Perform the integration tests
 
 The source code for Hono comes with a test suite for integration testing. To trigger these tests, change to the `tests` folder and execute:
