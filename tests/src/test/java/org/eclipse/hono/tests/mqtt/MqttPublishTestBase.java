@@ -282,7 +282,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
                 send(tenantId, deviceId, msg, useShortTopicName).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
-                        LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
+                        LOGGER.error("error sending message {}", messageCount.get(), sendAttempt.cause());
                     }
                     if (messageCount.get() % 50 == 0) {
                         LOGGER.info("messages sent: " + messageCount.get());

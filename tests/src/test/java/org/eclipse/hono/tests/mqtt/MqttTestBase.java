@@ -153,7 +153,7 @@ public abstract class MqttTestBase {
                         .orElse(Future.succeededFuture()))
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
                 .recover(t -> {
-                    LOGGER.debug("failed to establish connection to MQTT adapter [host: {}, port: {}]",
+                    LOGGER.info("failed to establish connection to MQTT adapter [host: {}, port: {}]",
                             IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT, t);
                     return Future.failedFuture(t);
                 });
@@ -182,7 +182,7 @@ public abstract class MqttTestBase {
             mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.future().map(conAck -> {
-            LOGGER.debug(
+            LOGGER.info(
                     "MQTT connection to adapter [host: {}, port: {}] established",
                     IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
             this.context = Vertx.currentContext();
@@ -212,7 +212,7 @@ public abstract class MqttTestBase {
             mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.future().map(conAck -> {
-            LOGGER.debug(
+            LOGGER.info(
                     "MQTTS connection to adapter [host: {}, port: {}] established",
                     IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT);
             this.context = Vertx.currentContext();
