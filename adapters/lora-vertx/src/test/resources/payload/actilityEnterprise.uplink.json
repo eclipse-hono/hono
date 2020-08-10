@@ -1,0 +1,49 @@
+{
+  "DevEUI_uplink": {
+    "Time": "2020-07-20T02:16:30.505+00:00",
+    "DevEUI": "0102030405060708",
+    "FPort": 2,
+    "FCntUp": 57,
+    "MType": 2,
+    "FCntDn": 12,
+    "payload_hex": "62756D6C7578",
+    "mic_hex": "922d4454",
+    "Lrcid": "0000000F",
+    "LrrRSSI": -112.000000,
+    "LrrSNR": -7.750000,
+    "SpFact": 10,
+    "SubBand": "G0",
+    "Channel": "LC3",
+    "DevLrrCnt": 1,
+    "Lrrid": "10000001",
+    "Late": 0,
+    "LrrLAT": 27.831039,
+    "LrrLON": -97.534576,
+    "Lrrs": {
+      "Lrr": [
+        {
+          "Lrrid": "10000001",
+          "Chain": 0,
+          "LrrRSSI": -112.000000,
+          "LrrSNR": -7.750000,
+          "LrrESP": -120.423981
+        }
+      ]
+    },
+    "CustomerID": "1100000000",
+    "CustomerData": {
+      "alr": {
+        "pro": "LORA/Generic",
+        "ver": "1"
+      }
+    },
+    "ModelCfg": "0",
+    "InstantPER": 0.000000,
+    "MeanPER": 0.000000,
+    "DevAddr": "02CC8E6D",
+    "TxPower": 20.000000,
+    "NbTrans": 1,
+    "Frequency": 902.9,
+    "DynamicClass": "A"
+  }
+}

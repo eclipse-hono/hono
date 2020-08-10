@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Objects;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
@@ -62,8 +63,8 @@ public class FireflyProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    public String pathPrefix() {
-        return "/firefly";
+    public Set<String> pathPrefixes() {
+        return Set.of("/firefly");
     }
 
     @Override

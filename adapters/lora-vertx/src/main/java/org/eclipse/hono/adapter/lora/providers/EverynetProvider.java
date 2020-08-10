@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.lora.providers;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
@@ -66,8 +67,8 @@ public class EverynetProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    public String pathPrefix() {
-        return "/everynet";
+    public Set<String> pathPrefixes() {
+        return Set.of("/everynet");
     }
 
     private Optional<JsonObject> getMetaObject(final JsonObject loraMessage) {

@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Set;
+
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.service.http.HttpUtils;
 
@@ -33,11 +35,11 @@ public interface LoraProvider {
     String getProviderName();
 
     /**
-     * The url path prefix which is used for this provider. E.g. "/myloraprovider".
+     * The url path prefix(es) which is/are used for this provider. E.g. "/myloraprovider".
      *
-     * @return The url path prefix with leading slash. E.g. "/myloraprovider".
+     * @return The url path prefix(es) with leading slash. E.g. "/myloraprovider".
      */
-    String pathPrefix();
+    Set<String> pathPrefixes();
 
     /**
      * Gets the content type that this provider accepts.

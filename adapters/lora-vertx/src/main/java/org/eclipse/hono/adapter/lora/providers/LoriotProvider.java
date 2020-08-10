@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,8 +67,8 @@ public class LoriotProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    public String pathPrefix() {
-        return "/loriot";
+    public Set<String> pathPrefixes() {
+        return Set.of("/loriot");
     }
 
     @Override

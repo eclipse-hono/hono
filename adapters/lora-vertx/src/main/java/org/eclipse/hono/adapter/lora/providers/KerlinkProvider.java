@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
 import java.util.Objects;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
@@ -43,8 +44,8 @@ public class KerlinkProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    public String pathPrefix() {
-        return "/kerlink/rxmessage";
+    public Set<String> pathPrefixes() {
+        return Set.of("/kerlink/rxmessage");
     }
 
     /**
