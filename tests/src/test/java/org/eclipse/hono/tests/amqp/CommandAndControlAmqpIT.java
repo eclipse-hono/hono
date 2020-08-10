@@ -95,12 +95,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      *
      * @param testInfo Meta info about the test being run.
      */
+    @Override
     @BeforeEach
-    public void setUp(final TestInfo testInfo) {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
+
         log.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         tenant = new Tenant();
+        helper.init().onComplete(ctx.completing());
     }
 
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {

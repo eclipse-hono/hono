@@ -51,7 +51,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
                 deviceId);
         final Promise<Void> result = Promise.promise();
         // throttle sending to allow adapter to be replenished with credits from consumer
-        VERTX.setTimer(5, go -> {
+        vertx.setTimer(5, go -> {
             mqttClient.publish(
                     topic,
                     payload,

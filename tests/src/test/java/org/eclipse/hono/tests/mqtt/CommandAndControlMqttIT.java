@@ -98,11 +98,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      */
     @BeforeEach
     @Override
-    public void setUp(final TestInfo testInfo) {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
         LOGGER.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         tenant = new Tenant();
+        helper.init().onComplete(ctx.completing());
     }
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {

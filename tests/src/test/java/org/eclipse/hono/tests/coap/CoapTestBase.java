@@ -64,9 +64,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -106,8 +104,6 @@ public abstract class CoapTestBase {
      */
     protected static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
 
-    private static final Vertx VERTX = Vertx.vertx();
-
     private static final int MESSAGES_TO_SEND = 60;
 
     private static final String COMMAND_TO_SEND = "setDarkness";
@@ -131,17 +127,7 @@ public abstract class CoapTestBase {
      */
     protected String deviceId;
 
-    /**
-     * Sets up clients.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @BeforeAll
-    public static void init(final VertxTestContext ctx) {
-
-        helper = new IntegrationTestSupport(VERTX);
-        helper.init().onComplete(ctx.completing());
-    }
+    private final Vertx vertx = Vertx.vertx();
 
     /**
      * Creates the endpoint configuration variants for Command &amp; Control scenarios.
@@ -161,12 +147,14 @@ public abstract class CoapTestBase {
      * Sets up the fixture.
      *
      * @param testInfo The test meta data.
+     * @param ctx The vert.x test context.
      * @throws UnknownHostException if the CoAP adapter's host name cannot be resolved.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo) throws UnknownHostException {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) throws UnknownHostException {
 
         logger.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
         logger.info("using CoAP adapter [host: {}, coap port: {}, coaps port: {}]",
                 IntegrationTestSupport.COAP_HOST,
                 IntegrationTestSupport.COAP_PORT,
@@ -175,11 +163,13 @@ public abstract class CoapTestBase {
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
+     * Closes the AMQP 1.0 Messaging Network client.
      *
      * @param ctx The vert.x context.
      */
@@ -187,16 +177,6 @@ public abstract class CoapTestBase {
     public void deleteObjects(final VertxTestContext ctx) {
 
         helper.deleteObjects(ctx);
-    }
-
-    /**
-     * Closes the AMQP 1.0 Messaging Network client.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void disconnect(final VertxTestContext ctx) {
-
         helper.disconnect().onComplete(ctx.completing());
     }
 
@@ -304,7 +284,7 @@ public abstract class CoapTestBase {
             }
 
             private void waitForWarmUp() {
-                VERTX.setTimer(1000, tid -> result.complete());
+                vertx.setTimer(1000, tid -> result.complete());
             }
         }, request);
         return result.future();

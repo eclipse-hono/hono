@@ -129,7 +129,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         }))
         .compose(ok -> {
             final Promise<MessageConsumer> consumerCreated = Promise.promise();
-            VERTX.setTimer(4000, tid -> {
+            vertx.setTimer(4000, tid -> {
                 LOGGER.info("opening event consumer for tenant [{}]", tenantId);
                 // THEN no messages can be consumed after the TTL has expired
                 createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
@@ -139,7 +139,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         })
         .compose(c -> {
             final Promise<Void> done = Promise.promise();
-            VERTX.setTimer(1000, tid -> {
+            vertx.setTimer(1000, tid -> {
                 if (receivedMessageCount.get() > 0) {
                     done.fail(new IllegalStateException("should not have received any events after TTL has expired"));
                 } else {

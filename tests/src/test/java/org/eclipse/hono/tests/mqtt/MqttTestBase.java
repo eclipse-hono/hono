@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,9 +19,7 @@ import java.util.function.Supplier;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
@@ -33,10 +31,10 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
-import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
@@ -46,20 +44,19 @@ import io.vertx.mqtt.messages.MqttConnAckMessage;
 public abstract class MqttTestBase {
 
     /**
+     * A logger to be used by subclasses.
+     */
+    protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    /**
      * The vert.xt instance to run on.
      */
-    protected static final Vertx VERTX = Vertx.vertx();
+    protected final Vertx vertx = Vertx.vertx();
+
     /**
      * A helper accessing the AMQP 1.0 Messaging Network and
      * for managing tenants/devices/credentials.
      */
-    protected static IntegrationTestSupport helper;
-
-    /**
-     * A logger to be used by subclasses.
-     */
-    protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
-
+    protected IntegrationTestSupport helper;
     /**
      * A client for publishing messages to the MQTT protocol adapter.
      */
@@ -70,36 +67,29 @@ public abstract class MqttTestBase {
     protected Context context;
 
     /**
-     * Sets up the helper.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @BeforeAll
-    public static void init(final VertxTestContext ctx) {
-
-        helper = new IntegrationTestSupport(VERTX);
-        helper.init().onComplete(ctx.completing());
-    }
-
-    /**
      * Sets up the fixture.
      *
      * @param testInfo The JUnit test info.
+     * @param ctx The vert.x context.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo) {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
         LOGGER.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
+     * Closes the AMQP 1.0 Messaging Network client.
      *
      * @param ctx The vert.x context.
      */
     @AfterEach
     public void postTest(final VertxTestContext ctx) {
 
+        final Checkpoint done = ctx.checkpoint(2);
         final Promise<Void> disconnectHandler = Promise.promise();
         if (context == null) {
             disconnectHandler.complete();
@@ -112,19 +102,9 @@ public abstract class MqttTestBase {
         disconnectHandler.future().onComplete(closeAttempt -> {
             LOGGER.info("connection to MQTT adapter closed");
             context = null;
-            ctx.completeNow();
+            done.flag();
         });
-    }
-
-    /**
-     * Closes the AMQP 1.0 Messaging Network client.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void disconnect(final VertxTestContext ctx) {
-
-        helper.disconnect().onComplete(ctx.completing());
+        helper.disconnect().onComplete(r -> done.flag());
     }
 
     /**
@@ -174,11 +154,11 @@ public abstract class MqttTestBase {
             final String password) {
 
         final Promise<MqttConnAckMessage> result = Promise.promise();
-        VERTX.runOnContext(connect -> {
+        vertx.runOnContext(connect -> {
             final MqttClientOptions options = new MqttClientOptions()
                     .setUsername(username)
                     .setPassword(password);
-            mqttClient = MqttClient.create(VERTX, options);
+            mqttClient = MqttClient.create(vertx, options);
             mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.future().map(conAck -> {
@@ -202,13 +182,13 @@ public abstract class MqttTestBase {
             final SelfSignedCertificate cert) {
 
         final Promise<MqttConnAckMessage> result = Promise.promise();
-        VERTX.runOnContext(connect -> {
+        vertx.runOnContext(connect -> {
             final MqttClientOptions options = new MqttClientOptions()
                     .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
                     .setKeyCertOptions(cert.keyCertOptions())
                     .setSsl(true);
             options.setHostnameVerificationAlgorithm("");
-            mqttClient = MqttClient.create(VERTX, options);
+            mqttClient = MqttClient.create(vertx, options);
             mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.future().map(conAck -> {

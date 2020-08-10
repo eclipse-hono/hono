@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,10 @@ import java.util.Optional;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,23 +47,24 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 public abstract class AmqpAdapterTestBase {
 
     /**
-     * The vert.x instance to run all tests on.
-     */
-    protected static Vertx VERTX;
-    /**
-     * A helper for accessing the AMQP 1.0 Messaging Network and
-     * for managing tenants/devices/credentials.
-     */
-    protected static IntegrationTestSupport helper;
-    /**
      * Default options for connecting to the AMQP adapter.
      */
     protected static ProtonClientOptions defaultOptions;
 
     /**
+     * The vert.x instance to run all tests on.
+     */
+    protected final Vertx vertx = Vertx.vertx();
+    /**
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+
+    /**
+     * A helper for accessing the AMQP 1.0 Messaging Network and
+     * for managing tenants/devices/credentials.
+     */
+    protected IntegrationTestSupport helper;
     /**
      * The vert.x context of the device connection.
      */
@@ -72,39 +75,40 @@ public abstract class AmqpAdapterTestBase {
     protected ProtonConnection connection;
 
     /**
-     * Create a HTTP client for accessing the device registry (for registering devices and credentials) and
-     * an AMQP 1.0 client for consuming messages from the messaging network.
-     *
-     * @param ctx The Vert.x test context.
+     * Creates default AMQP client options.
      */
     @BeforeAll
-    public static void setup(final VertxTestContext ctx) {
-
-        VERTX = Vertx.vertx();
+    public static void init() {
 
         defaultOptions = new ProtonClientOptions()
                 .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
                 .setHostnameVerificationAlgorithm("")
                 .setSsl(true);
-
-        helper = new IntegrationTestSupport(VERTX);
-        helper.init().onComplete(ctx.completing());
-
     }
 
     /**
-     * Shut down the client connected to the messaging network.
+     * Create a HTTP client for accessing the device registry (for registering devices and credentials) and
+     * an AMQP 1.0 client for consuming messages from the messaging network.
+     *
+     * @param testInfo Meta info about the test being run.
+     * @param ctx The Vert.x test context.
+     */
+    @BeforeEach
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
+
+        log.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
+        helper.init().onComplete(ctx.completing());
+    }
+
+    /**
+     * Shuts down the client connected to the messaging network.
      *
      * @param ctx The Vert.x test context.
      */
-    @AfterAll
-    public static void disconnect(final VertxTestContext ctx) {
-        helper.disconnect()
-        .compose(ok -> {
-            final Promise<Void> closeAttempt = Promise.promise();
-            VERTX.close(closeAttempt);
-            return closeAttempt.future();
-        }).onComplete(ctx.completing());
+    @AfterEach
+    public void disconnect(final VertxTestContext ctx) {
+        helper.disconnect().onComplete(ctx.completing());
     }
 
     /**
@@ -160,7 +164,7 @@ public abstract class AmqpAdapterTestBase {
     protected Future<ProtonConnection> connectToAdapter(final String username, final String password) {
 
         final Promise<ProtonConnection> result = Promise.promise();
-        final ProtonClient client = ProtonClient.create(VERTX);
+        final ProtonClient client = ProtonClient.create(vertx);
 
         final ProtonClientOptions options = new ProtonClientOptions(defaultOptions);
         options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
@@ -183,7 +187,7 @@ public abstract class AmqpAdapterTestBase {
     protected Future<ProtonConnection> connectToAdapter(final SelfSignedCertificate clientCertificate) {
 
         final Promise<ProtonConnection> result = Promise.promise();
-        final ProtonClient client = ProtonClient.create(VERTX);
+        final ProtonClient client = ProtonClient.create(vertx);
 
         final ProtonClientOptions secureOptions = new ProtonClientOptions(defaultOptions);
         secureOptions.setKeyCertOptions(clientCertificate.keyCertOptions());

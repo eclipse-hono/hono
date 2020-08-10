@@ -60,12 +60,14 @@ public class MqttConnectionIT extends MqttTestBase {
      */
     @BeforeEach
     @Override
-    public void setUp(final TestInfo testInfo) {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
         LOGGER.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         password = "secret";
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        helper.init().onComplete(ctx.completing());
     }
 
     /**

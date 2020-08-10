@@ -46,7 +46,6 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,7 +96,6 @@ public abstract class HttpTestBase {
     private static final String COMMAND_JSON_KEY = "brightness";
 
     private static final String ORIGIN_WILDCARD = "*";
-    private static final Vertx VERTX = Vertx.vertx();
     private static final long  TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
     private static final int MESSAGES_TO_SEND = 60;
 
@@ -137,15 +135,15 @@ public abstract class HttpTestBase {
      */
     protected SelfSignedCertificate deviceCert;
 
+    private final Vertx vertx = Vertx.vertx();
+
     private long testStartTimeMillis;
 
     /**
-     * Sets up clients.
-     *
-     * @param ctx The vert.x test context.
+     * Creates default client options.
      */
     @BeforeAll
-    public static void init(final VertxTestContext ctx) {
+    public static void init() {
 
         defaultOptions = new HttpClientOptions()
                 .setDefaultHost(IntegrationTestSupport.HTTP_HOST)
@@ -154,38 +152,40 @@ public abstract class HttpTestBase {
                 .setVerifyHost(false)
                 .setSsl(true);
 
-        helper = new IntegrationTestSupport(VERTX);
-        helper.init().onComplete(ctx.completing());
     }
 
     /**
      * Sets up the fixture.
      *
      * @param testInfo Meta info about the test being run.
+     * @param ctx The vert.x test context.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo) {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
 
         testStartTimeMillis = System.currentTimeMillis();
         logger.info("running {}", testInfo.getDisplayName());
+        helper = new IntegrationTestSupport(vertx);
         logger.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
                 IntegrationTestSupport.HTTP_HOST,
                 IntegrationTestSupport.HTTP_PORT,
                 IntegrationTestSupport.HTTPS_PORT);
 
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
-        httpClient = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions));
-        httpClientWithClientCert = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions)
+        httpClient = new CrudHttpClient(vertx, new HttpClientOptions(defaultOptions));
+        httpClientWithClientCert = new CrudHttpClient(vertx, new HttpClientOptions(defaultOptions)
                 .setKeyCertOptions(deviceCert.keyCertOptions()));
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         authorization = getBasicAuth(tenantId, deviceId, PWD);
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
+     * Disconnects from the AMQP Messaging Network.
      *
      * @param ctx The vert.x context.
      */
@@ -196,16 +196,6 @@ public abstract class HttpTestBase {
         if (deviceCert != null) {
             deviceCert.delete();
         }
-    }
-
-    /**
-     * Closes the AMQP 1.0 Messaging Network client.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void disconnect(final VertxTestContext ctx) {
-
         helper.disconnect().onComplete(ctx.completing());
     }
 
@@ -1218,7 +1208,7 @@ public abstract class HttpTestBase {
                         // consumer for the previous request
                         // wait a little and try again
                         final Promise<MultiMap> retryResult = Promise.promise();
-                        VERTX.setTimer(300, timerId -> {
+                        vertx.setTimer(300, timerId -> {
                             logger.info("re-trying request, failure was: {}", t.getMessage());
                             sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId)
                                 .onComplete(retryResult);

@@ -31,9 +31,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -43,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -56,22 +55,23 @@ public class TelemetryJmsQoS1IT {
     private static final int DELIVERY_MODE = DeliveryMode.NON_PERSISTENT;
     private static final Logger LOG = LoggerFactory.getLogger(TelemetryJmsQoS1IT.class);
 
-    private static Vertx vertx;
-    private static IntegrationTestSupport helper;
+    private final Vertx vertx = Vertx.vertx();
 
-    private static JmsBasedHonoConnection amqpMessagingNetwork;
-
+    private IntegrationTestSupport helper;
+    private JmsBasedHonoConnection amqpMessagingNetwork;
     private MessageConsumer downstreamConsumer;
     private JmsBasedHonoConnection amqpAdapter;
 
     /**
      * Creates a connection to the AMP Messaging Network.
+     * Prints the test name to the console.
      *
+     * @param info The current test's meta information.
      * @param ctx The vert.x test context.
      */
-    @BeforeAll
-    public static void init(final VertxTestContext ctx) {
-        vertx = Vertx.vertx();
+    @BeforeEach
+    public void setUp(final TestInfo info, final VertxTestContext ctx) {
+        LOG.info("running {}", info.getDisplayName());
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
 
@@ -80,51 +80,28 @@ public class TelemetryJmsQoS1IT {
     }
 
     /**
-     * Prints the test name to the console.
-     *
-     * @param info The current test's meta information.
-     */
-    @BeforeEach
-    public void printTestName(final TestInfo info) {
-        LOG.info("running {}", info.getDisplayName());
-    }
-
-    /**
      * Closes the downstream consumer an the connection
      * to the AMQP adapter.
+     * Closes the connection to the AMQP Messaging Network.
      *
      * @param ctx The vert.x test context.
      */
     @AfterEach
     public void after(final VertxTestContext ctx) {
 
-        if (downstreamConsumer != null) {
-            try {
-                downstreamConsumer.close();
-            } catch (final JMSException e) {
-                // ignore
-            }
+        final Checkpoint closeConnections = ctx.checkpoint(2);
+        helper.deleteObjects(ctx);
+        if (amqpMessagingNetwork != null) {
+            LOG.info("closing connection to AMQP Messaging Network");
+            amqpMessagingNetwork.disconnect(r -> closeConnections.flag());
+        } else {
+            closeConnections.flag();
         }
         if (amqpAdapter != null) {
             LOG.info("closing connection to AMQP protocol adapter");
-            amqpAdapter.disconnect(ctx.succeeding());
-        }
-        helper.deleteObjects(ctx);
-        ctx.completeNow();
-    }
-
-    /**
-     * Closes the connection to the AMQP Messaging Network.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void shutdown(final VertxTestContext ctx) {
-        if (amqpMessagingNetwork != null) {
-            LOG.info("closing connection to AMQP Messaging Network");
-            amqpMessagingNetwork.disconnect(ctx.completing());
+            amqpAdapter.disconnect(r -> closeConnections.flag());
         } else {
-            ctx.completeNow();
+            closeConnections.flag();
         }
     }
 

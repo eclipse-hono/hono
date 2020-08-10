@@ -30,9 +30,7 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.net.SelfSignedCertificate;
@@ -49,26 +47,19 @@ import io.vertx.junit5.VertxTestContext;
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
     /**
-     * Logs the currently executing test method name.
-     *
-     * @param testInfo Meta info about the test being run.
-     */
-    @BeforeEach
-    public void setup(final TestInfo testInfo) {
-
-        log.info("running {}", testInfo.getDisplayName());
-    }
-
-    /**
      * Closes the connection to the adapter.
+     *
+     * @param ctx The Vert.x test context.
      */
+    @Override
     @AfterEach
-    public void disconnect() {
+    public void disconnect(final VertxTestContext ctx) {
         if (connection != null) {
             connection.closeHandler(null);
             connection.close();
             connection = null;
         }
+        helper.disconnect().onComplete(ctx.completing());
     }
 
     /**
