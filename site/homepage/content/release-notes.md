@@ -12,6 +12,7 @@ title = "Release Notes"
   Please refer to the [Metrics API]({{% doclink "/api/metrics" %}}) for details.
 * A new Quarkus based HTTP protocol adapter is now available. This adapter version provides better memory consumption and
   startup times comparing to the existing one.
+* The LoraWAN protocol adapter has been extended with support for the *Actility Enterprise* provider.
 
 ## 1.3.0
 

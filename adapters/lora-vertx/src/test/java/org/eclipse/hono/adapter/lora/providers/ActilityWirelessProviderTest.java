@@ -19,17 +19,17 @@ import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 
 /**
- * Verifies behavior of {@link ActilityProvider}.
+ * Verifies behavior of {@link ActilityWirelessProvider}.
  */
-public class ActilityProviderTest extends LoraProviderTestBase<ActilityProvider> {
+public class ActilityWirelessProviderTest extends LoraProviderTestBase<ActilityWirelessProvider> {
 
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected ActilityProvider newProvider() {
-        return new ActilityProvider();
+    protected ActilityWirelessProvider newProvider() {
+        return new ActilityWirelessProvider();
     }
 
     /**

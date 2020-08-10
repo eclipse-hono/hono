@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
@@ -335,7 +336,7 @@ public class LoraProtocolAdapterTest {
     private LoraProvider getLoraProviderMock(final LoraMessage message) {
         final LoraProvider provider = mock(LoraProvider.class);
         when(provider.getProviderName()).thenReturn(TEST_PROVIDER);
-        when(provider.pathPrefix()).thenReturn("/bumlux");
+        when(provider.pathPrefixes()).thenReturn(Set.of("/bumlux"));
         when(provider.getMessage(any(RoutingContext.class))).thenReturn(message);
 
         return provider;
