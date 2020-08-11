@@ -127,8 +127,14 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
         registerAdditionalResources();
 
-        return CompositeFuture.any(bindSecureHttpServer(), bindInsecureHttpServer())
-                .map(ok -> (Void) null)
+        return CompositeFuture.all(bindSecureHttpServer(), bindInsecureHttpServer())
+                .map(ok -> {
+                    if (insecureServer == null && server == null) {
+                        throw new IllegalStateException("neither secure nor insecure server has been started");
+                    } else {
+                        return (Void) null;
+                    }
+                })
                 .recover(error -> {
                     LOG.error("failed to start Health Check server", error);
                     return Future.failedFuture(error);
@@ -144,7 +150,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
                 LOG.warn("insecure health checks HTTP server will bind to loopback device only");
             } else {
                 LOG.info("won't start insecure health checks HTTP server: no bind address configured.");
-                return Future.failedFuture("no bind address configured for insecure server");
+                return Future.succeededFuture();
             }
         }
 
@@ -214,7 +220,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             return result.future();
         } else {
             LOG.warn("cannot start secure health checks HTTP server: no key material configured");
-            return Future.failedFuture("no key material configured for secure server");
+            return Future.succeededFuture();
         }
     }
 

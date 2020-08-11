@@ -50,14 +50,15 @@ class VertxBasedHealthCheckServerTest {
 
     @AfterEach
     void cleanup(final VertxTestContext ctx) {
-        if (server != null) {
-            final Checkpoint checkpoint = ctx.checkpoint();
-            server.stop().onComplete(r -> checkpoint.flag());
+        if (server == null) {
+            ctx.completeNow();
+        } else {
+            server.stop().onComplete(r -> ctx.completeNow());
         }
     }
 
     /**
-     * Tests that a health check server fails to start if it is configured
+     * Verifies that a health check server fails to start if it is configured
      * to bind to the loop back device.
      *
      * @param ctx The test context.
