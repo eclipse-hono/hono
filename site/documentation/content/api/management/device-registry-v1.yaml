@@ -329,13 +329,11 @@ paths:
             - devices
          summary: Search devices for a tenant with optional filters, paging and sorting options.
          operationId: searchDevicesForTenant
-         requestBody:
-            description: Filters, paging and sorting options.
-            content:
-               application/json:
-                  schema:
-                     $ref: '#/components/schemas/PagingSortingFilteringOptions'
-            required: false
+         parameters:
+            - $ref: '#/components/parameters/pageSize'
+            - $ref: '#/components/parameters/pageOffset'
+            - $ref: '#/components/parameters/filterJson'
+            - $ref: '#/components/parameters/sortJson'
          responses:
             200:
                description: operation successful
@@ -650,94 +648,6 @@ components:
          additionalProperties: true
          description: Allows arbitrary properties as extension to the ones
                       specified by the Hono API.
-
-
-      PagingSortingFilteringOptions:
-         type: object
-         additionalProperties: false
-         properties:
-            "page":
-               $ref: '#/components/schemas/PagingOptions'
-            "filters":
-               type: array
-               description: A list of filter expressions. Objects must match all filters in order to be included in a result.
-               items:
-                  $ref: '#/components/schemas/FilterOption'
-            "sort":
-               type: array
-               description: A list of sorting options. If multiples options are provided, the results will be sorted following the order of the options in the list.
-               items:
-                  $ref: '#/components/schemas/SortingOption'
-
-      PagingOptions:
-         type: object
-         additionalProperties: false
-         description: options to page the results of bulk queries.
-         properties:
-            "limit":
-               type: integer
-               default: 30
-               minimum: 0
-               maximum: 200
-               description: The maximum number of objects to include in a response.
-            "offset":
-               type: integer
-               default: 0
-               minimum: 0
-               description: |
-                  The offset to use as a starting point to return results. This allows to go through the query results in
-                  a paged manner when the query returns more results than the limit.
-
-      FilterOption:
-            type: object
-            additionalProperties: false
-            description: Filters to be applied to bulk queries.
-            required:
-               - field
-               - value
-               - op
-            properties:
-               "field":
-                  type: string
-                  description: |
-                     A Json Pointer identifying the field to use for filtering.
-                     Json pointer is defined in RFC 6901.
-               "value":
-                  type: string
-                  description: |
-                     The value to filter the field with.
-                     Wildcard characters are supported : `*` will match zero or any number of characters
-                     and `?` will match exactly one character.
-               "op":
-                  type: string
-                  description: The operator to use when applying the filter.
-                  enum:
-                     - eq
-            examples:
-               Filters options:
-                  $ref: '#/components/examples/FilterOptionsExample'
-
-      SortingOption:
-         type: object
-         additionalProperties: false
-         description: Sorting option to be applied to bulk queries results.
-         required:
-            - field
-         properties:
-            "field":
-               type: string
-               description: |
-                  The Json Pointer identifying the field to use for sorting.
-                  Json pointer is defined in RFC 6901.
-            "direction":
-               type: string
-               default: ascending
-               enum:
-                  - ascending
-                  - descending
-         examples:
-            Sorting options:
-               $ref: '#/components/examples/SortingOptionsExample'
 
       # Tenant schema
 
@@ -1073,6 +983,17 @@ components:
             "status":
                $ref: '#/components/schemas/Status'
 
+      DeviceWithId:
+         type: object
+         additionalProperties: false
+         allOf:
+            - type: object
+              properties:
+                 "id":
+                    description: The identifier of the device.
+                    type: string
+            - $ref: '#/components/schemas/Device'
+
       Status:
          type: object
          additionalProperties: false
@@ -1096,20 +1017,16 @@ components:
 
       SearchDevicesResult:
          type: object
-         description: The result of a search request.
+         description: The result of a search request for devices.
          additionalProperties: false
          properties:
             "total":
-               type: String
-               description: The total number of results returned by the query, regardless of the *limit* set in the paging options.
-            "results":
-               $ref: '#/components/schemas/DevicesList'
-
-      DevicesList:
-         type: array
-         description: A list of devices.
-         items:
-            $ref: '#/components/schemas/Device'
+               type: integer
+               description: The total number of objects in the result set, regardless of the *pageSize* set in query.
+            "result":
+               type: array
+               items:
+                  $ref: '#/components/schemas/DeviceWithId'
 
 # Credentials
 
@@ -1262,6 +1179,37 @@ components:
                     type: string
                     format: byte
 
+      FilterJson:
+        description: Filters to be applied to bulk queries.
+        additionalProperties: false
+        required:
+           - field
+           - value
+        properties:
+          "field":
+            type: string
+            description: |
+              A [Json Pointer](https://tools.ietf.org/html/rfc6901) identifying the field to use for filtering.
+          "op":
+            type: string
+            description: The operator to use when applying the filter.
+            default: eq
+            enum:
+              - eq
+          "value":
+            oneOf:
+              - type: boolean
+                description: The value to filter the boolean typed field with.
+              - type: integer
+                description: The value to filter the integer typed field with.
+              - type: number
+                description: The value to filter the number typed field with.
+              - type: string
+                description: |
+                   The value to filter the string typed field with.
+                   Wildcard characters are supported : `*` will match zero or any number of characters
+                   and `?` will match exactly one character.
+
    parameters:
 
       resourceVersion:
@@ -1311,6 +1259,117 @@ components:
             type: string
             pattern: "[a-z0-9-]"
          example: sha-256
+
+      pageSize:
+        name: pageSize
+        in: query
+        description: |
+           The maximum number of objects to include in a response.
+        required: false
+        schema:
+           type: integer
+           minimum: 0
+           maximum: 200
+           default: 30
+
+      pageOffset:
+        name: pageOffset
+        in: query
+        description: |
+           The offset into the result set from which to include objects in the response. This allows to retrieve the whole result set page by page.
+        required: false
+        schema:
+           type: integer
+           minimum: 0
+           default: 0
+
+      filterJson:
+        name: filterJson
+        in: query
+        description: |
+          A predicate that objects in the result set must match. If this parameter is specified multiple
+          times, objects in the result set must match all predicates.
+          The predicate is specified as a string representing a JSON object complying with the following schema
+          ```
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "value"],
+            "properties": {
+              "field": {
+                "type": "string",
+                "description": "A Json Pointer (https://tools.ietf.org/html/rfc6901) identifying the field to use for filtering."
+              },
+              "op": {
+                "type": "string",
+                "description": "The operator to apply.",
+                "default": "eq",
+                "enum": ["eq"]
+              },
+              "value": {
+                "oneOf": [
+                  {
+                    "type": "boolean",
+                    "description": "The value to filter the boolean typed field with."
+                  },{
+                    "type": "number",
+                    "description": "The value to filter the number typed field with."
+                  },{
+                    "type": "string",
+                    "description": "The value to filter the string typed field with.
+                       Wildcard characters are supported : `*` will match zero or any number of characters
+                       and `?` will match exactly one character."
+                  }
+                ]
+              }
+            }
+          }
+          ```
+        required: false
+        schema:
+          type: string
+        examples:
+          boolean field:
+            value: "{\"field\": \"/enabled\",\"value\": true}"
+          number field:
+            value: "{\"field\": \"/ext/count\",\"value\": 15}"
+          string field:
+            value: "{\"field\": \"/ext/brand\",\"value\": \"eclipse*\"}"
+
+      sortJson:
+        name: sortJson
+        in: query
+        description: |
+          Specifies a property to sort the result set by. If this parameter is specified multiple
+          times, the sort options are applied in the order they are specified in the query string.
+          The sort option is specified as a string representing a JSON object complying with the following schema
+          ```
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field"],
+            "properties": {
+              "field": {
+                "type": "string",
+                "description": "A Json Pointer (https://tools.ietf.org/html/rfc6901) identifying the field to sort by."
+              },
+              "direction": {
+                "type": "string",
+                "description": "The sort direction.",
+                "default": "asc",
+                "enum": ["asc", "desc"]
+              }
+            }
+          }
+          ```
+        required: false
+        schema:
+          type: string
+        examples:
+          sort ascending:
+            value: "{\"field\":\"/ext/brand\"}"
+          sort descending:
+            value: "{\"field\":\"/status/created\",\"direction\":\"desc\"}"
 
    responses:
 
@@ -1499,25 +1558,6 @@ components:
                "type": "hashed-password",
                "secrets": [{
                   "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
-                  "not-after": "2027-12-24T19:00:00Z",
+                  "not-after": "2027-12-24T19:00:00Z"
                }]
             }]
-      FilterOptionsExample:
-         value:
-           [
-            {
-                field: "/enabled",
-                value: true,
-                op: "eq"
-            },
-            {
-                field: "/ext/brand",
-                value: "eclipse*",
-                op: "eq"
-            }
-           ]
-      SortingOptionsExample:
-         value:
-            field: "/status/created"
-            direction: "ascending"
-
