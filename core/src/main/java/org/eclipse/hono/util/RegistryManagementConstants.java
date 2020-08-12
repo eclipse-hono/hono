@@ -104,6 +104,46 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_MEMBER_OF = "memberOf";
 
+    /**
+     * The name of the field that contains the JSON pointer corresponding to the field used for filtering devices.
+     */
+    public static final String FIELD_FILTER_FIELD = "field";
+
+    /**
+     * The name of the field that contains the filter JSON object for search devices operation.
+     */
+    public static final String FIELD_FILTER_JSON = "filterJson";
+
+    /**
+     * The name of the field that contains the operator used for filtering devices.
+     */
+    public static final String FIELD_FILTER_OPERATOR = "op";
+
+    /**
+     * The name of the field that contains the value used for filtering devices.
+     */
+    public static final String FIELD_FILTER_VALUE = "value";
+
+    /**
+     * The name of the field that contains the page offset for search devices operation.
+     */
+    public static final String FIELD_PAGE_OFFSET = "pageOffset";
+
+    /**
+     * The name of the field that contains the page size for search devices operation.
+     */
+    public static final String FIELD_PAGE_SIZE = "pageSize";
+
+    /**
+     * The name of the field that contains sort direction used by search devices operation to sort the result set.
+     */
+    public static final String FIELD_SORT_DIRECTION = "direction";
+
+    /**
+     * The name of the field that contains the sort JSON object used by search devices operation to sort the result set.
+     */
+    public static final String FIELD_SORT_JSON = "sortJson";
+
     // CREDENTIALS
 
     /**
