@@ -44,6 +44,22 @@ public class AmqpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
         super(config, tenantClientFactory);
     }
 
+    /**
+     * Get the tenant and auth-id from the given ExecutionContext.
+     * <p>
+     * This is for unauthenticated AMQP connections where the tenant id and the device/auth id get taken from the
+     * message address.
+     *
+     * @param context The execution context.
+     * @param spanContext The OpenTracing context to use for tracking the operation (may be {@code null}).
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will fail if tenant and auth-id information could not be retrieved from the ExecutionContext
+     *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
+     *         {@code org.eclipse.hono.client.ServiceInvocationException}.
+     *         <p>
+     *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
+     */
     @Override
     public Future<TenantObjectWithAuthId> get(final AmqpContext context, final SpanContext spanContext) {
         if (context.getAddress() == null || context.getAddress().getTenantId() == null

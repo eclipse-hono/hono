@@ -614,8 +614,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * Derives the tenant from the given context and sets the trace sampling priority configured for that tenant on
      * the given context.
      * <p>
-     * This is for unauthenticated connections where the tenant id and the device/auth id get taken from the message
-     * address.
+     * This is for unauthenticated AMQP connections where the tenant id and the device/auth id get taken from the
+     * message address.
      *
      * @param context The execution context.
      * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
@@ -628,34 +628,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .map(tenantObjectWithAuthId -> {
                     final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
                             .getTraceSamplingPriority(tenantObjectWithAuthId);
-                    context.setTraceSamplingPriority(traceSamplingPriority);
-                    return traceSamplingPriority;
-                })
-                .recover(t -> Future.succeededFuture(OptionalInt.empty()));
-    }
-
-    /**
-     * Derives the tenant from the given context and applies the trace sampling priority configured for that tenant to
-     * the given span.
-     * <p>
-     * This is for unauthenticated connections where the tenant id and the device/auth id get taken from the message
-     * address.
-     * <p>
-     * The identified trace sampling priority also gets set in the given AmqpContext here.
-     *
-     * @param context The execution context.
-     * @param currentSpan The span to apply the configuration to.
-     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
-     *         with the applied sampling priority or an empty <em>OptionalInt</em> if no priority was applied.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected Future<OptionalInt> applyTenantTraceSamplingPriority(final AmqpContext context, final Span currentSpan) {
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(currentSpan);
-        return tenantObjectWithAuthIdProvider.get(context, currentSpan.context())
-                .map(tenantObjectWithAuthId -> {
-                    final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
-                            .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan);
                     context.setTraceSamplingPriority(traceSamplingPriority);
                     return traceSamplingPriority;
                 })

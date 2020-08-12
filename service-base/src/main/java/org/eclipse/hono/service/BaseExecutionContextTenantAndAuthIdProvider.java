@@ -161,7 +161,7 @@ public abstract class BaseExecutionContextTenantAndAuthIdProvider<T extends Exec
      * Gets a {@link TenantObjectWithAuthId} from the given tenant id and auth id.
      *
      * @param tenantId The tenant id.
-     * @param authId The auth id.
+     * @param authId The auth id. May also be the device id if no authentication is used.
      * @param spanContext The OpenTracing context to use for tracking the operation.
      * @return A future indicating the outcome of the operation.
      */
