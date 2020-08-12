@@ -15,8 +15,10 @@ package org.eclipse.hono.service.management.device;
 
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -34,6 +36,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -50,8 +53,14 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
 
+    private static final int DEFAULT_PAGE_OFFSET = 0;
+    private static final int DEFAULT_PAGE_SIZE = 30;
+    private static final int MAX_PAGE_SIZE = 200;
+    private static final int MIN_PAGE_OFFSET = 0;
+    private static final int MIN_PAGE_SIZE = 0;
     private static final String SPAN_NAME_CREATE_DEVICE = "create Device from management API";
     private static final String SPAN_NAME_GET_DEVICE = "get Device from management API";
+    private static final String SPAN_NAME_SEARCH_DEVICES = "search Devices from management API";
     private static final String SPAN_NAME_UPDATE_DEVICE = "update Device from management API";
     private static final String SPAN_NAME_REMOVE_DEVICE = "remove Device from management API";
 
@@ -101,6 +110,10 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         router.get(pathWithTenantAndDeviceId)
                 .handler(this::doGetDevice);
 
+        // SEARCH devices
+        router.get(pathWithTenant)
+                .handler(this::doSearchDevices);
+
         // UPDATE existing device
         router.put(pathWithTenantAndDeviceId)
                 .handler(this::extractRequiredJsonPayload)
@@ -133,6 +146,42 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
             .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
             .onFailure(t -> failRequest(ctx, t, span))
             .onComplete(s -> span.finish());
+    }
+
+    private void doSearchDevices(final RoutingContext ctx) {
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_SEARCH_DEVICES,
+                getClass().getSimpleName()).start();
+
+        final String tenantId = getTenantParam(ctx);
+        final Future<Integer> pageSize = getRequestParameterIntegerValue(ctx,
+                RegistryManagementConstants.PARAM_PAGE_SIZE)
+                        .map(optionalPageSize -> optionalPageSize
+                                .filter(value -> value >= MIN_PAGE_SIZE && value <= MAX_PAGE_SIZE)
+                                .orElse(DEFAULT_PAGE_SIZE));
+        final Future<Integer> pageOffset = getRequestParameterIntegerValue(ctx,
+                RegistryManagementConstants.PARAM_PAGE_OFFSET)
+                        .map(optionalPageOffset -> optionalPageOffset
+                                .filter(value -> value >= MIN_PAGE_OFFSET)
+                                .orElse(DEFAULT_PAGE_OFFSET));
+        final Future<Optional<List<Filter>>> filters = decodeJsonFromRequestParameter(ctx,
+                RegistryManagementConstants.PARAM_FILTER_JSON, Filter.class);
+        final Future<Optional<List<Sort>>> sortOptions = decodeJsonFromRequestParameter(ctx,
+                RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
+
+        CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
+                .compose(ok -> getService().searchDevices(
+                        tenantId,
+                        pageSize.result(),
+                        pageOffset.result(),
+                        filters.result(),
+                        sortOptions.result(),
+                        span))
+                .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+                .onFailure(t -> failRequest(ctx, t, span))
+                .onComplete(s -> span.finish());
     }
 
     private void doCreateDevice(final RoutingContext ctx) {
@@ -242,6 +291,48 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                     },
                     // payload was empty
                     () -> result.complete(new Device()));
+        return result.future();
+    }
+
+    private <T> Future<Optional<List<T>>> decodeJsonFromRequestParameter(final RoutingContext ctx,
+            final String paramKey, final Class<T> clazz) {
+
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(paramKey);
+        Objects.requireNonNull(clazz);
+
+        final Promise<Optional<List<T>>> result = Promise.promise();
+        try {
+            final Optional<List<T>> values = Optional.ofNullable(ctx.request().params()
+                    .getAll(paramKey))
+                    .map(jsons -> jsons
+                            .stream()
+                            .map(json -> Json.decodeValue(json, clazz))
+                            .collect(Collectors.toList()));
+            result.complete(values);
+        } catch (final DecodeException e) {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("error parsing json value of parameter [%s]", paramKey), e));
+        }
+
+        return result.future();
+    }
+
+    private Future<Optional<Integer>> getRequestParameterIntegerValue(final RoutingContext ctx,
+            final String paramKey) {
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(paramKey);
+
+        final Promise<Optional<Integer>> result = Promise.promise();
+        try {
+            final Optional<Integer> value = Optional.ofNullable(ctx.request().params().get(paramKey))
+                    .map(Integer::parseInt);
+            result.complete(value);
+        } catch (final NumberFormatException e) {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("parameter [%s] has a value which is not an integer", paramKey)));
+        }
+
         return result.future();
     }
 }

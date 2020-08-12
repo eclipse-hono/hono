@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.service.management.device;
 
+import java.net.HttpURLConnection;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.service.management.Id;
@@ -66,6 +69,46 @@ public interface DeviceManagementService {
      *      Device Registry Management API - Get Device Registration</a>
      */
     Future<OperationResult<Device>> readDevice(String tenantId, String deviceId, Span span);
+
+    /**
+     * Finds devices belonging to the given tenant with optional filters, paging and sorting options.
+     * <p>
+     * This search operation is considered as optional since it is not required for the normal functioning of Hono and
+     * is more of a convenient operation. Hence here it is declared as a default method which returns
+     * {@link HttpURLConnection#HTTP_NOT_IMPLEMENTED}. It is upto the implementors of this interface to offer an
+     * implementation of this service or not.
+     *
+     * @param tenantId The tenant that the devices belong to.
+     * @param pageSize The maximum number of results to include in a response.
+     * @param pageOffset The offset into the result set from which to include objects in the response. This allows to
+     *                   retrieve the whole result set page by page.
+     * @param filters A list of filters. The filters are predicates that objects in the result set must match.
+     * @param sortOptions A list of sort options. The sortOptions specify properties to sort the result set by.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation. The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device
+     *         Registry Management API - Search Devices</a>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
+     *      Management API - Search Devices</a>
+     */
+    default Future<OperationResult<List<DeviceWithId>>> searchDevices(
+            final String tenantId,
+            final int pageSize,
+            final int pageOffset,
+            final Optional<List<Filter>> filters,
+            final Optional<List<Sort>> sortOptions,
+            final Span span) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(filters);
+        Objects.requireNonNull(sortOptions);
+        Objects.requireNonNull(span);
+
+        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+    }
 
     /**
      * Updates device registration data.
