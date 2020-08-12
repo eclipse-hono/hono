@@ -25,6 +25,7 @@ import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapContext;
+import org.eclipse.hono.adapter.coap.CoapContextTenantAndAuthIdProvider;
 import org.eclipse.hono.adapter.coap.RequestDeviceAndAuth;
 import org.eclipse.hono.adapter.coap.TracingSupportingHonoResource;
 import org.eclipse.hono.auth.Device;
@@ -35,7 +36,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 
-import io.opentracing.Span;
 import io.vertx.core.Future;
 
 /**
@@ -83,10 +83,10 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
             if (peer == null) {
                 // unauthenticated device request
-                return Future.succeededFuture(new RequestDeviceAndAuth(device, null));
+                return Future.succeededFuture(new RequestDeviceAndAuth(device, null, null));
             } else {
                 return getAuthenticatedDevice(exchange)
-                        .map(authenticatedDevice -> new RequestDeviceAndAuth(device, authenticatedDevice));
+                        .map(authenticatedDevice -> new RequestDeviceAndAuth(device, getAuthId(exchange), authenticatedDevice));
             }
         } catch (final IllegalArgumentException cause) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
@@ -104,7 +104,8 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
      */
     public Future<RequestDeviceAndAuth> getPostRequestDeviceAndAuth(final CoapExchange exchange) {
         return getAuthenticatedDevice(exchange)
-                .map(authenticatedDevice -> new RequestDeviceAndAuth(authenticatedDevice, authenticatedDevice));
+                .map(authenticatedDevice -> new RequestDeviceAndAuth(authenticatedDevice, getAuthId(exchange),
+                        authenticatedDevice));
     }
 
     private CoapContext newContext(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth) {
@@ -112,75 +113,82 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 exchange,
                 deviceAndAuth.getOriginDevice(),
                 deviceAndAuth.getAuthenticatedDevice(),
+                deviceAndAuth.getAuthId(),
                 getMetrics().startTimer());
     }
 
     @Override
     protected Future<Void> preStartup() {
 
+        final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider = new CoapContextTenantAndAuthIdProvider(
+                getConfig(), getTenantClientFactory());
+
         final Set<Resource> result = new HashSet<>();
-        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName()) {
+        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
 
             @Override
-            public Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
-                return getPostRequestDeviceAndAuth(exchange)
-                .compose(deviceAndAuth -> upload(exchange, deviceAndAuth, currentSpan));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange) {
+                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
             }
 
             @Override
-            public Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
-                return getPutRequestDeviceAndAuth(exchange)
-                .compose(deviceAndAuth -> upload(exchange, deviceAndAuth, currentSpan));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange) {
+                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
             }
 
-            private Future<ResponseCode> upload(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth,
-                    final Span currentSpan) {
-                final CoapContext ctx = newContext(exchange, deviceAndAuth);
-                ctx.setTracingContext(currentSpan.context());
+            @Override
+            public Future<ResponseCode> handlePost(final CoapContext ctx) {
+                return uploadTelemetryMessage(ctx);
+            }
+
+            @Override
+            public Future<ResponseCode> handlePut(final CoapContext ctx) {
                 return uploadTelemetryMessage(ctx);
             }
         });
 
-        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName()) {
+        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
 
             @Override
-            public Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
-                return getPostRequestDeviceAndAuth(exchange)
-                .compose(deviceAndAuth -> upload(exchange, deviceAndAuth, currentSpan));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange) {
+                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
             }
 
             @Override
-            public Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
-                return getPutRequestDeviceAndAuth(exchange)
-                .compose(deviceAndAuth -> upload(exchange, deviceAndAuth, currentSpan));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange) {
+                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
             }
 
-            private Future<ResponseCode> upload(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth,
-                    final Span currentSpan) {
-                final CoapContext ctx = newContext(exchange, deviceAndAuth);
-                ctx.setTracingContext(currentSpan.context());
+            @Override
+            public Future<ResponseCode> handlePost(final CoapContext ctx) {
+                return uploadEventMessage(ctx);
+            }
+
+            @Override
+            public Future<ResponseCode> handlePut(final CoapContext ctx) {
                 return uploadEventMessage(ctx);
             }
         });
-        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName()) {
+        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
 
             @Override
-            public Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
-                return getPostRequestDeviceAndAuth(exchange)
-                .compose(deviceAndAuth -> upload(exchange, deviceAndAuth, currentSpan));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange) {
+                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
             }
 
             @Override
-            public Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
-                return getPutRequestDeviceAndAuth(exchange)
-                .compose(deviceAndAuth -> upload(exchange, deviceAndAuth, currentSpan));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange) {
+                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
             }
 
-            private Future<ResponseCode> upload(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth,
-                    final Span currentSpan) {
-                final CoapContext ctx = newContext(exchange, deviceAndAuth);
-                ctx.setTracingContext(currentSpan.context());
-                return uploadCommandResponseMessage(ctx, deviceAndAuth.getOriginDevice(), deviceAndAuth.getAuthenticatedDevice());
+            @Override
+            public Future<ResponseCode> handlePost(final CoapContext ctx) {
+                return uploadCommandResponseMessage(ctx);
+            }
+
+            @Override
+            public Future<ResponseCode> handlePut(final CoapContext ctx) {
+                return uploadCommandResponseMessage(ctx);
             }
         });
         setResources(result);

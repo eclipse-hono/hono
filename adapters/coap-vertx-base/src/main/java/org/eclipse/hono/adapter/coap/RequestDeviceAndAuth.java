@@ -26,6 +26,10 @@ public class RequestDeviceAndAuth {
      */
     private final Device originDevice;
     /**
+     * The authentication identifier of the request or {@code null}.
+     */
+    private final String authId;
+    /**
      * Authenticated device or {@code null}.
      */
     private final Device authenticatedDevice;
@@ -34,13 +38,15 @@ public class RequestDeviceAndAuth {
      * Creates a new RequestDeviceAndAuth instance.
      *
      * @param originDevice The request message's origin device.
+     * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
      * @param authenticatedDevice The authenticated device, or {@code null} if the request is unauthenticated.
      *                            A non-null value different from the originDevice means that the authenticatedDevice
      *                            represents a gateway, doing a request on behalf of the originDevice.
      * @throws NullPointerException if originDevice is {@code null}.
      */
-    public RequestDeviceAndAuth(final Device originDevice, final Device authenticatedDevice) {
+    public RequestDeviceAndAuth(final Device originDevice, final String authId, final Device authenticatedDevice) {
         this.originDevice = Objects.requireNonNull(originDevice);
+        this.authId = authId;
         this.authenticatedDevice = authenticatedDevice;
     }
 
@@ -49,8 +55,19 @@ public class RequestDeviceAndAuth {
      *
      * @return The device.
      */
-    public Device getOriginDevice() {
+    public final Device getOriginDevice() {
         return originDevice;
+    }
+
+    /**
+     * Gets the authentication identifier of the request.
+     * <p>
+     * Will be {@code null} for an unauthenticated request.
+     *
+     * @return The authentication identifier or {@code null}.
+     */
+    public final String getAuthId() {
+        return authId;
     }
 
     /**
@@ -63,7 +80,7 @@ public class RequestDeviceAndAuth {
      *
      * @return The authenticated device or {@code null}.
      */
-    public Device getAuthenticatedDevice() {
+    public final Device getAuthenticatedDevice() {
         return authenticatedDevice;
     }
 
