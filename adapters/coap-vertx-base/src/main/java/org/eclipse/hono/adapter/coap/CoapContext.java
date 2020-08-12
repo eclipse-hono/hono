@@ -45,14 +45,20 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
 
     private final CoapExchange exchange;
     private final Device originDevice;
+    private final String authId;
     private final AtomicBoolean acceptTimerFlag = new AtomicBoolean();
     private final AtomicBoolean acceptFlag = new AtomicBoolean();
     private Sample timer;
 
-    private CoapContext(final CoapExchange exchange, final Device originDevice, final Device authenticatedDevice) {
+    private CoapContext(
+            final CoapExchange exchange,
+            final Device originDevice,
+            final Device authenticatedDevice,
+            final String authId) {
         super(authenticatedDevice);
         this.exchange = exchange;
-        this.originDevice = originDevice;;
+        this.originDevice = originDevice;
+        this.authId = authId;
     }
 
     /**
@@ -62,17 +68,19 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @param originDevice The device that the message originates from.
      * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
      *                            if the device has not been authenticated.
+     * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
      * @return The context.
      * @throws NullPointerException if request or origin device are {@code null}.
      */
     public static CoapContext fromRequest(
             final CoapExchange request,
             final Device originDevice,
-            final Device authenticatedDevice) {
+            final Device authenticatedDevice,
+            final String authId) {
 
         Objects.requireNonNull(request);
         Objects.requireNonNull(originDevice);
-        return new CoapContext(request, originDevice, authenticatedDevice);
+        return new CoapContext(request, originDevice, authenticatedDevice, authId);
     }
 
     /**
@@ -82,6 +90,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @param originDevice The device that the message originates from.
      * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
      *                            if the device has not been authenticated.
+     * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
      * @param timer The object to use for measuring the time it takes to process the request.
      * @return The context.
      * @throws NullPointerException if request, origin device or timer are {@code null}.
@@ -90,13 +99,14 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
             final CoapExchange request,
             final Device originDevice,
             final Device authenticatedDevice,
+            final String authId,
             final Sample timer) {
 
         Objects.requireNonNull(request);
         Objects.requireNonNull(originDevice);
         Objects.requireNonNull(timer);
 
-        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice);
+        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId);
         result.timer = timer;
         return result;
     }
@@ -123,6 +133,26 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Gets the tenant identifier.
+     *
+     * @return The tenant.
+     */
+    public String getTenantId() {
+        return originDevice.getTenantId();
+    }
+
+    /**
+     * Gets the authentication identifier of the request.
+     * <p>
+     * Will be {@code null} for an unauthenticated request.
+     *
+     * @return The authentication identifier or {@code null}.
+     */
+    public String getAuthId() {
+        return authId;
     }
 
     /**

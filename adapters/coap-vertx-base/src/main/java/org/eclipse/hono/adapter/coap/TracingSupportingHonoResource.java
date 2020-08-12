@@ -23,6 +23,8 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +41,10 @@ import io.vertx.core.Future;
  * A CoAP resource that supports the tracking of request processing using <em>OpenTracing</em>.
  * <p>
  * This resource supports processing of {@code POST} and {@code PUT} requests only.
- * For each request, a new OpenTracing {@code Span} is created which is passed in to
- * the {@link #handlePost(CoapExchange, Span)} or {@link #handlePut(CoapExchange, Span)}
+ * For each request, a new OpenTracing {@code Span} is created. The {@code Span} context is
+ * associated with the {@link CoapContext} that is created via {@link #createCoapContextForPost(CoapExchange)}
+ * or {@link #createCoapContextForPut(CoapExchange)}. The {@link CoapContext} is
+ * then passed in to the {@link #handlePost(CoapContext)} or {@link #handlePut(CoapContext)}
  * method.
  * <p>
  * If the request contains the {@link CoapOptionInjectExtractAdapter#OPTION_TRACE_CONTEXT} option, its value
@@ -53,6 +57,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     protected final Logger log = LoggerFactory.getLogger(getClass());
     final Tracer tracer;
     final String adapterName;
+    final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider;
 
     /**
      * Creates a new resource that supports tracing of request processing.
@@ -60,12 +65,19 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param tracer The OpenTracing tracer.
      * @param resourceName The resource name.
      * @param adapterName The name of the protocol adapter that this resource is exposed on.
+     * @param tenantObjectWithAuthIdProvider The provider that determines the tenant and auth-id
+     *                                       associated with a request.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public TracingSupportingHonoResource(final Tracer tracer, final String resourceName, final String adapterName) {
+    public TracingSupportingHonoResource(
+            final Tracer tracer,
+            final String resourceName,
+            final String adapterName,
+            final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider) {
         super(resourceName);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
+        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(tenantObjectWithAuthIdProvider);
     }
 
     /**
@@ -105,12 +117,16 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
         final CoapExchange coapExchange = new CoapExchange(exchange, this);
         final Future<ResponseCode> responseCode;
         switch (exchange.getRequest().getCode()) {
-            case POST:
-                responseCode = handlePost(coapExchange, currentSpan);
-                break;
-            case PUT:
-                responseCode = handlePut(coapExchange, currentSpan);
-                break;
+        case POST:
+            responseCode = createCoapContextForPost(coapExchange)
+                    .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
+                    .compose(this::handlePost);
+            break;
+        case PUT:
+            responseCode = createCoapContextForPut(coapExchange)
+                    .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
+                    .compose(this::handlePut);
+            break;
         default:
             final Response response = CoapErrorResponse.respond("unsupported method", ResponseCode.METHOD_NOT_ALLOWED);
             coapExchange.respond(response);
@@ -118,7 +134,8 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             break;
         }
         responseCode.otherwise(t -> {
-            log.debug("failed:", t);
+            log.debug("error handling request", t);
+            TracingHelper.logError(currentSpan, t);
             final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
             coapExchange.respond(response);
             return response.getCode();
@@ -131,20 +148,62 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     }
 
     /**
+     * Creates a CoAP context for an incoming POST request.
+     *
+     * @param coapExchange The CoAP exchange to process.
+     * @return A future indicating the outcome of processing the request.
+     *         The future will be succeeded with the created CoAP context,
+     *         otherwise the future will be failed with a {@link ClientErrorException}.
+     */
+    protected abstract Future<CoapContext> createCoapContextForPost(CoapExchange coapExchange);
+
+    /**
+     * Creates a CoAP context for an incoming PUT request.
+     *
+     * @param coapExchange The CoAP exchange to process.
+     * @return A future indicating the outcome of processing the request.
+     *         The future will be succeeded with the created CoAP context,
+     *         otherwise the future will be failed with a {@link ClientErrorException}.
+     */
+    protected abstract Future<CoapContext> createCoapContextForPut(CoapExchange coapExchange);
+
+    /**
+     * Applies the trace sampling priority configured for the tenant associated with the
+     * given CoAP context to the given span.
+     * <p>
+     * Also ensures that the span context is set in the CoAP context.
+     *
+     * @param ctx The CoAP context.
+     * @param span The OpenTracing span.
+     * @return A succeeded future with the given CoAP context.
+     */
+    protected final Future<CoapContext> applyTraceSamplingPriority(final CoapContext ctx, final Span span) {
+        return tenantObjectWithAuthIdProvider.get(ctx, span.context())
+                .map(tenantObjectWithAuthId -> {
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObjectWithAuthId, span);
+                    ctx.setTracingContext(span.context());
+                    return ctx;
+                })
+                .recover(t -> {
+                    ctx.setTracingContext(span.context());
+                    return Future.succeededFuture(ctx);
+                });
+    }
+
+    /**
      * Invoked for an incoming POST request.
      * <p>
      * This default implementation sends a response back to the client
      * with response code {@link ResponseCode#NOT_IMPLEMENTED}.
      *
-     * @param exchange The CoAP exchange to process.
-     * @param currentSpan The OpenTracing span used to track the processing of the request.
+     * @param coapContext The CoAP context of the current request.
      * @return A future indicating the outcome of processing the request.
      *         The future will be succeeded with the CoAP response code sent back to the client,
      *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
+    protected Future<ResponseCode> handlePost(final CoapContext coapContext) {
         final Response response = CoapErrorResponse.respond("not implemented", ResponseCode.NOT_IMPLEMENTED);
-        exchange.respond(response);
+        coapContext.respond(response);
         return Future.succeededFuture(response.getCode());
     }
 
@@ -154,17 +213,18 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * This default implementation sends a response back to the client
      * with response code {@link ResponseCode#NOT_IMPLEMENTED}.
      *
-     * @param exchange The CoAP exchange to process.
-     * @param currentSpan The OpenTracing span used to track the processing of the request.
+     * @param coapContext The CoAP context of the current request.
      * @return A future indicating the outcome of processing the request.
      *         The future will be succeeded with the CoAP response code sent back to the client,
      *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
+    protected Future<ResponseCode> handlePut(final CoapContext coapContext) {
         final Response response = CoapErrorResponse.respond("not implemented", ResponseCode.NOT_IMPLEMENTED);
-        exchange.respond(response);
+        coapContext.respond(response);
         return Future.succeededFuture(response.getCode());
     }
+
+    // --------------- unsupported operations ---------------
 
     /**
      * {@inheritDoc}

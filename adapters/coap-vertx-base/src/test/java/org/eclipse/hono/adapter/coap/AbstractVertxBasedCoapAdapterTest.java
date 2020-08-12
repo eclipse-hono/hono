@@ -351,7 +351,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device");
 
         adapter.uploadTelemetryMessage(context);
 
@@ -387,7 +387,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, (Integer) null);
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device");
 
         adapter.uploadTelemetryMessage(context);
 
@@ -423,7 +423,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         // a URI-query option
         final CoapExchange coapExchange = newCoapExchange(null, Type.NON, MediaTypeRegistry.UNDEFINED);
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device");
 
         adapter.uploadTelemetryMessage(context);
 
@@ -459,7 +459,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         options.addUriQuery(CoapContext.PARAM_EMPTY_CONTENT);
         final CoapExchange coapExchange = newCoapExchange(null, Type.NON, options);
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device");
 
         adapter.uploadTelemetryMessage(context);
 
@@ -496,7 +496,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
         adapter.uploadTelemetryMessage(context);
 
@@ -534,7 +534,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
         adapter.uploadTelemetryMessage(context);
 
@@ -575,7 +575,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
         adapter.uploadEventMessage(context);
 
@@ -617,7 +617,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
         adapter.uploadEventMessage(ctx);
         verify(sender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
@@ -659,9 +659,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
-        adapter.uploadCommandResponseMessage(context, authenticatedDevice, authenticatedDevice);
+        adapter.uploadCommandResponseMessage(context);
 
         // THEN the command response is being forwarded downstream
         verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
@@ -712,9 +712,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
-        adapter.uploadCommandResponseMessage(context, authenticatedDevice, authenticatedDevice);
+        adapter.uploadCommandResponseMessage(context);
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
 
         // THEN the command response is being forwarded downstream
@@ -757,9 +757,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
 
-        adapter.uploadCommandResponseMessage(context, authenticatedDevice, authenticatedDevice);
+        adapter.uploadCommandResponseMessage(context);
 
         // THEN the command response not been forwarded downstream
         verify(sender, never()).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
@@ -796,7 +796,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
         adapter.uploadTelemetryMessage(ctx);
 
         // THEN the message is not being forwarded downstream
@@ -836,7 +836,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
         final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice);
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
         adapter.uploadEventMessage(ctx);
 
         // THEN the message is not being forwarded downstream

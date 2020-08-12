@@ -360,14 +360,18 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private Future<Endpoint> createSecureEndpoint(final NetworkConfig config) {
 
+        final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider = new CoapContextTenantAndAuthIdProvider(
+                getConfig(), getTenantClientFactory());
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
-                .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory()));
+                .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
+                        getCredentialsClientFactory(), tenantObjectWithAuthIdProvider));
         final AdvancedPskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
                     if (deviceResolver instanceof AdvancedPskStore) {
                         return (AdvancedPskStore) deviceResolver;
                     } else {
-                        return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory());
+                        return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
+                                getCredentialsClientFactory(), tenantObjectWithAuthIdProvider);
                     }
                 });
 
@@ -584,7 +588,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
         if (peerIdentity instanceof ExtensiblePrincipal) {
             final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
-            final Device authenticatedDevice = extPrincipal.getExtendedInfo().get("hono-device", Device.class);
+            final Device authenticatedDevice = extPrincipal.getExtendedInfo()
+                    .get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_DEVICE, Device.class);
             if (authenticatedDevice != null) {
                 result.complete(authenticatedDevice);
             } else {
@@ -599,6 +604,21 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         }
         return result.future();
+    }
+
+    /**
+     * Gets the authentication identifier of a CoAP request.
+     *
+     * @param exchange The CoAP exchange with the authenticated device's principal.
+     * @return The authentication identifier or {@code null} if it could not be determined.
+     */
+    protected final String getAuthId(final CoapExchange exchange) {
+        final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
+        if (!(peerIdentity instanceof ExtensiblePrincipal)) {
+            return null;
+        }
+        final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
+        return extPrincipal.getExtendedInfo().get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
     }
 
     /**
@@ -650,8 +670,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
      * @param context The context representing the request to be processed.
-     * @param device The message's origin device
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
      *            the sent.
      * @param senderTracker hono message sender tracker
@@ -1085,18 +1103,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Uploads a command response message to Hono.
      *
      * @param context The context representing the request to be processed.
-     * @param device The device that has executed the command.
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @return A succeeded future containing the CoAP status code that has been returned to the device.
-     * @throws NullPointerException if context or device are {@code null}.
+     * @throws NullPointerException if context is {@code null}.
      */
-    public final Future<ResponseCode> uploadCommandResponseMessage(
-            final CoapContext context,
-            final Device device,
-            final Device authenticatedDevice) {
-
+    public final Future<ResponseCode> uploadCommandResponseMessage(final CoapContext context) {
         Objects.requireNonNull(context);
-        Objects.requireNonNull(device);
+
+        final Device device = context.getOriginDevice();
+        final Device authenticatedDevice = context.getAuthenticatedDevice();
 
         if (!context.isConfirmable()) {
             context.respondWithCode(ResponseCode.BAD_REQUEST, "command response endpoint supports confirmable request messages only");

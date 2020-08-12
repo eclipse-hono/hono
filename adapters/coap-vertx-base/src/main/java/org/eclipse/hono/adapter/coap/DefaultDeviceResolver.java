@@ -38,6 +38,7 @@ import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -48,6 +49,7 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 
@@ -56,6 +58,15 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, AdvancedPskStore, AdvancedApplicationLevelInfoSupplier {
+
+    /**
+     * Key in the extended info of the peer identity containing the auth-id used for authentication.
+     */
+    public static final String EXT_INFO_KEY_HONO_AUTH_ID = "hono-auth-id";
+    /**
+     * Key in the extended info of the peer identity containing the authenticated Device.
+     */
+    public static final String EXT_INFO_KEY_HONO_DEVICE = "hono-device";
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultDeviceResolver.class);
 
@@ -67,6 +78,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     private final String adapterName;
     private final CoapAdapterProperties config;
     private final CredentialsClientFactory credentialsClientFactory;
+    private final CoapContextTenantAndAuthIdProvider coapContextTenantAndAuthIdProvider;
     private volatile PskSecretResultHandler californiumResultHandler;
 
     /**
@@ -77,6 +89,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * @param adapterName The name of the protocol adapter.
      * @param config The configuration properties.
      * @param credentialsClientFactory The factory to use for creating clients to the Credentials service.
+     * @param coapContextTenantAndAuthIdProvider The provider that determines the tenant and auth-id
+     *                                           associated with a request.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public DefaultDeviceResolver(
@@ -84,13 +98,15 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
             final Tracer tracer,
             final String adapterName,
             final CoapAdapterProperties config,
-            final CredentialsClientFactory credentialsClientFactory) {
+            final CredentialsClientFactory credentialsClientFactory,
+            final CoapContextTenantAndAuthIdProvider coapContextTenantAndAuthIdProvider) {
 
         this.context = Objects.requireNonNull(vertxContext);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
+        this.coapContextTenantAndAuthIdProvider = coapContextTenantAndAuthIdProvider;
     }
 
     /**
@@ -145,7 +161,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
                 // device id from previous lookup
                 final String deviceId = (String) customArgument;
                 final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(clientIdentity.getName(), null);
-                result.put("hono-device", new Device(deviceIdentity.getTenantId(), deviceId));
+                result.put(EXT_INFO_KEY_HONO_DEVICE, new Device(deviceIdentity.getTenantId(), deviceId));
+                result.put(EXT_INFO_KEY_HONO_AUTH_ID, deviceIdentity.getAuthId());
             } else {
                 // session resumption, so no custom-argument, because there was no previous lookup
                 final Span span = newSpan("PSK-getDeviceIdentityInfo");
@@ -154,7 +171,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
                 TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
                 final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
                 context.runOnContext(go -> {
-                    credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
+                    applyTraceSamplingPriority(deviceIdentity, span)
+                            .compose(v -> credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId()))
                             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
                                     deviceIdentity.getAuthId(), new JsonObject(), span.context()))
                             .onSuccess(credentials -> credentialsResult.complete(credentials))
@@ -164,7 +182,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
                     // client will only wait a limited period of time,
                     // so no need to use get(Long, TimeUnit) here
                     final CredentialsObject credentials = credentialsResult.join();
-                    result.put("hono-device", new Device(deviceIdentity.getTenantId(), credentials.getDeviceId()));
+                    result.put(EXT_INFO_KEY_HONO_DEVICE, new Device(deviceIdentity.getTenantId(), credentials.getDeviceId()));
+                    result.put(EXT_INFO_KEY_HONO_AUTH_ID, deviceIdentity.getAuthId());
                     span.log("successfully resolved device identity");
                     TracingHelper.TAG_DEVICE_ID.set(span, credentials.getDeviceId());
                 } catch (final CompletionException e) {
@@ -201,34 +220,44 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         TracingHelper.TAG_TENANT_ID.set(span, handshakeIdentity.getTenantId());
         TracingHelper.TAG_AUTH_ID.set(span, handshakeIdentity.getAuthId());
 
-        credentialsClientFactory
-            .getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
-            .compose(client -> client.get(
-                    handshakeIdentity.getType(),
-                    handshakeIdentity.getAuthId(),
-                    new JsonObject(),
-                    span.context()))
-            .map(credentials -> {
-                final String deviceId = credentials.getDeviceId();
-                TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
-                final SecretKey key = getCandidateKey(credentials);
-                if (key == null) {
-                    TracingHelper.logError(span, "PSK credentials for device do not contain proper key");
+        applyTraceSamplingPriority(handshakeIdentity, span)
+                .compose(v -> credentialsClientFactory.getOrCreateCredentialsClient(handshakeIdentity.getTenantId()))
+                .compose(client -> client.get(
+                        handshakeIdentity.getType(),
+                        handshakeIdentity.getAuthId(),
+                        new JsonObject(),
+                        span.context()))
+                .map(credentials -> {
+                    final String deviceId = credentials.getDeviceId();
+                    TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+                    final SecretKey key = getCandidateKey(credentials);
+                    if (key == null) {
+                        TracingHelper.logError(span, "PSK credentials for device do not contain proper key");
+                        return new PskSecretResult(cid, identity, null, null);
+                    } else {
+                        span.log("successfully retrieved PSK for device");
+                        // set deviceId as customArgument here
+                        return new PskSecretResult(cid, identity, key, deviceId);
+                    }
+                })
+                .otherwise(t -> {
+                    TracingHelper.logError(span, "could not retrieve PSK credentials for device", t);
+                    LOG.debug("error retrieving credentials for PSK identity [{}]", publicInfo, t);
                     return new PskSecretResult(cid, identity, null, null);
-                } else {
-                    span.log("successfully retrieved PSK for device");
-                    return new PskSecretResult(cid, identity, key, deviceId);
-                }
-            })
-            .otherwise(t -> {
-                TracingHelper.logError(span, "could not retrieve PSK credentials for device", t);
-                LOG.debug("error retrieving credentials for PSK identity [{}]", publicInfo, t);
-                return new PskSecretResult(cid, identity, null, null);
-            })
-            .onSuccess(result -> {
-                span.finish();
-                californiumResultHandler.apply(result);
-            });
+                })
+                .onSuccess(result -> {
+                    span.finish();
+                    californiumResultHandler.apply(result);
+                });
+    }
+
+    private Future<Void> applyTraceSamplingPriority(final PreSharedKeyDeviceIdentity deviceIdentity, final Span span) {
+        return coapContextTenantAndAuthIdProvider.get(deviceIdentity, span.context())
+                .map(tenantObjectWithAuthId -> {
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObjectWithAuthId, span);
+                    return (Void) null;
+                })
+                .recover(t -> Future.succeededFuture());
     }
 
     @Override
