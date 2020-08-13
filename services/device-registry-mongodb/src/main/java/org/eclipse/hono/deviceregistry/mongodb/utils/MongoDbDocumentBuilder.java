@@ -13,20 +13,25 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.service.management.device.Filter;
+import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.pointer.JsonPointer;
 
 /**
  * Utility class for building Json documents for mongodb.
  */
 public final class MongoDbDocumentBuilder {
 
+    private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String FIELD_CREDENTIALS_AUTH_ID_KEY = String.format("%s.%s",
             MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_AUTH_ID);
     private static final String FIELD_CREDENTIALS_TYPE_KEY = String.format("%s.%s",
@@ -125,5 +130,55 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withAuthId(final String authId) {
         document.put(FIELD_CREDENTIALS_AUTH_ID_KEY, authId);
         return this;
+    }
+
+
+    /**
+     * Sets the json object with the given device filters.
+     *
+     * @param filters The device filters list.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withDeviceFilters(final List<Filter> filters) {
+
+        filters.forEach(filter -> {
+            // TODO: To implement when filter values contain patterns such as * or %
+            if (FIELD_ID.equals(filter.getField())) {
+                document.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, filter.getValue());
+            } else {
+                document.put(MongoDbDeviceRegistryUtils.FIELD_DEVICE + filter.getField().toString().replace("/", "."),
+                        filter.getValue());
+            }
+        });
+
+        return this;
+    }
+
+    /**
+     * Sets the json object with the given sorting options.
+     *
+     * @param sortOptions The list of soring options.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withDeviceSortOptions(final List<Sort> sortOptions) {
+
+        sortOptions.forEach(sortOption -> {
+            if (FIELD_ID.equals(sortOption.getField())) {
+                document.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID,
+                        mapSortingDirection(sortOption.getDirection()));
+            } else {
+                document.put(MongoDbDeviceRegistryUtils.FIELD_DEVICE + "." + sortOption.getField(),
+                        mapSortingDirection(sortOption.getDirection()));
+            }
+        });
+        return this;
+    }
+
+    private int mapSortingDirection(final Sort.Direction direction) {
+        if (direction == Sort.Direction.asc) {
+            return 1;
+        } else {
+            return -1;
+        }
     }
 }
