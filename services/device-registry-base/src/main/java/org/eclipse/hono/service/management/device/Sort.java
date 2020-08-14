@@ -26,18 +26,29 @@ import io.vertx.core.json.pointer.JsonPointer;
  */
 public final class Sort {
 
-    @JsonProperty(RegistryManagementConstants.FIELD_FILTER_FIELD)
-    private JsonPointer field;
+    private final JsonPointer field;
 
     @JsonProperty(RegistryManagementConstants.FIELD_SORT_DIRECTION)
-    private DIRECTION direction = DIRECTION.asc;
+    private Direction direction = Direction.asc;
 
     /**
      * An enum defining the sort directions.
      */
-    public enum DIRECTION {
+    public enum Direction {
         asc,
         desc
+    }
+
+    /**
+     * Creates an instance of {@link Sort}.
+     *
+     * @param field The field to be used for sorting.
+     * @throws IllegalArgumentException if the field is not a valid pointer.
+     * @throws NullPointerException if the field is {@code null}.
+     */
+    public Sort(@JsonProperty(RegistryManagementConstants.FIELD_FILTER_FIELD) final String field) {
+        Objects.requireNonNull(field);
+        this.field = JsonPointer.from(field);
     }
 
     /**
@@ -50,34 +61,22 @@ public final class Sort {
     }
 
     /**
-     * Sets the JSON pointer identifying the field to sort by.
-     *
-     * @param field The field to be used for sorting.
-     * @throws IllegalArgumentException if the field is not a valid pointer.
-     * @throws NullPointerException if the field is {@code null}.
-     */
-    public void setField(final String field) {
-        Objects.requireNonNull(field);
-        this.field = JsonPointer.from(field);
-    }
-
-    /**
      * Gets the sort direction.
      *
      * @return The sort direction.
      */
-    public DIRECTION getDirection() {
+    public Direction getDirection() {
         return direction;
     }
 
     /**
      * Sets the sort direction.
      * <p>
-     * The default value is {@link DIRECTION#asc}
+     * The default value is {@link Direction#asc}
      *
      * @param direction The sort direction.
      */
-    public void setDirection(final DIRECTION direction) {
+    public void setDirection(final Direction direction) {
         this.direction = direction;
     }
 }

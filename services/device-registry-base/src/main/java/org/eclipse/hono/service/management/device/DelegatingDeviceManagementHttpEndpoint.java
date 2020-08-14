@@ -150,24 +150,21 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 SPAN_NAME_SEARCH_DEVICES,
                 getClass().getSimpleName()).start();
 
-        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID,
-                getPredicate(config.getTenantIdPattern(), false));
-        final Optional<Integer> pageSize = Optional
-                .ofNullable(ctx.request().getParam(RegistryManagementConstants.FIELD_PAGE_SIZE))
-                .map(Integer::parseInt);
-        final Optional<Integer> pageOffset = Optional
-                .ofNullable(ctx.request().getParam(RegistryManagementConstants.FIELD_PAGE_OFFSET))
-                .map(Integer::parseInt);
+        final String tenantId = getTenantParam(ctx);
+        final Future<Optional<Integer>> pageSize = getRequestParameterIntegerValue(ctx,
+                RegistryManagementConstants.PARAM_PAGE_SIZE);
+        final Future<Optional<Integer>> pageOffset = getRequestParameterIntegerValue(ctx,
+                RegistryManagementConstants.PARAM_PAGE_OFFSET);
         final Future<Optional<List<Filter>>> filters = decodeJsonFromRequestParameter(ctx,
-                RegistryManagementConstants.FIELD_FILTER_JSON, Filter.class);
+                RegistryManagementConstants.PARAM_FILTER_JSON, Filter.class);
         final Future<Optional<List<Sort>>> sortOptions = decodeJsonFromRequestParameter(ctx,
-                RegistryManagementConstants.FIELD_SORT_JSON, Sort.class);
+                RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
 
-        CompositeFuture.all(tenantId, filters, sortOptions)
+        CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
                 .compose(ok -> getService().searchDevices(
-                        tenantId.result(),
-                        pageSize,
-                        pageOffset,
+                        tenantId,
+                        pageSize.result(),
+                        pageOffset.result(),
                         filters.result(),
                         sortOptions.result(),
                         span))
@@ -294,13 +291,36 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         Objects.requireNonNull(clazz);
 
         final Promise<Optional<List<T>>> result = Promise.promise();
-        final Optional<List<T>> values = Optional.ofNullable(ctx.request().params()
-                .getAll(paramKey))
-                .map(jsons -> jsons
-                        .stream()
-                        .map(json -> Json.decodeValue(json, clazz))
-                        .collect(Collectors.toList()));
-        result.complete(values);
+        try {
+            final Optional<List<T>> values = Optional.ofNullable(ctx.request().params()
+                    .getAll(paramKey))
+                    .map(jsons -> jsons
+                            .stream()
+                            .map(json -> Json.decodeValue(json, clazz))
+                            .collect(Collectors.toList()));
+            result.complete(values);
+        } catch (final DecodeException e) {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("error parsing json value of parameter [%s]", paramKey), e));
+        }
+
+        return result.future();
+    }
+
+    private Future<Optional<Integer>> getRequestParameterIntegerValue(final RoutingContext ctx,
+            final String paramKey) {
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(paramKey);
+
+        final Promise<Optional<Integer>> result = Promise.promise();
+        try {
+            final Optional<Integer> value = Optional.ofNullable(ctx.request().params().get(paramKey))
+                    .map(Integer::parseInt);
+            result.complete(value);
+        } catch (final NumberFormatException e) {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("parameter [%s] has a value which is not an integer", paramKey)));
+        }
 
         return result.future();
     }

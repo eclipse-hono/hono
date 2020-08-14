@@ -30,20 +30,35 @@ import io.vertx.core.json.pointer.JsonPointer;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public final class Filter<T> {
 
-    @JsonProperty(RegistryManagementConstants.FIELD_FILTER_FIELD)
-    private JsonPointer field;
+    private final JsonPointer field;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_FILTER_VALUE)
-    private T value;
+    private final T value;
 
     @JsonProperty(RegistryManagementConstants.FIELD_FILTER_OPERATOR)
-    private OPERATOR operator = OPERATOR.eq;
+    private Operator operator = Operator.eq;
 
     /**
      * An enum defining supported filter operators.
      */
-    public enum OPERATOR {
+    public enum Operator {
         eq
+    }
+
+    /**
+     * Creates an instance of {@link Filter}.
+     *
+     * @param field The field to use for filtering.
+     * @param value The value corresponding to the field to use for filtering.
+     * @throws IllegalArgumentException if the field is not a valid pointer.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public Filter(@JsonProperty(RegistryManagementConstants.FIELD_FILTER_FIELD) final String field,
+            @JsonProperty(RegistryManagementConstants.FIELD_FILTER_VALUE) final T value) {
+        Objects.requireNonNull(field);
+        Objects.requireNonNull(value);
+
+        this.field = JsonPointer.from(field);
+        this.value = value;
     }
 
     /**
@@ -56,18 +71,6 @@ public final class Filter<T> {
     }
 
     /**
-     * Sets the field to use for filtering.
-     *
-     * @param field The field to use for filtering.
-     * @throws IllegalArgumentException if the field is not a valid pointer.
-     * @throws NullPointerException if the field is {@code null}.
-     */
-    public void setField(final String field) {
-        Objects.requireNonNull(field);
-        this.field = JsonPointer.from(field);
-    }
-
-    /**
      * Gets the value corresponding to the field to use for filtering.
      *
      * @return The value corresponding to the field to use for filtering.
@@ -77,32 +80,22 @@ public final class Filter<T> {
     }
 
     /**
-     * Sets the value corresponding to the field to use for filtering.
-     *
-     * @param value The value corresponding to the field to use for filtering.
-     * @throws NullPointerException if the value is {@code null}.
-     */
-    public void setValue(final T value) {
-        this.value = Objects.requireNonNull(value);
-    }
-
-    /**
      * Gets the operator to use for filtering.
      *
      * @return The operator to use for filtering.
      */
-    public OPERATOR getOperator() {
+    public Operator getOperator() {
         return operator;
     }
 
     /**
      * Sets the operator to use for filtering.
      * <p>
-     * The default value is {@link OPERATOR#eq}
+     * The default value is {@link Operator#eq}
      *
      * @param operator The operator to use for filtering.
      */
-    public void setOperator(final OPERATOR operator) {
+    public void setOperator(final Operator operator) {
         Optional.ofNullable(operator)
                 .ifPresent(opr -> this.operator = opr);
     }

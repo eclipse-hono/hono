@@ -24,7 +24,6 @@ import org.eclipse.hono.service.management.Result;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 
 /**
  * A service for managing device registration information.
@@ -72,7 +71,7 @@ public interface DeviceManagementService {
     Future<OperationResult<Device>> readDevice(String tenantId, String deviceId, Span span);
 
     /**
-     * Search devices belonging to the given tenant with optional filters, paging and sorting options.
+     * Finds devices belonging to the given tenant with optional filters, paging and sorting options.
      * <p>
      * This search operation is considered as optional since it is not required for the normal functioning of Hono and
      * is more of a convenient operation. Hence here it is declared as a default method which returns
@@ -110,10 +109,7 @@ public interface DeviceManagementService {
         Objects.requireNonNull(sortOptions);
         Objects.requireNonNull(span);
 
-        final Promise<OperationResult<List<DeviceWithId>>> defaultSearchDevicesResult = Promise.promise();
-        defaultSearchDevicesResult.complete(OperationResult.empty(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
-
-        return defaultSearchDevicesResult.future();
+        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
     /**
