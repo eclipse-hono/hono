@@ -53,6 +53,11 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
 
+    private static final int DEFAULT_PAGE_OFFSET = 0;
+    private static final int DEFAULT_PAGE_SIZE = 30;
+    private static final int MAX_PAGE_SIZE = 200;
+    private static final int MIN_PAGE_OFFSET = 0;
+    private static final int MIN_PAGE_SIZE = 0;
     private static final String SPAN_NAME_CREATE_DEVICE = "create Device from management API";
     private static final String SPAN_NAME_GET_DEVICE = "get Device from management API";
     private static final String SPAN_NAME_SEARCH_DEVICES = "search Devices from management API";
@@ -151,10 +156,16 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()).start();
 
         final String tenantId = getTenantParam(ctx);
-        final Future<Optional<Integer>> pageSize = getRequestParameterIntegerValue(ctx,
-                RegistryManagementConstants.PARAM_PAGE_SIZE);
-        final Future<Optional<Integer>> pageOffset = getRequestParameterIntegerValue(ctx,
-                RegistryManagementConstants.PARAM_PAGE_OFFSET);
+        final Future<Integer> pageSize = getRequestParameterIntegerValue(ctx,
+                RegistryManagementConstants.PARAM_PAGE_SIZE)
+                        .map(optionalPageSize -> optionalPageSize
+                                .filter(value -> value >= MIN_PAGE_SIZE && value <= MAX_PAGE_SIZE)
+                                .orElse(DEFAULT_PAGE_SIZE));
+        final Future<Integer> pageOffset = getRequestParameterIntegerValue(ctx,
+                RegistryManagementConstants.PARAM_PAGE_OFFSET)
+                        .map(optionalPageOffset -> optionalPageOffset
+                                .filter(value -> value >= MIN_PAGE_OFFSET)
+                                .orElse(DEFAULT_PAGE_OFFSET));
         final Future<Optional<List<Filter>>> filters = decodeJsonFromRequestParameter(ctx,
                 RegistryManagementConstants.PARAM_FILTER_JSON, Filter.class);
         final Future<Optional<List<Sort>>> sortOptions = decodeJsonFromRequestParameter(ctx,

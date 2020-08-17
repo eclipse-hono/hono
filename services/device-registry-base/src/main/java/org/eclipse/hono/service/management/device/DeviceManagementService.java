@@ -96,15 +96,13 @@ public interface DeviceManagementService {
      */
     default Future<OperationResult<List<DeviceWithId>>> searchDevices(
             final String tenantId,
-            final Optional<Integer> pageSize,
-            final Optional<Integer> pageOffset,
+            final int pageSize,
+            final int pageOffset,
             final Optional<List<Filter>> filters,
             final Optional<List<Sort>> sortOptions,
             final Span span) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(pageSize);
-        Objects.requireNonNull(pageOffset);
         Objects.requireNonNull(filters);
         Objects.requireNonNull(sortOptions);
         Objects.requireNonNull(span);
