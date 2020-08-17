@@ -12,12 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.service.resourcelimits;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,7 +74,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
 
     private static final String QUERY_TEMPLATE_MESSAGE_LIMIT = String.format(
-            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dd:%%3$ds]) or %2$s*0) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dd:%%3$ds]) or %1$s*0))",
+            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm:%%3$ds]) or %2$s*0) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm:%%3$ds]) or %1$s*0))",
             METRIC_NAME_MESSAGES_PAYLOAD_SIZE,
             METRIC_NAME_COMMANDS_PAYLOAD_SIZE,
             MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
@@ -87,6 +88,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private final AsyncCache<String, LimitedResource<Duration>> connectionDurationCache;
     private final AsyncCache<String, LimitedResource<Long>> dataVolumeCache;
     private final String url;
+
+    private Clock clock = Clock.systemUTC();
 
     /**
      * The mode of the data volume calculation.
@@ -205,6 +208,20 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .withTag(Tags.HTTP_URL.getKey(), QUERY_URI)
                 .withTag(TracingHelper.TAG_TENANT_ID.getKey(), tenant.getTenantId())
                 .start();
+    }
+
+    /**
+     * Sets a clock to use for determining the current system time.
+     * <p>
+     * The default value of this property is {@link Clock#systemUTC()}.
+     * <p>
+     * This property should only be set for running tests expecting the current
+     * time to be a certain value, e.g. by using {@link Clock#fixed(Instant, java.time.ZoneId)}.
+     *
+     * @param clock The clock to use.
+     */
+    void setClock(final Clock clock) {
+        this.clock = Objects.requireNonNull(clock);
     }
 
     @Override
@@ -361,23 +378,24 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             dataVolumeCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
                 TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                final Instant nowUtc = Instant.now(clock);
                 final Long allowedMaxBytes = calculateEffectiveLimit(
-                        OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                        OffsetDateTime.now(ZoneOffset.UTC),
+                        effectiveSince,
+                        nowUtc,
                         periodMode,
                         maxBytes);
-                final long dataUsagePeriod = calculateResourceUsagePeriod(
-                        OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                        OffsetDateTime.now(ZoneOffset.UTC),
+                final Duration dataUsagePeriod = calculateResourceUsageDuration(
+                        effectiveSince,
+                        nowUtc,
                         periodMode,
                         periodInDays);
-                if (dataUsagePeriod <= 0) {
+                if (dataUsagePeriod.toMinutes() <= 0) {
                     r.complete(new LimitedResource<Long>(allowedMaxBytes, 0L));
                 } else {
                     final String queryParams = String.format(
                             QUERY_TEMPLATE_MESSAGE_LIMIT,
                             tenant.getTenantId(),
-                            dataUsagePeriod,
+                            dataUsagePeriod.toMinutes(),
                             config.getCacheTimeout());
                     executeQuery(queryParams, span)
                         .onSuccess(bytesConsumed -> r.complete(new LimitedResource<Long>(allowedMaxBytes, bytesConsumed)))
@@ -470,24 +488,26 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             connectionDurationCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Duration>> r = new CompletableFuture<>();
                 TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                final Instant nowUtc = Instant.now(clock);
                 final Duration allowedMaxMinutes = Duration.ofMinutes(calculateEffectiveLimit(
-                                OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                                OffsetDateTime.now(ZoneOffset.UTC),
+                                effectiveSince,
+                                nowUtc,
                                 periodMode,
                                 maxConnectionDurationInMinutes));
-                final Duration connectionDurationUsagePeriod = Duration.ofDays(calculateResourceUsagePeriod(
-                                OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                                OffsetDateTime.now(ZoneOffset.UTC),
+                final Duration connectionDurationUsagePeriod = calculateResourceUsageDuration(
+                                effectiveSince,
+                                nowUtc,
                                 periodMode,
-                                periodInDays));
+                                periodInDays);
 
-                if (connectionDurationUsagePeriod.toDays() <= 0) {
+                if (connectionDurationUsagePeriod.toMinutes() <= 0) {
                     r.complete(new LimitedResource<Duration>(allowedMaxMinutes, Duration.ofMinutes(0)));
                 } else {
-                    final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%sd])))",
+                    final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%dm:%ds])))",
                             METRIC_NAME_CONNECTIONS_DURATION,
                             tenant.getTenantId(),
-                            connectionDurationUsagePeriod.toDays());
+                            connectionDurationUsagePeriod.toMinutes(),
+                            config.getCacheTimeout());
                     executeQuery(queryParams, span)
                         .onSuccess(minutesConnected -> r.complete(new LimitedResource<Duration>(allowedMaxMinutes, Duration.ofMinutes(minutesConnected))))
                         .onFailure(t -> r.completeExceptionally(t));
@@ -627,76 +647,145 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     /**
-     * Calculates the effective resource limit for a tenant for the given period from the configured values.
+     * Calculates the effective resource limit for a tenant for the current accounting period.
      * <p>
-     * In the <em>monthly</em> mode, if the effectiveSince date doesn't fall on the 
-     * first day of the month then the effective resource limit for the tenant is 
-     * calculated as below.
+     * For the initial accounting period of a monthly plan the effective resource limit is
+     * calculated as follows:
      * <pre>
      *             configured limit 
-     *   ---------------------------------- x No. of days from effectiveSince till lastDay of the targetDateMonth.
-     *    No. of days in the current month
+     *   ----------------------------------- x No. of minutes until start of next accounting period.
+     *   No. of minutes in the current month
      * </pre>
      * <p>
-     * For rest of the months and the <em>days</em> mode, the configured limit is used directly.
+     * In all other cases the configured limit is used directly.
      *
-     * @param effectiveSince The point of time on which the given resource limit came into effect.
-     * @param targetDateTime The target date and time.
-     * @param mode The mode of the period. 
-     * @param configuredLimit The configured limit. 
-     * @return The effective resource limit that has been calculated.
+     * @param effectiveSince The point of time (UTC) at which the resource limit became or will become effective.
+     * @param targetDateTime The point in time (UTC) to calculate the limit for.
+     * @param periodType The type of accounting periods that the resource limit is based on.
+     * @param configuredLimit The maximum amount of resources to be used per accounting period.
+     * @return The resource limit for the current accounting period. The value will be 0 if target
+     *         date-time is before effective since date-time.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     long calculateEffectiveLimit(
-            final OffsetDateTime effectiveSince,
-            final OffsetDateTime targetDateTime,
-            final PeriodMode mode,
+            final Instant effectiveSince,
+            final Instant targetDateTime,
+            final PeriodMode periodType,
             final long configuredLimit) {
-        if (PeriodMode.MONTHLY.equals(mode)
-                && configuredLimit > 0
-                && !targetDateTime.isBefore(effectiveSince)
-                && YearMonth.from(targetDateTime).equals(YearMonth.from(effectiveSince))
-                && effectiveSince.getDayOfMonth() != 1) {
-            final OffsetDateTime lastDayOfMonth = effectiveSince.with(TemporalAdjusters.lastDayOfMonth());
-            final long daysBetween = ChronoUnit.DAYS
-                    .between(effectiveSince, lastDayOfMonth) + 1;
-            return Double.valueOf(Math.ceil(daysBetween * configuredLimit / lastDayOfMonth.getDayOfMonth()))
-                    .longValue();
+
+        Objects.requireNonNull(effectiveSince, "effective since");
+        Objects.requireNonNull(targetDateTime, "target date-time");
+        Objects.requireNonNull(periodType, "period mode");
+
+        if (targetDateTime.isBefore(effectiveSince)) {
+            return 0;
+        }
+
+        // we only need to calculate the effective limit if we are in the initial accounting period
+        // of a monthly plan
+        if (PeriodMode.MONTHLY.equals(periodType) && configuredLimit > 0) {
+
+            final ZonedDateTime effectiveSinceZonedDateTime = ZonedDateTime.ofInstant(effectiveSince, ZoneOffset.UTC);
+            final ZonedDateTime targetZonedDateTime = ZonedDateTime.ofInstant(targetDateTime, ZoneOffset.UTC);
+
+            if (YearMonth.from(targetZonedDateTime).equals(YearMonth.from(effectiveSinceZonedDateTime))) {
+
+                final ZonedDateTime startOfNextAccountingPeriod = effectiveSinceZonedDateTime
+                        .with(TemporalAdjusters.firstDayOfNextMonth())
+                        .withHour(0)
+                        .withMinute(0)
+                        .withSecond(0)
+                        .withNano(0);
+                final long minutesTillStartOfNextAccountingPeriod = Math.max(1, Duration
+                        .between(effectiveSinceZonedDateTime, startOfNextAccountingPeriod)
+                        .toMinutes());
+                final long lengthOfCurrentMonthInMinutes = 60 * 24 * effectiveSinceZonedDateTime
+                        .range(ChronoField.DAY_OF_MONTH).getMaximum();
+                return (long) Math.ceil((double) minutesTillStartOfNextAccountingPeriod * configuredLimit / lengthOfCurrentMonthInMinutes);
+            }
         }
         return configuredLimit;
     }
 
     /**
-     * Calculates the period for which the resource usage like volume of used data, connection duration etc. 
-     * is to be retrieved from the Prometheus server based on the mode defined by 
-     * {@link TenantConstants#FIELD_PERIOD_MODE}.
+     * Gets the amount of time that has elapsed in the most recent accounting period up to a given point in time.
+     * <p>
+     * The amount of time is calculated as the number of full minutes between the beginning of the accounting
+     * period that the given target point in time lies in and the target point in time.
+     * Note that when the returned duration is used to determine the amount of resources already consumed during
+     * the current accounting period, this will result in resources not being accounted for which have been used
+     * before the start of the next minute at the beginning of the period.
+     * <p>
+     * The initial accounting period always starts at the point in time given by the effectiveSince parameter value.
+     * For a <em>MONTHLY</em> plan, subsequent accounting periods start on the 1st of each month at 12 AM UTC.
+     * For a <em>DAILY</em> plan, subsequent accounting periods start every periodLength days at the same time of day as
+     * given in the effectiveSince parameter value.
      *
-     * @param effectiveSince The point of time on which the resource limit came into effect.
-     * @param currentDateTime The current date and time used for the resource usage period calculation.
-     * @param mode The mode of the period defined by {@link TenantConstants#FIELD_PERIOD_MODE}.
-     * @param periodInDays The number of days defined by {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}. 
-     * @return The period in days for which the resource usage is to be calculated.
+     * @param effectiveSince The point of time (UTC) at which the resource limit became or will become effective.
+     * @param targetDateTime The point in time (UTC) to calculate the duration for.
+     * @param periodType The type of accounting periods that the resource limit is based on.
+     * @param periodLength The length of a single accounting period. This parameter is only used if the type of
+     *                     plan is <em>DAILY</em>.
+     * @return The calculated amount of time. The returned duration will have zero length if target date-time
+     *         is before effective since date-time.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    long calculateResourceUsagePeriod(
-            final OffsetDateTime effectiveSince,
-            final OffsetDateTime currentDateTime,
-            final PeriodMode mode,
-            final long periodInDays) {
-        final long inclusiveDaysBetween = ChronoUnit.DAYS.between(effectiveSince, currentDateTime) + 1;
-        switch (mode) {
-        case DAYS:
-            if (inclusiveDaysBetween > 0 && periodInDays > 0) {
-                final long dataUsagePeriodInDays = inclusiveDaysBetween % periodInDays;
-                return dataUsagePeriodInDays == 0 ? periodInDays : dataUsagePeriodInDays;
-            }
-            return 0L;
+    Duration calculateResourceUsageDuration(
+            final Instant effectiveSince,
+            final Instant targetDateTime,
+            final PeriodMode periodType,
+            final long periodLength) {
+
+        Objects.requireNonNull(effectiveSince, "effective since");
+        Objects.requireNonNull(targetDateTime, "target date-time");
+        Objects.requireNonNull(periodType, "period type");
+
+        if (targetDateTime.isBefore(effectiveSince)) {
+            return Duration.ZERO;
+        }
+
+        final ZonedDateTime targetZonedDateTime = ZonedDateTime.ofInstant(targetDateTime, ZoneOffset.UTC);
+        final ZonedDateTime beginningOfMostRecentAccountingPeriod = getBeginningOfMostRecentAccountingPeriod(
+                ZonedDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                targetZonedDateTime,
+                periodType,
+                periodLength);
+        return Duration.between(beginningOfMostRecentAccountingPeriod, targetZonedDateTime);
+    }
+
+    private ZonedDateTime getBeginningOfMostRecentAccountingPeriod(
+            final ZonedDateTime effectiveSince,
+            final ZonedDateTime targetDateTime,
+            final PeriodMode periodType,
+            final long periodLength) {
+
+        switch (periodType) {
         case MONTHLY:
-            if (YearMonth.from(currentDateTime).equals(YearMonth.from(effectiveSince))
-                    && effectiveSince.getDayOfMonth() != 1) {
-                return inclusiveDaysBetween;
+            final YearMonth targetYearMonth = YearMonth.from(targetDateTime);
+            if (targetYearMonth.equals(YearMonth.from(effectiveSince))) {
+                // we are in the initial accounting period
+                return effectiveSince;
+            } else {
+                // subsequent accounting periods start at midnight (start of day) UTC on the 1st of each month
+                return ZonedDateTime.of(
+                        targetYearMonth.getYear(), targetYearMonth.getMonthValue(), 1,
+                        0, 0, 0, 0,
+                        ZoneOffset.UTC);
             }
-            return currentDateTime.getDayOfMonth();
+        case DAYS:
+            final Duration overall = Duration.between(effectiveSince, targetDateTime);
+            final Duration accountingPeriodLength = Duration.ofDays(periodLength);
+            if (overall.compareTo(accountingPeriodLength) < 1) {
+                // we are in the initial accounting period
+                return effectiveSince;
+            } else {
+                // subsequent accounting periods start every accountingPeriodLength days
+                // at the same time as effective since 
+                final long totalPeriodsElapsed = overall.dividedBy(accountingPeriodLength);
+                return effectiveSince.plus(accountingPeriodLength.multipliedBy(totalPeriodsElapsed));
+            }
         default:
-            return 0L;
+            return targetDateTime;
         }
     }
 }

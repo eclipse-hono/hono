@@ -28,10 +28,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -79,9 +79,11 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, unit = TimeUnit.SECONDS)
 public class PrometheusBasedResourceLimitChecksTest {
 
+    private PrometheusBasedResourceLimitChecksConfig config;
     private PrometheusBasedResourceLimitChecks limitChecksImpl;
     private WebClient webClient;
     private HttpRequest<JsonObject> request;
+    private HttpRequest<Buffer> req;
     private AsyncCache<String, LimitedResource<Long>> connectionCountCache;
     private AsyncCache<String, LimitedResource<Duration>> connectionDurationCache;
     private AsyncCache<String, LimitedResource<Long>> dataVolumeCache;
@@ -97,12 +99,13 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void setup() {
 
         request = mock(HttpRequest.class);
-        final HttpRequest<Buffer> req = mock(HttpRequest.class);
+        when(request.basicAuthentication(anyString(), anyString())).thenReturn(request);
+        when(request.timeout(anyLong())).thenReturn(request);
+
+        req = mock(HttpRequest.class);
         when(req.addQueryParam(anyString(), anyString())).thenReturn(req);
         when(req.expect(any(ResponsePredicate.class))).thenReturn(req);
         when(req.as(any(BodyCodec.class))).thenReturn(request);
-        when(request.basicAuthentication(anyString(), anyString())).thenReturn(request);
-        when(request.timeout(anyLong())).thenReturn(request);
 
         webClient = mock(WebClient.class);
         when(webClient.get(anyString())).thenReturn(req);
@@ -134,7 +137,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(builder);
 
-        final PrometheusBasedResourceLimitChecksConfig config = new PrometheusBasedResourceLimitChecksConfig();
+        config = new PrometheusBasedResourceLimitChecksConfig();
 
         limitChecksImpl = new PrometheusBasedResourceLimitChecks(
                 webClient,
@@ -247,6 +250,9 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedConnectionNumberQuery(tenant));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -271,6 +277,9 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedConnectionNumberQuery(tenant));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -295,6 +304,9 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedConnectionNumberQuery(tenant));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -321,11 +333,16 @@ public class PrometheusBasedResourceLimitChecksTest {
                                 .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
+        // current accounting period started at Jan 3rd 2:30 PM UTC
+        limitChecksImpl.setClock(Clock.fixed(Instant.parse("2019-01-13T14:30:00Z"), ZoneOffset.UTC));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -341,21 +358,29 @@ public class PrometheusBasedResourceLimitChecksTest {
     @Test
     public void testMessageLimitExceeded(final VertxTestContext ctx) {
 
-        givenDataVolumeUsageInBytes(100);
-        final long incomingMessageSize = 20;
+        // GIVEN a tenant with a monthly plan effective since April 4th 12 AM UTC
+        // and a max data volume of 100 bytes per month
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits()
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
-                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setEffectiveSince(Instant.parse("2019-04-04T00:00:00Z"))
                                 .setPeriod(new ResourceLimitsPeriod()
-                                        .setMode("days")
-                                        .setNoOfDays(30))));
+                                        .setMode("monthly"))));
+        // resulting in an effective data volume limit of 90 bytes for the initial accounting period
+        limitChecksImpl.setClock(Clock.fixed(Instant.parse("2019-04-14T00:00:00Z"), ZoneOffset.UTC));
+        // and 70 bytes of the data volume already used up
+        givenDataVolumeUsageInBytes(70);
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
+        // WHEN checking the message limit for a new message with 21 bytes of payload
+        limitChecksImpl.isMessageLimitReached(tenant, 21, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
+                        // THEN the limit is reported as being exceeded
                         assertTrue(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -402,41 +427,47 @@ public class PrometheusBasedResourceLimitChecksTest {
      */
     @Test
     public void verifyEffectiveResourceLimitCalculation() {
-        final long maxBytes = 9300;
+
+        final long configuredLimit = 9300;
 
         // Monthly mode
-        // The case where the effectiveSince lies on the past months of the target date.
-        assertEquals(maxBytes,
+        // target date lies within the initial accounting period.
+        final long numberOfMinutesInSeptember = 24 * 60 * 30;
+        // next accounting period starts Oct 1st at midnight (start of day) UTC
+        final double remainingMinutesTillStartOfNextAccountingPeriod = 24 * 60 * 28 + 9 * 60 + 30;
+        final long expectedEffectiveLimit = (long) Math.ceil(remainingMinutesTillStartOfNextAccountingPeriod * configuredLimit / numberOfMinutesInSeptember );
+        assertEquals(expectedEffectiveLimit,
                 limitChecksImpl.calculateEffectiveLimit(
-                        OffsetDateTime.parse("2019-08-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        Instant.parse("2019-09-02T14:30:00Z"),
+                        Instant.parse("2019-09-06T09:25:34Z"),
                         PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
-                        maxBytes));
-        // The case where the effectiveSince lies on the the same month as of the target date 
-        // and first day of the month.
-        assertEquals(9300,
+                        configuredLimit));
+
+        // target date lies not within the initial accounting period.
+        assertEquals(configuredLimit,
                 limitChecksImpl.calculateEffectiveLimit(
-                        OffsetDateTime.parse("2019-09-01T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        Instant.parse("2019-08-06T14:30:00Z"),
+                        Instant.parse("2019-09-06T14:30:00Z"),
                         PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
-                        maxBytes));
-        // The case where the effectiveSince lies on the the same month as of the target date
-        // and not on the first day of the month.
-        assertEquals(8990,
-                limitChecksImpl.calculateEffectiveLimit(
-                        OffsetDateTime.parse("2019-09-02T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
-                        maxBytes));
+                        configuredLimit));
 
         // Days mode
-        assertEquals(maxBytes,
+        // target date lies within the initial accounting period.
+        assertEquals(configuredLimit,
                 limitChecksImpl.calculateEffectiveLimit(
-                        OffsetDateTime.parse("2019-09-02T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        Instant.parse("2019-08-20T07:18:23Z"),
+                        Instant.parse("2019-09-06T14:30:00Z"),
                         PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
-                        maxBytes));
-    }
+                        configuredLimit));
+
+        // target date lies not within the initial accounting period.
+        assertEquals(configuredLimit,
+                limitChecksImpl.calculateEffectiveLimit(
+                        Instant.parse("2019-06-15T14:30:00Z"),
+                        Instant.parse("2019-09-06T11:14:46Z"),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
+                        configuredLimit));
+}
 
     /**
      * Verifies the resource usage period calculation for various scenarios.
@@ -444,38 +475,62 @@ public class PrometheusBasedResourceLimitChecksTest {
      */
     @Test
     public void verifyResourceUsagePeriodCalculation() {
-        final long noOfDays = 30;
+
         // Monthly mode
-        // The case where the effectiveSince lies on the past months of the target date.
-        assertEquals(6,
-                limitChecksImpl.calculateResourceUsagePeriod(
-                        OffsetDateTime.parse("2019-08-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+
+        // within initial accounting period
+        Instant since = Instant.parse("2019-09-06T07:15:00Z");
+        Instant now = Instant.parse("2019-09-10T14:30:00Z");
+        // most recent accounting period starts at effective since
+        Instant currentAccountingPeriodStart = since;
+
+        assertEquals(Duration.between(currentAccountingPeriodStart, now),
+                limitChecksImpl.calculateResourceUsageDuration(
+                        since,
+                        now,
                         PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
-                        noOfDays));
-        // The case where the effectiveSince lies on the the same month as of the target date.
-        assertEquals(5,
-                limitChecksImpl.calculateResourceUsagePeriod(
-                        OffsetDateTime.parse("2019-09-06T07:15:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        30));
+
+        // after initial accounting period
+        since = Instant.parse("2019-08-06T05:11:00Z");
+        now = Instant.parse("2019-09-06T14:30:00Z");
+        // current accounting period starts on first day of current month at midnight (start of day) UTC
+        currentAccountingPeriodStart = Instant.parse("2019-09-01T00:00:00Z");
+
+        assertEquals(Duration.between(currentAccountingPeriodStart, now),
+                limitChecksImpl.calculateResourceUsageDuration(
+                        since,
+                        now,
                         PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
-                        noOfDays));
+                        30));
 
         // Days mode
-        // The case where the effectiveSince lies on the past months of the target date.
-        assertEquals(6,
-                limitChecksImpl.calculateResourceUsagePeriod(
-                        OffsetDateTime.parse("2019-08-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+
+        // within initial accounting period
+        since = Instant.parse("2019-08-20T19:03:59Z");
+        now = Instant.parse("2019-09-10T09:32:17Z");
+        // current accounting period starts at effective since date-time
+        currentAccountingPeriodStart = since;
+
+        assertEquals(Duration.between(currentAccountingPeriodStart, now),
+                limitChecksImpl.calculateResourceUsageDuration(
+                        since,
+                        now,
                         PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
-                        noOfDays));
-        // The case where the effectiveSince lies on the the same month as of the target date.
-        assertEquals(5,
-                limitChecksImpl.calculateResourceUsagePeriod(
-                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                        OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        30));
+
+        // after initial accounting period
+        since = Instant.parse("2019-07-03T11:49:22Z");
+        now = Instant.parse("2019-09-10T14:30:11Z");
+        // current accounting period starts 2 x 30 days after start
+        currentAccountingPeriodStart = Instant.parse("2019-09-01T11:49:22Z");
+
+        assertEquals(Duration.between(currentAccountingPeriodStart, now),
+                limitChecksImpl.calculateResourceUsageDuration(
+                        since,
+                        now,
                         PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
-                        noOfDays));
+                        30));
     }
 
     /**
@@ -584,14 +639,19 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .setResourceLimits(new ResourceLimits()
                         .setConnectionDuration(new ConnectionDuration()
                                 .setMaxDuration(100L)
-                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setEffectiveSince(Instant.parse("2019-03-10T14:30:00Z"))
                                 .setPeriod(new ResourceLimitsPeriod()
-                                        .setMode("days")
-                                        .setNoOfDays(30))));
+                                        .setMode("monthly"))));
+        // start of current accounting period is April 1st 12 AM UTC
+        limitChecksImpl.setClock(Clock.fixed(Instant.parse("2019-04-11T00:00:00Z"), ZoneOffset.UTC));
+
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -617,10 +677,16 @@ public class PrometheusBasedResourceLimitChecksTest {
                                 .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
+        // start of current accounting period is Feb 2nd 2:30 PM UTC
+        limitChecksImpl.setClock(Clock.fixed(Instant.parse("2019-02-12T14:30:00Z"), ZoneOffset.UTC));
+
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -643,8 +709,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                 .setMaxBytes(50L)
                                 .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
                                 .setPeriod(new ResourceLimitsPeriod()
-                                        .setMode("days")
-                                        .setNoOfDays(30))));
+                                        .setMode("monthly"))));
 
         limitChecksImpl.isMessageLimitReached(tenant, 100L, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
@@ -671,15 +736,20 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .setResourceLimits(new ResourceLimits()
                         .setConnectionDuration(new ConnectionDuration()
                                 .setMaxDuration(100L)
-                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setEffectiveSince(Instant.parse("2019-01-12T14:30:00Z"))
                                 .setPeriod(new ResourceLimitsPeriod()
-                                        .setMode("days")
-                                        .setNoOfDays(30))));
+                                        .setMode("monthly"))));
+        // start of current accounting period is Jan 12th 2:30 PM UTC
+        limitChecksImpl.setClock(Clock.fixed(Instant.parse("2019-01-22T14:30:00Z"), ZoneOffset.UTC));
+
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
+                        verify(req).addQueryParam(
+                                "query",
+                                getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
                         verify(request).send(any(Handler.class));
                         // AND the span is not marked as erroneous
                         verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
@@ -749,7 +819,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         }).when(request).send(any(Handler.class));
     }
 
-    private JsonObject createPrometheusResponse(final Integer value) {
+    private static JsonObject createPrometheusResponse(final Integer value) {
         final JsonArray valueArray = new JsonArray();
         if (value != null) {
             valueArray.add("timestamp").add(String.valueOf(value));
@@ -759,5 +829,37 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .put("data", new JsonObject()
                         .put("result", new JsonArray().add(new JsonObject()
                                 .put("value", valueArray))));
+    }
+
+    private static String getExpectedDataVolumeQuery(
+            final TenantObject tenant,
+            final long minutes,
+            final PrometheusBasedResourceLimitChecksConfig config) {
+
+        return String.format(
+                "floor(sum(increase(hono_messages_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm:%3$ds]) or hono_commands_payload_bytes_sum*0)"
+                + " + sum(increase(hono_commands_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm:%3$ds]) or hono_messages_payload_bytes_sum*0))",
+                tenant.getTenantId(),
+                minutes,
+                config.getCacheTimeout());
+    }
+
+    private static String getExpectedConnectionDurationQuery(
+            final TenantObject tenant,
+            final long minutes,
+            final PrometheusBasedResourceLimitChecksConfig config) {
+
+        return String.format(
+                "minute( sum( increase( hono_connections_authenticated_duration_seconds_sum {tenant=\"%1$s\"} [%2$dm:%3$ds])))",
+                tenant.getTenantId(),
+                minutes,
+                config.getCacheTimeout());
+    }
+
+    private static String getExpectedConnectionNumberQuery(final TenantObject tenant) {
+
+        return String.format(
+                "sum(hono_connections_authenticated{tenant=\"%1$s\"})",
+                tenant.getTenantId());
     }
 }

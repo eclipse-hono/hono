@@ -64,11 +64,11 @@ public class ResourceLimitsPeriod {
      *
      * @param noOfDays The number of days for which resource usage is calculated.
      * @return  a reference to this for fluent use.
-     * @throws IllegalArgumentException if the number of days is negative.
+     * @throws IllegalArgumentException if the number of days is &lt;= 0.
      */
     public final ResourceLimitsPeriod setNoOfDays(final int noOfDays) {
-        if (noOfDays < 0) {
-            throw new IllegalArgumentException("Number of days property must be  set to value >= 0");
+        if (noOfDays <= 0) {
+            throw new IllegalArgumentException("Number of days property must be set to value > 0");
         }
         this.noOfDays = noOfDays;
         return this;
