@@ -354,15 +354,16 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     }
 
     /**
-     * Gets the timeout to ACK a CoAP CON requests.
+     * Gets the timeout to ACK a CoAP CON request.
      * <p>
      * If the response is available before that timeout, a more efficient piggybacked response is used. If the timeout
-     * is reached without response, a separate ACK is sent to prevent the client from retransmit the CON request.
+     * is reached without response, a separate ACK is sent to prevent the client from retransmitting the CON request.
      * <p>
      * The default value of this property is {@value #DEFAULT_TIMEOUT_TO_ACK} milliseconds.
      *
-     * @return The timeout in milliseconds. {@code -1}, never use separate response, {@code 0}, always use separate
-     *         response.
+     * @return The timeout in milliseconds. A value of {@code -1} means to always piggyback the response in an ACK and
+     *         never send a separate CON; a value of {@code 0} means to always send an ACK immediately and include the
+     *         response in a separate CON.
      */
     public final int getTimeoutToAck() {
         return timeoutToAck;
@@ -372,12 +373,13 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Sets the timeout to ACK a CoAP CON request.
      * <p>
      * If the response is available before that timeout, a more efficient piggybacked response is used. If the timeout
-     * is reached without response, a separate ACK is sent to prevent the client form retransmit the CON request.
+     * is reached without response, a separate ACK is sent to prevent the client form retransmitting the CON request.
      * <p>
      * The default value of this property is {@value #DEFAULT_TIMEOUT_TO_ACK} milliseconds.
      *
-     * @param timeoutToAck timeout in milliseconds to send separate ACK. {@code -1}, never use separate response,
-     *            {@code 0}, always use separate response.
+     * @param timeoutToAck timeout in milliseconds to send a separate ACK. A value of {@code -1} means to always
+     *            piggyback the response in an ACK and never send a separate CON; a value of {@code 0} means to always
+     *            send an ACK immediately and include the response in a separate CON.
      * @throws IllegalArgumentException if timeoutToAck is &lt; -1.
      */
     public final void setTimeoutToAck(final int timeoutToAck) {
