@@ -24,15 +24,12 @@ import io.vertx.core.json.pointer.JsonPointer;
 
 /**
  * Filter to apply during search operation in Device Registry Management API.
- *
- * @param <T> The filter value type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public final class Filter<T> {
+public final class Filter {
 
     private final JsonPointer field;
-
-    private final T value;
+    private final Object value;
 
     @JsonProperty(RegistryManagementConstants.FIELD_FILTER_OPERATOR)
     private Operator operator = Operator.eq;
@@ -45,15 +42,15 @@ public final class Filter<T> {
     }
 
     /**
-     * Creates an instance of {@link Filter}.
+     * Creates a filter for a field and value using the equals operator.
      *
      * @param field The field to use for filtering.
      * @param value The value corresponding to the field to use for filtering.
      * @throws IllegalArgumentException if the field is not a valid pointer.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public Filter(@JsonProperty(RegistryManagementConstants.FIELD_FILTER_FIELD) final String field,
-            @JsonProperty(RegistryManagementConstants.FIELD_FILTER_VALUE) final T value) {
+    public Filter(@JsonProperty(value = RegistryManagementConstants.FIELD_FILTER_FIELD, required = true) final String field,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_FILTER_VALUE, required = true) final Object value) {
         Objects.requireNonNull(field);
         Objects.requireNonNull(value);
 
@@ -75,7 +72,7 @@ public final class Filter<T> {
      *
      * @return The value corresponding to the field to use for filtering.
      */
-    public T getValue() {
+    public Object getValue() {
         return value;
     }
 

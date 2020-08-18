@@ -53,11 +53,12 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
 
-    private static final int DEFAULT_PAGE_OFFSET = 0;
-    private static final int DEFAULT_PAGE_SIZE = 30;
-    private static final int MAX_PAGE_SIZE = 200;
-    private static final int MIN_PAGE_OFFSET = 0;
-    private static final int MIN_PAGE_SIZE = 0;
+    static final int DEFAULT_PAGE_OFFSET = 0;
+    static final int DEFAULT_PAGE_SIZE = 30;
+    static final int MAX_PAGE_SIZE = 200;
+    static final int MIN_PAGE_OFFSET = 0;
+    static final int MIN_PAGE_SIZE = 0;
+
     private static final String SPAN_NAME_CREATE_DEVICE = "create Device from management API";
     private static final String SPAN_NAME_GET_DEVICE = "get Device from management API";
     private static final String SPAN_NAME_SEARCH_DEVICES = "search Devices from management API";
@@ -106,13 +107,13 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 .handler(this::extractOptionalJsonPayload)
                 .handler(this::doCreateDevice);
 
-        // GET device
-        router.get(pathWithTenantAndDeviceId)
-                .handler(this::doGetDevice);
-
         // SEARCH devices
         router.get(pathWithTenant)
                 .handler(this::doSearchDevices);
+
+        // GET device
+        router.get(pathWithTenantAndDeviceId)
+                .handler(this::doGetDevice);
 
         // UPDATE existing device
         router.put(pathWithTenantAndDeviceId)
@@ -156,19 +157,21 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()).start();
 
         final String tenantId = getTenantParam(ctx);
-        final Future<Integer> pageSize = getRequestParameterIntegerValue(ctx,
-                RegistryManagementConstants.PARAM_PAGE_SIZE)
-                        .map(optionalPageSize -> optionalPageSize
-                                .filter(value -> value >= MIN_PAGE_SIZE && value <= MAX_PAGE_SIZE)
-                                .orElse(DEFAULT_PAGE_SIZE));
-        final Future<Integer> pageOffset = getRequestParameterIntegerValue(ctx,
-                RegistryManagementConstants.PARAM_PAGE_OFFSET)
-                        .map(optionalPageOffset -> optionalPageOffset
-                                .filter(value -> value >= MIN_PAGE_OFFSET)
-                                .orElse(DEFAULT_PAGE_OFFSET));
-        final Future<Optional<List<Filter>>> filters = decodeJsonFromRequestParameter(ctx,
+        final Future<Integer> pageSize = getRequestParameter(
+                ctx,
+                RegistryManagementConstants.PARAM_PAGE_SIZE,
+                DEFAULT_PAGE_SIZE,
+                CONVERTER_INT,
+                value -> value >= MIN_PAGE_SIZE && value <= MAX_PAGE_SIZE);
+        final Future<Integer> pageOffset = getRequestParameter(
+                ctx,
+                RegistryManagementConstants.PARAM_PAGE_OFFSET,
+                DEFAULT_PAGE_OFFSET,
+                CONVERTER_INT,
+                value -> value >= MIN_PAGE_OFFSET);
+        final Future<List<Filter>> filters = decodeJsonFromRequestParameter(ctx,
                 RegistryManagementConstants.PARAM_FILTER_JSON, Filter.class);
-        final Future<Optional<List<Sort>>> sortOptions = decodeJsonFromRequestParameter(ctx,
+        final Future<List<Sort>> sortOptions = decodeJsonFromRequestParameter(ctx,
                 RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
 
         CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
@@ -294,43 +297,25 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         return result.future();
     }
 
-    private <T> Future<Optional<List<T>>> decodeJsonFromRequestParameter(final RoutingContext ctx,
-            final String paramKey, final Class<T> clazz) {
+    private static <T> Future<List<T>> decodeJsonFromRequestParameter(
+            final RoutingContext ctx,
+            final String paramKey,
+            final Class<T> clazz) {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(paramKey);
         Objects.requireNonNull(clazz);
 
-        final Promise<Optional<List<T>>> result = Promise.promise();
+        final Promise<List<T>> result = Promise.promise();
         try {
-            final Optional<List<T>> values = Optional.ofNullable(ctx.request().params()
-                    .getAll(paramKey))
-                    .map(jsons -> jsons
-                            .stream()
-                            .map(json -> Json.decodeValue(json, clazz))
-                            .collect(Collectors.toList()));
+            final List<T> values = ctx.request().params().getAll(paramKey)
+                    .stream()
+                    .map(json -> Json.decodeValue(json, clazz))
+                    .collect(Collectors.toList());
             result.complete(values);
         } catch (final DecodeException e) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("error parsing json value of parameter [%s]", paramKey), e));
-        }
-
-        return result.future();
-    }
-
-    private Future<Optional<Integer>> getRequestParameterIntegerValue(final RoutingContext ctx,
-            final String paramKey) {
-        Objects.requireNonNull(ctx);
-        Objects.requireNonNull(paramKey);
-
-        final Promise<Optional<Integer>> result = Promise.promise();
-        try {
-            final Optional<Integer> value = Optional.ofNullable(ctx.request().params().get(paramKey))
-                    .map(Integer::parseInt);
-            result.complete(value);
-        } catch (final NumberFormatException e) {
-            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("parameter [%s] has a value which is not an integer", paramKey)));
         }
 
         return result.future();

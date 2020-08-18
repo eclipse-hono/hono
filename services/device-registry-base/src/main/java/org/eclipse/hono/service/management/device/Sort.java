@@ -46,7 +46,7 @@ public final class Sort {
      * @throws IllegalArgumentException if the field is not a valid pointer.
      * @throws NullPointerException if the field is {@code null}.
      */
-    public Sort(@JsonProperty(RegistryManagementConstants.FIELD_FILTER_FIELD) final String field) {
+    public Sort(@JsonProperty(value = RegistryManagementConstants.FIELD_FILTER_FIELD, required = true) final String field) {
         Objects.requireNonNull(field);
         this.field = JsonPointer.from(field);
     }

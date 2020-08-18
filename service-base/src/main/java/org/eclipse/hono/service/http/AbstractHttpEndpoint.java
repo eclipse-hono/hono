@@ -16,6 +16,7 @@ package org.eclipse.hono.service.http;
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -67,6 +68,18 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * The key that is used to put the if-Match ETags values to the RoutingContext.
      */
     protected static final String KEY_RESOURCE_VERSION = "KEY_RESOURCE_VERSION";
+    /**
+     * A function that tries to parse a string into an integer. Throws an
+     * {@code IllegalArgumentException} if the string cannot be parsed into
+     * an integer.
+     */
+    protected static final Function<String, Integer> CONVERTER_INT = s -> {
+        try {
+            return Integer.parseInt(s);
+        } catch (final NumberFormatException e) {
+            throw new IllegalArgumentException("value is not a an integer");
+        }
+    };
 
     /**
      * The configuration properties for this endpoint.
@@ -191,7 +204,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @throws NullPointerException If ctx is null.
      */
     protected final String getTenantParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_TENANT_ID);
+        return ctx.request().params().get(PARAM_TENANT_ID);
     }
 
     /**
@@ -202,11 +215,14 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @throws NullPointerException If ctx is null.
      */
     protected final String getDeviceIdParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_DEVICE_ID);
+        return ctx.request().params().get(PARAM_DEVICE_ID);
     }
 
     /**
      * Gets the value of a request parameter.
+     * <p>
+     * This method delegates to {@link #getRequestParameter(RoutingContext, String, Object, Function, Predicate)}
+     * with a default value of {@code null} and the identity converter function.
      *
      * @param ctx The routing context to get the parameter from.
      * @param paramName The name of the parameter.
@@ -215,34 +231,69 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      *                  instead of returning {@code false} in order to convey additional
      *                  information about why the test failed.
      * @return A future indicating the outcome of the operation.
-     *         If the request does not contain a parameter with the given name, the future will be
-     *         <ul>
-     *         <li>completed with an empty optional if the <em>optional</em> flag is {@code true}, or</li>
-     *         <li>failed with a {@link ClientErrorException} with status 400 if the flag is {@code false}.</li>
-     *         </ul>
-     *         If the request does contain a parameter with the given name, the future will be
-     *         <ul>
-     *         <li>failed with a {@link ClientErrorException} with status 400 if a predicate has been
-     *         given and the predicate evaluates to {@code false}, or</li>
-     *         <li>otherwise be completed with the parameter value.</li>
-     *         </ul>
-     * @throws NullPointerException If ctx, paramName or validator are {@code null}.
+     *         The future will be completed with the parameter value if validation was successful.
+     *         Otherwise, the future will be failed with a {@link ClientErrorException} with status 400.
+     * @throws NullPointerException if any of the parameters are are {@code null}.
      */
     protected final Future<String> getRequestParameter(
             final RoutingContext ctx,
             final String paramName,
             final Predicate<String> validator) {
+        return getRequestParameter(
+                ctx,
+                paramName,
+                null,
+                s -> s,
+                validator);
+    }
+
+    /**
+     * Gets the value of a request parameter.
+     * <p>
+     * This method first tries to get the value of the parameter with the given name from the
+     * request. If the request contains such a parameter, the given converter is used to transform
+     * its value to the expected type. Otherwise, the default value is used.
+     * The parameter value is then validated by means of the given predicate.
+     *
+     * @param <C> The expected type of the parameter.
+     * @param ctx The routing context to get the parameter from.
+     * @param paramName The name of the parameter.
+     * @param defaultValue A default value to use if the request does not contain a parameter with the given name
+     *                     or {@code null} if no default value is defined.
+     * @param converter A function for converting the request parameter value to the expected type.
+     *                  The function may throw an {@code IllegalArgumentException}
+     *                  instead of returning a value in order to convey additional
+     *                  information about why the parameter could not be converted to the expected type.
+     * @param validator A predicate to use for validating the parameter value.
+     *                  The predicate may throw an {@code IllegalArgumentException}
+     *                  instead of returning {@code false} in order to convey additional
+     *                  information about why the test failed.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be completed with the converted parameter value if validation was successful.
+     *         Otherwise, the future will be failed with a {@link ClientErrorException} with status 400.
+     * @throws NullPointerException if any of the parameters other than default value are {@code null}.
+     */
+    protected final <C> Future<C> getRequestParameter(
+            final RoutingContext ctx,
+            final String paramName,
+            final C defaultValue,
+            final Function<String, C> converter,
+            final Predicate<C> validator) {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(paramName);
+        Objects.requireNonNull(converter);
         Objects.requireNonNull(validator);
 
-        final Promise<String> result = Promise.promise();
-        final String value = ctx.request().getParam(paramName);
+        final Promise<C> result = Promise.promise();
+        final String value = ctx.request().params().get(paramName);
 
         try {
-            if (validator.test(value)) {
-                result.complete(value);
+            final C typedValue = Optional.ofNullable(value)
+                    .map(converter)
+                    .orElse(defaultValue);
+            if (validator.test(typedValue)) {
+                result.complete(typedValue);
             } else {
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                         String.format("request parameter [name: %s, value: %s] failed validation", paramName, value)));

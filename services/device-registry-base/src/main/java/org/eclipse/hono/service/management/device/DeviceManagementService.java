@@ -98,8 +98,8 @@ public interface DeviceManagementService {
             final String tenantId,
             final int pageSize,
             final int pageOffset,
-            final Optional<List<Filter>> filters,
-            final Optional<List<Sort>> sortOptions,
+            final List<Filter> filters,
+            final List<Sort> sortOptions,
             final Span span) {
 
         Objects.requireNonNull(tenantId);
