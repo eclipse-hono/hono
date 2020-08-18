@@ -25,8 +25,8 @@ import com.google.common.base.MoreObjects;
  */
 public class DeviceReadResult {
 
-    private Device device;
-    private Optional<String> resourceVersion;
+    private final Device device;
+    private final Optional<String> resourceVersion;
 
     /**
      * Create a new instance.
@@ -50,7 +50,7 @@ public class DeviceReadResult {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("resourceVersion", this.resourceVersion)
-                .add("device", this.device)
+                .add("org/eclipse/hono/service/base/jdbc/store/device", this.device)
                 .toString();
     }
 }

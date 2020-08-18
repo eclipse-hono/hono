@@ -95,7 +95,7 @@ public class Store extends AbstractStore {
 
         return StatementConfiguration
                 .empty(tableNameString)
-                .overrideWithDefaultPattern("base", dialect, Store.class, StatementConfiguration.DEFAULT_PATH.resolve("devcon"));
+                .overrideWithDefaultPattern("base", dialect, Store.class, StatementConfiguration.DEFAULT_PATH.resolve("org/eclipse/hono/service/base/jdbc/store/devcon"));
 
     }
 
@@ -128,7 +128,7 @@ public class Store extends AbstractStore {
         });
 
         log.debug("readDeviceState - statement: {}", expanded);
-        final var result = expanded.trace(this.tracer, span).query(this.client);
+        final var result = expanded.trace(this.tracer, span.context()).query(this.client);
 
         final var f = result
                 .<Optional<DeviceState>>flatMap(r -> {
@@ -179,7 +179,7 @@ public class Store extends AbstractStore {
         });
 
         log.debug("setLastKnownGateway - statement: {}", expanded);
-        final var result = expanded.trace(this.tracer, span).update(this.client);
+        final var result = expanded.trace(this.tracer, span.context()).update(this.client);
 
         return result.onComplete(x -> span.finish());
 
@@ -204,7 +204,7 @@ public class Store extends AbstractStore {
         });
 
         log.debug("dropTenant - statement: {}", expanded);
-        final var result = expanded.trace(this.tracer, span).update(this.client);
+        final var result = expanded.trace(this.tracer, span.context()).update(this.client);
 
         return result.onComplete(x -> span.finish());
 

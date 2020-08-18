@@ -121,13 +121,13 @@ public class QueryTest {
                 Statement.statement("INSERT INTO %s (tenant_id, device_id, version, data) VALUES (:tenant_id, :device_id, :version, to_jsonb(:data::jsonb))", "table")
                         .expand(map -> {
                             map.put("tenant_id", "tenant");
-                            map.put("device_id", "device");
+                            map.put("device_id", "org/eclipse/hono/service/base/jdbc/store/device");
                             map.put("version", "version");
                             map.put("data", "{}");
                         });
 
         assertEquals("INSERT INTO table (tenant_id, device_id, version, data) VALUES (?, ?, ?, to_jsonb(?::jsonb))", expanded.getSql());
-        assertArrayEquals(new Object[] {"tenant", "device", "version", "{}"}, expanded.getParameters());
+        assertArrayEquals(new Object[] {"tenant", "org/eclipse/hono/service/base/jdbc/store/device", "version", "{}"}, expanded.getParameters());
     }
 
 

@@ -15,6 +15,8 @@ package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
@@ -44,7 +46,6 @@ import io.vertx.core.json.JsonObject;
  * {@link AbstractRegistrationService#processAssertRegistration(DeviceKey, Span)} to retrieve a device's registration
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
- *
  */
 public abstract class AbstractRegistrationService implements RegistrationService {
 
@@ -77,19 +78,19 @@ public abstract class AbstractRegistrationService implements RegistrationService
      *
      * @param deviceKey The ID of the device to get registration data for.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
+     * implementation should log (error) events on this span and it may set tags and use this span as the
+     * parent for any spans created in this method.
      * @return A future indicating the outcome of the operation. The <em>status</em> will be
-     *            <ul>
-     *            <li><em>200 OK</em>, if a device with the given ID is registered for the tenant.<br>
-     *            The <em>payload</em> will contain a JSON object with the following properties:
-     *              <ul>
-     *              <li><em>device-id</em> - the device identifier</li>
-     *              <li><em>data</em> - the information registered for the device</li>
-     *              </ul>
-     *            </li>
-     *            <li><em>404 Not Found</em>, if no device with the given identifier is registered for the tenant.</li>
-     *            </ul>
+     * <ul>
+     * <li><em>200 OK</em>, if a device with the given ID is registered for the tenant.<br>
+     * The <em>payload</em> will contain a JSON object with the following properties:
+     *   <ul>
+     *   <li><em>device-id</em> - the device identifier</li>
+     *   <li><em>data</em> - the information registered for the device</li>
+     *   </ul>
+     * </li>
+     * <li><em>404 Not Found</em>, if no device with the given identifier is registered for the tenant.</li>
+     * </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected abstract Future<RegistrationResult> processAssertRegistration(DeviceKey deviceKey, Span span);
@@ -101,13 +102,41 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param tenantId The tenant the device belongs to.
      * @param viaGroups The viaGroups list of a device. This list contains the ids of groups.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. A failed future with 
-     *           a {@link ServiceInvocationException} is returned, if there was an error resolving the groups.
+     * implementation should log (error) events on this span and it may set tags and use this span as the
+     * parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation. A failed future with
+     * a {@link ServiceInvocationException} is returned, if there was an error resolving the groups.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected abstract Future<JsonArray> resolveGroupMembers(String tenantId, JsonArray viaGroups, Span span);
+    Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+
+        final var viaGroupsAsString = viaGroups.stream()
+                .filter(String.class::isInstance).map(String.class::cast)
+                .collect(Collectors.toSet());
+
+        return processResolveGroupMembers(tenantId, viaGroupsAsString, span)
+                .map(deviceIds -> {
+                    final var result = new JsonArray();
+                    deviceIds.forEach(result::add);
+                    return result;
+                });
+
+    }
+
+    /**
+     * Takes the 'viaGroups' list of a device and resolves all group ids with the ids of the devices that are
+     * a member of those groups.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param viaGroups The viaGroups list of a device. This list contains the ids of groups.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     * implementation should log (error) events on this span and it may set tags and use this span as the
+     * parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation. A set of device ID that belong to the provided groups.
+     * A failed future with a {@link ServiceInvocationException} is returned, if there was an error resolving the groups.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected abstract Future<Set<String>> processResolveGroupMembers(String tenantId, Set<String> viaGroups, Span span);
 
     @Override
     public final Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
@@ -176,7 +205,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .compose(result ->  {
+                .compose(result -> {
 
                     if (result.isError()) {
                         return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
@@ -319,12 +348,12 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param deviceId The device to create the assertion token for.
      * @param registrationInfo The device registration information.
      * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed with the payload
-     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
+     * <p>
+     * The future will succeed with the payload
+     * or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
     protected final Future<JsonObject> getAssertionPayload(final String tenantId, final String deviceId,
-            final JsonObject registrationInfo) {
+                                                           final JsonObject registrationInfo) {
         return getAssertionPayload(tenantId, deviceId, registrationInfo, NoopSpan.INSTANCE);
     }
 
@@ -339,15 +368,15 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param deviceId The device to create the assertion token for.
      * @param registrationInfo The device registration information.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
+     * implementation should log (error) events on this span and it may set tags and use this span as the
+     * parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed with the payload
-     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
+     * <p>
+     * The future will succeed with the payload
+     * or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
     protected final Future<JsonObject> getAssertionPayload(final String tenantId, final String deviceId,
-            final JsonObject registrationInfo, final Span span) {
+                                                           final JsonObject registrationInfo, final Span span) {
         return getSupportedGatewaysForDevice(tenantId, deviceId, registrationInfo, span)
                 .compose(via -> {
                     final JsonObject result = new JsonObject()
@@ -432,12 +461,12 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param deviceId The device id.
      * @param registrationInfo The device's registration information.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
+     * implementation should log (error) events on this span and it may set tags and use this span as the
+     * parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed with the list of gateways as a JSON array of Strings (never {@code null})
-     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
+     * <p>
+     * The future will succeed with the list of gateways as a JSON array of Strings (never {@code null})
+     * or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
     protected Future<JsonArray> getSupportedGatewaysForDevice(
             final String tenantId,

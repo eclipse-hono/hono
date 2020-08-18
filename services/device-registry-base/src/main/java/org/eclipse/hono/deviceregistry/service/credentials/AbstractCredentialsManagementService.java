@@ -10,22 +10,24 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.deviceregistry.service.credentials;
 
 import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,23 +43,34 @@ import io.vertx.core.Vertx;
  */
 public abstract class AbstractCredentialsManagementService implements CredentialsManagementService {
 
+
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
-    private HonoPasswordEncoder passwordEncoder;
-
     private final Vertx vertx;
+    private final HonoPasswordEncoder passwordEncoder;
+    private final int maxBcryptIteration;
+    private final Set<String> hashAlgorithmsWhitelist;
 
     /**
      * Creates a service for the given Vertx and password encoder instances.
      *
      * @param vertx The Vertx instance to use.
      * @param passwordEncoder The password encoder.
-     * @throws NullPointerException if any of the parameters is {@code null};
+     * @param maxBcryptIteration The maximum number of allowed bcrypt iterations.
+     * @param hashAlgorithmsWhitelist An optional collection of allowed password hashes.
+     * @throws NullPointerException if any of the required parameters is {@code null};
      */
-    @Autowired
-    public AbstractCredentialsManagementService(final Vertx vertx, final HonoPasswordEncoder passwordEncoder) {
+    public AbstractCredentialsManagementService(
+            final Vertx vertx,
+            final HonoPasswordEncoder passwordEncoder,
+            final int maxBcryptIteration,
+            final Set<String> hashAlgorithmsWhitelist) {
+
         this.vertx = Objects.requireNonNull(vertx);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
+        this.maxBcryptIteration = maxBcryptIteration;
+        this.hashAlgorithmsWhitelist = hashAlgorithmsWhitelist;
+
     }
 
     /**
@@ -119,17 +132,26 @@ public abstract class AbstractCredentialsManagementService implements Credential
         Objects.requireNonNull(deviceId);
 
         return this.tenantInformationService
+
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
                         ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
-                        : processReadCredentials(DeviceKey.from(result.getPayload(), deviceId), span));
+                        : processReadCredentials(DeviceKey.from(result.getPayload(), deviceId), span))
+
+                // strip private information
+                .map(v -> {
+                    if (v != null && v.getPayload() != null) {
+                        v.getPayload().forEach(CommonCredential::stripPrivateInfo);
+                    }
+                    return v;
+                });
     }
 
     private Future<List<CommonCredential>> verifyAndEncodePasswords(final List<CommonCredential> credentials) {
         // Check if we need to encode passwords
         if (needToEncode(credentials)) {
             // ... yes, encode passwords asynchronously
-            return Futures.executeBlocking(this.vertx, () -> checkCredentials(checkCredentials(credentials)));
+            return Futures.executeBlocking(this.vertx, () -> checkCredentials(credentials));
         } else {
             // ... no, so don't fork off a worker task, but inline work
             return Future.succeededFuture(checkCredentials(credentials));
@@ -141,7 +163,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
      *
      * @param credentials The credentials to check.
      * @return {@code true} is the list contains at least one password which needs to be encoded on the
-     *         server side.
+     * server side.
      */
     private static boolean needToEncode(final List<CommonCredential> credentials) {
         return credentials
@@ -153,22 +175,22 @@ public abstract class AbstractCredentialsManagementService implements Credential
     }
 
     /**
-     *  Checks credentials and encodes secrets if necessary.
+     * Checks credentials and encodes secrets if necessary.
      *
      * @param credentials The credentials to check.
      * @return Verified and encoded credentials.
      * @throws IllegalStateException if the secret is not valid.
      */
     protected List<CommonCredential> checkCredentials(final List<CommonCredential> credentials) {
+
         for (final CommonCredential credential : credentials) {
-            credential.checkValidity();
-            if (credential instanceof PasswordCredential) {
-                for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
-                    passwordSecret.encode(this.passwordEncoder);
-                    passwordSecret.checkValidity();
-                }
-            }
+            DeviceRegistryUtils.checkCredential(
+                    credential,
+                    passwordEncoder,
+                    hashAlgorithmsWhitelist,
+                    maxBcryptIteration);
         }
+
         return credentials;
     }
 

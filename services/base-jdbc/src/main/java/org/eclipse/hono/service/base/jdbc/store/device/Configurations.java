@@ -26,11 +26,6 @@ import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
 public final class Configurations {
 
     /**
-     * Default table name, when using the JSON data model.
-     */
-    public static final String DEFAULT_TABLE_NAME_JSON = "devices";
-
-    /**
      * Default table name of the credentials table, when using the flat table model.
      */
     public static final String DEFAULT_TABLE_NAME_CREDENTIALS = "device_credentials";
@@ -39,6 +34,11 @@ public final class Configurations {
      * Default table name of the registrations table, when using the flat table model.
      */
     public static final String DEFAULT_TABLE_NAME_REGISTRATIONS = "device_registrations";
+
+    /**
+     * Default table name of the groups table, when using the flat table model.
+     */
+    public static final String DEFAULT_TABLE_NAME_GROUPS = "device_groups";
 
     private Configurations() {
     }
@@ -49,50 +49,30 @@ public final class Configurations {
      * @param jdbcUrl The JDBC URL.
      * @param tableNameCredentials The optional table name for the credentials table.
      * @param tableNameRegistrations The optional table name for the registration table.
+     * @param tableNameGroups The optional table name for the groups table.
+     *
      * @return The newly created configuration.
      *
      * @throws IOException in case an IO error occurs, when reading the statement configuration.
      */
-    public static StatementConfiguration tableConfiguration(final String jdbcUrl, final Optional<String> tableNameCredentials, final Optional<String> tableNameRegistrations)
+    public static StatementConfiguration tableConfiguration(
+            final String jdbcUrl,
+            final Optional<String> tableNameCredentials,
+            final Optional<String> tableNameRegistrations,
+            final Optional<String> tableNameGroups)
             throws IOException {
 
         final String dialect = SQL.getDatabaseDialect(jdbcUrl);
 
         final String tableNameCredentialsString = tableNameCredentials.orElse(DEFAULT_TABLE_NAME_CREDENTIALS);
         final String tableNameRegistrationsString = tableNameRegistrations.orElse(DEFAULT_TABLE_NAME_REGISTRATIONS);
+        final String tableNameGroupsString = tableNameGroups.orElse(DEFAULT_TABLE_NAME_GROUPS);
 
-        final Path base = StatementConfiguration.DEFAULT_PATH.resolve("device");
-
-        return StatementConfiguration
-                .empty(tableNameRegistrationsString, tableNameCredentialsString)
-                .overrideWithDefaultPattern("base", dialect, Configurations.class, base)
-                .overrideWithDefaultPattern("table", dialect, Configurations.class, base);
-
-    }
-
-    /**
-     * Create a new default table configuration.
-     *
-     * @param jdbcUrl The JDBC URL.
-     * @param tableName The optional table name.
-     * @param hierarchical If the JSON store uses a hierarchical model for a flat one.
-     * @return The newly created configuration.
-     *
-     * @throws IOException in case an IO error occurs, when reading the statement configuration.
-     */
-    public static StatementConfiguration jsonConfiguration(final String jdbcUrl, final Optional<String> tableName, final boolean hierarchical) throws IOException {
-
-        final String dialect = SQL.getDatabaseDialect(jdbcUrl);
-        final String tableNameString = tableName.orElse(DEFAULT_TABLE_NAME_JSON);
-        final String jsonModel = hierarchical ? "json.tree" : "json.flat";
-
-        final Path base = StatementConfiguration.DEFAULT_PATH.resolve("device");
+        final Path base = StatementConfiguration.DEFAULT_PATH.resolve("org/eclipse/hono/service/base/jdbc/store/device");
 
         return StatementConfiguration
-                .empty(tableNameString)
-                .overrideWithDefaultPattern("base", dialect, Configurations.class, base)
-                .overrideWithDefaultPattern("json", dialect, Configurations.class, base)
-                .overrideWithDefaultPattern(jsonModel, dialect, Configurations.class, base);
+                .empty(tableNameRegistrationsString, tableNameCredentialsString, tableNameGroupsString)
+                .overrideWithDefaultPattern("base", dialect, Configurations.class, base);
 
     }
 

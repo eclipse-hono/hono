@@ -1,0 +1,27 @@
+updateLastKnownGateway: |
+  MERGE INTO %s (
+     tenant_id,
+     device_id,
+     last_known_gateway
+  ) KEY (
+     tenant_id,
+     device_id
+  ) VALUES (
+     :tenant_id,
+     :device_id,
+     :gateway_id
+  )
+
+updateAdapterInstance: |
+  MERGE INTO %s (
+     tenant_id,
+     device_id,
+     adapter_instance_id
+  ) KEY (
+     tenant_id,
+     device_id
+  ) VALUES (
+     :tenant_id,
+     :device_id,
+     :adapter_instance_id
+  )

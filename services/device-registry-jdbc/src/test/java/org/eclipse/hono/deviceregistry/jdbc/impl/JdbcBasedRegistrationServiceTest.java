@@ -11,13 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.base.jdbc.config;
+package org.eclipse.hono.deviceregistry.jdbc.impl;
 
-/**
- * The data model model.
- */
-public enum Mode {
-    JSON_FLAT,
-    JSON_TREE,
-    TABLE;
+import org.eclipse.hono.service.registration.RegistrationServiceTests;
+
+class JdbcBasedRegistrationServiceTest extends AbstractJdbcRegistryTest implements RegistrationServiceTests {
 }

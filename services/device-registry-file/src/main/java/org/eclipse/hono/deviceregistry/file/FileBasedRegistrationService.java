@@ -13,12 +13,11 @@
 package org.eclipse.hono.deviceregistry.file;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -298,20 +297,20 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     }
 
     @Override
-    public Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+    protected Future<Set<String>> processResolveGroupMembers(final String tenantId, final Set<String> viaGroups, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(span);
 
         final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
-        final List<String> gatewaySet = devices.entrySet().stream()
+        final Set<String> gatewaySet = devices.entrySet().stream()
                 .filter(entry -> entry.getValue().getValue().getMemberOf().stream()
-                        .anyMatch(group -> viaGroups.contains(group)))
+                        .anyMatch(viaGroups::contains))
                 .map(Entry::getKey)
-                .collect(Collectors.toCollection(ArrayList::new));
+                .collect(Collectors.toSet());
 
-        return Future.succeededFuture(new JsonArray(gatewaySet));
+        return Future.succeededFuture(gatewaySet);
     }
 
     private RegistrationResult convertResult(final String deviceId, final OperationResult<Device> result) {

@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.ext.sql.ResultSet;
@@ -75,7 +76,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * @return The future, tracking the outcome of the operation.
      */
     protected Future<ResultSet> readDevice(final SQLOperations operations, final DeviceKey key, final Span span) {
-        return read(operations, key, this.readRegistrationStatement, span);
+        return read(operations, key, this.readRegistrationStatement, span.context());
     }
 
     /**
@@ -88,12 +89,12 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * @param operations The SQL operations to use.
      * @param key The key to the device entry.
      * @param statement The statement to execute.
-     * @param span The span to contribute to.
+     * @param spanContext The span to contribute to.
      *
      * @return The future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> read(final SQLOperations operations, final DeviceKey key, final Statement statement, final Span span) {
-        return read(operations, key, Optional.empty(), statement, span);
+    protected Future<ResultSet> read(final SQLOperations operations, final DeviceKey key, final Statement statement, final SpanContext spanContext) {
+        return read(operations, key, Optional.empty(), statement, spanContext);
     }
 
     /**
@@ -107,11 +108,11 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * @param key The key to the device entry.
      * @param statement The statement to execute.
      * @param resourceVersion An optional resource version to read.
-     * @param span The span to contribute to.
+     * @param spanContext The span to contribute to.
      *
      * @return The future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> read(final SQLOperations operations, final DeviceKey key, final Optional<String> resourceVersion, final Statement statement, final Span span) {
+    protected Future<ResultSet> read(final SQLOperations operations, final DeviceKey key, final Optional<String> resourceVersion, final Statement statement, final SpanContext spanContext) {
 
         final var expanded = statement.expand(params -> {
             params.put("tenant_id", key.getTenantId());
@@ -121,7 +122,10 @@ public abstract class AbstractDeviceStore extends AbstractStore {
 
         log.debug("read - statement: {}", expanded);
 
-        return expanded.trace(this.tracer, span).query(this.client);
+        return expanded
+                .trace(this.tracer, spanContext)
+                .query(this.client);
+
     }
 
 }

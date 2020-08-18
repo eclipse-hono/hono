@@ -130,12 +130,14 @@ public class TelemetryJmsQoS1IT {
         final Tenant tenant = new Tenant();
 
         final VertxTestContext setup = new VertxTestContext();
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, pwd)
-            .compose(ok -> getAmqpAdapterConnection(username, pwd))
-            .onComplete(setup.succeeding(connection -> {
-                amqpAdapter = connection;
-                setup.completeNow();
-            }));
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, pwd)
+                .compose(ok -> getAmqpAdapterConnection(username, pwd))
+                .onComplete(setup.succeeding(connection -> {
+                    amqpAdapter = connection;
+                    setup.completeNow();
+                }))
+                .onFailure(setup::failNow);
         assertTrue(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS));
         if (setup.failed()) {
             fail(setup.causeOfFailure());
