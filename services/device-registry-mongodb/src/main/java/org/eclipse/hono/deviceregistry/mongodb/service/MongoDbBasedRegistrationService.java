@@ -374,8 +374,10 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         final Promise<List<JsonObject>> searchDevicesPromise = Promise.promise();
 
         searchDevicesOptions.setSort(sortDocument);
-        LOG.trace("pageSize: [{}], pageOffset: [{}], searchDevicesQuery: [{}], sortOptions: [{}]", pageSize, pageOffset,
-                searchDevicesQuery.encodePrettily(), sortDocument.encodePrettily());
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("pageSize: [{}], pageOffset: [{}], searchDevicesQuery: [{}], sortOptions: [{}]", pageSize,
+                    pageOffset, searchDevicesQuery.encodePrettily(), sortDocument.encodePrettily());
+        }
         mongoClient.findWithOptions(
                 config.getCollectionName(),
                 searchDevicesQuery,

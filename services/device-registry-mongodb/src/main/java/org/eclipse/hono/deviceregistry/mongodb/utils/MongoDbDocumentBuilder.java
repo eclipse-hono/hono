@@ -174,7 +174,7 @@ public final class MongoDbDocumentBuilder {
         return this;
     }
 
-    private int mapSortingDirection(final Sort.Direction direction) {
+    private static int mapSortingDirection(final Sort.Direction direction) {
         if (direction == Sort.Direction.asc) {
             return 1;
         } else {
