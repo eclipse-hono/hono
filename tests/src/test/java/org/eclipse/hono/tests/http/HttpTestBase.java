@@ -529,7 +529,7 @@ public abstract class HttpTestBase {
         final long start = System.currentTimeMillis();
         int messageCount = 0;
 
-        while (messageCount < numberOfMessages) {
+        while (messageCount < numberOfMessages && !messageSending.failed()) {
 
             messageCount++;
             final int currentMessage = messageCount;

@@ -114,6 +114,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         // WHEN a device that belongs to the tenant publishes an event

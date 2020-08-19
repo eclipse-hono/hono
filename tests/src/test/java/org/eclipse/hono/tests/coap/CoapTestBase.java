@@ -482,7 +482,7 @@ public abstract class CoapTestBase {
         final long start = System.currentTimeMillis();
         final AtomicInteger messageCount = new AtomicInteger(0);
 
-        while (messageCount.get() < numberOfMessages) {
+        while (messageCount.get() < numberOfMessages && !ctx.failed()) {
 
             final CountDownLatch sending = new CountDownLatch(1);
             requestSender.apply(messageCount.getAndIncrement()).compose(this::assertCoapResponse)
@@ -494,13 +494,16 @@ public abstract class CoapTestBase {
                                     attempt.cause().getMessage());
                             ctx.failNow(attempt.cause());
                         }
-                        sending.countDown();;
+                        sending.countDown();
                     });
 
             if (messageCount.get() % 20 == 0) {
                 logger.info("messages sent: {}", messageCount.get());
             }
             sending.await();
+        }
+        if (ctx.failed()) {
+            return;
         }
 
         final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 1000, Math.round(numberOfMessages * 20));
