@@ -287,6 +287,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
@@ -389,6 +390,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         assertThat(setup.awaitCompletion(15, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         final Checkpoint failedAttempts = ctx.checkpoint(2);
@@ -480,6 +482,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         final AtomicInteger commandsSent = new AtomicInteger(0);

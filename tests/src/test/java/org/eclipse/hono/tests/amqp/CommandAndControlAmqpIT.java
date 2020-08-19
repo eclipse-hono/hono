@@ -298,6 +298,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
                 (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender));
+        if (ctx.failed()) {
+            return;
+        }
 
         final String replyId = "reply-id";
         final int totalNoOfCommandsToSend = 60;
@@ -325,6 +328,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         final long start = System.currentTimeMillis();
@@ -425,6 +429,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final int totalNoOfCommandsToSend) throws InterruptedException {
 
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig, commandConsumerFactory);
+        if (ctx.failed()) {
+            return;
+        }
 
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
@@ -523,6 +530,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         final Checkpoint expectedFailures = ctx.checkpoint(2);
@@ -596,6 +604,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         final Checkpoint expectedSteps = ctx.checkpoint(2);
@@ -650,6 +659,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
                 (cmdReceiver, cmdResponseSender) -> createRejectingCommandConsumer(ctx, cmdReceiver));
+        if (ctx.failed()) {
+            return;
+        }
 
         final int totalNoOfCommandsToSend = 3;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
@@ -665,6 +677,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
             ctx.failNow(commandClientCreation.causeOfFailure());
+            return;
         }
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
@@ -739,6 +752,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         // command handler won't send a disposition update
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
                 (cmdReceiver, cmdResponseSender) -> createNotSendingDeliveryUpdateCommandConsumer(ctx, cmdReceiver, receivedMessagesCounter));
+        if (ctx.failed()) {
+            return;
+        }
 
         final int totalNoOfCommandsToSend = 2;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
@@ -754,6 +770,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
             ctx.failNow(commandClientCreation.causeOfFailure());
+            return;
         }
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
