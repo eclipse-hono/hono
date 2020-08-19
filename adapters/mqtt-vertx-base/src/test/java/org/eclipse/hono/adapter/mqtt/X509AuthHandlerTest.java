@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,7 +10,6 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-
 
 package org.eclipse.hono.adapter.mqtt;
 
@@ -33,6 +32,7 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
 import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +43,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttEndpoint;
-
 
 /**
  * Tests verifying behavior of {@link X509AuthHandler}.
@@ -94,7 +93,8 @@ public class X509AuthHandlerTest {
         when(endpoint.sslSession()).thenReturn(sslSession);
         when(endpoint.clientIdentifier()).thenReturn("mqtt-device");
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint,
+                TenantObject.from("tenant", true), "CN=device");
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
             .onComplete(ctx.succeeding(info -> {
@@ -131,7 +131,8 @@ public class X509AuthHandlerTest {
         when(endpoint.isSsl()).thenReturn(true);
         when(endpoint.sslSession()).thenReturn(sslSession);
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint,
+                TenantObject.from("tenant", true), "CN=device");
         authHandler.authenticateDevice(context)
             // THEN the request context is failed with the 503 error code
             .onComplete(ctx.failing(t -> {

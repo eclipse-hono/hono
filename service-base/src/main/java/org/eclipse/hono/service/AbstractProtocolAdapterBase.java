@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -55,10 +56,13 @@ import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -66,11 +70,13 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
@@ -197,6 +203,55 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Future<TenantClient> getTenantClient() {
         return getTenantClientFactory().getOrCreateTenantClient();
+    }
+
+    /**
+     * Applies the trace sampling priority configured for the given tenant to the given span.
+     * Also sets tenant/auth-id tags and sets the changed tracing context in the given execution context.
+     *
+     * @param tenantObjectWithAuthId The tenant and auth id.
+     * @param currentSpan The span to apply the configuration to.
+     * @param executionContext The execution context to set the span context in (may be {@code null}).
+     * @return An <em>OptionalInt</em> with the applied sampling priority or an empty <em>OptionalInt</em> if no priority was applied.
+     * @throws NullPointerException if tenantObjectWithAuthId or currentSpan is {@code null}.
+     */
+    protected final OptionalInt applyTenantTracingOptions(final TenantObjectWithAuthId tenantObjectWithAuthId,
+            final Span currentSpan, final ExecutionContext executionContext) {
+        final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
+                .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan);
+        TracingHelper.TAG_TENANT_ID.set(currentSpan, tenantObjectWithAuthId.getTenantObject().getTenantId());
+        if (getConfig().isAuthenticationRequired()) {
+            TracingHelper.TAG_AUTH_ID.set(currentSpan, tenantObjectWithAuthId.getAuthId());
+        }
+        if (executionContext != null) {
+            executionContext.setTracingContext(currentSpan.context());
+        }
+        return traceSamplingPriority;
+    }
+
+    /**
+     * Applies the trace sampling priority configured for the given tenant to the given span.
+     * Also sets tenant/auth-id tags and sets the changed tracing context in the given execution context.
+     *
+     * @param tenantObject The tenant from which to get the tracing configuration.
+     * @param authId The authentication identifier to get the tracing options for.
+     * @param currentSpan The span to apply the configuration to.
+     * @param executionContext The execution context to set the span context in (may be {@code null}).
+     * @return An <em>OptionalInt</em> with the applied sampling priority or an empty <em>OptionalInt</em> if no priority was applied.
+     * @throws NullPointerException if tenantObjectWithAuthId or currentSpan is {@code null}.
+     */
+    protected final OptionalInt applyTenantTracingOptions(final TenantObject tenantObject, final String authId,
+            final Span currentSpan, final ExecutionContext executionContext) {
+        final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
+                .applyTraceSamplingPriority(tenantObject, authId, currentSpan);
+        TracingHelper.TAG_TENANT_ID.set(currentSpan, tenantObject.getTenantId());
+        if (getConfig().isAuthenticationRequired()) {
+            TracingHelper.TAG_AUTH_ID.set(currentSpan, authId);
+        }
+        if (executionContext != null) {
+            executionContext.setTracingContext(currentSpan.context());
+        }
+        return traceSamplingPriority;
     }
 
     /**

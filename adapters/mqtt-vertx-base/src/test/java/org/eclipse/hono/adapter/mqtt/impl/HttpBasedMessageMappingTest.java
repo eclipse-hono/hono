@@ -35,6 +35,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -93,7 +94,7 @@ public class HttpBasedMessageMappingTest {
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, TEST_TENANT_ID, "gateway", new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject())
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -119,7 +120,7 @@ public class HttpBasedMessageMappingTest {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, TEST_TENANT_ID, "gateway", new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -162,7 +163,7 @@ public class HttpBasedMessageMappingTest {
         when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
 
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, TEST_TENANT_ID, "gateway", new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -180,8 +181,10 @@ public class HttpBasedMessageMappingTest {
         captor.getValue().handle(Future.succeededFuture(httpResponse));
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
+    private static MqttContext newContext(final MqttPublishMessage message, final String tenant,
+            final String authId, final Device authenticatedDevice) {
+        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), TenantObject.from(tenant, true),
+                authId, authenticatedDevice);
     }
 
     private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {

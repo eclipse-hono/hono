@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.slf4j.Logger;
@@ -39,27 +40,44 @@ public final class TenantTraceSamplingHelper {
     }
 
     /**
-     * Gets the trace sampling priority configured for the given tenant.
+     * Gets the trace sampling priority configured for the given tenant and authentication identifier.
      *
-     * @param tenantObjectWithAuthId The tenant object combined with an auth-id.
+     * @param tenantObjectWithAuthId The tenant object combined with an authentication identifier.
      * @return An <em>OptionalInt</em> containing the identified sampling priority or an empty
      *         <em>OptionalInt</em> if no priority was identified.
      * @throws NullPointerException if tenantObjectWithAuthId is {@code null}.
      */
     public static OptionalInt getTraceSamplingPriority(final TenantObjectWithAuthId tenantObjectWithAuthId) {
         Objects.requireNonNull(tenantObjectWithAuthId);
-        return Optional.ofNullable(getSamplingMode(tenantObjectWithAuthId))
+
+        return getTraceSamplingPriority(tenantObjectWithAuthId.getTenantObject(), tenantObjectWithAuthId.getAuthId());
+    }
+
+    /**
+     * Gets the trace sampling priority configured for the given tenant and authentication identifier.
+     *
+     * @param tenantObject The tenant from which to get the trace sampling priority configuration.
+     * @param authId The authentication identifier to get the trace sampling priority for (may be {@code null}).
+     * @return An <em>OptionalInt</em> containing the identified sampling priority or an empty
+     *         <em>OptionalInt</em> if no priority was identified.
+     * @throws NullPointerException if tenantObject is {@code null}.
+     */
+    public static OptionalInt getTraceSamplingPriority(final TenantObject tenantObject, final String authId) {
+        Objects.requireNonNull(tenantObject);
+
+        return Optional.ofNullable(getSamplingMode(tenantObject, authId))
                 .map(mode -> getSamplingPriority(mode))
                 .orElse(OptionalInt.empty());
     }
 
     /**
-     * Applies the trace sampling priority configured for the given tenant to the given span.
+     * Applies the trace sampling priority configured for the given tenant and authentication identifier to the given
+     * span.
      *
-     * @param tenantObjectWithAuthId The tenant object combined with an auth-id.
+     * @param tenantObjectWithAuthId The tenant object combined with an authentication identifier.
      * @param span The span to apply the configuration to.
-     * @return An <em>OptionalInt</em> containing the applied sampling priority or an empty
-     *         <em>OptionalInt</em> if no priority was applied.
+     * @return An <em>OptionalInt</em> containing the applied sampling priority or an empty <em>OptionalInt</em> if no
+     *         priority was applied.
      * @throws NullPointerException if either of the parameters is {@code null}.
      */
     public static OptionalInt applyTraceSamplingPriority(
@@ -69,14 +87,33 @@ public final class TenantTraceSamplingHelper {
         Objects.requireNonNull(tenantObjectWithAuthId);
         Objects.requireNonNull(span);
 
-        return Optional.ofNullable(getSamplingMode(tenantObjectWithAuthId))
+        return applyTraceSamplingPriority(tenantObjectWithAuthId.getTenantObject(), tenantObjectWithAuthId.getAuthId(), span);
+    }
+
+    /**
+     * Applies the trace sampling priority configured for the given tenant to the given span.
+     *
+     * @param tenantObject The tenant from which to get the trace sampling priority configuration.
+     * @param authId The authentication identifier to get the trace sampling priority for (may be {@code null}).
+     * @param span The span to apply the configuration to.
+     * @return An <em>OptionalInt</em> containing the applied sampling priority or an empty
+     *         <em>OptionalInt</em> if no priority was applied.
+     * @throws NullPointerException if tenantObject or span is {@code null}.
+     */
+    public static OptionalInt applyTraceSamplingPriority(
+            final TenantObject tenantObject,
+            final String authId,
+            final Span span) {
+
+        Objects.requireNonNull(tenantObject);
+        Objects.requireNonNull(span);
+
+        return Optional.ofNullable(getSamplingMode(tenantObject, authId))
                 .map(mode -> getSamplingPriority(mode))
                 .map(samplingPriority -> {
                     samplingPriority.ifPresent(prio -> {
                         LOG.trace("setting trace sampling prio to {} for tenant [{}], auth-id [{}]",
-                                prio,
-                                tenantObjectWithAuthId.getTenantObject().getTenantId(),
-                                tenantObjectWithAuthId.getAuthId());
+                                prio, tenantObject.getTenantId(), authId);
                         TracingHelper.setTraceSamplingPriority(span, prio);
                     });
                     return samplingPriority;
@@ -87,15 +124,28 @@ public final class TenantTraceSamplingHelper {
     /**
      * Gets the value for the <em>sampling.priority</em> span tag as encoded in the properties of this tenant.
      *
-     * @param tenantAndAuthId The authentication identity of a device.
+     * @param tenantAndAuthId The tenant and authentication identity of a device.
      * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
      *         <em>OptionalInt</em> if no priority should be set.
      */
     @JsonIgnore
     private static TracingSamplingMode getSamplingMode(final TenantObjectWithAuthId tenantAndAuthId) {
+        return getSamplingMode(tenantAndAuthId.getTenantObject(), tenantAndAuthId.getAuthId());
+    }
 
-        return Optional.ofNullable(tenantAndAuthId.getTenantObject().getTracingConfig())
-                .map(config -> config.getSamplingMode(tenantAndAuthId.getAuthId()))
+    /**
+     * Gets the value for the <em>sampling.priority</em> span tag as encoded in the properties of this tenant.
+     *
+     * @param tenantObject The tenant from which to get the trace sampling priority configuration.
+     * @param authId The authentication identifier to get the trace sampling priority for (may be {@code null}).
+     * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
+     *         <em>OptionalInt</em> if no priority should be set.
+     */
+    @JsonIgnore
+    private static TracingSamplingMode getSamplingMode(final TenantObject tenantObject, final String authId) {
+
+        return Optional.ofNullable(tenantObject.getTracingConfig())
+                .map(config -> config.getSamplingMode(authId))
                 .orElse(null);
     }
 

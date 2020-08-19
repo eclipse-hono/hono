@@ -45,7 +45,6 @@ import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.auth.device.ChainAuthHandler;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
-import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
@@ -55,11 +54,9 @@ import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
-import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -113,8 +110,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private MqttServer server;
     private MqttServer insecureServer;
-    private AuthHandler<MqttContext> authHandler;
-    private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
+    private AuthHandler<MqttConnectContext> authHandler;
+    private MqttRequestTenantDetailsProvider requestTenantDetailsProvider;
 
     /**
      * Sets the authentication handler to use for authenticating devices.
@@ -122,19 +119,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param authHandler The handler to use.
      * @throws NullPointerException if handler is {@code null}.
      */
-    public final void setAuthHandler(final AuthHandler<MqttContext> authHandler) {
+    public final void setAuthHandler(final AuthHandler<MqttConnectContext> authHandler) {
         this.authHandler = Objects.requireNonNull(authHandler);
     }
 
     /**
-     * Sets the provider that determines the tenant and auth-id associated with a request.
+     * Sets the provider that determines the tenant associated with a request.
      *
-     * @param tenantObjectWithAuthIdProvider the provider.
-     * @throws NullPointerException if tenantObjectWithAuthIdProvider is {@code null}.
+     * @param requestTenantDetailsProvider The provider.
+     * @throws NullPointerException if requestTenantDetailsProvider is {@code null}.
      */
-    public void setTenantObjectWithAuthIdProvider(
-            final ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider) {
-        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(tenantObjectWithAuthIdProvider);
+    public void setRequestTenantDetailsProvider(
+            final MqttRequestTenantDetailsProvider requestTenantDetailsProvider) {
+        this.requestTenantDetailsProvider = Objects.requireNonNull(requestTenantDetailsProvider);
     }
 
     @Override
@@ -188,9 +185,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @return The handler.
      */
-    protected AuthHandler<MqttContext> createAuthHandler() {
+    protected AuthHandler<MqttConnectContext> createAuthHandler() {
 
-        return new ChainAuthHandler<MqttContext>()
+        return new ChainAuthHandler<MqttConnectContext>()
                 .append(new X509AuthHandler(
                         new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                         new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer)))
@@ -202,16 +199,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Creates the provider that determines the tenant and auth-id associated with a request.
+     * Creates the provider that determines the tenant associated with a request.
      * <p>
-     * This default implementation creates a {@link MqttContextTenantAndAuthIdProvider}.
+     * This default implementation creates a {@link MqttRequestTenantDetailsProvider}.
      * <p>
      * Subclasses may override this method in order to return a different implementation.
      *
      * @return The provider.
      */
-    protected ExecutionContextTenantAndAuthIdProvider<MqttContext> createTenantAndAuthIdProvider() {
-        return new MqttContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
+    protected MqttRequestTenantDetailsProvider createRequestTenantDetailsProvider() {
+        return new MqttRequestTenantDetailsProvider(getConfig(), getTenantClientFactory());
     }
 
     /**
@@ -328,8 +325,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 if (authHandler == null) {
                     authHandler = createAuthHandler();
                 }
-                if (tenantObjectWithAuthIdProvider == null) {
-                    tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
+                if (requestTenantDetailsProvider == null) {
+                    requestTenantDetailsProvider = createRequestTenantDetailsProvider();
                 }
                 return Future.succeededFuture((Void) null);
             })
@@ -522,61 +519,38 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return Future.succeededFuture(null);
     }
 
-    private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
-            final Span currentSpan) {
+    private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint, final Span currentSpan) {
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
-        final Future<OptionalInt> traceSamplingPriority = applyTenantTraceSamplingPriority(context, currentSpan);
-        final Future<DeviceUser> authAttempt = traceSamplingPriority.compose(v -> {
-            context.setTracingContext(currentSpan.context());
-            return authenticate(context);
-        });
-        return authAttempt
-                .compose(authenticatedDevice -> CompositeFuture.all(
-                        getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
-                            .compose(tenantObj -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObj).recover(t -> Future.failedFuture(
-                                            new AdapterDisabledException(
-                                                    authenticatedDevice.getTenantId(),
-                                                    "adapter is disabled for tenant",
-                                                    t))),
-                                    checkConnectionLimit(tenantObj, currentSpan.context()))),
-                        checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
-                        .map(authenticatedDevice))
-                .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
-                .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, traceSamplingPriority.result()))
-                .recover(t -> {
-                    if (authAttempt.failed()) {
-                        log.debug("could not authenticate device", t);
-                    } else {
-                        log.debug("cannot establish connection with device [tenant-id: {}, device-id: {}]",
-                                authAttempt.result().getTenantId(), authAttempt.result().getDeviceId(), t);
-                    }
-                    return Future.failedFuture(t);
+        return MqttConnectContext.fromConnectPacket(endpoint, requestTenantDetailsProvider, currentSpan.context())
+                .compose(context -> {
+                    final OptionalInt traceSamplingPriority = applyTenantTracingOptions(context.tenantObject(),
+                            context.authId(), currentSpan, context);
+
+                    final Future<DeviceUser> authAttempt = authenticate(context);
+                    return authAttempt
+                            .compose(authenticatedDevice -> CompositeFuture.all(
+                                    isAdapterEnabled(context.tenantObject()).recover(t -> Future.failedFuture(
+                                            new AdapterDisabledException(authenticatedDevice.getTenantId(),
+                                                    "adapter is disabled for tenant", t))),
+                                    checkConnectionLimit(context.tenantObject(), currentSpan.context()),
+                                    checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
+                                    .map(authenticatedDevice))
+                            .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
+                            .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice,
+                                    traceSamplingPriority))
+                            .recover(t -> {
+                                if (authAttempt.failed()) {
+                                    log.debug("could not authenticate device", t);
+                                } else {
+                                    log.debug("cannot establish connection with device [tenant-id: {}, device-id: {}]",
+                                            authAttempt.result().getTenantId(), authAttempt.result().getDeviceId(), t);
+                                }
+                                return Future.failedFuture(t);
+                            });
                 });
     }
 
-    /**
-     * Applies the trace sampling priority configured for the tenant derived from the given context to the given span.
-     *
-     * @param context The execution context.
-     * @param currentSpan The span to apply the configuration to.
-     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
-     *         with the applied sampling priority or an empty <em>OptionalInt</em> if no priority was applied.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final Future<OptionalInt> applyTenantTraceSamplingPriority(final MqttContext context, final Span currentSpan) {
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(currentSpan);
-        return tenantObjectWithAuthIdProvider.get(context, currentSpan.context())
-                .map(tenantObjectWithAuthId -> TenantTraceSamplingHelper
-                        .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan))
-                .recover(t -> {
-                    return Future.succeededFuture(OptionalInt.empty());
-                });
-    }
-
-    private Future<DeviceUser> authenticate(final MqttContext connectContext) {
+    private Future<DeviceUser> authenticate(final MqttConnectContext connectContext) {
 
         return authHandler.authenticateDevice(connectContext);
     }
@@ -834,59 +808,55 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    void handlePublishedMessage(final MqttContext context) {
+    void handlePublishedMessage(final MqttPublishMessage message, final MqttEndpoint endpoint, final Device authenticatedDevice) {
+
         // try to extract a SpanContext from the property bag of the message's topic (if set)
-        final SpanContext spanContext = Optional.ofNullable(context.propertyBag())
-                .map(propertyBag -> TracingHelper.extractSpanContext(tracer, propertyBag::getPropertiesIterator))
-                .orElse(null);
-        final MqttQoS qos = context.message().qosLevel();
+        final SpanContext spanContext = message.topicName() != null
+                ? Optional.ofNullable(PropertyBag.fromTopic(message.topicName()))
+                        .map(propertyBag -> TracingHelper.extractSpanContext(tracer,
+                                propertyBag::getPropertiesIterator))
+                        .orElse(null)
+                : null;
+        final MqttQoS qos = message.qosLevel();
         final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "PUBLISH", getTypeName())
             .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-            .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
+            .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.topicName())
             .withTag(TracingHelper.TAG_QOS.getKey(), qos.toString())
-            .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
+            .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
             .start();
-        context.setTimer(getMetrics().startTimer());
 
-        applyTenantTraceSamplingPriority(context, span)
-                .compose(v -> {
-                    context.setTracingContext(span.context());
-                    return checkTopic(context);
-                })
-                .compose(ok -> onPublishedMessage(context))
-                .onComplete(processing -> {
-                    if (processing.succeeded()) {
-                        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
-                        onMessageSent(context);
-                    } else {
-                        if (processing.cause() instanceof ServiceInvocationException) {
-                            final ServiceInvocationException sie = (ServiceInvocationException) processing.cause();
-                            Tags.HTTP_STATUS.set(span, sie.getErrorCode());
-                        } else {
-                            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
-                        }
-                        if (processing.cause() instanceof ClientErrorException) {
-                            // nothing to do
-                        } else {
-                            onMessageUndeliverable(context);
-                        }
-                        TracingHelper.logError(span, processing.cause());
-                        if (context.deviceEndpoint().isConnected()) {
-                            span.log("closing connection to device");
-                            context.deviceEndpoint().close();
-                        }
+        MqttContext.fromPublishPacket(message, endpoint, requestTenantDetailsProvider, authenticatedDevice, span.context())
+                .compose(context -> {
+                    context.setTimer(getMetrics().startTimer());
+                    applyTenantTracingOptions(context.tenantObject(), context.authId(), span, context);
+
+                    return onPublishedMessage(context)
+                            .recover(thr -> {
+                                if (thr instanceof ClientErrorException) {
+                                    // nothing to do
+                                } else {
+                                    onMessageUndeliverable(context);
+                                }
+                                return Future.failedFuture(thr);
+                            }).map(ok -> {
+                                Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
+                                onMessageSent(context);
+                                return null;
+                            });
+                }).recover(thr -> {
+                    final int statusCode = thr instanceof ServiceInvocationException
+                            ? ((ServiceInvocationException) thr).getErrorCode()
+                            : HttpURLConnection.HTTP_INTERNAL_ERROR;
+                    Tags.HTTP_STATUS.set(span, statusCode);
+                    TracingHelper.logError(span, thr);
+                    if (endpoint.isConnected()) {
+                        span.log("closing connection to device");
+                        endpoint.close();
                     }
-                    span.finish();
-                });
+                    return Future.failedFuture(thr);
+                }).onComplete(res -> span.finish());
     }
 
-    private Future<Void> checkTopic(final MqttContext context) {
-        if (context.topic() == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
-        } else {
-            return Future.succeededFuture();
-        }
-    }
 
     /**
      * Forwards a message to the AMQP Messaging Network.
@@ -964,16 +934,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
 
-        return tenantTracker
-                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getTelemetrySender(tenant),
-                        ctx.endpoint()))
+        return uploadMessage(ctx, ctx.tenantObject(), deviceId, payload, getTelemetrySender(tenant), ctx.endpoint())
                 .compose(success -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
-                            ctx.tenant(),
-                            tenantTracker.result(),
+                            ctx.tenantObject().getTenantId(),
+                            ctx.tenantObject(),
                             MetricsTags.ProcessingOutcome.FORWARDED,
                             qos,
                             payload.length(),
@@ -982,8 +949,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 }).recover(t -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
-                            ctx.tenant(),
-                            tenantTracker.result(),
+                            ctx.tenantObject().getTenantId(),
+                            ctx.tenantObject(),
                             ProcessingOutcome.from(t),
                             qos,
                             payload.length(),
@@ -1024,16 +991,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
 
-        return tenantTracker
-                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getEventSender(tenant),
-                        ctx.endpoint()))
+        return uploadMessage(ctx, ctx.tenantObject(), deviceId, payload, getEventSender(tenant), ctx.endpoint())
                 .compose(success -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
-                            ctx.tenant(),
-                            tenantTracker.result(),
+                            ctx.tenantObject().getTenantId(),
+                            ctx.tenantObject(),
                             MetricsTags.ProcessingOutcome.FORWARDED,
                             qos,
                             payload.length(),
@@ -1042,8 +1006,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 }).recover(t -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
-                            ctx.tenant(),
-                            tenantTracker.result(),
+                            ctx.tenantObject().getTenantId(),
+                            ctx.tenantObject(),
                             ProcessingOutcome.from(t),
                             qos,
                             payload.length(),
@@ -1110,17 +1074,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-            final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
-                    targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
-            final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
-                                    isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
-                                    .map(success -> tenantTracker.result());
+        final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
 
-        return CompositeFuture.all(tenantTracker, commandResponseTracker)
-                .compose(success -> CompositeFuture.all(tokenTracker, tenantValidationTracker))
+        return commandResponseTracker
+                .compose(success -> CompositeFuture.all(
+                        getRegistrationAssertion(targetAddress.getTenantId(),
+                                targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context()), 
+                        isAdapterEnabled(ctx.tenantObject()),
+                        checkMessageLimit(ctx.tenantObject(), payloadSize, currentSpan.context())))
                 .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseTracker.result(),
                         currentSpan.context()))
                 .compose(delivery -> {
@@ -1129,7 +1090,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     metrics.reportCommand(
                             Direction.RESPONSE,
                             targetAddress.getTenantId(),
-                            tenantTracker.result(),
+                            ctx.tenantObject(),
                             ProcessingOutcome.FORWARDED,
                             payloadSize,
                             ctx.getTimer());
@@ -1146,7 +1107,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     metrics.reportCommand(
                             Direction.RESPONSE,
                             targetAddress.getTenantId(),
-                            tenantTracker.result(),
+                            ctx.tenantObject(),
                             ProcessingOutcome.from(t),
                             payloadSize,
                             ctx.getTimer());
@@ -1293,59 +1254,20 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Extracts credentials from a client's MQTT <em>CONNECT</em> packet.
-     * <p>
-     * This default implementation returns a future with {@link UsernamePasswordCredentials} created from the
-     * <em>username</em> and <em>password</em> fields of the <em>CONNECT</em> packet.
-     * <p>
-     * Subclasses should override this method if the device uses credentials that do not comply with the format expected
-     * by {@link UsernamePasswordCredentials}.
-     *
-     * @param endpoint The MQTT endpoint representing the client.
-     * @return A future indicating the outcome of the operation.
-     *         The future will succeed with the client's credentials extracted from the CONNECT packet
-     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
-     */
-    protected final Future<UsernamePasswordCredentials> getCredentials(final MqttEndpoint endpoint) {
-
-        if (endpoint.auth() == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device did not provide credentials in CONNECT packet"));
-        }
-
-        if (endpoint.auth().getUsername() == null || endpoint.auth().getPassword() == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device provided malformed credentials in CONNECT packet"));
-        }
-
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
-                .create(endpoint.auth().getUsername(), endpoint.auth().getPassword(), getConfig().isSingleTenant());
-
-        if (credentials == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device provided malformed credentials in CONNECT packet"));
-        } else {
-            return Future.succeededFuture(credentials);
-        }
-    }
-
-    /**
      * Processes an MQTT message that has been published by a device.
      * <p>
      * Subclasses should determine
      * <ul>
-     * <li>the tenant and identifier of the device that has published the message</li>
+     * <li>the identifier of the device that has published the message</li>
      * <li>the payload to send downstream</li>
      * <li>the content type of the payload</li>
      * </ul>
      * and then invoke one of the <em>upload*</em> methods to send the message downstream.
      *
-     * @param ctx The context in which the MQTT message has been published. The
-     *            {@link MqttContext#topic()} method will return a non-null resource identifier
-     *            for the topic that the message has been published to.
+     * @param ctx The context in which the MQTT message has been published. The {@link MqttContext#topic()} method will
+     *            return a non-null resource identifier for the topic that the message has been published to. The
+     *            {@link MqttContext#tenantObject()} method will return the tenant of the device that has published
+     *            the message.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been successfully uploaded. Otherwise, the future will fail
@@ -1581,7 +1503,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final CommandSubscriptionsManager<T> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, getConfig());
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdSubscriptionsManager, traceSamplingPriority));
         endpoint.publishHandler(
-                message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
+                message -> handlePublishedMessage(message, endpoint, authenticatedDevice));
         endpoint.publishAcknowledgeHandler(cmdSubscriptionsManager::handlePubAck);
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdSubscriptionsManager,
                 traceSamplingPriority));

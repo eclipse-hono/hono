@@ -38,7 +38,7 @@ import io.vertx.core.json.JsonObject;
  * X.509 credentials for the device in order to determine the corresponding device identifier.
  *
  */
-public class X509AuthHandler extends ExecutionContextAuthHandler<MqttContext> {
+public class X509AuthHandler extends ExecutionContextAuthHandler<MqttConnectContext> {
 
     private static final ClientErrorException UNAUTHORIZED = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED);
 
@@ -80,7 +80,7 @@ public class X509AuthHandler extends ExecutionContextAuthHandler<MqttContext> {
      * @throws IllegalArgumentException if the context does not contain an MQTT endpoint.
      */
     @Override
-    public Future<JsonObject> parseCredentials(final MqttContext context) {
+    public Future<JsonObject> parseCredentials(final MqttConnectContext context) {
 
         Objects.requireNonNull(context);
 

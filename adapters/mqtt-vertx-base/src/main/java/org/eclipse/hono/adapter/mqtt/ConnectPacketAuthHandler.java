@@ -37,7 +37,7 @@ import io.vertx.mqtt.MqttAuth;
  * An auth handler for extracting a username and password from an MQTT CONNECT packet.
  *
  */
-public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttContext> {
+public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttConnectContext> {
 
     private final Tracer tracer;
 
@@ -72,7 +72,7 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
      * @throws IllegalArgumentException if the context does not contain an MQTT endpoint.
      */
     @Override
-    public Future<JsonObject> parseCredentials(final MqttContext context) {
+    public Future<JsonObject> parseCredentials(final MqttConnectContext context) {
 
         Objects.requireNonNull(context);
 

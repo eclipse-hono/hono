@@ -13,17 +13,22 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.SpanContext;
+import io.vertx.core.Future;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -34,92 +39,138 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
-    private MqttPublishMessage message;
-    private MqttEndpoint deviceEndpoint;
-    private Device authenticatedDevice;
-    private ResourceIdentifier topic;
+    private final MqttPublishMessage message;
+    private final MqttEndpoint deviceEndpoint;
+    private final ResourceIdentifier topic;
+    private final TenantObject tenantObject;
+    private final String authId;
+    private final PropertyBag propertyBag;
+    private final MetricsTags.EndpointType endpoint;
+
     private String contentType;
     private Sample timer;
-    private MetricsTags.EndpointType endpoint;
-    private PropertyBag propertyBag;
 
-    private MqttContext(final Device authenticatedDevice) {
+    private MqttContext(
+            final MqttPublishMessage message,
+            final MqttEndpoint deviceEndpoint,
+            final ResourceIdentifier topic,
+            final TenantObject tenantObject,
+            final String authId,
+            final Device authenticatedDevice,
+            final PropertyBag propertyBag) {
         super(authenticatedDevice);
-    }
-
-    @Override
-    public QoS getRequestedQos() {
-
-        switch (message.qosLevel()) {
-            case AT_LEAST_ONCE:
-                return QoS.AT_LEAST_ONCE;
-            case AT_MOST_ONCE:
-                return QoS.AT_MOST_ONCE;
-            default:
-                return QoS.UNKNOWN;
-        }
-    }
-
-    /**
-     * Creates a new context for a published message.
-     *
-     * @param publishedMessage The MQTT message to process.
-     * @param deviceEndpoint The endpoint representing the device
-     *                       that has published the message.
-     * @return The context.
-     * @throws NullPointerException if message or endpoint are {@code null}.
-     */
-    public static MqttContext fromPublishPacket(
-            final MqttPublishMessage publishedMessage,
-            final MqttEndpoint deviceEndpoint) {
-
-        return fromPublishPacket(publishedMessage, deviceEndpoint, null);
+        this.message = Objects.requireNonNull(message);
+        this.deviceEndpoint = Objects.requireNonNull(deviceEndpoint);
+        this.topic = Objects.requireNonNull(topic);
+        this.tenantObject = Objects.requireNonNull(tenantObject);
+        this.authId = authId;
+        this.propertyBag = propertyBag;
+        this.endpoint = MetricsTags.EndpointType.fromString(topic.getEndpoint());
     }
 
     /**
      * Creates a new context for a published message.
      *
      * @param publishedMessage The published MQTT message.
-     * @param deviceEndpoint The endpoint representing the device
-     *                       that has published the message.
-     * @param authenticatedDevice The authenticated device identity.
+     * @param deviceEndpoint The endpoint representing the device that has published the message.
+     * @param requestTenantDetailsProvider The provider to determine tenant and authentication identifier from the
+     *            authentication data used during connection establishment or to determine the tenant from the topic of
+     *            the PUBLISH message in case of an unauthenticated connection.
+     * @param authenticatedDevice The authenticated identity of the device that published the message or {@code null} if
+     *            the device has not been authenticated.
+     * @param spanContext The OpenTracing context to use for tracking the operation (may be {@code null}).
+     * @return A future containing the created context. The future will be failed if there was an error getting the
+     *         tenant and authentication identifier via the requestTenantDetailsProvider. In particular, the future will be
+     *         failed with a {@link ClientErrorException} if there was no corresponding data given in the connection
+     *         attempt or in the message topic to determine the tenant.
+     * @throws NullPointerException if message, endpoint or requestTenantDetailsProvider is {@code null}.
+     */
+    public static Future<MqttContext> fromPublishPacket(
+            final MqttPublishMessage publishedMessage,
+            final MqttEndpoint deviceEndpoint,
+            final MqttRequestTenantDetailsProvider requestTenantDetailsProvider,
+            final Device authenticatedDevice,
+            final SpanContext spanContext) {
+
+        Objects.requireNonNull(publishedMessage);
+        Objects.requireNonNull(deviceEndpoint);
+        Objects.requireNonNull(requestTenantDetailsProvider);
+
+        if (publishedMessage.topicName() == null) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+        }
+        final PropertyBag propertyBag = PropertyBag.fromTopic(publishedMessage.topicName());
+        final ResourceIdentifier topic = ResourceIdentifier.fromString(propertyBag != null
+                ? propertyBag.topicWithoutPropertyBag()
+                : publishedMessage.topicName());
+
+        return requestTenantDetailsProvider.getFromMqttEndpointOrPublishTopic(deviceEndpoint, topic, spanContext)
+                .map(tenantObjectWithAuthId -> new MqttContext(
+                        publishedMessage,
+                        deviceEndpoint,
+                        topic,
+                        tenantObjectWithAuthId.getTenantObject(),
+                        (tenantObjectWithAuthId instanceof DeviceCredentials)
+                                ? ((DeviceCredentials) tenantObjectWithAuthId).getAuthId()
+                                : null,
+                        authenticatedDevice,
+                        propertyBag));
+    }
+
+    /**
+     * Creates a new context for a published message.
+     *
+     * @param publishedMessage The published MQTT message.
+     * @param deviceEndpoint The endpoint representing the device that has published the message.
+     * @param tenantObject The tenant that the device belongs to that published the message.
+     * @param authId The authentication identifier used for the MQTT connection or {@code null} if the connection is
+     *            unauthenticated.
+     * @param authenticatedDevice The authenticated identity of the device that published the message or {@code null} if
+     *            the device has not been authenticated.
      * @return The context.
-     * @throws NullPointerException if message or endpoint are {@code null}.
+     * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
+     * @throws IllegalArgumentException if the topic of the given message is {@code null}.
      */
     public static MqttContext fromPublishPacket(
             final MqttPublishMessage publishedMessage,
             final MqttEndpoint deviceEndpoint,
+            final TenantObject tenantObject,
+            final String authId,
             final Device authenticatedDevice) {
 
         Objects.requireNonNull(publishedMessage);
         Objects.requireNonNull(deviceEndpoint);
+        Objects.requireNonNull(tenantObject);
 
-        final MqttContext result = new MqttContext(authenticatedDevice);
-        result.message = publishedMessage;
-        result.deviceEndpoint = deviceEndpoint;
-        result.authenticatedDevice = authenticatedDevice;
-        if (publishedMessage.topicName() != null) {
-            Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
-                    .ifPresentOrElse(propertyBag -> {
-                        result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());
-                        result.propertyBag = propertyBag;
-                    }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
-            result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
+        if (publishedMessage.topicName() == null) {
+            throw new IllegalArgumentException("message topic must be set");
         }
-        return result;
+        final PropertyBag propertyBag = PropertyBag.fromTopic(publishedMessage.topicName());
+        final ResourceIdentifier topic = ResourceIdentifier.fromString(propertyBag != null
+                ? propertyBag.topicWithoutPropertyBag()
+                : publishedMessage.topicName());
+
+        return new MqttContext(
+                publishedMessage,
+                deviceEndpoint,
+                topic,
+                tenantObject,
+                authId,
+                authenticatedDevice,
+                propertyBag);
     }
 
-    /**
-     * Creates a new context for a connection attempt.
-     *
-     * @param endpoint The endpoint representing the client's connection attempt.
-     * @return The context.
-     * @throws NullPointerException if endpoint is {@code null}.
-     */
-    public static MqttContext fromConnectPacket(final MqttEndpoint endpoint) {
-        final MqttContext result = new MqttContext(null);
-        result.deviceEndpoint = endpoint;
-        return result;
+    @Override
+    public QoS getRequestedQos() {
+
+        switch (message.qosLevel()) {
+        case AT_LEAST_ONCE:
+            return QoS.AT_LEAST_ONCE;
+        case AT_MOST_ONCE:
+            return QoS.AT_MOST_ONCE;
+        default:
+            return QoS.UNKNOWN;
+        }
     }
 
     /**
@@ -149,7 +200,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      *         been authenticated.
      */
     public Device authenticatedDevice() {
-        return authenticatedDevice;
+        return getAuthenticatedDevice();
     }
 
     /**
@@ -181,22 +232,21 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Gets the tenant that the device belongs to that published
-     * the message.
+     * Gets the tenant that the device belongs to that published the message.
      *
-     * @return The tenant identifier or {@code null} if the device is
-     *         not authenticated and the message's topic does not contain
-     *         a tenant identifier.
+     * @return The tenant object.
      */
-    public String tenant() {
+    public TenantObject tenantObject() {
+        return tenantObject;
+    }
 
-        if (authenticatedDevice != null) {
-            return authenticatedDevice.getTenantId();
-        } else if (topic != null) {
-            return topic.getTenantId();
-        } else {
-            return null;
-        }
+    /**
+     * Gets the authentication identifier used in the MQTT connection.
+     *
+     * @return The authentication identifier or {@code null} if the device has not been authenticated.
+     */
+    public String authId() {
+        return authId;
     }
 
     /**

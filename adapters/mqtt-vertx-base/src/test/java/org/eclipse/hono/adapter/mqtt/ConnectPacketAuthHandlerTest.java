@@ -18,10 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,10 +57,9 @@ public class ConnectPacketAuthHandlerTest {
      * information retrieved from a device's CONNECT packet.
      *
      * @param ctx The vert.x test context.
-     * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */
     @Test
-    public void testParseCredentialsIncludesMqttClientId(final VertxTestContext ctx) throws SSLPeerUnverifiedException {
+    public void testParseCredentialsIncludesMqttClientId(final VertxTestContext ctx) {
 
         // GIVEN an auth handler configured with an auth provider
 
@@ -74,7 +72,8 @@ public class ConnectPacketAuthHandlerTest {
         when(endpoint.auth()).thenReturn(auth);
         when(endpoint.clientIdentifier()).thenReturn("mqtt-device");
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint,
+                TenantObject.from("DEFAULT_TENANT", true), "sensor1");
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
             .onComplete(ctx.succeeding(info -> {

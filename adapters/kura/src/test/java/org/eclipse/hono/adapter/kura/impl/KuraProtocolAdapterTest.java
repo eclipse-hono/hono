@@ -24,6 +24,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,7 +71,7 @@ public class KuraProtocolAdapterTest {
         // GIVEN an adapter configured to use the standard topic.control-prefix $EDC
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
-        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "$EDC/my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "$EDC/my-scope/4711", "my-scope");
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
                 ctx.verify(() -> {
                     // THEN the message is mapped to the event API
@@ -96,7 +97,7 @@ public class KuraProtocolAdapterTest {
         config.setCtrlMsgContentType("control-msg");
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "$EDC/my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "$EDC/my-scope/4711", "my-scope");
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the telemetry API
@@ -121,7 +122,7 @@ public class KuraProtocolAdapterTest {
         config.setControlPrefix("bumlux");
 
         // WHEN a message is published to a topic with the custom prefix as endpoint
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "bumlux/my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "bumlux/my-scope/4711", "my-scope");
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the event API
@@ -147,7 +148,7 @@ public class KuraProtocolAdapterTest {
         config.setDataMsgContentType("data-msg");
 
         // WHEN a message is published to an application topic with QoS 0
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "my-scope/4711", "my-scope");
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the telemetry API
@@ -172,7 +173,7 @@ public class KuraProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN a message is published to an application topic with QoS 1
-        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "my-scope/4711", "my-scope");
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is forwarded to the event API
@@ -204,17 +205,26 @@ public class KuraProtocolAdapterTest {
         return message;
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic) {
-        return newContext(qosLevel, topic, null);
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final String tenant) {
+
+        return newContext(qosLevel, topic, tenant, null, null);
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Device authenticatedDevice) {
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final String tenant,
+            final String authId, final Device authenticatedDevice) {
 
         final MqttPublishMessage message = newMessage(qosLevel, topic);
-        return newContext(message, authenticatedDevice);
+        return newContext(message, tenant, authId, authenticatedDevice);
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
+    private static MqttContext newContext(final MqttPublishMessage message, final String tenant,
+            final String authId, final Device authenticatedDevice) {
+
+        return MqttContext.fromPublishPacket(
+                message,
+                mock(MqttEndpoint.class),
+                TenantObject.from(tenant, true),
+                authId,
+                authenticatedDevice);
     }
 }

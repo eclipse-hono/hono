@@ -16,16 +16,22 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.device.TenantDetailsDeviceCredentials;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantObjectContainer;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Future;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -36,26 +42,23 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 public class MqttContextTest {
 
     /**
-     * Verifies that the tenant is determined from the authenticated device.
+     * Verifies that the tenant is determined via the MqttRequestTenantAndAuthIdExtractor.
      */
     @Test
-    public void testTenantIsRetrievedFromAuthenticatedDevice() {
+    public void testTenantIsRetrievedViaExtractor() {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t");
         final Device device = new Device("tenant", "device");
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
-        assertEquals("tenant", context.tenant());
-    }
+        final TenantObject tenantObject = TenantObject.from("tenant", true);
 
-    /**
-     * Verifies that the tenant is determined from the published message's topic if
-     * the device has not been authenticated.
-     */
-    @Test
-    public void testTenantIsRetrievedFromTopic() {
-        final MqttPublishMessage msg = newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device");
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
-        assertEquals("tenant", context.tenant());
+        final MqttRequestTenantDetailsProvider tenantAndAuthIdExtractor = mock(MqttRequestTenantDetailsProvider.class);
+        when(tenantAndAuthIdExtractor.getFromMqttEndpointOrPublishTopic(any(MqttEndpoint.class), any(), any()))
+                .thenReturn(Future.succeededFuture(getCredentials(tenantObject, "device")));
+        final Future<MqttContext> contextFuture = MqttContext
+                .fromPublishPacket(msg, mock(MqttEndpoint.class), tenantAndAuthIdExtractor, device, null);
+
+        assertTrue(contextFuture.succeeded());
+        assertEquals(tenantObject, contextFuture.result().tenantObject());
     }
 
     /**
@@ -66,7 +69,8 @@ public class MqttContextTest {
         final Device device = new Device("tenant", "device");
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("event/tenant/device/?param1=value1&param2=value2");
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class),
+                TenantObject.from("tenant", true), "device", device);
 
         assertNotNull(context.propertyBag());
         assertEquals("value1", context.propertyBag().getProperty("param1"));
@@ -91,8 +95,14 @@ public class MqttContextTest {
                 MetricsTags.EndpointType.COMMAND);
     }
 
+    private TenantObjectContainer getCredentials(final TenantObject tenantObject, final String authId) {
+        return new TenantDetailsDeviceCredentials(tenantObject, authId, "unspecified");
+    }
+
     private static void assertEndpoint(final MqttPublishMessage msg, final MetricsTags.EndpointType expectedEndpoint) {
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
+
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class),
+                TenantObject.from("tenantIgnored", true), "authIdIgnored", null);
         assertEquals(expectedEndpoint, context.endpoint());
     }
 
