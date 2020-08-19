@@ -34,6 +34,9 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.service.management.device.Filter;
+import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -146,6 +149,24 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(span);
 
         return processReadDevice(tenantId, deviceId)
+                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+    }
+
+    @Override
+    public Future<OperationResult<List<DeviceWithId>>> searchDevices(
+            final String tenantId,
+            final int pageSize,
+            final int pageOffset,
+            final List<Filter> filters,
+            final List<Sort> sortOptions,
+            final Span span) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(filters);
+        Objects.requireNonNull(sortOptions);
+        Objects.requireNonNull(span);
+
+        return processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions)
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -330,6 +351,55 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             .orElse(new JsonArray());
                     span.log("successfully resolved group members");
                     return deviceIds;
+                });
+    }
+
+    private Future<OperationResult<List<DeviceWithId>>> processSearchDevices(
+            final String tenantId,
+            final int pageSize,
+            final int pageOffset,
+            final List<Filter> filters,
+            final List<Sort> sortOptions) {
+
+        final FindOptions searchDevicesOptions = new FindOptions()
+                .setLimit(pageSize)
+                .setSkip(pageOffset);
+        final JsonObject searchDevicesQuery = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
+                .withDeviceFilters(filters)
+                .document();
+        final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
+                .withDeviceSortOptions(sortOptions)
+                .document();
+        final Promise<List<JsonObject>> searchDevicesPromise = Promise.promise();
+
+        searchDevicesOptions.setSort(sortDocument);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("pageSize: [{}], pageOffset: [{}], searchDevicesQuery: [{}], sortOptions: [{}]", pageSize,
+                    pageOffset, searchDevicesQuery.encodePrettily(), sortDocument.encodePrettily());
+        }
+        mongoClient.findWithOptions(
+                config.getCollectionName(),
+                searchDevicesQuery,
+                searchDevicesOptions,
+                searchDevicesPromise);
+
+        return searchDevicesPromise.future()
+                .map(result -> {
+                    final List<DeviceWithId> devicesWithId = Optional.ofNullable(result)
+                            .map(devices -> devices.stream()
+                                    .map(json -> json.mapTo(DeviceDto.class))
+                                    .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getDevice()))
+                                    .collect(Collectors.toList()))
+                            .map(devices -> devices.isEmpty() ? null : devices)
+                            .orElseThrow(() -> new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
+
+                    return OperationResult.ok(
+                            HttpURLConnection.HTTP_OK,
+                            devicesWithId,
+                            Optional.ofNullable(
+                                    DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
+                            Optional.empty());
                 });
     }
 

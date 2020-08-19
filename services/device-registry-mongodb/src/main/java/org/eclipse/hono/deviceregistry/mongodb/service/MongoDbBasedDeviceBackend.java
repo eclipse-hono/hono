@@ -24,6 +24,9 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.AutoProvisioningEnabledDeviceBackend;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.service.management.device.Filter;
+import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -75,6 +78,16 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
     @Override
     public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
         return registrationService.readDevice(tenantId, deviceId, span);
+    }
+
+    @Override
+    public Future<OperationResult<List<DeviceWithId>>> searchDevices(final String tenantId,
+            final int pageSize,
+            final int pageOffset,
+            final List<Filter> filters,
+            final List<Sort> sortOptions,
+            final Span span) {
+        return registrationService.searchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span);
     }
 
     @Override
