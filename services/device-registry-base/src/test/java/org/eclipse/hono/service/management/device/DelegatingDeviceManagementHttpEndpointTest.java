@@ -26,9 +26,11 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
+import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Filter.Operator;
 import org.eclipse.hono.service.management.device.Sort.Direction;
@@ -40,9 +42,11 @@ import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
 
@@ -56,6 +60,9 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     private DelegatingDeviceManagementHttpEndpoint<DeviceManagementService> endpoint;
     private Vertx vertx;
     private Router router;
+    private MultiMap requestParams;
+    private MultiMap requestHeaders;
+    private Buffer requestBody;
 
     /**
      * Sets up the fixture.
@@ -69,6 +76,13 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         // make sure that ServiceInvocationExceptions are properly handled
         // and result in the exception's error code being set on the response
         router.route().failureHandler(new DefaultFailureHandler());
+        // allow upload of data in a request
+        router.route().handler(ctx -> {
+            if (requestBody != null) {
+                ctx.setBody(requestBody);
+            }
+            ctx.next();
+        });
         service = mock(DeviceManagementService.class);
         when(service.searchDevices(
                 anyString(),
@@ -81,6 +95,103 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         endpoint = new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx, service);
         endpoint.setConfiguration(new ServiceConfigProperties());
         endpoint.addRoutes(router);
+        requestParams = MultiMap.caseInsensitiveMultiMap();
+        requestHeaders = MultiMap.caseInsensitiveMultiMap();
+    }
+
+    /**
+     * Verifies that the endpoint uses the device ID provided in a request's URI
+     * for creating a device.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateDeviceUsesIdFromUriParam() {
+
+        final JsonObject json = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_MAPPER, "my-mapper")
+                .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("custom", "value"));
+        requestBody = json.toBuffer();
+
+        when(service.createDevice(anyString(), any(Optional.class), any(Device.class), any(Span.class)))
+            .thenAnswer(invocation -> {
+                final Optional<String> deviceId = invocation.getArgument(1);
+                return Future.succeededFuture(OperationResult.ok(
+                        HttpURLConnection.HTTP_CREATED,
+                        Id.of(deviceId.get()),
+                        Optional.empty(),
+                        Optional.empty()));
+            });
+
+        final HttpServerResponse response = newResponse();
+
+        final HttpServerRequest request = newRequest(
+                HttpMethod.POST,
+                "/v1/devices/mytenant/mydeviceid",
+                requestHeaders,
+                requestParams,
+                response);
+        when(request.getHeader("Content-Type")).thenReturn("application/json");
+
+        router.handle(request);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_CREATED);
+        verify(service).createDevice(
+                eq("mytenant"),
+                argThat(deviceId -> "mydeviceid".equals(deviceId.get())),
+                argThat(device -> {
+                    return "my-mapper".equals(device.getMapper()) &&
+                            "value".equals(device.getExtensions().get("custom"));
+                }),
+                any(Span.class));
+    }
+
+    /**
+     * Verifies that the endpoint returns a 400 status code if the request's URI contains
+     * a device ID that does not match the configured device ID pattern.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateDeviceRejectsInvalidDeviceId() {
+
+        final HttpServerResponse response = newResponse();
+
+        final HttpServerRequest request = newRequest(
+                HttpMethod.POST,
+                "/v1/devices/mytenant/%265woo_%24",
+                requestHeaders,
+                requestParams,
+                response);
+
+        router.handle(request);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
+        verify(service, never()).createDevice(anyString(), any(Optional.class), any(Device.class), any(Span.class));
+    }
+
+    /**
+     * Verifies that the endpoint returns a 400 status code if the request body contains
+     * a JSON object that does not comply with the Device object specification.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateDeviceRejectsInvalidPayload() {
+
+        final JsonObject json = new JsonObject().put("manufacturer", "ACME");
+        requestBody = json.toBuffer();
+        final HttpServerResponse response = newResponse();
+
+        final HttpServerRequest request = newRequest(
+                HttpMethod.POST,
+                "/v1/devices/mytenant/newdevice",
+                requestHeaders,
+                requestParams,
+                response);
+        when(request.getHeader("Content-Type")).thenReturn("application/json");
+
+        router.handle(request);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
+        verify(service, never()).createDevice(anyString(), any(Optional.class), any(Device.class), any(Span.class));
     }
 
     /**
@@ -92,11 +203,13 @@ public class DelegatingDeviceManagementHttpEndpointTest {
 
         final HttpServerResponse response = newResponse();
 
-        final MultiMap params = MultiMap.caseInsensitiveMultiMap();
-        params.add("tenant_id", "mytenant");
+        final HttpServerRequest request = newRequest(
+                HttpMethod.GET,
+                "/v1/devices/mytenant",
+                requestHeaders,
+                requestParams,
+                response);
 
-        final HttpServerRequest request = newRequest(HttpMethod.GET, "/v1/devices/mytenant", response);
-        when(request.params()).thenReturn(params);
         router.handle(request);
 
         verify(response).setStatusCode(HttpURLConnection.HTTP_OK);
@@ -117,17 +230,20 @@ public class DelegatingDeviceManagementHttpEndpointTest {
 
         final HttpServerResponse response = newResponse();
 
-        final MultiMap params = MultiMap.caseInsensitiveMultiMap();
-        params.add("tenant_id", "mytenant");
-        params.add(RegistryManagementConstants.PARAM_PAGE_SIZE, "10");
-        params.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, "50");
-        params.add(RegistryManagementConstants.PARAM_FILTER_JSON,
+        requestParams.add(RegistryManagementConstants.PARAM_PAGE_SIZE, "10");
+        requestParams.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, "50");
+        requestParams.add(RegistryManagementConstants.PARAM_FILTER_JSON,
                 "{\"field\":\"/manufacturer\",\"value\":\"ACME*\"}");
-        params.add(RegistryManagementConstants.PARAM_SORT_JSON,
+        requestParams.add(RegistryManagementConstants.PARAM_SORT_JSON,
                 "{\"field\":\"/manufacturer\",\"direction\":\"desc\"}");
 
-        final HttpServerRequest request = newRequest(HttpMethod.GET, "/v1/devices/mytenant", response);
-        when(request.params()).thenReturn(params);
+        final HttpServerRequest request = newRequest(
+                HttpMethod.GET,
+                "/v1/devices/mytenant",
+                requestHeaders,
+                requestParams,
+                response);
+
         router.handle(request);
 
         verify(response).setStatusCode(HttpURLConnection.HTTP_OK);
@@ -164,10 +280,8 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     @Test
     public void testSearchDevicesFailsForMalformedPageSizeParam() {
 
-        final MultiMap params = MultiMap.caseInsensitiveMultiMap();
-        params.add("tenant_id", "mytenant");
-        params.add(RegistryManagementConstants.PARAM_PAGE_SIZE, "not-a-number");
-        testSearchDevicesFailsForMalformedSearchCriteria(params);
+        requestParams.add(RegistryManagementConstants.PARAM_PAGE_SIZE, "not-a-number");
+        testSearchDevicesFailsForMalformedSearchCriteria(requestParams);
     }
 
     /**
@@ -177,10 +291,8 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     @Test
     public void testSearchDevicesFailsForMalformedPageOffsetParam() {
 
-        final MultiMap params = MultiMap.caseInsensitiveMultiMap();
-        params.add("tenant_id", "mytenant");
-        params.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, "not-a-number");
-        testSearchDevicesFailsForMalformedSearchCriteria(params);
+        requestParams.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, "not-a-number");
+        testSearchDevicesFailsForMalformedSearchCriteria(requestParams);
     }
 
     /**
@@ -190,10 +302,8 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     @Test
     public void testSearchDevicesFailsForMalformedFilterJsonParam() {
 
-        final MultiMap params = MultiMap.caseInsensitiveMultiMap();
-        params.add("tenant_id", "mytenant");
-        params.add(RegistryManagementConstants.PARAM_FILTER_JSON, "not-JSON");
-        testSearchDevicesFailsForMalformedSearchCriteria(params);
+        requestParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, "not-JSON");
+        testSearchDevicesFailsForMalformedSearchCriteria(requestParams);
     }
 
     /**
@@ -203,10 +313,8 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     @Test
     public void testSearchDevicesFailsForMalformedSortJsonParam() {
 
-        final MultiMap params = MultiMap.caseInsensitiveMultiMap();
-        params.add("tenant_id", "mytenant");
-        params.add(RegistryManagementConstants.PARAM_SORT_JSON, "not-JSON");
-        testSearchDevicesFailsForMalformedSearchCriteria(params);
+        requestParams.add(RegistryManagementConstants.PARAM_SORT_JSON, "not-JSON");
+        testSearchDevicesFailsForMalformedSearchCriteria(requestParams);
     }
 
     @SuppressWarnings("unchecked")
@@ -214,8 +322,12 @@ public class DelegatingDeviceManagementHttpEndpointTest {
 
         final HttpServerResponse response = newResponse();
 
-        final HttpServerRequest request = newRequest(HttpMethod.GET, "/v1/devices/mytenant", response);
-        when(request.params()).thenReturn(params);
+        final HttpServerRequest request = newRequest(
+                HttpMethod.GET,
+                "/v1/devices/mytenant",
+                requestHeaders,
+                params,
+                response);
 
         router.handle(request);
 
@@ -232,20 +344,15 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     private static HttpServerRequest newRequest(
             final HttpMethod method,
             final String path,
-            final HttpServerResponse response) {
-        return newRequest(method, path, MultiMap.caseInsensitiveMultiMap(), response);
-    }
-
-    private static HttpServerRequest newRequest(
-            final HttpMethod method,
-            final String path,
-            final MultiMap headers,
+            final MultiMap requestHeaders,
+            final MultiMap requestParams,
             final HttpServerResponse response) {
 
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.method()).thenReturn(method);
         when(request.path()).thenReturn(path);
-        when(request.headers()).thenReturn(headers);
+        when(request.headers()).thenReturn(requestHeaders);
+        when(request.params()).thenReturn(requestParams);
         when(request.response()).thenReturn(response);
         return request;
     }

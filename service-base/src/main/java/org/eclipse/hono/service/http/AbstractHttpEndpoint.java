@@ -174,10 +174,10 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      */
     protected final void extractOptionalJsonPayload(final RoutingContext ctx) {
 
-        if (ctx.getBody().length() != 0) {
-            extractRequiredJson(ctx, RoutingContext::getBodyAsJson);
-        } else {
+        if (ctx.getBody() == null || ctx.getBody().length() == 0) {
             ctx.next();
+        } else {
+            extractRequiredJson(ctx, RoutingContext::getBodyAsJson);
         }
     }
 
