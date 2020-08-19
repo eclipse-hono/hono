@@ -1,0 +1,244 @@
+/*******************************************************************************
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+package org.eclipse.hono.service.management.device;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.HttpURLConnection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.eclipse.hono.util.Constants;
+import org.junit.jupiter.api.Test;
+
+import io.opentracing.noop.NoopSpan;
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxTestContext;
+
+/**
+ * As suite of tests for verifying implementations of the Device management's 
+ * search devices operation.
+ * <p>
+ * Concrete subclasses need to provide the service implementations under test
+ * by means of implementing the {@link #getDeviceManagementService()} method.
+ */
+public abstract class AbstractDeviceManagementSearchDevicesTest {
+
+    /**
+     * The tenant used in tests.
+     */
+    protected static final String TENANT = Constants.DEFAULT_TENANT;
+
+    /**
+     * Gets device management service being tested.
+     *
+     * @return The device management service
+     */
+    public abstract DeviceManagementService getDeviceManagementService();
+
+    private String randomDeviceId() {
+        return UUID.randomUUID().toString();
+    }
+
+    /**
+     * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND}
+     * when no matching devices are found.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSearchDevicesWhenNoDevicesAreFound(final VertxTestContext ctx) {
+        final int pageSize = 10;
+        final int pageOffset = 0;
+        final Filter filter = new Filter("/enabled", false);
+
+        createDevices(Map.of(randomDeviceId(), new Device()))
+                .compose(ok -> getDeviceManagementService()
+                        .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s.isError());
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that a request to search devices with a valid filter succeeds and matching devices are found.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSearchDevicesWithAFilterSucceeds(final VertxTestContext ctx) {
+        final int pageSize = 10;
+        final int pageOffset = 0;
+        final Filter filter = new Filter("/enabled", true);
+
+        createDevices(Map.of(
+                "testDevice1", new Device().setEnabled(true),
+                "testDevice2", new Device().setEnabled(false)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(),
+                                        NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                        assertThat(s.getPayload()).hasSize(1);
+                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice1");
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
+     * Verifies that a request to search devices with multiple filters succeeds and matching devices are found.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSearchDevicesWithMultipleFiltersSucceeds(final VertxTestContext ctx) {
+        final int pageSize = 10;
+        final int pageOffset = 0;
+        final Filter filter1 = new Filter("/enabled", true);
+        final Filter filter2 = new Filter("/via/0", "gw-1");
+
+        createDevices(Map.of(
+                "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
+                "testDevice2", new Device().setEnabled(false)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter1, filter2),
+                                        List.of(), NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                        assertThat(s.getPayload()).hasSize(1);
+                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice1");
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
+     * Verifies that a request to search devices with valid pageSize succeeds and the result is in accordance
+     * with the specified page size.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSearchDevicesWithPageSize(final VertxTestContext ctx) {
+        final int pageSize = 1;
+        final int pageOffset = 0;
+        final Filter filter = new Filter("/enabled", true);
+
+        createDevices(Map.of(
+                "testDevice1", new Device().setEnabled(true),
+                "testDevice2", new Device().setEnabled(true)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(),
+                                        NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                        assertThat(s.getPayload()).hasSize(1);
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
+     * Verifies that a request to search devices with valid page offset succeeds and the result is in accordance with
+     * the specified page offset.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
+        final int pageSize = 1;
+        final int pageOffset = 1;
+        final Filter filter = new Filter("/enabled", true);
+        final Sort sortOption = new Sort("/id");
+
+        sortOption.setDirection(Sort.Direction.desc);
+        createDevices(Map.of(
+                "testDevice1", new Device().setEnabled(true),
+                "testDevice2", new Device().setEnabled(true)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter),
+                                        List.of(sortOption),
+                                        NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                        assertThat(s.getPayload()).hasSize(1);
+                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice1");
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
+     * Verifies that a request to search devices with a sort option succeeds and the result is in accordance with the
+     * specified sort option.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSearchDevicesWithSortOption(final VertxTestContext ctx) {
+        final int pageSize = 1;
+        final int pageOffset = 0;
+        final Filter filter = new Filter("/enabled", true);
+        final Sort sortOption = new Sort("/id");
+
+        sortOption.setDirection(Sort.Direction.desc);
+        createDevices(Map.of(
+                "testDevice1", new Device().setEnabled(true),
+                "testDevice2", new Device().setEnabled(true)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(sortOption),
+                                        NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                        assertThat(s.getPayload()).hasSize(1);
+                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice2");
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
+     * Creates a set of devices.
+     *
+     * @param devices The devices to create.
+     * @return A succeeded future if all devices have been created successfully.
+     */
+    protected Future<?> createDevices(final Map<String, Device> devices) {
+        Future<?> current = Future.succeededFuture();
+
+        for (final Map.Entry<String, Device> entry : devices.entrySet()) {
+
+            current = current.compose(ok -> getDeviceManagementService()
+                    .createDevice(TENANT, Optional.of(entry.getKey()), entry.getValue(), NoopSpan.INSTANCE)
+                    .map(r -> {
+                        assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+                        return null;
+                    }));
+
+        }
+
+        return current;
+    }
+}
