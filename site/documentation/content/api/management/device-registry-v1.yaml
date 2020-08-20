@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.4.0
+   version: 1.4.1
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -893,13 +893,13 @@ components:
             "effective-since":
                type: string
                format: date-time
-               description: The date-time on which the data volume limit came into effect.
+               description: The point in time at which the data volume limit came into effect.
             "max-bytes":
                type: integer
                default: -1
-               description: The maximum number of bytes to be allowed for a tenant for the
-                            defined period.
-                            A value of -1 (the default) indicates that no limit is set.
+               description: The maximum amount of data (in bytes) that all of the tenant's devices together may
+                            transfer to and/or receive from protocol adapters during each accounting period.
+                            A value of `-1` (the default) indicates that no limit is set.
             "period":
                $ref: '#/components/schemas/Period'
 
@@ -912,13 +912,14 @@ components:
             "effective-since":
                type: string
                format: date-time
-               description: The date-time on which the connection duration limit came into effect.
+               description: The point in time at which the connection duration limit came into effect.
             "max-minutes":
                type: integer
                default: -1
-               description: The maximum number of minutes to be allowed for a tenant for the
-                  defined period.
-                  A value of -1 (the default) indicates that no limit is set.
+               description: |
+                 The maximum amount of time (in minutes) that all of the tenant's devices together may
+                 be connected to a protocol adapter during each accounting period.
+                 A value of `-1` (the default) indicates that no limit is set.
             "period":
                $ref: '#/components/schemas/Period'
 
@@ -930,13 +931,19 @@ components:
          properties:
             "mode":
                type: string
-               description: The mode of the data usage caluclation. The supported modes by
-                            the default resource limit checks implementation are "days"
-                            and "monthly".
+               description: |
+                 The accounting period mode of recurrence. The following modes are defined:
+                 * `monthly`: Accounting periods start at midnight (start of day) UTC on the 1st day of each month.
+                 * `days`: Accounting periods start at the time of the initial accounting period every *N* days where
+                           *N* is the value of the *no-of-days* property.
+
+                 The initial accounting period always starts at the point in time that the plan was put in effect at.
+                 Implementations MUST support the *monthly* and *days* modes and MAY support additional custom modes.
             "no-of-days":
                type: integer
-               description: The number of days for which the data usage is to be calculated
-                            if mode is set to "days". Otherwise, this property is ignored.
+               minimum: 1
+               description: The accounting period length in days. This property is only used if *mode* is set to value
+                            `days`. Otherwise, this property is ignored.
                
 # Devices schema
 
