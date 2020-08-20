@@ -31,6 +31,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -73,6 +74,10 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      * The target address that this sender sends messages to.
      */
     protected final String targetAddress;
+    /**
+     * A sampler for sending messages.
+     */
+    protected final SendMessageSampler sampler;
 
     private Handler<Void> drainHandler;
 
@@ -84,18 +89,21 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      * @param tenantId The identifier of the tenant that the
      *           devices belong to which have published the messages
      *           that this sender is used to send downstream.
+     * @param sampler The sampler for sending messages.
      * @param targetAddress The target address to send the messages to.
      */
     protected AbstractSender(
             final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress) {
+            final String targetAddress,
+            final SendMessageSampler sampler) {
 
         super(connection);
         this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.targetAddress = targetAddress;
+        this.sampler = sampler;
         if (sender.isOpen()) {
             this.offeredCapabilities = Optional.ofNullable(sender.getRemoteOfferedCapabilities())
                     .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
@@ -143,7 +151,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
     @Override
     public final Future<ProtonDelivery> send(final Message rawMessage) {
-
         return send(rawMessage, (SpanContext) null);
     }
 
@@ -165,10 +172,12 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 logError(span, e);
                 span.finish();
                 result.fail(e);
+                this.sampler.queueFull(this.tenantId);
             } else {
                 sendMessage(rawMessage, span).onComplete(result);
             }
         });
+
     }
 
     /**
@@ -257,6 +266,8 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         message.setMessageId(messageId);
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
+        final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
+
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
                     if (!result.future().isComplete()) {
@@ -266,6 +277,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                         logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
                                 messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
+                        sample.timeout();
                     }
                 })
                 : null;
@@ -280,6 +292,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                         messageId, getMessageAddress(message));
             } else if (deliveryUpdated.remotelySettled()) {
                 logUpdatedDeliveryState(currentSpan, message, deliveryUpdated);
+                sample.completed(remoteState);
                 if (Accepted.class.isInstance(remoteState)) {
                     result.complete(deliveryUpdated);
                 } else {

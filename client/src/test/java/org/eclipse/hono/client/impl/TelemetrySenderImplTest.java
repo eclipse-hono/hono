@@ -29,6 +29,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,7 +74,7 @@ public class TelemetrySenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant");
+        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant", SendMessageSampler.noop());
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
@@ -102,7 +103,7 @@ public class TelemetrySenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
-        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant");
+        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant", SendMessageSampler.noop());
 
         // WHEN trying to send a message
         final Message event = ProtonHelper.message("telemetry/tenant", "hello");
@@ -129,7 +130,7 @@ public class TelemetrySenderImplTest {
             handler.handle(timerId);
             return timerId;
         });
-        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant");
+        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant", SendMessageSampler.noop());
 
         // WHEN sending a message
         final Message message = mock(Message.class);

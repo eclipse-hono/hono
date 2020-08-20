@@ -65,7 +65,18 @@ Additional tags for protocol adapters are:
 | *tenant*    | *string*                                           | The identifier of the tenant that the metric is being reported for |
 | *ttd*       | `command`, `expired`, `none`                    | A status indicating the outcome of processing a TTD value contained in a message received from a device.<br>`command` indicates that a command for the device has been included in the response to the device's request for uploading the message.<br>`expired` indicates that a response without a command has been sent to the device.<br>`none` indicates that either no TTD value has been specified by the device or that the protocol adapter does not support it. |
 | *type*      | `telemetry`, `event`                             | The type of (downstream) message that the metric is being reported for. |
+
+Additional tags for *hono.connections.attempts*:
+
+| Name        | Value                                              | Description |
+| ----------- | -------------------------------------------------- | ----------- |
 | *outcome*   | `adapter-disabled`, `connection-duration-exceeded`,<br/>`data-volume-exceeded`, `registration-assertion-failure`,<br/>`succeeded`, `tenant-connections-exceeded`,<br/>`unauthorized`, `unavailable`, `unknown` | The outcome of a device's connection attempt.<br/>`adapter-connections-exceeded` indicates that the maximum number of connections that the adapter instance can handle are exceeded<br/>`adapter-disabled` indicates that the protocol adapter is not enabled for the device's tenant<br/>`connection-duration-exceeded` indicates that the overall amount of time that a tenant's devices may be connected to an adapter has exceeded<br/>`data-volume-exceeded` indicates that the overall amount of data that a tenant's device may transfer per time period has exceeded<br/>`registration-assertion-failure` indicates that the device is either unknown or disabled<br/>`succeeded` indicates a successfully established connection<br/>`tenant-connections-exceeded` indicates that the maximum number of devices that may be connected simultaneously for a tenant has been exceeded<br/>`unauthorized` indicates that the device failed to authenticate<br/>`unavailable` indicates that some of Hono's (required) services are not available<br/>`unknown` indicates an unknown reason. |
+
+Additional tags for *hono.downstream.sent*:
+
+| Name        | Value                                              | Description |
+| ----------- | -------------------------------------------------- | ----------- |
+| *outcome*   | `received`, `accepted`, `rejected`, `released`, `modified`, `declared`, `transactionalState`, and `aborted` | Any of the AMQP 1.0 disposition states, as well as `aborted`, in the case the connection/link was closed before the disposition could be read. | 
 
 Metrics provided by the protocol adapters are:
 
@@ -77,6 +88,9 @@ Metrics provided by the protocol adapters are:
 | *hono.connections.unauthenticated* | Gauge               | *host*, *component-type*, *component-name*                                                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.connections.authenticated.duration* | Timer        | *host*, *component-type*, *component-name*, *tenant*                                         | The overall amount of time that authenticated devices have been connected to protocol adapters. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.connections.attempts*        | Counter             | *host*, *component-type*, *component-name*, *tenant*, *outcome*                              | The number of attempts made by devices to connect to a protocol adapter. The *outcome* tag's value determines if the attempt was successful or not. In the latter case the outcome also indicates the reason for the failure to connect.<br/>**NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.downstream.full*             | Counter             | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | The number of times a message should be sent, but could not because the sender was out of credit. |
+| *hono.downstream.sent*             | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *outcome*                      | The time it took to send a message and receive the remote peers disposition. |
+| *hono.downstream.timeout*          | Counter             | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | The number of times a message timed out, meaning that no disposition was received in the appropriate amount of time. |
 | *hono.messages.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *qos*, *ttd*         | The time it took to process a message conveying telemetry data or an event. |
 | *hono.messages.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*                       | The number of bytes conveyed in the payload of a telemetry or event message. |
 

@@ -18,6 +18,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.AddressHelper;
@@ -44,14 +45,16 @@ public class EventSenderImpl extends AbstractDownstreamSender {
      * @param sender The sender link to send events over.
      * @param tenantId The tenant that the events will be published for.
      * @param targetAddress The target address to send the events to.
+     * @param sampler The sampler to use.
      */
     protected EventSenderImpl(
             final HonoConnection con,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress) {
+            final String targetAddress,
+            final SendMessageSampler sampler) {
 
-        super(con, sender, tenantId, targetAddress);
+        super(con, sender, tenantId, targetAddress, sampler);
     }
 
     @Override
@@ -69,6 +72,7 @@ public class EventSenderImpl extends AbstractDownstreamSender {
      *
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the events will be published for.
+     * @param sampler The sampler to use.
      * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
      *            sender's target address is provided as an argument to the handler.
      * @return A future indicating the outcome.
@@ -77,6 +81,7 @@ public class EventSenderImpl extends AbstractDownstreamSender {
     public static Future<DownstreamSender> create(
             final HonoConnection con,
             final String tenantId,
+            final SendMessageSampler sampler,
             final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(con);
@@ -84,7 +89,7 @@ public class EventSenderImpl extends AbstractDownstreamSender {
 
         final String targetAddress = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, con.getConfig());
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
-                .compose(sender -> Future.succeededFuture(new EventSenderImpl(con, sender, tenantId, targetAddress)));
+                .compose(sender -> Future.succeededFuture(new EventSenderImpl(con, sender, tenantId, targetAddress, sampler)));
     }
 
     /**

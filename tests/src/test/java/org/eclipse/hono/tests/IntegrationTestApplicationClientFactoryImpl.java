@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.impl.ApplicationClientFactoryImpl;
 
 import io.vertx.core.Future;
@@ -35,7 +36,7 @@ public class IntegrationTestApplicationClientFactoryImpl extends ApplicationClie
      * @param connection The connection to Hono.
      */
     public IntegrationTestApplicationClientFactoryImpl(final HonoConnection connection) {
-        super(connection);
+        super(connection, SendMessageSampler.Factory.noop());
     }
 
     /**

@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.SendMessageSampler;
 
 import io.vertx.core.Future;
 
@@ -26,6 +27,7 @@ public class RegistrationClientFactoryImplTest
 
     @Override
     protected Future<RegistrationClient> getClientFuture(final HonoConnection connection, final String tenantId) {
-        return new RegistrationClientFactoryImpl(connection, null).getOrCreateRegistrationClient(tenantId);
+        return new RegistrationClientFactoryImpl(connection, null, SendMessageSampler.Factory.noop())
+                .getOrCreateRegistrationClient(tenantId);
     }
 }

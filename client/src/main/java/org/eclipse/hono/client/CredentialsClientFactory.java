@@ -33,7 +33,7 @@ public interface CredentialsClientFactory extends ConnectionLifecycle<HonoConnec
      * @throws NullPointerException if connection is {@code null}
      */
     static CredentialsClientFactory create(final HonoConnection connection) {
-        return new CredentialsClientFactoryImpl(connection, null);
+        return new CredentialsClientFactoryImpl(connection, null, SendMessageSampler.Factory.noop());
     }
 
     /**
@@ -42,11 +42,12 @@ public interface CredentialsClientFactory extends ConnectionLifecycle<HonoConnec
      * @param connection The connection to use.
      * @param cacheProvider The cache provider to use for creating caches for credential objects
      *                      or {@code null} if credential objects should not be cached.
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      * @throws NullPointerException if connection is {@code null}
      */
-    static CredentialsClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider) {
-        return new CredentialsClientFactoryImpl(connection, cacheProvider);
+    static CredentialsClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider, final SendMessageSampler.Factory samplerFactory) {
+        return new CredentialsClientFactoryImpl(connection, cacheProvider, samplerFactory);
     }
 
     /**

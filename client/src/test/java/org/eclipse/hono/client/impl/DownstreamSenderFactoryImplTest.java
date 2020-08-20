@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,7 +72,7 @@ public class DownstreamSenderFactoryImplTest {
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(vertx.eventBus()).thenReturn(mock(EventBus.class));
-        factory = new DownstreamSenderFactoryImpl(connection);
+        factory = new DownstreamSenderFactoryImpl(connection, SendMessageSampler.Factory.noop());
     }
 
     /**

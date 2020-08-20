@@ -151,12 +151,13 @@ public class Application {
     CredentialsClientFactory credentialsClientFactory() {
         return CredentialsClientFactory.create(
                 HonoConnection.newConnection(vertx, config.credentials),
-                newCaffeineCache(config.credentials.getResponseCacheMinSize(), config.credentials.getResponseCacheMaxSize()));
+                newCaffeineCache(config.credentials.getResponseCacheMinSize(), config.credentials.getResponseCacheMaxSize()),
+                metrics);
     }
 
     @Produces
     DeviceConnectionClientFactory deviceConnectionClientFactory() {
-        return DeviceConnectionClientFactory.create(HonoConnection.newConnection(vertx, config.deviceConnection));
+        return DeviceConnectionClientFactory.create(HonoConnection.newConnection(vertx, config.deviceConnection), metrics);
     }
 
     @Produces
@@ -175,14 +176,16 @@ public class Application {
     RegistrationClientFactory registrationClientFactory() {
         return RegistrationClientFactory.create(
                 HonoConnection.newConnection(vertx, config.registration),
-                newCaffeineCache(config.registration.getResponseCacheMinSize(), config.registration.getResponseCacheMaxSize()));
+                newCaffeineCache(config.registration.getResponseCacheMinSize(), config.registration.getResponseCacheMaxSize()),
+                metrics);
     }
 
     @Produces
     TenantClientFactory tenantClientFactory() {
         return TenantClientFactory.create(
                 HonoConnection.newConnection(vertx, config.tenant),
-                newCaffeineCache(config.tenant.getResponseCacheMinSize(), config.tenant.getResponseCacheMaxSize()));
+                newCaffeineCache(config.tenant.getResponseCacheMinSize(), config.tenant.getResponseCacheMaxSize()),
+                metrics);
     }
 
     /**

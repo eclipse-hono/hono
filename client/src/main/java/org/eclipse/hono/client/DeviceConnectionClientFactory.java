@@ -26,10 +26,11 @@ public interface DeviceConnectionClientFactory extends BasicDeviceConnectionClie
      * Creates a new factory for an existing connection.
      *
      * @param connection The connection to use.
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      * @throws NullPointerException if connection is {@code null}
      */
-    static DeviceConnectionClientFactory create(final HonoConnection connection) {
-        return new DeviceConnectionClientFactoryImpl(connection);
+    static DeviceConnectionClientFactory create(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        return new DeviceConnectionClientFactoryImpl(connection, samplerFactory);
     }
 }

@@ -19,7 +19,9 @@ import java.util.Objects;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.DeviceConnectionConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
@@ -38,10 +40,11 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
      * Creates a new factory for an existing connection.
      *
      * @param connection The connection to use.
+     * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if connection is {@code null}
      */
-    public DeviceConnectionClientFactoryImpl(final HonoConnection connection) {
-        super(connection);
+    public DeviceConnectionClientFactoryImpl(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
         this.deviceConnectionClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
@@ -69,6 +72,7 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
                             () -> DeviceConnectionClientImpl.create(
                                     connection,
                                     tenantId,
+                                    samplerFactory.create(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT),
                                     this::removeDeviceConnectionClient,
                                     this::removeDeviceConnectionClient),
                             result);

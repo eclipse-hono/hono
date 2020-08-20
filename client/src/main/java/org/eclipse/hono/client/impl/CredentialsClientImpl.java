@@ -23,6 +23,7 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -66,9 +67,10 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      *
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
+     * @param sampler The sampler to use.
      */
-    CredentialsClientImpl(final HonoConnection connection, final String tenantId) {
-        super(connection, tenantId);
+    CredentialsClientImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
+        super(connection, tenantId, sampler);
     }
 
     /**
@@ -78,10 +80,15 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
+     * @param sampler The sampler to use.
      */
-    CredentialsClientImpl(final HonoConnection connection, final String tenantId, final ProtonSender sender,
-            final ProtonReceiver receiver) {
-        super(connection, tenantId, sender, receiver);
+    CredentialsClientImpl(
+            final HonoConnection connection,
+            final String tenantId,
+            final ProtonSender sender,
+            final ProtonReceiver receiver,
+            final SendMessageSampler sampler) {
+        super(connection, tenantId, sender, receiver, sampler);
     }
 
     @Override
@@ -138,6 +145,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      *                      or {@code null} if credential objects should not be cached.
      * @param con The connection to the server.
      * @param tenantId The tenant for which credentials are handled.
+     * @param sampler The sampler to use.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome of the creation attempt.
@@ -147,11 +155,12 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             final CacheProvider cacheProvider,
             final HonoConnection con,
             final String tenantId,
+            final SendMessageSampler sampler,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
         LOG.debug("creating new credentials client for [{}]", tenantId);
-        final CredentialsClientImpl client = new CredentialsClientImpl(con, tenantId);
+        final CredentialsClientImpl client = new CredentialsClientImpl(con, tenantId, sampler);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(CredentialsClientImpl.getTargetAddress(tenantId)));
         }

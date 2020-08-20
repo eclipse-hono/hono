@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.Future;
@@ -51,15 +52,17 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
      * @param tenantId The identifier of the tenant that the
      *           devices belong to which have published the messages
      *           that this sender is used to send downstream.
+     * @param sampler The sampler for sending messages.
      * @param targetAddress The target address to send the messages to.
      */
     protected AbstractDownstreamSender(
             final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress) {
+            final String targetAddress,
+            final SendMessageSampler sampler) {
 
-        super(connection, sender, tenantId, targetAddress);
+        super(connection, sender, tenantId, targetAddress, sampler);
     }
 
     @Override

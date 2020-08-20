@@ -24,6 +24,7 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -61,9 +62,10 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      *
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
+     * @param sampler The sampler to use.
      */
-    protected RegistrationClientImpl(final HonoConnection connection, final String tenantId) {
-        super(connection, tenantId);
+    protected RegistrationClientImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
+        super(connection, tenantId, sampler);
     }
 
     /**
@@ -73,14 +75,16 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
+     * @param sampler The sampler to use.
      */
     protected RegistrationClientImpl(
             final HonoConnection connection,
             final String tenantId,
             final ProtonSender sender,
-            final ProtonReceiver receiver) {
+            final ProtonReceiver receiver,
+            final SendMessageSampler sampler) {
 
-        super(connection, tenantId, sender, receiver);
+        super(connection, tenantId, sender, receiver, sampler);
     }
 
     /**
@@ -133,6 +137,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      *                     the client will not cache any results from the Device Registration service.
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
+     * @param sampler The sampler to use.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome of the creation attempt.
@@ -142,11 +147,12 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             final CacheProvider cacheProvider,
             final HonoConnection con,
             final String tenantId,
+            final SendMessageSampler sampler,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
         LOG.debug("creating new registration client for [{}]", tenantId);
-        final RegistrationClientImpl client = new RegistrationClientImpl(con, tenantId);
+        final RegistrationClientImpl client = new RegistrationClientImpl(con, tenantId, sampler);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(RegistrationClientImpl.getTargetAddress(tenantId)));
         }

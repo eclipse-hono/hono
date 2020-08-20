@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 
 import io.vertx.core.Future;
 
@@ -25,6 +26,7 @@ public class CredentialsClientFactoryImplTest extends AbstractTenantTimeoutRelat
 
     @Override
     protected Future<CredentialsClient> getClientFuture(final HonoConnection connection, final String tenantId) {
-        return new CredentialsClientFactoryImpl(connection, null).getOrCreateCredentialsClient(tenantId);
+        return new CredentialsClientFactoryImpl(connection, null, SendMessageSampler.Factory.noop())
+                .getOrCreateCredentialsClient(tenantId);
     }
 }

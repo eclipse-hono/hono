@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -49,7 +50,7 @@ import io.vertx.core.Vertx;
  * event on the event bus. The event bus address is {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of
  * the message is the tenantId.
  */
-public class MicrometerBasedMetrics implements Metrics {
+public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Factory {
 
     /**
      * The name of the meter for authenticated connections.
@@ -83,6 +84,18 @@ public class MicrometerBasedMetrics implements Metrics {
      * The name of the meter for command messages.
      */
     public static final String METER_COMMANDS_RECEIVED = "hono.commands.received";
+    /**
+     * The name of the meter for queue full events.
+     */
+    public static final String METER_DOWNSTREAM_FULL = "hono.downstream.full";
+    /**
+     * The name of the meter for sent messages.
+     */
+    public static final String METER_DOWNSTREAM_SENT = "hono.downstream.sent";
+    /**
+     * The name of the meter for timed out messages.
+     */
+    public static final String METER_DOWNSTREAM_TIMEOUT = "hono.downstream.timeout";
 
     private static final long DEFAULT_TENANT_IDLE_TIMEOUT = ProtocolAdapterProperties.DEFAULT_TENANT_IDLE_TIMEOUT
             .toMillis();
@@ -406,6 +419,10 @@ public class MicrometerBasedMetrics implements Metrics {
         registry.find(METER_COMMANDS_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
         registry.find(METER_COMMANDS_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
 
+        registry.find(METER_DOWNSTREAM_FULL).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_DOWNSTREAM_SENT).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_DOWNSTREAM_TIMEOUT).tags(tenantTag).meters().forEach(registry::remove);
+
         vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
     }
 
@@ -435,5 +452,60 @@ public class MicrometerBasedMetrics implements Metrics {
                             }
                             return null;
                         }));
+    }
+
+    @Override
+    public SendMessageSampler create(final String messageType) {
+        return new SendMessageSampler() {
+            @Override
+            public Sample start(final String tenantId) {
+
+                final Timer.Sample sample = Timer.start(registry);
+
+                return new Sample() {
+
+                    @Override
+                    public void completed(final String outcome) {
+
+                        sample.stop(registry.timer(METER_DOWNSTREAM_SENT,
+                                MetricsTags.TAG_TYPE, messageType,
+                                "outcome", outcome
+                        ));
+
+                    }
+
+                    @Override
+                    public void timeout() {
+
+                        /*
+                         * We report timeouts with a different meter, since the message might still be
+                         * accepted by the remote peer, at a time after the timeout expired. And so we
+                         * can still track those times.
+                         */
+
+                        registry
+                                .counter(
+                                        METER_DOWNSTREAM_TIMEOUT,
+                                        MetricsTags.TAG_TYPE, messageType,
+                                        MetricsTags.TAG_TENANT, tenantId)
+                                .increment();
+
+                    }
+                };
+
+            }
+
+            @Override
+            public void queueFull(final String tenantId) {
+
+                registry
+                        .counter(
+                                METER_DOWNSTREAM_FULL,
+                                MetricsTags.TAG_TYPE, messageType,
+                                MetricsTags.TAG_TENANT, tenantId)
+                        .increment();
+
+            }
+        };
     }
 }

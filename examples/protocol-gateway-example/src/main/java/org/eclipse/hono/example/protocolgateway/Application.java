@@ -16,6 +16,7 @@ package org.eclipse.hono.example.protocolgateway;
 import java.util.Optional;
 
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -101,11 +102,13 @@ public class Application {
     /**
      * Exposes a factory for clients for the AMQP adapter as a Spring bean.
      *
+     * @param samplerFactory The sampler factory to use, may be {@link SendMessageSampler.Factory#noop()}
+     * it you don't want sampling.
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public AmqpAdapterClientFactory amqpAdapterClientFactory() {
-        return AmqpAdapterClientFactory.create(amqpAdapterConnection(), amqpAdapterTenant());
+    public AmqpAdapterClientFactory amqpAdapterClientFactory(final SendMessageSampler.Factory samplerFactory) {
+        return AmqpAdapterClientFactory.create(amqpAdapterConnection(), amqpAdapterTenant(), samplerFactory);
     }
 }

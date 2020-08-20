@@ -20,7 +20,9 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
@@ -42,9 +44,10 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
      * @param connection The connection to use.
      * @param cacheProvider The cache provider to use for creating caches for credential objects
      *                      or {@code null} if credentials objects should not be cached.
+     * @param samplerFactory The sampler factory to use.
      */
-    public CredentialsClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider) {
-        super(connection);
+    public CredentialsClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
         credentialsClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
@@ -75,6 +78,7 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
                                     cacheProvider,
                                     connection,
                                     tenantId,
+                                    samplerFactory.create(CredentialsConstants.CREDENTIALS_ENDPOINT),
                                     this::removeCredentialsClient,
                                     this::removeCredentialsClient),
                             result);

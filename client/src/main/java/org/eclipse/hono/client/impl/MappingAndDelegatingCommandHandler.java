@@ -26,6 +26,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.DelegatedCommandSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -74,6 +75,7 @@ public class MappingAndDelegatingCommandHandler {
     private final AdapterInstanceCommandHandler adapterInstanceCommandHandler;
     private final String adapterInstanceId;
     private final CachingClientFactory<DelegatedCommandSender> delegatedCommandSenderFactory;
+    private final SendMessageSampler sampler;
 
     /**
      * Creates a new MappingAndDelegatingCommandHandler instance.
@@ -83,15 +85,20 @@ public class MappingAndDelegatingCommandHandler {
      * @param adapterInstanceCommandHandler The handler to delegate command handling to if the command is to be
      *                                      handled by the local adapter instance.
      * @param adapterInstanceId The id of the protocol adapter instance that this handler is running in.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MappingAndDelegatingCommandHandler(final HonoConnection connection,
+    public MappingAndDelegatingCommandHandler(
+            final HonoConnection connection,
             final CommandTargetMapper commandTargetMapper,
-            final AdapterInstanceCommandHandler adapterInstanceCommandHandler, final String adapterInstanceId) {
+            final AdapterInstanceCommandHandler adapterInstanceCommandHandler,
+            final String adapterInstanceId,
+            final SendMessageSampler sampler) {
         this.connection = Objects.requireNonNull(connection);
         this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
         this.adapterInstanceCommandHandler = Objects.requireNonNull(adapterInstanceCommandHandler);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
+        this.sampler = sampler;
 
         this.delegatedCommandSenderFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
         this.connection.addDisconnectListener(con -> delegatedCommandSenderFactory.clearState());
@@ -303,7 +310,7 @@ public class MappingAndDelegatingCommandHandler {
     private Future<DelegatedCommandSender> getOrCreateDelegatedCommandSender(final String protocolAdapterInstanceId) {
         return connection.executeOnContext(result -> {
             delegatedCommandSenderFactory.getOrCreateClient(protocolAdapterInstanceId,
-                    () -> DelegatedCommandSenderImpl.create(connection, protocolAdapterInstanceId,
+                    () -> DelegatedCommandSenderImpl.create(connection, protocolAdapterInstanceId, sampler,
                             onSenderClosed -> delegatedCommandSenderFactory.removeClient(protocolAdapterInstanceId)),
                     result);
         });

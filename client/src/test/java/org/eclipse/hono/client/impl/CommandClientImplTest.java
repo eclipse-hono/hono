@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +70,8 @@ public class CommandClientImplTest {
                 Constants.DEFAULT_TENANT,
                 REPLY_ID,
                 sender,
-                receiver);
+                receiver,
+                SendMessageSampler.noop());
     }
 
     /**

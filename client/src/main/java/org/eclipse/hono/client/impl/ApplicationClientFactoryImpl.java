@@ -25,6 +25,7 @@ import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.CommandConstants;
 
 import io.vertx.core.Future;
@@ -46,9 +47,10 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
      * Creates a new factory for an existing connection.
      *
      * @param connection The connection to use.
+     * @param samplerFactory The sampler factory to use.
      */
-    public ApplicationClientFactoryImpl(final HonoConnection connection) {
-        super(connection);
+    public ApplicationClientFactoryImpl(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
         consumerFactory = new ClientFactory<>();
         commandClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         asyncCommandClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
@@ -139,6 +141,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
                             connection,
                             tenantId,
                             replyId,
+                            samplerFactory.create(CommandConstants.COMMAND_ENDPOINT),
                             s -> removeCommandClient(cacheKey),
                             s -> removeCommandClient(cacheKey)),
                     result);
@@ -167,6 +170,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
                     () -> AsyncCommandClientImpl.create(
                             connection,
                             tenantId,
+                            samplerFactory.create(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT),
                             s -> removeAsyncCommandClient(key)),
                     result);
         });

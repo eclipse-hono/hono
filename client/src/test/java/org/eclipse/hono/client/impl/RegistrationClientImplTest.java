@@ -30,6 +30,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -94,7 +95,7 @@ public class RegistrationClientImplTest {
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
         when(connection.getTracer()).thenReturn(tracer);
 
-        client = new RegistrationClientImpl(connection, "tenant", sender, receiver);
+        client = new RegistrationClientImpl(connection, "tenant", sender, receiver, SendMessageSampler.noop());
     }
 
     /**

@@ -26,6 +26,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.util.CacheDirective;
@@ -70,10 +71,11 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * {@link #createLinks(Handler, Handler)} only.
      *
      * @param connection The connection to Hono.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected TenantClientImpl(final HonoConnection connection) {
-        super(connection, null);
+    protected TenantClientImpl(final HonoConnection connection, final SendMessageSampler sampler) {
+        super(connection, null, sampler);
     }
 
     /**
@@ -82,14 +84,16 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @param connection The connection to Hono.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected TenantClientImpl(
             final HonoConnection connection,
             final ProtonSender sender,
-            final ProtonReceiver receiver) {
+            final ProtonReceiver receiver,
+            final SendMessageSampler sampler) {
 
-        super(connection, null, sender, receiver);
+        super(connection, null, sender, receiver, sampler);
     }
 
     @Override
@@ -142,7 +146,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      *
      * @param cacheProvider A factory for cache instances for tenant configuration results. If {@code null}
      *                     the client will not cache any results from the Tenant service.
-     * @param con The connection to the server.
+     * @param connection The connection to the server.
+     * @param sampler The sampler to use.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome of the creation attempt.
@@ -150,12 +155,13 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      */
     public static final Future<TenantClient> create(
             final CacheProvider cacheProvider,
-            final HonoConnection con,
+            final HonoConnection connection,
+            final SendMessageSampler sampler,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
         LOG.debug("creating new tenant client");
-        final TenantClientImpl client = new TenantClientImpl(con);
+        final TenantClientImpl client = new TenantClientImpl(connection, sampler);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(TenantClientImpl.getTargetAddress()));
         }

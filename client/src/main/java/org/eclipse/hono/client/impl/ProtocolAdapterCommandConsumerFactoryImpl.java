@@ -30,6 +30,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -86,10 +87,12 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      * Creates a new factory for an existing connection.
      *
      * @param connection The connection to the AMQP network.
+     * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public ProtocolAdapterCommandConsumerFactoryImpl(final HonoConnection connection) {
-        super(connection);
+    public ProtocolAdapterCommandConsumerFactoryImpl(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
+
         // the container id contains a UUID therefore it can be used as a unique adapter instance id
         adapterInstanceId = connection.getContainerId();
 
@@ -103,7 +106,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
         this.deviceConnectionClientFactory = Objects.requireNonNull(deviceConnectionClientFactory);
 
         mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(connection,
-                commandTargetMapper, adapterInstanceCommandHandler, adapterInstanceId);
+                commandTargetMapper, adapterInstanceCommandHandler, adapterInstanceId, samplerFactory.create(CommandConstants.COMMAND_ENDPOINT));
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
 
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
@@ -342,7 +345,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
         return connection.executeOnContext(result -> {
-            CommandResponseSenderImpl.create(connection, tenantId, replyId, onRemoteClose -> {}).onComplete(result);
+            CommandResponseSenderImpl.create(connection, tenantId, replyId, samplerFactory.create(CommandConstants.COMMAND_RESPONSE_ENDPOINT), onRemoteClose -> {}).onComplete(result);
         });
     }
 

@@ -33,7 +33,7 @@ public interface RegistrationClientFactory extends ConnectionLifecycle<HonoConne
      * @throws NullPointerException if connection is {@code null}
      */
     static RegistrationClientFactory create(final HonoConnection connection) {
-        return new RegistrationClientFactoryImpl(connection, null);
+        return new RegistrationClientFactoryImpl(connection, null, SendMessageSampler.Factory.noop());
     }
 
     /**
@@ -42,11 +42,12 @@ public interface RegistrationClientFactory extends ConnectionLifecycle<HonoConne
      * @param connection The connection to use.
      * @param cacheProvider The cache provider to use for creating caches for tenant objects
      *                      or {@code null} if tenant objects should not be cached.
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      * @throws NullPointerException if connection is {@code null}
      */
-    static RegistrationClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider) {
-        return new RegistrationClientFactoryImpl(connection, cacheProvider);
+    static RegistrationClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider, final SendMessageSampler.Factory samplerFactory) {
+        return new RegistrationClientFactoryImpl(connection, cacheProvider, samplerFactory);
     }
 
     /**

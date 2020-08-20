@@ -40,6 +40,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
@@ -482,7 +483,7 @@ public class AbstractRequestResponseClientTest  {
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
 
         final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
-        return new AbstractRequestResponseClient<SimpleRequestResponseResult>(connection, tenant, sender, receiver) {
+        return new AbstractRequestResponseClient<SimpleRequestResponseResult>(connection, tenant, sender, receiver, SendMessageSampler.noop()) {
 
             @Override
             protected String getName() {

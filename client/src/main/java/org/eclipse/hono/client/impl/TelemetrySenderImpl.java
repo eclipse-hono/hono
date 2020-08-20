@@ -21,6 +21,7 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -50,14 +51,16 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
      * @param sender The sender link to send telemetry messages over.
      * @param tenantId The tenant that the messages will be published for.
      * @param targetAddress The target address to send the messages to.
+     * @param sampler The sampler for sending messages.
      */
     protected TelemetrySenderImpl(
             final HonoConnection con,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress) {
+            final String targetAddress,
+            final SendMessageSampler sampler) {
 
-        super(con, sender, tenantId, targetAddress);
+        super(con, sender, tenantId, targetAddress, sampler);
     }
 
     @Override
@@ -75,6 +78,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
      *
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the telemetry data will be published for.
+     * @param sampler The sampler to use.
      * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
      *            sender's target address is provided as an argument to the handler.
      * @return A future indicating the outcome.
@@ -83,6 +87,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
     public static Future<DownstreamSender> create(
             final HonoConnection con,
             final String tenantId,
+            final SendMessageSampler sampler,
             final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(con);
@@ -91,7 +96,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         final String targetAddress = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, con.getConfig());
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
                 .compose(sender -> Future
-                        .succeededFuture(new TelemetrySenderImpl(con, sender, tenantId, targetAddress)));
+                        .succeededFuture(new TelemetrySenderImpl(con, sender, tenantId, targetAddress, sampler)));
     }
 
     /**
@@ -99,7 +104,6 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
      */
     @Override
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message rawMessage) {
-
         return sendAndWaitForOutcome(rawMessage, null);
     }
 
@@ -160,6 +164,8 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         message.setMessageId(messageId);
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
+        final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
+
         final ClientConfigProperties config = connection.getConfig();
         final AtomicBoolean timeoutReached = new AtomicBoolean(false);
         final Long timerId = config.getSendMessageTimeout() > 0
@@ -174,6 +180,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
                         TracingHelper.logError(currentSpan, exception.getMessage());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                         currentSpan.finish();
+                        sample.timeout();
                     }
                 })
                 : null;
@@ -183,6 +190,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
                 connection.getVertx().cancelTimer(timerId);
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
+            sample.completed(remoteState);
             if (timeoutReached.get()) {
                 log.debug("ignoring received delivery update for message [ID: {}, address: {}]: waiting for the update has already timed out",
                         messageId, getMessageAddress(message));

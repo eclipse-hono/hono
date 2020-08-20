@@ -32,7 +32,7 @@ of Maven profiles. The following build profiles are currently supported:
 * `metrics-graphite` – Enables the Graphite backend.
 * `metrics-influxdb` – Enables the InfluxDB backend.
 
-Additionally to selecting a metrics back end, you may need to configure the
+Additionally, to selecting a metrics back end, you may need to configure the
 back end using Spring configuration options. See the documentation mentioned
 above for more information.
 

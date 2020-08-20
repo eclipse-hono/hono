@@ -21,6 +21,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.DelegatedCommandSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -46,9 +47,10 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
     DelegatedCommandSenderImpl(
             final HonoConnection connection,
-            final ProtonSender sender) {
+            final ProtonSender sender,
+            final SendMessageSampler sampler) {
 
-        super(connection, sender, "", "");
+        super(connection, sender, "", "", sampler);
     }
 
     @Override
@@ -128,6 +130,8 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         final String messageId = message.getMessageId() != null ? message.getMessageId().toString() : "";
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
+        final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
+
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
                     if (!result.future().isComplete()) {
@@ -138,6 +142,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                         logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
                                 messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
+                        sample.timeout();
                     }
                 })
                 : null;
@@ -147,6 +152,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 connection.getVertx().cancelTimer(timerId);
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
+            sample.completed(remoteState);
             if (result.future().isComplete()) {
                 log.debug("ignoring received delivery update for message [ID: {}, address: {}]: waiting for the update has already timed out",
                         messageId, getMessageAddress(message));
@@ -223,6 +229,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      *
      * @param con The connection to the AMQP network.
      * @param adapterInstanceId The protocol adapter instance id.
+     * @param sampler The sampler to use.
      * @param remoteCloseHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
      * @return A future indicating the result of the creation attempt.
      * @throws NullPointerException if con or adapterInstanceId is {@code null}.
@@ -230,6 +237,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
     public static Future<DelegatedCommandSender> create(
             final HonoConnection con,
             final String adapterInstanceId,
+            final SendMessageSampler sampler,
             final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(con);
@@ -237,7 +245,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
         final String targetAddress = getTargetAddress(adapterInstanceId);
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
-                .map(sender -> new DelegatedCommandSenderImpl(con, sender));
+                .map(sender -> new DelegatedCommandSenderImpl(con, sender, sampler));
     }
 
     @Override
