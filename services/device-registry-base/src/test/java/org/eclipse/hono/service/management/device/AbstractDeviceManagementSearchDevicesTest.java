@@ -18,9 +18,8 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
-import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
@@ -33,13 +32,10 @@ import io.vertx.junit5.VertxTestContext;
  * <p>
  * Concrete subclasses need to provide the service implementations under test
  * by means of implementing the {@link #getDeviceManagementService()} method.
+ * Also the subclasses should clean up any fixture in the database that has
+ * been created by individual test cases.
  */
 public abstract class AbstractDeviceManagementSearchDevicesTest {
-
-    /**
-     * The tenant used in tests.
-     */
-    protected static final String TENANT = Constants.DEFAULT_TENANT;
 
     /**
      * Gets device management service being tested.
@@ -47,10 +43,6 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @return The device management service
      */
     public abstract DeviceManagementService getDeviceManagementService();
-
-    private String randomDeviceId() {
-        return UUID.randomUUID().toString();
-    }
 
     /**
      * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND}
@@ -60,13 +52,15 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      */
     @Test
     public void testSearchDevicesWhenNoDevicesAreFound(final VertxTestContext ctx) {
+        final String deviceId = DeviceRegistryUtils.getUniqueIdentifier();
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
         final Filter filter = new Filter("/enabled", false);
 
-        createDevices(Map.of(randomDeviceId(), new Device()))
+        createDevices(tenantId, Map.of(deviceId, new Device()))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.isError());
@@ -83,15 +77,16 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      */
     @Test
     public void testSearchDevicesWithAFilterSucceeds(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
         final Filter filter = new Filter("/enabled", true);
 
-        createDevices(Map.of(
+        createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(false)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
                                         NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
@@ -110,16 +105,17 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      */
     @Test
     public void testSearchDevicesWithMultipleFiltersSucceeds(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
         final Filter filter1 = new Filter("/enabled", true);
         final Filter filter2 = new Filter("/via/0", "gw-1");
 
-        createDevices(Map.of(
+        createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
                 "testDevice2", new Device().setEnabled(false)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter1, filter2),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
                                         List.of(), NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
@@ -139,15 +135,16 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      */
     @Test
     public void testSearchDevicesWithPageSize(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
         final int pageOffset = 0;
         final Filter filter = new Filter("/enabled", true);
 
-        createDevices(Map.of(
+        createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
                                         NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
@@ -166,17 +163,18 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      */
     @Test
     public void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
         final int pageOffset = 1;
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption = new Sort("/id");
 
         sortOption.setDirection(Sort.Direction.desc);
-        createDevices(Map.of(
+        createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter),
                                         List.of(sortOption),
                                         NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
@@ -197,17 +195,18 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      */
     @Test
     public void testSearchDevicesWithSortOption(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
         final int pageOffset = 0;
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption = new Sort("/id");
 
         sortOption.setDirection(Sort.Direction.desc);
-        createDevices(Map.of(
+        createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(TENANT, pageSize, pageOffset, List.of(filter), List.of(sortOption),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(sortOption),
                                         NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
@@ -222,16 +221,18 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
     /**
      * Creates a set of devices.
      *
+     *
+     * @param tenantId The tenant identifier.
      * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
-    protected Future<?> createDevices(final Map<String, Device> devices) {
+    protected Future<?> createDevices(final String tenantId, final Map<String, Device> devices) {
         Future<?> current = Future.succeededFuture();
 
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
 
             current = current.compose(ok -> getDeviceManagementService()
-                    .createDevice(TENANT, Optional.of(entry.getKey()), entry.getValue(), NoopSpan.INSTANCE)
+                    .createDevice(tenantId, Optional.of(entry.getKey()), entry.getValue(), NoopSpan.INSTANCE)
                     .map(r -> {
                         assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                         return null;
