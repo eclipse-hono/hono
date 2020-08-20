@@ -34,6 +34,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -87,6 +88,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     protected final String linkTargetAddress;
 
+    protected final SendMessageSampler sampler;
+
     private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();
     private Handler<Void> drainHandler;
     private final String replyToAddress;
@@ -117,13 +120,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param connection The connection to the service.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
-            final String tenantId) {
+            final String tenantId,
+            final SendMessageSampler sampler) {
 
-        this(connection, tenantId, UUID.randomUUID().toString());
+        this(connection, tenantId, UUID.randomUUID().toString(), sampler);
     }
 
     /**
@@ -144,14 +149,17 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
      * @param replyId The replyId to use in the reply-to address.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
             final String tenantId,
-            final String replyId) {
+            final String replyId,
+            final SendMessageSampler sampler) {
 
         super(connection);
+        this.sampler = sampler;
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         if (tenantId == null) {
             this.linkTargetAddress = getName();
@@ -182,13 +190,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
             final String tenantId,
             final String deviceId,
-            final String replyId) {
+            final String replyId,
+            final SendMessageSampler sampler) {
 
         super(connection);
         Objects.requireNonNull(tenantId);
@@ -199,6 +209,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this.linkTargetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
         this.replyToAddress = String.format("%s/%s/%s/%s", getReplyToEndpointName(), tenantId, deviceId, replyId);
         this.tenantId = tenantId;
+        this.sampler = sampler;
     }
 
     /**
@@ -209,15 +220,17 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                 client should not be scoped to a tenant.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters other than tenant are {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
             final String tenantId,
             final ProtonSender sender,
-            final ProtonReceiver receiver) {
+            final ProtonReceiver receiver,
+            final SendMessageSampler sampler) {
 
-        this(connection, tenantId);
+        this(connection, tenantId, sampler);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
     }
@@ -837,9 +850,13 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         connection.executeOnContext(res -> {
 
             if (sender.sendQueueFull()) {
+
                 LOG.debug("cannot send request to peer, no credit left for link [link target: {}]", linkTargetAddress);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
+
+                sampler.queueFull(tenantId);
+
             } else {
 
                 final Map<String, Object> details = new HashMap<>(3);
@@ -855,9 +872,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
                 replyMap.put(correlationId, handler);
 
+                final SendMessageSampler.Sample sample = sampler.start(tenantId);
+
                 sender.send(request, deliveryUpdated -> {
                     final Promise<R> failedResult = Promise.promise();
                     final DeliveryState remoteState = deliveryUpdated.getRemoteState();
+                    sample.completed(remoteState);
                     if (Rejected.class.isInstance(remoteState)) {
                         final Rejected rejected = (Rejected) remoteState;
                         if (rejected.getError() != null) {
@@ -909,6 +929,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     connection.getVertx().setTimer(requestTimeoutMillis, tid -> {
                         cancelRequest(correlationId, Future.failedFuture(new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE, "request timed out after " + requestTimeoutMillis + "ms")));
+                        sample.timeout();
                     });
                 }
                 if (LOG.isDebugEnabled()) {
@@ -929,6 +950,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     "not connected")));
             return null;
         });
+
     }
 
     /**
@@ -951,6 +973,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 closeHandler.handle(Future.succeededFuture());
             }
         });
+
     }
 
     /**
@@ -1000,6 +1023,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 return Future.succeededFuture(result);
             }
         }
+
     }
 
     /**

@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -42,8 +43,9 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
             final HonoConnection con,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress) {
-        super(con, sender, tenantId, targetAddress);
+            final String targetAddress,
+            final SendMessageSampler sampler) {
+        super(con, sender, tenantId, targetAddress, sampler);
     }
 
     @Override
@@ -144,12 +146,14 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the device belongs to.
      * @param closeHook A handler to invoke if the peer closes the sender link unexpectedly.
+     * @param sampler The sampler to use.
      * @return A future indicating the outcome.
      * @throws NullPointerException if any of connection, tenantId or deviceId are {@code null}.
      */
     public static Future<AsyncCommandClient> create(
             final HonoConnection con,
             final String tenantId,
+            final SendMessageSampler sampler,
             final Handler<String> closeHook) {
 
         Objects.requireNonNull(con);
@@ -157,6 +161,6 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
 
         final String linkTargetAddress = AsyncCommandClientImpl.getLinkTargetAddress(tenantId);
         return con.createSender(linkTargetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-                .compose(sender -> Future.succeededFuture(new AsyncCommandClientImpl(con, sender, tenantId, linkTargetAddress)));
+                .compose(sender -> Future.succeededFuture(new AsyncCommandClientImpl(con, sender, tenantId, linkTargetAddress, sampler)));
     }
 }

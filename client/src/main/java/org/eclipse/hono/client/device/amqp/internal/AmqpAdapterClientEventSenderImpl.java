@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.device.amqp.EventSender;
 import org.eclipse.hono.client.device.amqp.TraceableEventSender;
 import org.eclipse.hono.client.impl.EventSenderImpl;
@@ -39,7 +40,7 @@ public class AmqpAdapterClientEventSenderImpl extends EventSenderImpl implements
 
     AmqpAdapterClientEventSenderImpl(final HonoConnection con, final ProtonSender sender, final String tenantId,
             final String targetAddress) {
-        super(con, sender, tenantId, targetAddress);
+        super(con, sender, tenantId, targetAddress, SendMessageSampler.noop());
     }
 
     /**

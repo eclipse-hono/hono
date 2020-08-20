@@ -20,6 +20,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.device.amqp.CommandResponder;
 import org.eclipse.hono.client.device.amqp.TraceableCommandResponder;
 import org.eclipse.hono.client.impl.CommandResponseSenderImpl;
@@ -41,7 +42,7 @@ public class AmqpAdapterClientCommandResponseSender extends CommandResponseSende
 
     AmqpAdapterClientCommandResponseSender(final HonoConnection connection, final ProtonSender sender,
             final String tenantId) {
-        super(connection, sender, tenantId, null);
+        super(connection, sender, tenantId, null, SendMessageSampler.noop());
     }
 
     /**

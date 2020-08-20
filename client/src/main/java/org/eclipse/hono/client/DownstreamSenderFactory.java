@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client;
 
 import org.eclipse.hono.client.impl.DownstreamSenderFactoryImpl;
@@ -32,7 +31,19 @@ public interface DownstreamSenderFactory extends ConnectionLifecycle<HonoConnect
      * @throws NullPointerException if connection is {@code null}
      */
     static DownstreamSenderFactory create(final HonoConnection connection) {
-        return new DownstreamSenderFactoryImpl(connection);
+        return new DownstreamSenderFactoryImpl(connection, SendMessageSampler.Factory.noop());
+    }
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @param samplerFactory The sampler factory to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static DownstreamSenderFactory create(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        return new DownstreamSenderFactoryImpl(connection, samplerFactory);
     }
 
     /**

@@ -18,6 +18,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -50,14 +51,16 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param sender The sender link to send command response messages over.
      * @param tenantId The tenant that the messages will be published for.
      * @param targetAddress The target address to send the messages to.
+     * @param sampler The sampler to use.
      */
     protected CommandResponseSenderImpl(
             final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress) {
+            final String targetAddress,
+            final SendMessageSampler sampler) {
 
-        super(connection, sender, tenantId, targetAddress);
+        super(connection, sender, tenantId, targetAddress, sampler);
     }
 
     @Override
@@ -111,6 +114,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param con The connection to the AMQP network.
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
      * @param replyId The reply id as the unique postfix of the replyTo address.
+     * @param sampler The sampler to use.
      * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
      * @return A future indicating the result of the creation attempt.
      * @throws NullPointerException if any of con, tenantId or replyId are {@code null}.
@@ -119,6 +123,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final HonoConnection con,
             final String tenantId,
             final String replyId,
+            final SendMessageSampler sampler,
             final Handler<String> closeHook) {
 
         Objects.requireNonNull(con);
@@ -133,7 +138,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
 
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
                 .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(con, sender, tenantId,
-                        targetAddress));
+                        targetAddress, sampler));
     }
 
     @Override

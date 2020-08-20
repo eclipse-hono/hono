@@ -34,6 +34,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -103,7 +104,7 @@ public class TenantClientImplTest {
         when(connection.getTracer()).thenReturn(tracer);
 
         cache = mock(ExpiringValueCache.class);
-        client = new TenantClientImpl(connection, sender, receiver);
+        client = new TenantClientImpl(connection, sender, receiver, SendMessageSampler.noop());
     }
 
     /**

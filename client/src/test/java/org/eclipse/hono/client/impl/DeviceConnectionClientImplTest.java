@@ -29,6 +29,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -90,7 +91,7 @@ public class DeviceConnectionClientImplTest {
         final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
         when(connection.getTracer()).thenReturn(tracer);
 
-        client = new DeviceConnectionClientImpl(connection, Constants.DEFAULT_TENANT, sender, receiver);
+        client = new DeviceConnectionClientImpl(connection, Constants.DEFAULT_TENANT, sender, receiver, SendMessageSampler.noop());
     }
 
     /**

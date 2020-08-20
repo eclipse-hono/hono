@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 
 import io.vertx.core.Future;
 
@@ -26,6 +27,6 @@ public class DownstreamSenderFactoryImplEventTest
 
     @Override
     protected Future<DownstreamSender> getClientFuture(final HonoConnection connection, final String tenantId) {
-        return new DownstreamSenderFactoryImpl(connection).getOrCreateEventSender(tenantId);
+        return new DownstreamSenderFactoryImpl(connection, SendMessageSampler.Factory.noop()).getOrCreateEventSender(tenantId);
     }
 }

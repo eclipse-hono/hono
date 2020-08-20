@@ -40,6 +40,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -109,7 +110,7 @@ public class MappingAndDelegatingCommandHandlerTest {
         commandTargetMapper = mock(CommandTargetMapper.class);
 
         mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(
-                connection, commandTargetMapper, adapterInstanceCommandHandler, adapterInstanceId);
+                connection, commandTargetMapper, adapterInstanceCommandHandler, adapterInstanceId, SendMessageSampler.noop());
     }
 
     /**

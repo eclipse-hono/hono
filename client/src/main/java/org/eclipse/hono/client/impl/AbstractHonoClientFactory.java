@@ -20,6 +20,7 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
@@ -42,14 +43,19 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConn
      * The connection to use for interacting with Hono.
      */
     protected final HonoConnection connection;
+    /**
+     * The factory for creating <em>send message</em> samplers.
+     */
+    protected final SendMessageSampler.Factory samplerFactory;
 
     /**
      * @param connection The connection to use.
      * @throws NullPointerException if connection is {@code null}.
      */
-    AbstractHonoClientFactory(final HonoConnection connection) {
+    AbstractHonoClientFactory(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
         this.connection = Objects.requireNonNull(connection);
         this.connection.addDisconnectListener(con -> onDisconnect());
+        this.samplerFactory = samplerFactory;
     }
 
     /**

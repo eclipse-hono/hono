@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client;
 
 import java.util.function.BiConsumer;
@@ -26,7 +25,6 @@ import io.vertx.proton.ProtonDelivery;
 
 /**
  * A factory for creating clients for Hono's north bound APIs.
- *
  */
 public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnection> {
 
@@ -38,7 +36,19 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      * @throws NullPointerException if connection is {@code null}
      */
     static ApplicationClientFactory create(final HonoConnection connection) {
-        return new ApplicationClientFactoryImpl(connection);
+        return create(connection, SendMessageSampler.Factory.noop());
+    }
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @param samplerFactory The sampler to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static ApplicationClientFactory create(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        return new ApplicationClientFactoryImpl(connection, samplerFactory);
     }
 
     /**

@@ -21,6 +21,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -62,14 +63,16 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * @param connection The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
      * @param replyId The replyId to use in the reply-to address.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     CommandClientImpl(
             final HonoConnection connection,
             final String tenantId,
-            final String replyId) {
+            final String replyId,
+            final SendMessageSampler sampler) {
 
-        super(connection, tenantId, replyId);
+        super(connection, tenantId, replyId, sampler);
     }
 
     /**
@@ -80,6 +83,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * @param replyId The replyId to use in the reply-to address.
      * @param sender The link to use for sending command requests.
      * @param receiver The link to use for receiving command responses.
+     * @param sampler The sampler to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     CommandClientImpl(
@@ -87,9 +91,10 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             final String tenantId,
             final String replyId,
             final ProtonSender sender,
-            final ProtonReceiver receiver) {
+            final ProtonReceiver receiver,
+            final SendMessageSampler sampler) {
 
-        this(connection, tenantId, replyId);
+        this(connection, tenantId, replyId, sampler);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
     }
@@ -244,6 +249,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * @param con The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
      * @param replyId The replyId to use in the reply-to address.
+     * @param sampler The sampler to use
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome.
@@ -253,10 +259,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             final HonoConnection con,
             final String tenantId,
             final String replyId,
+            final SendMessageSampler sampler,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
-        final CommandClientImpl client = new CommandClientImpl(con, tenantId, replyId);
+        final CommandClientImpl client = new CommandClientImpl(con, tenantId, replyId, sampler);
         return client.createLinks(senderCloseHook, receiverCloseHook)
                 .map(ok -> {
                     LOG.debug("successfully created command client for [{}]", tenantId);

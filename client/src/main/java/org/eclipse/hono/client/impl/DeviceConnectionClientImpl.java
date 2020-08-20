@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -62,9 +63,10 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
      *
      * @param connection The connection to the Device Connection service.
      * @param tenantId The identifier of the tenant for which the client should be created.
+     * @param sampler The sampler to use.
      */
-    protected DeviceConnectionClientImpl(final HonoConnection connection, final String tenantId) {
-        super(connection, tenantId);
+    protected DeviceConnectionClientImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
+        super(connection, tenantId, sampler);
     }
 
     /**
@@ -74,14 +76,16 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
+     * @param sampler The sampler to use.
      */
     protected DeviceConnectionClientImpl(
             final HonoConnection connection,
             final String tenantId,
             final ProtonSender sender,
-            final ProtonReceiver receiver) {
+            final ProtonReceiver receiver,
+            final SendMessageSampler sampler) {
 
-        super(connection, tenantId, sender, receiver);
+        super(connection, tenantId, sender, receiver, sampler);
     }
 
     /**
@@ -133,6 +137,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
      *
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
+     * @param sampler The sampler to use.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome of the creation attempt.
@@ -141,11 +146,12 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
     public static final Future<DeviceConnectionClient> create(
             final HonoConnection con,
             final String tenantId,
+            final SendMessageSampler sampler,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
         LOG.debug("creating new device connection client for [{}]", tenantId);
-        final DeviceConnectionClientImpl client = new DeviceConnectionClientImpl(con, tenantId);
+        final DeviceConnectionClientImpl client = new DeviceConnectionClientImpl(con, tenantId, sampler);
         // no response cache being set on client here - device connection results shall not be cached
         return client.createLinks(senderCloseHook, receiverCloseHook)
                 .map(ok -> {

@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -38,10 +39,11 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
 
     /**
      * @param connection The connection to use.
+     * @param samplerFactory The factory to create samplers.
      */
-    public DownstreamSenderFactoryImpl(final HonoConnection connection) {
-        super(connection);
-        clientFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
+    public DownstreamSenderFactoryImpl(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
+        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
@@ -65,7 +67,7 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
                 .compose(v -> connection.executeOnContext(result -> {
                     clientFactory.getOrCreateClient(
                             AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, connection.getConfig()),
-                            () -> TelemetrySenderImpl.create(connection, tenantId,
+                            () -> TelemetrySenderImpl.create(connection, tenantId, samplerFactory.create(TelemetryConstants.TELEMETRY_ENDPOINT),
                                     onSenderClosed -> {
                                         clientFactory.removeClient(AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, connection.getConfig()));
                                     }),
@@ -84,7 +86,7 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
                 .compose(v -> connection.executeOnContext(result -> {
                     clientFactory.getOrCreateClient(
                             AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, connection.getConfig()),
-                            () -> EventSenderImpl.create(connection, tenantId,
+                            () -> EventSenderImpl.create(connection, tenantId, samplerFactory.create(EventConstants.EVENT_ENDPOINT),
                                     onSenderClosed -> {
                                         clientFactory.removeClient(AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, connection.getConfig()));
                                     }),

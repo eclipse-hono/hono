@@ -16,8 +16,10 @@ package org.eclipse.hono.client.impl;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.util.TenantConstants;
 
 import io.vertx.core.Future;
 
@@ -37,10 +39,11 @@ public class TenantClientFactoryImpl extends AbstractHonoClientFactory implement
      * @param connection The connection to use.
      * @param cacheProvider The cache provider to use for creating caches for tenant objects
      *                      or {@code null} if tenant objects should not be cached.
+     * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if connection is {@code null}
      */
-    public TenantClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider) {
-        super(connection);
+    public TenantClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
         this.tenantClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
     }
@@ -66,6 +69,7 @@ public class TenantClientFactoryImpl extends AbstractHonoClientFactory implement
                             () -> TenantClientImpl.create(
                                     cacheProvider,
                                     connection,
+                                    samplerFactory.create(TenantConstants.TENANT_ENDPOINT),
                                     this::removeTenantClient,
                                     this::removeTenantClient),
                             result);

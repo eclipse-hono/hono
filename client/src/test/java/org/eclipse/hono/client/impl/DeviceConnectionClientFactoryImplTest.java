@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 
 import io.vertx.core.Future;
 
@@ -26,6 +27,7 @@ public class DeviceConnectionClientFactoryImplTest
 
     @Override
     protected Future<DeviceConnectionClient> getClientFuture(final HonoConnection connection, final String tenantId) {
-        return new DeviceConnectionClientFactoryImpl(connection).getOrCreateDeviceConnectionClient(tenantId);
+        return new DeviceConnectionClientFactoryImpl(connection, SendMessageSampler.Factory.noop())
+                .getOrCreateDeviceConnectionClient(tenantId);
     }
 }

@@ -27,6 +27,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
@@ -82,7 +83,6 @@ public abstract class AbstractAdapterConfig {
      */
     @Bean
     public Tracer getTracer() {
-
         return Optional.ofNullable(TracerResolver.resolveTracer())
                 .orElse(NoopTracerFactory.create());
     }
@@ -179,13 +179,15 @@ public abstract class AbstractAdapterConfig {
      * <p>
      * The factory is initialized with the connection provided by {@link #downstreamConnection()}.
      *
+     * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
+     * out of the box.
      * @return The factory.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Bean
     @Scope("prototype")
-    public DownstreamSenderFactory downstreamSenderFactory() {
-        return DownstreamSenderFactory.create(downstreamConnection());
+    public DownstreamSenderFactory downstreamSenderFactory(final SendMessageSampler.Factory samplerFactory) {
+        return DownstreamSenderFactory.create(downstreamConnection(), samplerFactory);
     }
 
     /**
@@ -234,13 +236,14 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes a factory for creating clients for the <em>Device Registration</em> API as a Spring bean.
      *
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public RegistrationClientFactory registrationClientFactory() {
-        return RegistrationClientFactory.create(registrationServiceConnection(), registrationCacheProvider());
+    public RegistrationClientFactory registrationClientFactory(final SendMessageSampler.Factory samplerFactory) {
+        return RegistrationClientFactory.create(registrationServiceConnection(), registrationCacheProvider(), samplerFactory);
     }
 
     /**
@@ -299,13 +302,14 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes a factory for creating clients for the <em>Credentials</em> API as a Spring bean.
      *
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      */
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
-    public CredentialsClientFactory credentialsClientFactory() {
-        return CredentialsClientFactory.create(credentialsServiceConnection(), credentialsCacheProvider());
+    public CredentialsClientFactory credentialsClientFactory(final SendMessageSampler.Factory samplerFactory) {
+        return CredentialsClientFactory.create(credentialsServiceConnection(), credentialsCacheProvider(), samplerFactory);
     }
 
     /**
@@ -364,13 +368,14 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes a factory for creating clients for the <em>Tenant</em> API as a Spring bean.
      *
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
-    public TenantClientFactory tenantClientFactory() {
-        return TenantClientFactory.create(tenantServiceConnection(), tenantCacheProvider());
+    public TenantClientFactory tenantClientFactory(final SendMessageSampler.Factory samplerFactory) {
+        return TenantClientFactory.create(tenantServiceConnection(), tenantCacheProvider(), samplerFactory);
     }
 
     /**
@@ -443,14 +448,15 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes a factory for creating clients for the <em>Device Connection</em> API as a Spring bean.
      *
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      */
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @Scope("prototype")
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
-    public BasicDeviceConnectionClientFactory deviceConnectionClientFactory() {
-        return DeviceConnectionClientFactory.create(deviceConnectionServiceConnection());
+    public BasicDeviceConnectionClientFactory deviceConnectionClientFactory(final SendMessageSampler.Factory samplerFactory) {
+        return DeviceConnectionClientFactory.create(deviceConnectionServiceConnection(), samplerFactory);
     }
 
     /**

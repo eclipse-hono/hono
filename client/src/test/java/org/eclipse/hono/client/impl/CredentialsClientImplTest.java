@@ -30,6 +30,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -92,7 +93,7 @@ public class CredentialsClientImplTest {
 
         sender = HonoClientUnitTestHelper.mockProtonSender();
         cache = mock(ExpiringValueCache.class);
-        client = new CredentialsClientImpl(connection, "tenant", sender, HonoClientUnitTestHelper.mockProtonReceiver());
+        client = new CredentialsClientImpl(connection, "tenant", sender, HonoClientUnitTestHelper.mockProtonReceiver(), SendMessageSampler.noop());
     }
 
     /**

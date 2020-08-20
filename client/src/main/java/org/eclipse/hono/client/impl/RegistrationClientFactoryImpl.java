@@ -20,7 +20,9 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistrationConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
@@ -42,10 +44,11 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
      * @param connection The connection to use.
      * @param cacheProvider The cache provider to use for creating caches for tenant objects
      *                      or {@code null} if tenant objects should not be cached.
+     * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if connection is {@code null}
      */
-    public RegistrationClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider) {
-        super(connection);
+    public RegistrationClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
         this.registrationClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
@@ -76,6 +79,7 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
                                     cacheProvider,
                                     connection,
                                     tenantId,
+                                    samplerFactory.create(RegistrationConstants.REGISTRATION_ENDPOINT),
                                     this::removeRegistrationClient,
                                     this::removeRegistrationClient),
                             result);

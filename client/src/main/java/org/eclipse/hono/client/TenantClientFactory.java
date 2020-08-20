@@ -33,7 +33,7 @@ public interface TenantClientFactory extends ConnectionLifecycle<HonoConnection>
      * @throws NullPointerException if connection is {@code null}
      */
     static TenantClientFactory create(final HonoConnection connection) {
-        return new TenantClientFactoryImpl(connection, null);
+        return new TenantClientFactoryImpl(connection, null, SendMessageSampler.Factory.noop());
     }
 
     /**
@@ -42,11 +42,12 @@ public interface TenantClientFactory extends ConnectionLifecycle<HonoConnection>
      * @param connection The connection to use.
      * @param cacheProvider The provider to use for creating caches for tenant objects
      *                      or {@code null} if tenant objects should not be cached.
+     * @param samplerFactory The sampler factory to use.
      * @return The factory.
      * @throws NullPointerException if connection is {@code null}
      */
-    static TenantClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider) {
-        return new TenantClientFactoryImpl(connection, cacheProvider);
+    static TenantClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider, final SendMessageSampler.Factory samplerFactory) {
+        return new TenantClientFactoryImpl(connection, cacheProvider, samplerFactory);
     }
 
     /**

@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.client.device.amqp.AmqpSenderLink;
 import org.eclipse.hono.client.device.amqp.CommandResponder;
@@ -53,10 +54,11 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
      *
      * @param connection The connection to use.
      * @param tenantId The ID of the tenant to be used for the clients created by this factory.
+     * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if any of the parameters is {@code null}
      */
-    public AmqpAdapterClientFactoryImpl(final HonoConnection connection, final String tenantId) {
-        super(connection);
+    public AmqpAdapterClientFactoryImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
         Objects.requireNonNull(tenantId);
 
         telemetrySenderClientFactory = new CachingClientFactory<>(connection.getVertx(), AmqpSenderLink::isOpen);

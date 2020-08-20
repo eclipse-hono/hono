@@ -19,6 +19,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.impl.AmqpAdapterClientFactoryImpl;
 
 import io.vertx.core.Future;
@@ -33,11 +34,24 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      *
      * @param connection The connection to use.
      * @param tenantId The ID of the tenant for which the connection is authenticated.
+     * @param samplerFactory The sampler factory to use.
+     * @return The factory.
+     * @throws NullPointerException if any of the parameters is {@code null}
+     */
+    static AmqpAdapterClientFactory create(final HonoConnection connection, final String tenantId, final SendMessageSampler.Factory samplerFactory) {
+        return new AmqpAdapterClientFactoryImpl(connection, tenantId, samplerFactory);
+    }
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @param tenantId The ID of the tenant for which the connection is authenticated.
      * @return The factory.
      * @throws NullPointerException if any of the parameters is {@code null}
      */
     static AmqpAdapterClientFactory create(final HonoConnection connection, final String tenantId) {
-        return new AmqpAdapterClientFactoryImpl(connection, tenantId);
+        return new AmqpAdapterClientFactoryImpl(connection, tenantId, SendMessageSampler.Factory.noop());
     }
 
     /**

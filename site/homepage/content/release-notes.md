@@ -14,6 +14,7 @@ title = "Release Notes"
   startup times comparing to the existing one.
 * The LoraWAN protocol adapter has been extended with support for the *Actility Enterprise* provider.
 * The LoraWAN protocol adapter has been extended with support for the *Orbiwise* provider.
+* Added metrics for tracking the RTT between sending an AMQP message to receiving the disposition.
 
 ## 1.3.0
 
