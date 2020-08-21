@@ -25,8 +25,7 @@ import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -362,20 +361,59 @@ public class TenantObjectTest {
                 .put("max-connections", 2)
                 .put("data-volume",
                         new JsonObject().put("max-bytes", 20_000_000)
-                                .put("effective-since", "2019-04-25T14:30:00Z")
+                                .put("effective-since", "2019-04-25T15:30:00+01:00")
                                 .put("period", new JsonObject()
-                                        .put("mode", "days")
+                                        .put("mode", ResourceLimitsPeriod.PERIOD_MODE_DAYS)
                                         .put("no-of-days", 90)));
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.setResourceLimits(limitsConfig);
         assertThat(tenantObject.getResourceLimits()).isNotNull();
         assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes()).isEqualTo(20_000_000L);
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(
-                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant());
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo("days");
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T14:30:00Z"));
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(ResourceLimitsPeriod.PERIOD_MODE_DAYS);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays()).isEqualTo(90);
     }
+
+   /**
+    * Verifies that data volume limits use period mode monthly by default.
+    */
+   @Test
+   public void testGetDataVolumeUsesDefaultPeriod() {
+       final JsonObject limitsConfig = new JsonObject()
+               .put("max-connections", 2)
+               .put("data-volume",
+                       new JsonObject().put("max-bytes", 20_000_000)
+                               .put("effective-since", "2019-04-25T14:30:00-05:00"));
+       final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+       tenantObject.setResourceLimits(limitsConfig);
+       assertThat(tenantObject.getResourceLimits()).isNotNull();
+       assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
+       assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes()).isEqualTo(20_000_000);
+       assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T19:30:00Z"));
+       assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(ResourceLimitsPeriod.PERIOD_MODE_MONTHLY);
+       assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays()).isEqualTo(0);
+   }
+
+   /**
+    * Verifies that connection duration limits use period mode monthly by default.
+    */
+   @Test
+   public void testGetConnectionDurationUsesDefaultPeriod() {
+       final JsonObject limitsConfig = new JsonObject()
+               .put("max-connections", 2)
+               .put("connection-duration",
+                       new JsonObject().put("max-minutes", 1_000)
+                               .put("effective-since", "2019-04-25T14:30:00Z"));
+       final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+       tenantObject.setResourceLimits(limitsConfig);
+       assertThat(tenantObject.getResourceLimits()).isNotNull();
+       assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
+       assertThat(tenantObject.getResourceLimits().getConnectionDuration().getMaxMinutes()).isEqualTo(1_000L);
+       assertThat(tenantObject.getResourceLimits().getConnectionDuration().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T14:30:00Z"));
+       assertThat(tenantObject.getResourceLimits().getConnectionDuration().getPeriod().getMode()).isEqualTo(ResourceLimitsPeriod.PERIOD_MODE_MONTHLY);
+       assertThat(tenantObject.getResourceLimits().getConnectionDuration().getPeriod().getNoOfDays()).isEqualTo(0);
+   }
 
     /**
      * Verifies that {@code null} is returned when resource limits are not set.

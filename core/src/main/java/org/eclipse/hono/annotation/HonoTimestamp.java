@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,7 +46,7 @@ import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
 @Retention(RetentionPolicy.RUNTIME)
 @JacksonAnnotationsInside
 @JsonInclude(Include.NON_NULL)
-@Target(ElementType.FIELD)
+@Target({ ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD })
 @Documented
 @JsonSerialize(using = Serializer.class)
 @JsonDeserialize(using = Deserializer.class)

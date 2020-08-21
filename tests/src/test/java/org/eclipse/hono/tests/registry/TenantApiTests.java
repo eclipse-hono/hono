@@ -78,12 +78,10 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final ResourceLimits resourceLimits = new ResourceLimits()
                 .setMaxConnections(100000)
                 .setMaxTtl(30L)
-                .setDataVolume(new DataVolume()
-                        .setMaxBytes(2147483648L)
-                        .setEffectiveSince(Instant.parse("2019-07-27T14:30:00Z"))
-                        .setPeriod(new ResourceLimitsPeriod()
-                                .setMode("days")
-                                .setNoOfDays(30)));
+                .setDataVolume(new DataVolume(
+                        Instant.parse("2019-07-27T14:30:00Z"),
+                        new ResourceLimitsPeriod(ResourceLimitsPeriod.PERIOD_MODE_DAYS).setNoOfDays(30),
+                        2147483648L));
 
         final String tenantId = getHelper().getRandomTenantId();
         final Tenant tenant = new Tenant();
