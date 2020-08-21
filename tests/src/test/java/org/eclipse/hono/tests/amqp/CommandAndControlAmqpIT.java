@@ -611,7 +611,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         // send first command
         helper.sendOneWayCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
-                Buffer.buffer("cmd"), null, 200)
+                Buffer.buffer("cmd"), null, helper.getSendCommandTimeout())
         // first command shall succeed because there's one initial credit
         .onComplete(ctx.succeeding(v -> {
             expectedSteps.flag();
@@ -630,7 +630,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         assertThat(t).isInstanceOf(ServerErrorException.class);
                         assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                         // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
-                        // and the error here would be caused by a request timeout in the sendOneWayCommand() method above (after 200ms already)
+                        // and the error here would be caused by a request timeout in the sendOneWayCommand() method above
                         assertThat(t.getMessage()).doesNotContain("timed out");
                     });
                     expectedSteps.flag();
