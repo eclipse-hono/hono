@@ -50,10 +50,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String CREDENTIALS_HTTP_ENDPOINT = "credentials";
 
     /**
-     * The name of the Device Registration HTTP API endpoint.
-     */
-    public static final String REGISTRATION_HTTP_ENDPOINT = "devices";
-    /**
      * The name of the HTTP endpoint for the Tenant API.
      */
     public static final String TENANT_HTTP_ENDPOINT = "tenants";

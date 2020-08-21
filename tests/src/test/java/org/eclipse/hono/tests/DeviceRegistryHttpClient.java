@@ -70,13 +70,13 @@ public final class DeviceRegistryHttpClient {
      * The URI pattern for addressing a device instance.
      */
     public static final String TEMPLATE_URI_REGISTRATION_WITHOUT_ID = String.format("/%s/%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.DEVICES_HTTP_ENDPOINT);
 
     /**
      * The URI pattern for addressing adding a device without id.
      */
     public static final String TEMPLATE_URI_REGISTRATION_INSTANCE = String.format("/%s/%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.DEVICES_HTTP_ENDPOINT);
 
     /**
      * The URI pattern for addressing the credentials of a device.
