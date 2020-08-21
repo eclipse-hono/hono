@@ -16,6 +16,7 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
+import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 
 import io.quarkus.arc.config.ConfigProperties;
 
@@ -42,6 +43,8 @@ public class HonoConfig {
      public RegistrationClientConfig registration;
 
      public TenantClientConfig tenant;
+
+     public ResourceLimitChecksConfig resourceLimitChecks;
 
      /**
       * Command configuration.
@@ -96,4 +99,10 @@ public class HonoConfig {
       */
      @ConfigProperties(prefix = "hono.tenant", failOnMismatchingMember = false)
      public static class TenantClientConfig extends RequestResponseClientConfigProperties { }
+
+     /**
+      * Resource Limit Checks configuration.
+      */
+     @ConfigProperties(prefix = "hono.resource-limits.prometheus-based", failOnMismatchingMember = false)
+     public static class ResourceLimitChecksConfig extends PrometheusBasedResourceLimitChecksConfig { }
 }

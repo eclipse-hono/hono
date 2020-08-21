@@ -17,7 +17,7 @@ import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 /**
  * Properties for configuring the Prometheus based resource limit checks.
  */
-public final class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClientConfigProperties {
+public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClientConfigProperties {
 
     /**
      * The default minimum size of caches.

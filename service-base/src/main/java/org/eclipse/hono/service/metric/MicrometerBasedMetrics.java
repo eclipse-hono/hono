@@ -28,6 +28,8 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Counter;
@@ -86,6 +88,8 @@ public class MicrometerBasedMetrics implements Metrics {
             .toMillis();
     private static final long DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(10);
 
+    protected final Logger log = LoggerFactory.getLogger(getClass());
+
     /**
      * The meter registry.
      */
@@ -111,6 +115,7 @@ public class MicrometerBasedMetrics implements Metrics {
         Objects.requireNonNull(registry);
         Objects.requireNonNull(vertx);
 
+        log.info("using Metrics Registry implementation [{}]", registry.getClass().getName());
         this.registry = registry;
         this.vertx = vertx;
 

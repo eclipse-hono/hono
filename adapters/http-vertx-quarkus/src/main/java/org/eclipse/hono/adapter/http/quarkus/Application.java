@@ -12,8 +12,8 @@
  */
 package org.eclipse.hono.adapter.http.quarkus;
 
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -37,21 +37,21 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
-import org.eclipse.hono.service.metric.PrometheusScrapingResource;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.opentracing.Tracer;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.ext.web.Router;
 
 /**
  * The Hono HTTP adapter main application class.
@@ -68,7 +68,17 @@ public class Application {
     @Inject
     HonoConfig config;
 
-    @Inject Tracer tracer;
+    @Inject
+    Tracer tracer;
+
+    @Inject
+    MicrometerBasedHttpAdapterMetrics metrics;
+
+    @Inject
+    List<Handler<Router>> healthCheckResourceProviders;
+
+    @Inject
+    ResourceLimitChecks resourceLimitChecks;
 
     void onStart(final @Observes StartupEvent ev) {
         LOG.info("deploying {} HTTP adapter instances ...", config.app.getMaxInstances());
@@ -114,27 +124,12 @@ public class Application {
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory());
         adapter.setDownstreamSenderFactory(downstreamSenderFactory());
         adapter.setHealthCheckServer(healthCheckServer());
-        adapter.setMetrics(metrics());
+        adapter.setMetrics(metrics);
         adapter.setRegistrationClientFactory(registrationClientFactory());
         adapter.setTenantClientFactory(tenantClientFactory());
         adapter.setTracer(tracer);
-        //TODO consider adding resource limit check
+        adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;
-    }
-
-    @Singleton
-    PrometheusMeterRegistry metricsRegistry() {
-        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-    }
-
-    @Singleton
-    MicrometerBasedHttpAdapterMetrics metrics() {
-        return new MicrometerBasedHttpAdapterMetrics(metricsRegistry(), vertx);
-    }
-
-    @Singleton
-    PrometheusScrapingResource scrapingResource() {
-        return new PrometheusScrapingResource(metricsRegistry());
     }
 
     @Produces
@@ -172,7 +167,7 @@ public class Application {
     @Singleton
     HealthCheckServer healthCheckServer() {
         final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, config.healthCheck);
-        server.setAdditionalResources(Collections.singletonList(scrapingResource()));
+        server.setAdditionalResources(healthCheckResourceProviders);
         return server;
     }
 

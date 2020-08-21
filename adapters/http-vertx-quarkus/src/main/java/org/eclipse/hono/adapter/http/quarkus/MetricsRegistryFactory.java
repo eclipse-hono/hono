@@ -12,35 +12,33 @@
  */
 package org.eclipse.hono.adapter.http.quarkus;
 
-import java.util.Optional;
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 
-import io.jaegertracing.Configuration;
-import io.opentracing.Tracer;
-import io.opentracing.contrib.tracerresolver.TracerResolver;
-import io.opentracing.noop.NoopTracerFactory;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.arc.properties.IfBuildProperty;
 
 /**
- * A factory class that creates a proper tracer based on the profile.
+ * A factory class that creates micrometer registry based on the profile.
  */
 @ApplicationScoped
-public class TracerFactory {
+public class MetricsRegistryFactory {
+
+    @Produces
+    @IfBuildProperty(name = "hono.metrics", stringValue = "prometheus")
+    MeterRegistry prometheusRegistry() {
+        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+    }
 
     @Produces
     @DefaultBean
-    Tracer tracer() {
-        return Optional.ofNullable(TracerResolver.resolveTracer())
-                .orElse(NoopTracerFactory.create());
+    MeterRegistry simpleRegistry() {
+        return new SimpleMeterRegistry();
     }
 
-    @Produces
-    @IfBuildProperty(name = "hono.tracing", stringValue = "jaeger")
-    Tracer jaegerTracer() {
-        return Configuration.fromEnv().getTracer();
-    }
 
 }

@@ -98,6 +98,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     @Autowired
     public final void setMetrics(final HttpAdapterMetrics metrics) {
         this.metrics = metrics;
+        log.info("using Metrics implementation [{}]", metrics.getClass().getName());
     }
 
     /**
