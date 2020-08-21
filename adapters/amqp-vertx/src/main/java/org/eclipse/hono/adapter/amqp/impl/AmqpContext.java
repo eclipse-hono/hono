@@ -66,12 +66,8 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
         ctx.message = message;
         ctx.payload = MessageHelper.getPayload(message);
         if (message.getAddress() != null) {
-            try {
-                ctx.address = ResourceIdentifier.fromString(message.getAddress());
-                ctx.endpoint = EndpointType.fromString(ctx.address.getEndpoint());
-            } catch (final IllegalArgumentException e) {
-                // malformed address
-            }
+            ctx.address = ResourceIdentifier.fromString(message.getAddress());
+            ctx.endpoint = EndpointType.fromString(ctx.address.getEndpoint());
         }
         return ctx;
     }

@@ -119,26 +119,21 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         final Source remoteSource = sender.getRemoteSource();
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
                 con.getRemoteContainer(), remoteSource);
-        try {
-            final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
-            final AmqpEndpoint endpoint = getEndpoint(targetResource);
+        final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
+        final AmqpEndpoint endpoint = getEndpoint(targetResource);
 
-            if (endpoint == null) {
-                LOG.debug("no endpoint registered for node [{}]", targetResource);
-                con.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such node")).close();
+        if (endpoint == null) {
+            LOG.debug("no endpoint registered for node [{}]", targetResource);
+            con.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such node")).close();
+        } else {
+            final HonoUser user = Constants.getClientPrincipal(con);
+            if (Constants.SUBJECT_ANONYMOUS.equals(user.getName())) {
+                con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "client must authenticate using SASL")).close();
             } else {
-                final HonoUser user = Constants.getClientPrincipal(con);
-                if (Constants.SUBJECT_ANONYMOUS.equals(user.getName())) {
-                    con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "client must authenticate using SASL")).close();
-                } else {
-                    Constants.copyProperties(con, sender);
-                    sender.setSource(sender.getRemoteSource());
-                    endpoint.onLinkAttach(con, sender, targetResource);
-                }
+                Constants.copyProperties(con, sender);
+                sender.setSource(sender.getRemoteSource());
+                endpoint.onLinkAttach(con, sender, targetResource);
             }
-        } catch (final IllegalArgumentException e) {
-            LOG.debug("client has provided invalid resource identifier as source address", e);
-            con.setCondition(ProtonHelper.condition(AmqpError.INVALID_FIELD, "malformed source address")).close();
         }
     }
 }
