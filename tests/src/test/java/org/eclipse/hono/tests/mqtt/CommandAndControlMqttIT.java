@@ -284,7 +284,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
         .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -380,14 +380,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         helper.applicationClientFactory.createGenericMessageSender(linkTargetAddress)
-        .map(s -> {
-            LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
-            sender.set(s);
-            ready.flag();
-            return s;
-        });
+            .onSuccess(s -> {
+                LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
+                sender.set(s);
+                ready.flag();
+            });
 
-        assertThat(setup.awaitCompletion(15, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -479,7 +478,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
                 .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;

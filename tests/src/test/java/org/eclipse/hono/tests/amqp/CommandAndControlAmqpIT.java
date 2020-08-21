@@ -161,7 +161,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
         }
@@ -325,7 +325,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -527,7 +527,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         })
         .onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -601,7 +601,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -674,7 +674,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .onSuccess(c -> c.setRequestTimeout(300))
                 .onComplete(commandClientCreation.completing());
 
-        assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(commandClientCreation.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
             ctx.failNow(commandClientCreation.causeOfFailure());
             return;
@@ -767,7 +767,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .onSuccess(c -> c.setRequestTimeout(1300)) // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
                 .onComplete(commandClientCreation.completing());
 
-        assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(commandClientCreation.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
             ctx.failNow(commandClientCreation.causeOfFailure());
             return;

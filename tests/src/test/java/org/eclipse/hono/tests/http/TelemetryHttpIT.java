@@ -77,7 +77,7 @@ public class TelemetryHttpIT extends HttpTestBase {
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
                 .onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;

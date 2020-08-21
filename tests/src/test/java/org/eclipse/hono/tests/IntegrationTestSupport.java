@@ -418,6 +418,9 @@ public final class IntegrationTestSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
+    private static final long DEFAULT_TEST_SETUP_TIMEOUT_SECONDS = 5;
+    private static final long DEFAULT_SEND_COMMAND_TIMEOUT_MILLIS = 200;
+    private static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
 
     /**
      * A client for managing tenants/devices/credentials.
@@ -619,7 +622,21 @@ public final class IntegrationTestSupport {
      *         otherwise.
      */
     public long getSendCommandTimeout() {
-        return isTestEnvironment() ? 1000 : 200;
+        return isTestEnvironment() ? 1000 : DEFAULT_SEND_COMMAND_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Determines the time to wait before timing out the setup phase of a test case.
+     *
+     * @return The time out in seconds. The value will be {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS}
+     *         if {@link #isTestEnvironment()} returns {@code false} and
+     *         {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS} *
+     *         {@value IntegrationTestSupport#TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR}
+     *         otherwise.
+     */
+    public long getTestSetupTimeout() {
+        final int factor = isTestEnvironment() ? TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR : 1;
+        return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * factor;
     }
 
     /**

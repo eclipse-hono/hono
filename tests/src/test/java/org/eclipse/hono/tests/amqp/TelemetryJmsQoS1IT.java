@@ -127,7 +127,7 @@ public class TelemetryJmsQoS1IT {
             amqpAdapter = connection;
             setup.completeNow();
         }));
-        assertTrue(setup.awaitCompletion(5, TimeUnit.SECONDS));
+        assertTrue(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS));
 
         final CountDownLatch latch = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();
