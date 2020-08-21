@@ -13,10 +13,10 @@
 package org.eclipse.hono.util;
 
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,86 +24,70 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Data volume definition of the tenant resource limits.
  */
 @JsonInclude(Include.NON_DEFAULT)
-public class DataVolume {
+public class DataVolume extends LimitedResource {
 
-    @JsonProperty(value = TenantConstants.FIELD_EFFECTIVE_SINCE, required = true)
-    @HonoTimestamp
-    private Instant effectiveSince;
-
-    @JsonProperty(TenantConstants.FIELD_MAX_BYTES)
-    private long maxBytes = TenantConstants.UNLIMITED_BYTES;
-
-    @JsonProperty(TenantConstants.FIELD_PERIOD)
-    private ResourceLimitsPeriod period;
+    private final long maxBytes;
 
     /**
-     * Gets the point in time on which the data volume limit came into effect.
+     * Creates a new data volume specification for an instant in time and an accounting period definition.
      *
-     * @return The instant on which the data volume limit came into effective or 
-     *         {@code null} if not set.
+     * @param effectiveSince The point in time at which the limit became or will become effective.
+     * @param period The definition of the accounting periods to be used for this specification
+     *               or {@code null} to use the default period definition with mode
+     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     * @throws NullPointerException if effectiveSince is {@code null}.
+     * @throws IllegalArgumentException if max bytes is &lt; -1.
      */
-    public final Instant getEffectiveSince() {
-        return effectiveSince;
+    public DataVolume(
+            @JsonProperty(value = TenantConstants.FIELD_EFFECTIVE_SINCE, required = true)
+            @HonoTimestamp
+            final Instant effectiveSince,
+            @JsonProperty(TenantConstants.FIELD_PERIOD)
+            final ResourceLimitsPeriod period) {
+
+        this(effectiveSince, period, TenantConstants.UNLIMITED_BYTES);
     }
 
     /**
-     * Sets the point in time on which the data volume limit came into effect.
+     * Creates a new data volume specification for an instant in time.
      *
-     * @param effectiveSince the point in time on which the data volume limit came into effect
-     *                       and it comply to the {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME}.
-     * @return  a reference to this for fluent use.
+     * @param effectiveSince The point in time at which the limit became or will become effective.
+     * @param period The definition of the accounting periods to be used for this specification
+     *               or {@code null} to use the default period definition with mode
+     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     * @param maxBytes The amount of data (in bytes) that devices of a tenant may transfer per accounting period.
+     *                 The value {@value TenantConstants#UNLIMITED_BYTES} can be used to indicate that
+     *                 the data volume should not be limited.
+     * @throws NullPointerException if effectiveSince is {@code null}.
+     * @throws IllegalArgumentException if max bytes is &lt; -1.
      */
-    public final DataVolume setEffectiveSince(final Instant effectiveSince) {
-        this.effectiveSince = effectiveSince;
-        return this;
-    }
+    @JsonCreator
+    public DataVolume(
+            @JsonProperty(value = TenantConstants.FIELD_EFFECTIVE_SINCE, required = true)
+            @HonoTimestamp
+            final Instant effectiveSince,
+            @JsonProperty(TenantConstants.FIELD_PERIOD)
+            final ResourceLimitsPeriod period,
+            @JsonProperty(value = TenantConstants.FIELD_MAX_BYTES)
+            final long maxBytes) {
 
-    /**
-     * Gets the maximum number of bytes to be allowed for the time period defined by the
-     * {@link TenantConstants#FIELD_PERIOD_MODE} and 
-     * {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}.
-     *
-     * @return The maximum number of bytes or {@link TenantConstants#UNLIMITED_BYTES} 
-     *         if not set.
-     */
-    public final long getMaxBytes() {
-        return maxBytes;
-    }
-
-    /**
-     * Sets the maximum number of bytes to be allowed for the time period defined by the
-     * {@link TenantConstants#FIELD_PERIOD_MODE} and 
-     * {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}.
-     *
-     * @param maxBytes The maximum number of bytes to be allowed.
-     * @return  a reference to this for fluent use.
-     * @throws IllegalArgumentException if the maximum number of bytes is set to less than -1.
-     */
-    public final DataVolume setMaxBytes(final long maxBytes) {
+        super(effectiveSince, period);
         if (maxBytes < -1) {
             throw new IllegalArgumentException("Maximum bytes allowed property must be set to value >= -1");
         }
         this.maxBytes = maxBytes;
-        return this;
     }
 
     /**
-     * Gets the period for the data usage calculation.
+     * Gets the amount of data that devices of a tenant may transfer per accounting period.
+     * <p>
+     * The default value of this property is {@value TenantConstants#UNLIMITED_BYTES} which indicates
+     * that the data volume is unlimited.
      *
-     * @return The period for the data usage calculation.
+     * @return The amount of data in bytes.
      */
-    public final ResourceLimitsPeriod getPeriod() {
-        return period;
-    }
-
-    /**
-     * Sets the period for the data usage calculation.
-     *
-     * @param period The period for the data usage calculation.
-     * @return  a reference to this for fluent use.
-     */
-    public final DataVolume setPeriod(final ResourceLimitsPeriod period) {
-        this.period = period;
-        return this;
+    @JsonProperty(TenantConstants.FIELD_MAX_BYTES)
+    public final long getMaxBytes() {
+        return maxBytes;
     }
 }

@@ -23,7 +23,6 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -90,57 +89,6 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private final String url;
 
     private Clock clock = Clock.systemUTC();
-
-    /**
-     * The mode of the data volume calculation.
-     *
-     */
-    protected enum PeriodMode {
-        /**
-         * The mode of the data volume calculation in terms of days.
-         */
-        DAYS("days"),
-        /**
-         * The mode of the data volume calculation is monthly.
-         */
-        MONTHLY("monthly"),
-        /**
-         * The unknown mode.
-         */
-        UNKNOWN("unknown");
-
-        private final String mode;
-
-        PeriodMode(final String mode) {
-            this.mode = mode;
-        }
-
-        /**
-         * Construct a PeriodMode from a given value.
-         *
-         * @param value The value from which the PeriodMode needs to be constructed.
-         * @return The PeriodMode as enum
-         */
-        static PeriodMode from(final String value) {
-            if (value != null) {
-                for (PeriodMode mode : values()) {
-                    if (value.equalsIgnoreCase(mode.value())) {
-                        return mode;
-                    }
-                }
-            }
-            return UNKNOWN;
-        }
-
-        /**
-         * Gets the string equivalent of the mode.
-         *
-         * @return The value of the mode.
-         */
-        String value() {
-            return this.mode;
-        }
-    }
 
     /**
      * Creates new checks.
@@ -358,12 +306,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final long maxBytes = dataVolumeConfig.getMaxBytes();
         final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
         //If the period is not set explicitly, monthly is assumed as the default value
-        final PeriodMode periodMode = Optional.ofNullable(dataVolumeConfig.getPeriod())
-                .map(period -> PeriodMode.from(period.getMode()))
-                .orElse(PeriodMode.MONTHLY);
-        final long periodInDays = Optional.ofNullable(dataVolumeConfig.getPeriod())
-                .map(ResourceLimitsPeriod::getNoOfDays)
-                .orElse(0);
+        final String periodMode = dataVolumeConfig.getPeriod().getMode();
+        final long periodInDays = dataVolumeConfig.getPeriod().getNoOfDays();
 
         LOG.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
                 TenantConstants.FIELD_MAX_BYTES, maxBytes,
@@ -371,7 +315,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxBytes == TenantConstants.UNLIMITED_BYTES || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode) || payloadSize <= 0) {
+        if (maxBytes == TenantConstants.UNLIMITED_BYTES || effectiveSince == null || !ResourceLimitsPeriod.isSupportedMode(periodMode) || payloadSize <= 0) {
             result.complete(Boolean.FALSE);
         } else {
 
@@ -467,12 +411,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final long maxConnectionDurationInMinutes = connectionDurationConfig.getMaxMinutes();
         final Instant effectiveSince = connectionDurationConfig.getEffectiveSince();
         //If the period is not set explicitly, monthly is assumed as the default value
-        final PeriodMode periodMode = Optional.ofNullable(connectionDurationConfig.getPeriod())
-                .map(period -> PeriodMode.from(period.getMode()))
-                .orElse(PeriodMode.MONTHLY);
-        final long periodInDays = Optional.ofNullable(connectionDurationConfig.getPeriod())
-                .map(ResourceLimitsPeriod::getNoOfDays)
-                .orElse(0);
+        final String periodMode = connectionDurationConfig.getPeriod().getMode();
+        final long periodInDays = connectionDurationConfig.getPeriod().getNoOfDays();
 
         LOG.trace("connection duration config for the tenant [{}] is [{}:{}, {}:{}, {}:{}, {}:{}]",
                 tenant.getTenantId(),
@@ -481,7 +421,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode)) {
+        if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null || !ResourceLimitsPeriod.isSupportedMode(periodMode)) {
             result.complete(Boolean.FALSE);
         } else {
 
@@ -670,7 +610,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     long calculateEffectiveLimit(
             final Instant effectiveSince,
             final Instant targetDateTime,
-            final PeriodMode periodType,
+            final String periodType,
             final long configuredLimit) {
 
         Objects.requireNonNull(effectiveSince, "effective since");
@@ -683,7 +623,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         // we only need to calculate the effective limit if we are in the initial accounting period
         // of a monthly plan
-        if (PeriodMode.MONTHLY.equals(periodType) && configuredLimit > 0) {
+        if (ResourceLimitsPeriod.PERIOD_MODE_MONTHLY.equals(periodType) && configuredLimit > 0) {
 
             final ZonedDateTime effectiveSinceZonedDateTime = ZonedDateTime.ofInstant(effectiveSince, ZoneOffset.UTC);
             final ZonedDateTime targetZonedDateTime = ZonedDateTime.ofInstant(targetDateTime, ZoneOffset.UTC);
@@ -733,7 +673,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     Duration calculateResourceUsageDuration(
             final Instant effectiveSince,
             final Instant targetDateTime,
-            final PeriodMode periodType,
+            final String periodType,
             final long periodLength) {
 
         Objects.requireNonNull(effectiveSince, "effective since");
@@ -756,11 +696,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private ZonedDateTime getBeginningOfMostRecentAccountingPeriod(
             final ZonedDateTime effectiveSince,
             final ZonedDateTime targetDateTime,
-            final PeriodMode periodType,
+            final String periodType,
             final long periodLength) {
 
         switch (periodType) {
-        case MONTHLY:
+        case ResourceLimitsPeriod.PERIOD_MODE_MONTHLY:
             final YearMonth targetYearMonth = YearMonth.from(targetDateTime);
             if (targetYearMonth.equals(YearMonth.from(effectiveSince))) {
                 // we are in the initial accounting period
@@ -772,7 +712,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         0, 0, 0, 0,
                         ZoneOffset.UTC);
             }
-        case DAYS:
+        case ResourceLimitsPeriod.PERIOD_MODE_DAYS:
             final Duration overall = Duration.between(effectiveSince, targetDateTime);
             final Duration accountingPeriodLength = Duration.ofDays(periodLength);
             if (overall.compareTo(accountingPeriodLength) < 1) {

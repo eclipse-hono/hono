@@ -13,10 +13,10 @@
 package org.eclipse.hono.util;
 
 import java.time.Instant;
-import java.util.Objects;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -24,39 +24,57 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * The resource limits definition corresponding to the connection duration.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-public class ConnectionDuration {
+public class ConnectionDuration extends LimitedResource {
 
-    @JsonProperty(value = TenantConstants.FIELD_EFFECTIVE_SINCE, required = true)
-    @HonoTimestamp
-    private Instant effectiveSince;
-
-    @JsonProperty(TenantConstants.FIELD_MAX_MINUTES)
-    private long maxMinutes = TenantConstants.UNLIMITED_MINUTES;
-
-    @JsonProperty(value = TenantConstants.FIELD_PERIOD)
-    private ResourceLimitsPeriod period;
+    private final long maxMinutes;
 
     /**
-     * Gets the point in time on which the connection duration limit came into effect.
+     * Creates a new connection duration specification for an instant in time.
      *
-     * @return The instant on which the connection duration limit came into effective or 
-     *         {@code null} if not set.
+     * @param effectiveSince The point in time at which the limit became or will become effective.
+     * @param period The definition of the accounting periods to be used for this specification
+     *               or {@code null} to use the default period definition with mode
+     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     * @throws NullPointerException if effectiveSince is {@code null}.
      */
-    public final Instant getEffectiveSince() {
-        return effectiveSince;
+    public ConnectionDuration(
+            @JsonProperty(value = TenantConstants.FIELD_EFFECTIVE_SINCE, required = true)
+            @HonoTimestamp
+            final Instant effectiveSince,
+            @JsonProperty(TenantConstants.FIELD_PERIOD)
+            final ResourceLimitsPeriod period) {
+
+        this(effectiveSince, period, TenantConstants.UNLIMITED_MINUTES);
     }
 
     /**
-     * Sets the point in time on which the connection duration limit came into effect.
+     * Creates a new connection duration specification for an instant in time.
      *
-     * @param effectiveSince the point in time on which the connection duration limit came into effect
-     *                       and it comply to the {@link java.time.format.DateTimeFormatter#ISO_OFFSET_DATE_TIME}.
-     * @return  a reference to this for fluent use.
+     * @param effectiveSince The point in time at which the limit became or will become effective.
+     * @param period The definition of the accounting periods to be used for this specification
+     *               or {@code null} to use the default period definition with mode
+     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     * @param maxMinutes The maximum connection duration in minutes to be allowed.
      * @throws NullPointerException if effectiveSince is {@code null}.
+     * @throws IllegalArgumentException if the maximum number of minutes is set to less than 
+     *                                  {@link TenantConstants#UNLIMITED_MINUTES}.
      */
-    public final ConnectionDuration setEffectiveSince(final Instant effectiveSince) {
-        this.effectiveSince = Objects.requireNonNull(effectiveSince);
-        return this;
+    @JsonCreator
+    public ConnectionDuration(
+            @JsonProperty(value = TenantConstants.FIELD_EFFECTIVE_SINCE, required = true)
+            @HonoTimestamp
+            final Instant effectiveSince,
+            @JsonProperty(TenantConstants.FIELD_PERIOD)
+            final ResourceLimitsPeriod period,
+            @JsonProperty(TenantConstants.FIELD_MAX_MINUTES)
+            final long maxMinutes) {
+
+        super(effectiveSince, period);
+        if (maxMinutes < TenantConstants.UNLIMITED_MINUTES) {
+            throw new IllegalArgumentException(
+                    String.format("Maximum minutes must be set to value >= %s", TenantConstants.UNLIMITED_MINUTES));
+        }
+        this.maxMinutes = maxMinutes;
     }
 
     /**
@@ -67,47 +85,8 @@ public class ConnectionDuration {
      * @return The maximum connection duration in minutes or {@link TenantConstants#UNLIMITED_MINUTES}
      *         if not set.
      */
+    @JsonProperty(TenantConstants.FIELD_MAX_MINUTES)
     public final long getMaxMinutes() {
         return maxMinutes;
-    }
-
-    /**
-     * Sets the maximum device connection duration in minutes to be allowed for the time period
-     * defined by the {@link TenantConstants#FIELD_PERIOD_MODE} and 
-     * {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}.
-     *
-     * @param maxMinutes The maximum connection duration in minutes to be allowed.
-     * @return  a reference to this for fluent use.
-     * @throws IllegalArgumentException if the maximum number of minutes is set to less than 
-     *                                  {@link TenantConstants#UNLIMITED_MINUTES}.
-     */
-    public final ConnectionDuration setMaxDuration(final long maxMinutes) {
-        if (maxMinutes < TenantConstants.UNLIMITED_MINUTES) {
-            throw new IllegalArgumentException(
-                    String.format("Maximum minutes must be set to value >= %s", TenantConstants.UNLIMITED_MINUTES));
-        }
-        this.maxMinutes = maxMinutes;
-        return this;
-    }
-
-    /**
-     * Gets the period for the connection duration calculation.
-     *
-     * @return The period for the connection duration calculation.
-     */
-    public final ResourceLimitsPeriod getPeriod() {
-        return period;
-    }
-
-    /**
-     * Sets the period for the connection duration calculation.
-     *
-     * @param period The period for the connection duration calculation.
-     * @return a reference to this for fluent use.
-     * @throws NullPointerException if period is {@code null}.
-     */
-    public final ConnectionDuration setPeriod(final ResourceLimitsPeriod period) {
-        this.period = Objects.requireNonNull(period);
-        return this;
     }
 }

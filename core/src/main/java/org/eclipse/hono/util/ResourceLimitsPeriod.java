@@ -23,11 +23,41 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class ResourceLimitsPeriod {
 
-    @JsonProperty(value = TenantConstants.FIELD_PERIOD_MODE, required = true)
-    private String mode;
+    /**
+     * The name of the constantly recurring accounting period mode.
+     */
+    public static final String PERIOD_MODE_DAYS = "days";
+    /**
+     * The name of the monthly recurring accounting period mode.
+     */
+    public static final String PERIOD_MODE_MONTHLY = "monthly";
+
+    static final ResourceLimitsPeriod DEFAULT_PERIOD = new ResourceLimitsPeriod(PERIOD_MODE_MONTHLY);
+
+    private final String mode;
 
     @JsonProperty(value = TenantConstants.FIELD_PERIOD_NO_OF_DAYS)
     private int noOfDays;
+
+    /**
+     * Creates a new instance with a given mode of recurrence.
+     *
+     * @param mode The mode of recurrence.
+     * @throws NullPointerException if mode is {@code null}.
+     */
+    public ResourceLimitsPeriod(@JsonProperty(value = TenantConstants.FIELD_PERIOD_MODE, required = true) final String mode) {
+        this.mode = Objects.requireNonNull(mode);
+    }
+
+    /**
+     * Checks if a given mode is one of the supported standard modes.
+     *
+     * @param mode The mode to check.
+     * @return {@code true} if the mode is one of the standard modes.
+     */
+    public static boolean isSupportedMode(final String mode) {
+        return PERIOD_MODE_DAYS.equals(mode) || PERIOD_MODE_MONTHLY.equals(mode);
+    }
 
     /**
      * Gets the mode of period for resource limit calculation.
@@ -36,18 +66,6 @@ public class ResourceLimitsPeriod {
      */
     public final String getMode() {
         return mode;
-    }
-
-    /**
-     * Sets the mode of period for resource limit calculation.
-     *
-     * @param mode The mode of period for resource limit calculation.
-     * @return  a reference to this for fluent use.
-     * @throws NullPointerException if mode is {@code null}.
-     */
-    public final ResourceLimitsPeriod setMode(final String mode) {
-        this.mode = Objects.requireNonNull(mode);
-        return this;
     }
 
     /**
