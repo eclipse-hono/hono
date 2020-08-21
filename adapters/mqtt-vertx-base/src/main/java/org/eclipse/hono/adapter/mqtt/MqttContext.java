@@ -99,16 +99,12 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
         if (publishedMessage.topicName() != null) {
-            try {
-                Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
-                        .ifPresentOrElse(propertyBag -> {
-                            result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());
-                            result.propertyBag = propertyBag;
-                        }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
-                result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
-            } catch (final IllegalArgumentException e) {
-                // malformed topic
-            }
+            Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
+                    .ifPresentOrElse(propertyBag -> {
+                        result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());
+                        result.propertyBag = propertyBag;
+                    }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
+            result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
         }
         return result;
     }

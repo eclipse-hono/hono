@@ -168,7 +168,6 @@ public final class ResourceIdentifier {
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
-     * @throws IllegalArgumentException if the given string does not represent a valid resource identifier.
      */
     public static ResourceIdentifier fromString(final String resource) {
         Objects.requireNonNull(resource);
@@ -186,7 +185,6 @@ public final class ResourceIdentifier {
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
-     * @throws IllegalArgumentException if the given string does not represent a valid resource identifier.
      */
     public static ResourceIdentifier fromStringAssumingDefaultTenant(final String resource) {
         Objects.requireNonNull(resource);
