@@ -87,6 +87,12 @@ public final class DeviceRegistryHttpClient {
     public static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
             RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_HTTP_ENDPOINT);
 
+    /**
+     * The URI pattern for searching devices.
+     */
+    public static final String TEMPLATE_URI_SEARCH_DEVICES_INSTANCE = String.format("/%s/%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.DEVICES_HTTP_ENDPOINT);
+
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryHttpClient.class);
 
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
@@ -154,6 +160,10 @@ public final class DeviceRegistryHttpClient {
                 Optional.ofNullable(tenant)
                     .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
                     .orElse(""));
+    }
+
+    private static String searchDevicesUri(final String tenant) {
+        return String.format(TEMPLATE_URI_SEARCH_DEVICES_INSTANCE, tenant);
     }
 
     // tenant management
@@ -640,6 +650,49 @@ public final class DeviceRegistryHttpClient {
 
         return deregisterDevice(tenantId, deviceId, okOrIgnoreMissing(ignoreMissing));
 
+    }
+
+    /**
+     * Finds devices belonging to the given tenant with optional filters, paging and sorting options.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param pageSize The maximum number of results to include in a response.
+     * @param pageOffset The offset into the result set from which to include objects in the response.
+     * @param filters The filters are predicates that objects in the result set must match.
+     * @param sortOptions A list of sort options.
+     * @param expectedStatusCode The status code indicating a successful outcome.
+     * @return A future indicating the outcome of the operation. The future will contain the response if the
+     *         response contained the expected status code. Otherwise the future will fail.
+     * @throws NullPointerException if the tenant is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> searchDevices(
+            final String tenantId,
+            final Optional<Integer> pageSize,
+            final Optional<Integer> pageOffset,
+            final List<String> filters,
+            final List<String> sortOptions,
+            final int expectedStatusCode) {
+
+        Objects.requireNonNull(tenantId);
+
+        final String requestUri = searchDevicesUri(tenantId);
+        final MultiMap queryParams = MultiMap.caseInsensitiveMultiMap();
+
+        pageSize.ifPresent(
+                pSize -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_SIZE, String.valueOf(pSize)));
+        pageOffset.ifPresent(
+                pOffset -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, String.valueOf(pOffset)));
+        Optional.ofNullable(filters)
+                .filter(fltrs -> !fltrs.isEmpty())
+                .ifPresent(fltrs -> fltrs
+                        .forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON,
+                                filterJson)));
+        Optional.ofNullable(sortOptions)
+                .filter(sortOpts -> !sortOpts.isEmpty())
+                .ifPresent(sortOpts -> sortOpts
+                        .forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson)));
+
+        return httpClient.get(requestUri, queryParams, ResponsePredicate.status(expectedStatusCode));
     }
 
     // credentials management
