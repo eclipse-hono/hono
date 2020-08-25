@@ -158,13 +158,13 @@ public final class Constants {
      */
     public static final String QUALIFIER_DOWNSTREAM = "downstream";
     /**
+     * The qualifier to use for referring to HTTP based components.
+     */
+    public static final String QUALIFIER_HTTP = "http";
+    /**
      * The qualifier to use for referring to the AMQP Messaging Network.
      */
     public static final String QUALIFIER_MESSAGING = "messaging";
-    /**
-     * The qualifier to use for referring to REST based components.
-     */
-    public static final String QUALIFIER_REST = "rest";
 
     /**
      * The subject name to use for anonymous clients.

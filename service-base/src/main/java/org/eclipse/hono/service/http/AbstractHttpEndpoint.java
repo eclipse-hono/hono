@@ -102,7 +102,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
-    @Qualifier(Constants.QUALIFIER_REST)
+    @Qualifier(Constants.QUALIFIER_HTTP)
     @Autowired(required = false)
     public final void setConfiguration(final T props) {
         this.config = Objects.requireNonNull(props);

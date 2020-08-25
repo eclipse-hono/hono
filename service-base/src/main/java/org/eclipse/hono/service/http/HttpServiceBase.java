@@ -107,7 +107,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     @Autowired
-    @Qualifier(Constants.QUALIFIER_REST)
+    @Qualifier(Constants.QUALIFIER_HTTP)
     @Override
     public final void setConfig(final T configuration) {
         setSpecificConfig(configuration);

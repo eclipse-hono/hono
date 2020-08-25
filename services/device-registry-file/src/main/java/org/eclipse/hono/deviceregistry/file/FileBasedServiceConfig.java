@@ -28,10 +28,16 @@ import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttp
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 
 import io.vertx.core.Vertx;
 
@@ -149,13 +155,53 @@ public class FileBasedServiceConfig {
     //
 
     /**
+     * A Spring Boot condition that checks if the deprecated property name prefix
+     * <em>hono.registry.rest</em> is being used for configuring the registry's
+     * HTTP endpoint.
+     */
+    public static class DeprecatedEndpointConfigCondition implements Condition {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean matches(final ConditionContext context, final AnnotatedTypeMetadata metadata) {
+            return propertiesUsed(context.getEnvironment(), "rest");
+        }
+
+        private boolean propertiesUsed(final Environment env, final String type) {
+            return env.containsProperty(String.format("hono.registry.%s.keyPath", type)) ||
+            env.containsProperty(String.format("hono.registry.%s.keyStorePath", type)) ||
+            env.containsProperty(String.format("hono.registry.%s.insecurePortEnabled", type)) ||
+            env.containsProperty(String.format("hono.registry.%s.insecurePort", type)) ||
+            env.containsProperty(String.format("hono.registry.%s.insecurePortBindAddress", type));
+        }
+    }
+
+    /**
+     * Gets properties for configuring the HTTP based Device Registry Management endpoint.
+     * <p>
+     * Uses the deprecated prefix <em>hono.registry.rest</em> for backward compatibility.
+     *
+     * @return The properties.
+     */
+    @Bean(name = "deprecated-http-config")
+    @Qualifier(Constants.QUALIFIER_HTTP)
+    @ConfigurationProperties(prefix = "hono.registry.rest")
+    @Conditional(DeprecatedEndpointConfigCondition.class)
+    public ServiceConfigProperties httpServerPropertiesDeprecated() {
+        return new ServiceConfigProperties();
+    }
+
+    /**
      * Gets properties for configuring the HTTP based Device Registry Management endpoint.
      *
      * @return The properties.
      */
     @Bean
-    @Qualifier(Constants.QUALIFIER_REST)
-    @ConfigurationProperties(prefix = "hono.registry.rest")
+    @Qualifier(Constants.QUALIFIER_HTTP)
+    @ConfigurationProperties(prefix = "hono.registry.http")
+    @ConditionalOnMissingBean(name = "deprecated-http-config")
     public ServiceConfigProperties httpServerProperties() {
         return new ServiceConfigProperties();
     }
