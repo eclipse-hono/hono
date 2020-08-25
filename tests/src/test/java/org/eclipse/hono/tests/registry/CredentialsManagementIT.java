@@ -81,10 +81,10 @@ public class CredentialsManagementIT {
         ORIG_BCRYPT_PWD = encoder.encode("thePassword");
     }
 
-    private final AtomicReference<String> resourceVersion = new AtomicReference<>();
     private String tenantId;
     private String deviceId;
     private String authId;
+    private AtomicReference<String> resourceVersion;
     private PasswordCredential hashedPasswordCredential;
     private PskCredential pskCredentials;
 
@@ -112,6 +112,7 @@ public class CredentialsManagementIT {
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         authId = getRandomAuthId(PREFIX_AUTH_ID);
+        resourceVersion = new AtomicReference<>();
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = newPskCredentials(authId);
         registry.registerDevice(tenantId, deviceId)
