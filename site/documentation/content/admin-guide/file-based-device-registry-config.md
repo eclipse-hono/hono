@@ -88,9 +88,9 @@ The variables only need to be set if the default value does not match your envir
 
 ## Port Configuration
 
-The file based Device Registry supports configuration of both, an AMQP based endpoint as well as an HTTP based endpoint providing resources
-for managing tenants, registration information and credentials as defined by the [Registry Management API]({{< relref "api/management" >}}).
-Both endpoints can be configured to listen for connections on
+The file based Device Registry supports configuration of both an AMQP based endpoint exposing the Tenant, Device Registration and Credentials
+APIs as well as an HTTP based endpoint providing resources for managing tenants, registration information and credentials as defined by the
+[Registry Management API]({{< relref "api/management" >}}). Both endpoints can be configured to listen for connections on
 
 * a secure port only (default) or
 * an insecure port only or
@@ -98,7 +98,7 @@ Both endpoints can be configured to listen for connections on
 
 The registry will fail to start if none of the ports is configured properly.
 
-The following sections apply to configuring both, the AMQP endpoint as well as the HTTP endpoint. The environment variables to use for configuring
+The following sections apply to configuring both the AMQP and the HTTP endpoint. The environment variables to use for configuring
 the HTTP endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_HTTP_`, e.g. `HONO_REGISTRY_HTTP_KEY_PATH`
 instead of `HONO_REGISTRY_AMQP_KEY_PATH`.
 
@@ -117,7 +117,7 @@ When starting up, the server will bind a TLS secured socket to the default secur
 The port number can also be set explicitly using the `HONO_REGISTRY_AMQP_PORT` variable.
 
 The `HONO_REGISTRY_AMQP_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on.
-By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this
+By default, the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this
 variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally
 to the outside world).
 
@@ -130,10 +130,10 @@ e.g. for testing purposes. In any case, the non-secure port needs to be explicit
 - implicitly configuring the default port (`5672` for AMQP and `8080` for HTTP) to be used by setting `HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED`
   to `true`.
 
-The server issues a warning on the console if one of the insecure ports is set to the corresponding default secure ports.
+The server issues a warning on the console if one of the insecure ports is set to the corresponding default secure port.
 
 The `HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on.
-By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used
+By default, the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used
 to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring
 encrypted communication when accessed from the outside over public network infrastructure.
 
