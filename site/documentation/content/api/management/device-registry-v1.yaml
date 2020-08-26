@@ -323,6 +323,8 @@ paths:
                $ref: '#/components/responses/Unauthorized'
             403:
                $ref: '#/components/responses/NotAllowed'
+            404:
+               $ref: '#/components/responses/TenantNotFound'
 
       get:
          tags:
@@ -359,7 +361,8 @@ paths:
             - devices
          summary: Create a new device registration
          description: |
-            Clients use this operation to register a new device with a given identifier.
+            Clients use this operation to register a new device for an existing tenant with
+            a given identifier
          operationId: createDeviceRegistrationWithId
          requestBody:
             description: The configuration properties to register for the device.
@@ -384,6 +387,8 @@ paths:
                $ref: '#/components/responses/NotAllowed'
             409:
                $ref: '#/components/responses/AlreadyExists'
+            404:
+               $ref: '#/components/responses/TenantNotFound'
 
       get:
          tags:
@@ -550,7 +555,7 @@ paths:
             401:
                $ref: '#/components/responses/Unauthorized'
             404:
-               $ref: '#/components/responses/NotFound'
+               $ref: '#/components/responses/DeviceNotFound'
 
       put:
          tags:
@@ -618,7 +623,7 @@ paths:
             403:
                $ref: '#/components/responses/NotAllowed'
             404:
-               $ref: '#/components/responses/NotFound'
+               $ref: '#/components/responses/DeviceNotFound'
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
 
@@ -1426,6 +1431,28 @@ components:
          description: |
             Object not found. This may also be returned for some operations
             if the user lacks authorization to read the subject of the operation.
+         content:
+            application/json:
+               schema:
+                  $ref: '#/components/schemas/Error'
+
+      TenantNotFound:
+         description: |
+            The referenced tenant could not be found.
+
+            This may also be returned for some operations
+            if the user lacks authorization to read the tenant.
+         content:
+            application/json:
+               schema:
+                  $ref: '#/components/schemas/Error'
+
+      DeviceNotFound:
+         description: |
+            The referenced device could not be found.
+
+            This may also be returned for some operations
+            if the user lacks authorization to read the device.
          content:
             application/json:
                schema:
