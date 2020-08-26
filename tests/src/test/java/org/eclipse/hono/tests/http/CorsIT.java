@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.http;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.tests.CrudHttpClient;
@@ -32,6 +33,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -78,12 +80,14 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> {
+                ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
-                assertAccessControlHeaders(headers, HttpMethod.POST);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_QOS_LEVEL);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+                assertAccessControlHeaders(
+                        response.headers(),
+                        HttpMethod.POST,
+                        Constants.HEADER_QOS_LEVEL,
+                        Constants.HEADER_TIME_TILL_DISCONNECT);
             });
             ctx.completeNow();
         }));
@@ -103,12 +107,14 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> {
+                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
-                assertAccessControlHeaders(headers, HttpMethod.PUT);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_QOS_LEVEL);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+                assertAccessControlHeaders(
+                        response.headers(),
+                        HttpMethod.PUT,
+                        Constants.HEADER_QOS_LEVEL,
+                        Constants.HEADER_TIME_TILL_DISCONNECT);
             });
             ctx.completeNow();
         }));
@@ -128,11 +134,10 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> {
+                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
-                assertAccessControlHeaders(headers, HttpMethod.POST);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+                assertAccessControlHeaders(response.headers(), HttpMethod.POST, Constants.HEADER_TIME_TILL_DISCONNECT);
             });
             ctx.completeNow();
         }));
@@ -152,12 +157,10 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> {
+                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
-                assertAccessControlHeaders(headers, HttpMethod.PUT);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS))
-                        .contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+                assertAccessControlHeaders(response.headers(), HttpMethod.PUT, Constants.HEADER_TIME_TILL_DISCONNECT);
             });
             ctx.completeNow();
         }));
@@ -177,11 +180,10 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> {
+                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
-                assertAccessControlHeaders(headers, HttpMethod.POST);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS);
+                assertAccessControlHeaders(response.headers(), HttpMethod.POST, Constants.HEADER_COMMAND_RESPONSE_STATUS);
             });
             ctx.completeNow();
         }));
@@ -201,21 +203,28 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> {
+                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
-                assertAccessControlHeaders(headers, HttpMethod.PUT);
-                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS);
+                assertAccessControlHeaders(response.headers(), HttpMethod.PUT, Constants.HEADER_COMMAND_RESPONSE_STATUS);
             });
             ctx.completeNow();
         }));
     }
 
-    private static void assertAccessControlHeaders(final MultiMap headers, final HttpMethod expectedAllowedMethod) {
+    private static void assertAccessControlHeaders(
+            final MultiMap headers,
+            final HttpMethod expectedAllowedMethod,
+            final String ... expectedAllowedHeaders) {
 
         assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS)).contains(expectedAllowedMethod.name());
         assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo("*");
         assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(HttpHeaders.AUTHORIZATION);
         assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(HttpHeaders.CONTENT_TYPE);
+        Optional.ofNullable(expectedAllowedHeaders).ifPresent(headerNames -> {
+            for (final String name : headerNames) {
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(name);
+            }
+        });
     }
 }

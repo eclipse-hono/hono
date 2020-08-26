@@ -127,10 +127,10 @@ public class TenantManagementIT {
     public void testAddTenantSucceedsWithAGeneratedId(final VertxTestContext context) {
 
         helper.registry.addTenant()
-            .onComplete(context.succeeding(responseHeaders -> {
+            .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
-                    assertThat(responseHeaders.get(HttpHeaders.ETAG)).isNotNull();
-                    final String generatedId = assertLocationHeader(responseHeaders);
+                    assertThat(httpResponse.getHeader(HttpHeaders.ETAG.toString())).isNotNull();
+                    final String generatedId = assertLocationHeader(httpResponse.headers());
                     // update the global tenantId value for cleanup
                     helper.addTenantIdForRemoval(generatedId);
                 });
@@ -149,10 +149,11 @@ public class TenantManagementIT {
 
         final Tenant payload = buildTenantPayload();
 
-        helper.registry.addTenant(tenantId, payload).compose(ar -> {
-            // now try to add the tenant again
-            return helper.registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
-        }).onComplete(context.completing());
+        helper.registry.addTenant(tenantId, payload)
+            .compose(ar -> {
+                // now try to add the tenant again
+                return helper.registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
+            }).onComplete(context.completing());
     }
 
     /**
@@ -164,10 +165,12 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantFailsForWrongContentType(final VertxTestContext context)  {
 
-        helper.registry.addTenant(tenantId,
+        helper.registry.addTenant(
+                tenantId,
                 buildTenantPayload(),
                 "application/x-www-form-urlencoded",
-                HttpURLConnection.HTTP_BAD_REQUEST).onComplete(context.completing());
+                HttpURLConnection.HTTP_BAD_REQUEST)
+            .onComplete(context.completing());
     }
 
     /**
@@ -210,7 +213,7 @@ public class TenantManagementIT {
                 requestBody,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-        .onComplete(context.completing());
+            .onComplete(context.completing());
     }
 
     /**
@@ -271,21 +274,21 @@ public class TenantManagementIT {
         final AtomicReference<String> latestVersion = new AtomicReference<>();
 
         helper.registry.addTenant(tenantId, orig)
-            .compose(responseHeaders -> {
-                latestVersion.set(responseHeaders.get(HttpHeaders.ETAG));
+            .compose(httpResponse -> {
+                latestVersion.set(httpResponse.getHeader(HttpHeaders.ETAG.toString()));
                 assertThat(latestVersion.get()).isNotNull();
                 return helper.registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT);
             })
-            .compose(responseHeaders -> {
-                final String updatedVersion = responseHeaders.get(HttpHeaders.ETAG);
+            .compose(httpResponse -> {
+                final String updatedVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
                 assertThat(updatedVersion).isNotNull();
                 assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
                 return helper.registry.getTenant(tenantId);
             })
-            .onComplete(context.succeeding(b -> {
+            .onComplete(context.succeeding(httpResponse -> {
                 // compare the changed field only
                 context.verify(() -> {
-                    assertFalse(b.toJsonObject().getBoolean(TenantConstants.FIELD_ENABLED, Boolean.TRUE));
+                    assertFalse(httpResponse.bodyAsJsonObject().getBoolean(TenantConstants.FIELD_ENABLED, Boolean.TRUE));
                 });
                 context.completeNow();
             }));
@@ -349,8 +352,8 @@ public class TenantManagementIT {
         LOG.debug("registering tenant using Management API: {}", JsonObject.mapFrom(requestBody).encodePrettily());
         helper.registry.addTenant(tenantId, requestBody)
             .compose(ar -> helper.registry.getTenant(tenantId))
-            .onComplete(context.succeeding(b -> {
-                final JsonObject json = b.toJsonObject();
+            .onComplete(context.succeeding(httpResponse -> {
+                final JsonObject json = httpResponse.bodyAsJsonObject();
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
                 context.verify(() -> {
                     assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, JsonObject.mapFrom(requestBody)));

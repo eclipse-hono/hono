@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,7 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -88,7 +89,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello " + count),
                     requestHeaders,
-                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
         });
     }
 
@@ -119,15 +120,10 @@ public class TelemetryHttpIT extends HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer(IntegrationTestSupport.getPayload(4096)),
                         requestHeaders,
-                        response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED)
-                        .recover(HttpProtocolException::transformInto);
+                        ResponsePredicate.status(HttpURLConnection.HTTP_ENTITY_TOO_LARGE));
 
             })
-            .onComplete(ctx.failing(t -> {
-
-                // THEN the message gets rejected by the HTTP adapter with a 413
-                ctx.verify(() ->  HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_ENTITY_TOO_LARGE, t));
-                ctx.completeNow();
-            }));
+            // THEN the message gets rejected by the HTTP adapter with a 413
+            .onComplete(ctx.completing());
     }
 }

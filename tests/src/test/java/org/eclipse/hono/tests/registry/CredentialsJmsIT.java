@@ -27,7 +27,9 @@ import org.eclipse.hono.util.CredentialsConstants.CredentialsAction;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -70,28 +72,13 @@ public class CredentialsJmsIT extends CredentialsApiTests {
     }
 
     /**
-     * {@inheritDoc}
+     * Logs the current test case's display name.
+     *
+     * @param testInfo The test case meta data.
      */
-    @Override
-    protected IntegrationTestSupport getHelper() {
-        return helper;
-    }
-
-    private Future<JmsBasedCredentialsClient> getJmsBasedClient(final String tenant) {
-        if (connection == null) {
-            throw new IllegalStateException("no connection to Credentials service");
-        }
-        return connection
-                .isConnected()
-                .compose(ok -> JmsBasedCredentialsClient.create(connection, props, tenant));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected Future<CredentialsClient> getClient(final String tenant) {
-        return getJmsBasedClient(tenant).map(client -> (CredentialsClient) client);
+    @BeforeEach
+    public void logTestName(final TestInfo testInfo) {
+        log.info("running test {}", testInfo.getDisplayName());
     }
 
     /**
@@ -114,6 +101,31 @@ public class CredentialsJmsIT extends CredentialsApiTests {
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
         disconnect(ctx, cons, connection);
+    }
+
+    private Future<JmsBasedCredentialsClient> getJmsBasedClient(final String tenant) {
+        if (connection == null) {
+            throw new IllegalStateException("no connection to Credentials service");
+        }
+        return connection
+                .isConnected()
+                .compose(ok -> JmsBasedCredentialsClient.create(connection, props, tenant));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected IntegrationTestSupport getHelper() {
+        return helper;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Future<CredentialsClient> getClient(final String tenant) {
+        return getJmsBasedClient(tenant).map(client -> (CredentialsClient) client);
     }
 
     /**

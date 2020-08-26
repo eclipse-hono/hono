@@ -27,6 +27,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -193,15 +194,18 @@ public class CorsIT {
                 MultiMap.caseInsensitiveMultiMap()
                         .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                         .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method.name()),
-                status -> status == HttpURLConnection.HTTP_OK)
-        .onComplete(ctx.succeeding(headers -> ctx.verify(() -> {
-            assertAccessControlHeaders(headers, method);
-            ctx.completeNow();
-         })));
+                        ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> {
+                    assertAccessControlHeaders(response.headers(), method);
+                 });
+                ctx.completeNow();
+            }));
     }
 
-
-    private static void assertAccessControlHeaders(final MultiMap headers, final HttpMethod expectedAllowedMethod) {
+    private static void assertAccessControlHeaders(
+            final MultiMap headers,
+            final HttpMethod expectedAllowedMethod) {
 
         Assertions.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS).contains(expectedAllowedMethod.name()));
         Assertions.assertEquals("*", headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
@@ -209,6 +213,4 @@ public class CorsIT {
         Assertions.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(HttpHeaders.CONTENT_TYPE));
         Assertions.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(HttpHeaders.IF_MATCH));
     }
-
-
 }
