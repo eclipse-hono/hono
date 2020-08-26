@@ -84,7 +84,7 @@ public class CredentialsManagementIT {
     private String tenantId;
     private String deviceId;
     private String authId;
-    private AtomicReference<String> resourceVersion = new AtomicReference<>();
+    private AtomicReference<String> resourceVersion;
     private PasswordCredential hashedPasswordCredential;
     private PskCredential pskCredentials;
 
@@ -112,6 +112,7 @@ public class CredentialsManagementIT {
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         authId = getRandomAuthId(PREFIX_AUTH_ID);
+        resourceVersion = new AtomicReference<>();
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = newPskCredentials(authId);
         registry.registerDevice(tenantId, deviceId)
@@ -381,7 +382,7 @@ public class CredentialsManagementIT {
             final int expectedStatus) {
 
         LOG.debug("updating credentials with request body: {}",
-                Optional.ofNullable(payload).map(p -> p.encodePrettily()).orElse(null));
+                Optional.ofNullable(payload).map(JsonArray::encodePrettily).orElse(null));
 
         registry.updateCredentialsRaw(
                 tenantId,
@@ -449,8 +450,8 @@ public class CredentialsManagementIT {
                             .mapTo(CredentialsObject.class);
                     context.verify(() -> {
                         assertThat(o.getAuthId()).isEqualTo(authId);
-                        assertThat(o.getCandidateSecrets(s -> CredentialsConstants.getPasswordHash(s))
-                                .stream().anyMatch(hash -> ORIG_BCRYPT_PWD.equals(hash)))
+                        assertThat(o.getCandidateSecrets(CredentialsConstants::getPasswordHash)
+                                .stream().anyMatch(ORIG_BCRYPT_PWD::equals))
                         .isFalse();
                     });
                     context.completeNow();

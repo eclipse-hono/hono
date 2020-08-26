@@ -58,7 +58,7 @@ public class DeviceManagementIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceManagementIT.class);
 
-    private static Vertx vertx = Vertx.vertx();
+    private static final Vertx vertx = Vertx.vertx();
     private static DeviceRegistryHttpClient registry;
     private static IntegrationTestSupport helper;
     private String tenantId;
@@ -132,7 +132,7 @@ public class DeviceManagementIT {
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(tenantId, null, device)
+        registry.registerDevice(tenantId, device)
                 .onComplete(ctx.succeeding(responseHeaders -> {
                     ctx.verify(() -> {
                         assertThat(responseHeaders.get(HttpHeaders.ETAG)).isNotNull();

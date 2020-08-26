@@ -126,7 +126,7 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantSucceedsWithAGeneratedId(final VertxTestContext context) {
 
-        helper.registry.addTenant(null)
+        helper.registry.addTenant()
             .onComplete(context.succeeding(responseHeaders -> {
                 context.verify(() -> {
                     assertThat(responseHeaders.get(HttpHeaders.ETAG)).isNotNull();
@@ -178,7 +178,7 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
-        helper.registry.addTenant(tenantId, null, HttpURLConnection.HTTP_CREATED)
+        helper.registry.addTenant(tenantId)
             .onComplete(context.completing());
     }
 

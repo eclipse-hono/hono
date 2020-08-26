@@ -336,16 +336,6 @@ public final class IntegrationTestSupport {
      * The password that applications use for authenticating to the AMQP Messaging Network.
      */
     public static final String DOWNSTREAM_PWD = System.getProperty(PROPERTY_DOWNSTREAM_PASSWORD);
-    /**
-     * The username that applications use for authenticating to the AMQP Messaging Network when
-     * requiring access to the default tenant only.
-     */
-    public static final String RESTRICTED_CONSUMER_NAME = "user1@HONO";
-    /**
-     * The password that applications use for authenticating to the AMQP Messaging Network when
-     * requiring access to the default tenant only.
-     */
-    public static final String RESTRICTED_CONSUMER_PWD = "pw";
 
     /**
      * The IP address of the CoAP protocol adapter.
@@ -522,12 +512,11 @@ public final class IntegrationTestSupport {
      */
     public static ClientConfigProperties getDeviceRegistryProperties(final String username, final String password) {
 
-        final ClientConfigProperties props = getClientConfigProperties(
+        return getClientConfigProperties(
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
                 username,
                 password);
-        return props;
     }
 
     /**
@@ -539,12 +528,11 @@ public final class IntegrationTestSupport {
      */
     public static ClientConfigProperties getDeviceConnectionServiceProperties(final String username, final String password) {
 
-        final ClientConfigProperties props = getClientConfigProperties(
+        return getClientConfigProperties(
                 IntegrationTestSupport.HONO_DEVICECONNECTION_HOST,
                 IntegrationTestSupport.HONO_DEVICECONNECTION_AMQP_PORT,
                 username,
                 password);
-        return props;
     }
 
     /**
