@@ -45,17 +45,28 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_AMQP_NATIVE_TLS_REQUIRED`<br>`--hono.registry.amqp.nativeTlsRequired` | no | `false` | The server will probe for OpenSLL on startup if a secure port is configured. By default, the server will fall back to the JVM's default SSL engine if not available. However, if set to `true`, the server will fail to start at all in this case. |
 | `HONO_REGISTRY_AMQP_PORT`<br>`--hono.registry.amqp.port` | no | `5671` | The secure port that the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_REGISTRY_AMQP_SECURE_PROTOCOLS`<br>`--hono.registry.amqp.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
-| `HONO_REGISTRY_REST_TENANT_ID_REGEX`<br>`--hono.registry.rest.tenantIdRegex` | no | `^[a-zA-Z0-9-_.]+$` | The regular expression to use to validate tenant ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html). |
-| `HONO_REGISTRY_REST_DEVICE_ID_REGEX`<br>`--hono.registry.rest.deviceIdRegex` | no | `^[a-zA-Z0-9-_]+$` | The regular expression to use to validate device ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html). |
-| `HONO_REGISTRY_REST_BIND_ADDRESS`<br>`--hono.registry.rest.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_REST_CERT_PATH`<br>`--hono.registry.rest.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_REST_KEY_PATH`.<br>Alternatively, the `HONO_REGISTRY_REST_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_REGISTRY_REST_INSECURE_PORT`<br>`--hono.registry.rest.insecurePort` | no | - | The insecure port the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_REST_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.registry.rest.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_REST_INSECURE_PORT_ENABLED`<br>`--hono.registry.rest.insecurePortEnabled` | no | `false` | If set to `true` the server will open an insecure port (not secured by TLS) using either the port number set via `HONO_REGISTRY_REST_INSECURE_PORT` or the default AMQP port number (`5672`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_REGISTRY_REST_KEY_PATH`<br>`--hono.registry.rest.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_REST_CERT_PATH`. Alternatively, the `HONO_REGISTRY_REST_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_REGISTRY_REST_KEY_STORE_PASSWORD`<br>`--hono.registry.rest.keyStorePassword` | no | - | The password required to read the contents of the key store. |
-| `HONO_REGISTRY_REST_KEY_STORE_PATH`<br>`--hono.registry.rest.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_REGISTRY_REST_KEY_PATH` and `HONO_REGISTRY_REST_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
-| `HONO_REGISTRY_REST_PORT`<br>`--hono.registry.rest.port` | no | `5671` | The secure port that the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRY_HTTP_TENANT_ID_REGEX`<br>`--hono.registry.http.tenantIdRegex` | no | `^[a-zA-Z0-9-_.]+$` | The regular expression to use to validate tenant ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html). |
+| `HONO_REGISTRY_HTTP_DEVICE_ID_REGEX`<br>`--hono.registry.http.deviceIdRegex` | no | `^[a-zA-Z0-9-_]+$` | The regular expression to use to validate device ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html). |
+| `HONO_REGISTRY_HTTP_BIND_ADDRESS`<br>`--hono.registry.http.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRY_HTTP_CERT_PATH`<br>`--hono.registry.http.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_HTTP_KEY_PATH`.<br>Alternatively, the `HONO_REGISTRY_HTTP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_REGISTRY_HTTP_INSECURE_PORT`<br>`--hono.registry.http.insecurePort` | no | - | The insecure port the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRY_HTTP_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.registry.http.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRY_HTTP_INSECURE_PORT_ENABLED`<br>`--hono.registry.http.insecurePortEnabled` | no | `false` | If set to `true` the server will open an insecure port (not secured by TLS) using either the port number set via `HONO_REGISTRY_HTTP_INSECURE_PORT` or the default HTTP port number (`8080`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRY_HTTP_KEY_PATH`<br>`--hono.registry.http.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_HTTP_CERT_PATH`. Alternatively, the `HONO_REGISTRY_HTTP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_REGISTRY_HTTP_KEY_STORE_PASSWORD`<br>`--hono.registry.http.keyStorePassword` | no | - | The password required to read the contents of the key store. |
+| `HONO_REGISTRY_HTTP_KEY_STORE_PATH`<br>`--hono.registry.http.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_REGISTRY_HTTP_KEY_PATH` and `HONO_REGISTRY_HTTP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
+| `HONO_REGISTRY_HTTP_PORT`<br>`--hono.registry.http.port` | no | `8443` | The secure port that the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_REGISTRY_REST_TENANT_ID_REGEX`<br>`--hono.registry.rest.tenantIdRegex` | no | `^[a-zA-Z0-9-_.]+$` | The regular expression to use to validate tenant ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html).<br>**Deprecated** Use `HONO_REGISTRY_HTTP_TENANT_ID_REGEX` instead. |
+| `HONO_REGISTRY_REST_DEVICE_ID_REGEX`<br>`--hono.registry.rest.deviceIdRegex` | no | `^[a-zA-Z0-9-_]+$` | The regular expression to use to validate device ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html).<br>**Deprecated** Use `HONO_REGISTRY_HTTP_DEVICE_ID_REGEX` instead. |
+| `HONO_REGISTRY_REST_BIND_ADDRESS`<br>`--hono.registry.rest.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_BIND_ADDRESS` instead. |
+| `HONO_REGISTRY_REST_CERT_PATH`<br>`--hono.registry.rest.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_REST_KEY_PATH`.<br>Alternatively, the `HONO_REGISTRY_REST_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_CERT_PATH` instead. |
+| `HONO_REGISTRY_REST_INSECURE_PORT`<br>`--hono.registry.rest.insecurePort` | no | - | The insecure port the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_INSECURE_PORT` instead. |
+| `HONO_REGISTRY_REST_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.registry.rest.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_INSECURE_PORT_BIND_ADDRESS` instead. |
+| `HONO_REGISTRY_REST_INSECURE_PORT_ENABLED`<br>`--hono.registry.rest.insecurePortEnabled` | no | `false` | If set to `true` the server will open an insecure port (not secured by TLS) using either the port number set via `HONO_REGISTRY_REST_INSECURE_PORT` or the default HTTP port number (`8080`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_INSECURE_PORT_ENABLED` instead. |
+| `HONO_REGISTRY_REST_KEY_PATH`<br>`--hono.registry.rest.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_REST_CERT_PATH`. Alternatively, the `HONO_REGISTRY_REST_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_KEY_PATH` instead. |
+| `HONO_REGISTRY_REST_KEY_STORE_PASSWORD`<br>`--hono.registry.rest.keyStorePassword` | no | - | The password required to read the contents of the key store.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_KEY_STORE_PASSWORD` instead. |
+| `HONO_REGISTRY_REST_KEY_STORE_PATH`<br>`--hono.registry.rest.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_REGISTRY_REST_KEY_PATH` and `HONO_REGISTRY_REST_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_KEY_STORE_PATH` instead. |
+| `HONO_REGISTRY_REST_PORT`<br>`--hono.registry.rest.port` | no | `8443` | The secure port that the server should listen on for HTTP requests.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details.<br>**Deprecated** Use `HONO_REGISTRY_HTTP_PORT` instead. |
 | `HONO_REGISTRY_SVC_CACHE_MAX_AGE`<br>`--hono.registry.svc.cacheMaxAge` | no | `180` | The maximum period of time (seconds) that information returned by the service's operations may be cached for. |
 | `HONO_REGISTRY_SVC_FILENAME`<br>`--hono.registry.svc.filename` | no | `/var/lib/hono/device-registry/`<br>`device-identities.json` | The path to the file where the server stores identities of registered devices. Hono tries to read device identities from this file during start-up and writes out all identities to this file periodically if property `HONO_REGISTRY_SVC_SAVE_TO_FILE` is set to `true`.<br>Please refer to [Device Identities File Format]({{< relref "#device-identities-file-format" >}}) for details regarding the file's format. |
 | `HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT`<br>`--hono.registry.svc.maxDevicesPerTenant` | no | `100` | The number of devices that can be registered for each tenant. It is an error to set this property to a value <= 0. |
@@ -77,15 +88,19 @@ The variables only need to be set if the default value does not match your envir
 
 ## Port Configuration
 
-The Device Registry supports configuration of both, an AMQP based endpoint as well as an HTTP based endpoint proving RESTful resources for managing registration information and credentials. Both endpoints can be configured to listen for connections on
+The file based Device Registry supports configuration of both an AMQP based endpoint exposing the Tenant, Device Registration and Credentials
+APIs as well as an HTTP based endpoint providing resources for managing tenants, registration information and credentials as defined by the
+[Registry Management API]({{< relref "api/management" >}}). Both endpoints can be configured to listen for connections on
 
 * a secure port only (default) or
 * an insecure port only or
 * both a secure and an insecure port (dual port configuration)
 
-The server will fail to start if none of the ports is configured properly.
+The registry will fail to start if none of the ports is configured properly.
 
-The following sections apply to configuring both, the AMQP endpoint as well as the REST endpoint. The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_REST_`, e.g. `HONO_REGISTRY_REST_KEY_PATH` instead of `HONO_REGISTRY_AMQP_KEY_PATH`.
+The following sections apply to configuring both the AMQP and the HTTP endpoint. The environment variables to use for configuring
+the HTTP endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_HTTP_`, e.g. `HONO_REGISTRY_HTTP_KEY_PATH`
+instead of `HONO_REGISTRY_AMQP_KEY_PATH`.
 
 ### Secure Port Only
 
@@ -93,25 +108,37 @@ The server needs to be configured with a private key and certificate in order to
 
 There are two alternative ways for doing so:
 
-1. Setting the `HONO_REGISTRY_AMQP_KEY_STORE_PATH` and the `HONO_REGISTRY_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
-1. setting the `HONO_REGISTRY_AMQP_KEY_PATH` and `HONO_REGISTRY_AMQP_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
+1. Setting the `HONO_REGISTRY_AMQP_KEY_STORE_PATH` and the `HONO_REGISTRY_AMQP_KEY_STORE_PASSWORD` variables in order to load the
+key & certificate from a password protected key store, or
+1. setting the `HONO_REGISTRY_AMQP_KEY_PATH` and `HONO_REGISTRY_AMQP_CERT_PATH` variables in order to load the key and certificate
+   from two separate PEM files in PKCS8 format.
 
-When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_REGISTRY_AMQP_PORT` variable.
+When starting up, the server will bind a TLS secured socket to the default secure port (`5671` for AMQP and `8443` for HTTP).
+The port number can also be set explicitly using the `HONO_REGISTRY_AMQP_PORT` variable.
 
-The `HONO_REGISTRY_AMQP_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
+The `HONO_REGISTRY_AMQP_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on.
+By default, the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this
+variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally
+to the outside world).
 
 ### Insecure Port Only
 
-The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS secured port instead, e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either by
+The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS secured port instead,
+e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either by
 
 - explicitly setting `HONO_REGISTRY_AMQP_INSECURE_PORT` to a valid port number, or by
-- implicitly configuring the default AMQP port (5672) by simply setting `HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED` to `true`.
+- implicitly configuring the default port (`5672` for AMQP and `8080` for HTTP) to be used by setting `HONO_REGISTRY_AMQP_INSECURE_PORT_ENABLED`
+  to `true`.
 
-The server issues a warning on the console if `HONO_REGISTRY_AMQP_INSECURE_PORT` is set to the default secure AMQP port (5671).
+The server issues a warning on the console if one of the insecure ports is set to the corresponding default secure port.
 
-The `HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring encrypted communication when accessed from the outside over public network infrastructure.
+The `HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on.
+By default, the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used
+to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring
+encrypted communication when accessed from the outside over public network infrastructure.
 
-Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
+Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally
+to the outside world).
 
 ### Dual Port
  
@@ -119,12 +146,14 @@ In test setups and some production scenarios Hono server may be configured to op
  
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has it's own binding address `HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS`. 
+Since the secure port may need different visibility in the network setup compared to the secure port, it has it's own binding address
+`HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS`.
 This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
 
 ### Ephemeral Ports
 
-The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
+The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above.
+For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
 
 ## Authentication Service Connection Configuration
 

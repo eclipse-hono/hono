@@ -378,7 +378,7 @@ public class ApplicationConfig {
      *
      * @return The properties.
      */
-    @Qualifier(Constants.QUALIFIER_REST)
+    @Qualifier(Constants.QUALIFIER_HTTP)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.http")
     public HttpServiceConfigProperties httpServerProperties() {

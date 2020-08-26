@@ -33,7 +33,7 @@ hono:
       certPath: /run/secrets/hono.eclipse.org-cert.pem
       insecurePortBindAddress: 0.0.0.0
       insecurePortEnabled: true
-    rest:
+    http:
       bindAddress: 0.0.0.0
       keyPath: /run/secrets/hono.eclipse.org-key.pem
       certPath: /run/secrets/hono.eclipse.org-cert.pem
