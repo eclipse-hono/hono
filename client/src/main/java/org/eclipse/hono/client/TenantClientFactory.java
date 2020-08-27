@@ -20,7 +20,7 @@ import org.eclipse.hono.client.impl.TenantClientFactoryImpl;
 import io.vertx.core.Future;
 
 /**
- * A factory for creating clients for Hono's Credentials API.
+ * A factory for creating clients for Hono's Tenant API.
  *
  */
 public interface TenantClientFactory extends ConnectionLifecycle<HonoConnection> {
