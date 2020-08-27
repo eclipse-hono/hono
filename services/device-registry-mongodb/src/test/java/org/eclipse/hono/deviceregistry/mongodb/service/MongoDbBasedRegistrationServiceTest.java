@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
@@ -65,7 +66,8 @@ public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceT
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                config);
+                config,
+                new NoopTenantInformationService());
         registrationService.start().onComplete(testContext.completing());
     }
 

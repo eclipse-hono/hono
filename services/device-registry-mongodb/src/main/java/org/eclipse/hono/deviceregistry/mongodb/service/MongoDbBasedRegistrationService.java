@@ -27,6 +27,7 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.Lifecycle;
@@ -87,16 +88,19 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      * @param vertx The vert.x instance to run on.
      * @param mongoClient The client for accessing the Mongo DB instance.
      * @param config The properties for configuring this service.
+     * @param tenantInformationService An implementation of the tenant information service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedRegistrationService(
             final Vertx vertx,
             final MongoClient mongoClient,
-            final MongoDbBasedRegistrationConfigProperties config) {
+            final MongoDbBasedRegistrationConfigProperties config,
+            final TenantInformationService tenantInformationService) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(mongoClient);
         Objects.requireNonNull(config);
+        Objects.requireNonNull(tenantInformationService);
 
         this.mongoClient = mongoClient;
         this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);
@@ -135,6 +139,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
+                .compose(ok -> tenantExists(tenantId, span))
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> processCreateDevice(
                         new DeviceDto(
@@ -153,7 +158,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return processReadDevice(tenantId, deviceId)
+        return tenantExists(tenantId, span)
+                .compose(ok -> processReadDevice(tenantId, deviceId))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -171,7 +177,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(sortOptions);
         Objects.requireNonNull(span);
 
-        return processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions)
+        return tenantExists(tenantId, span)
+                .compose(ok -> processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -185,6 +192,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
+                .compose(ok -> tenantExists(tenantId, span))
                 .compose(deviceDto -> processUpdateDevice(tenantId, deviceId, device, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -199,6 +207,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
+                .compose(ok -> tenantExists(tenantId, span))
                 .compose(ok -> processDeleteDevice(tenantId, deviceId, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -212,12 +221,15 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);
 
-        return findDeviceDocument(deviceKey.getTenantId(), deviceKey.getDeviceId())
+        return tenantExists(deviceKey.getTenantId(), span)
+                .compose(ok -> findDeviceDocument(deviceKey.getTenantId(), deviceKey.getDeviceId()))
                 .map(result -> Optional.ofNullable(result)
                         .map(ok -> getRegistrationResult(
                                 deviceKey.getDeviceId(),
                                 result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)))
-                        .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                        .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)))
+                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span))
+                        .map(result -> RegistrationResult.from(result.getStatus())));
     }
 
     @Override
@@ -227,7 +239,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(span);
 
-        return processResolveGroupMembers(tenantId, viaGroups, span);
+        return tenantExists(tenantId, span)
+                .compose(ok -> processResolveGroupMembers(tenantId, viaGroups, span));
     }
 
     private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
@@ -507,5 +520,13 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                     }
                     return Future.succeededFuture();
                 });
+    }
+
+    private Future<Void> tenantExists(final String tenantId, final Span span) {
+
+        return tenantInformationService.tenantExists(tenantId, span)
+                .compose(result -> result.isError()
+                        ? Future.failedFuture(new ClientErrorException(result.getStatus()))
+                        : Future.succeededFuture());
     }
 }
