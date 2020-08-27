@@ -36,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.Timer.Sample;
@@ -205,7 +206,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
         Objects.requireNonNull(outcome);
 
         final Tags tags = Tags.of(outcome.asTag())
-                .and(MetricsTags.getTenantTag(Optional.ofNullable(tenantId).orElse("UNKNOWN")));
+                .and(MetricsTags.getTenantTag(tenantId));
 
         Counter.builder(METER_CONNECTIONS_ATTEMPTS)
             .tags(tags)
@@ -456,6 +457,9 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
 
     @Override
     public SendMessageSampler create(final String messageType) {
+
+        Objects.requireNonNull(messageType);
+
         return new SendMessageSampler() {
             @Override
             public Sample start(final String tenantId) {
@@ -467,10 +471,11 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
                     @Override
                     public void completed(final String outcome) {
 
-                        sample.stop(registry.timer(METER_DOWNSTREAM_SENT,
-                                MetricsTags.TAG_TYPE, messageType,
-                                "outcome", outcome
-                        ));
+                        final Tags tags = Tags.of(
+                                Tag.of(MetricsTags.TAG_TYPE, messageType),
+                                MetricsTags.getTenantTag(tenantId),
+                                Tag.of("outcome", outcome));
+                        sample.stop(registry.timer(METER_DOWNSTREAM_SENT, tags));
 
                     }
 
@@ -483,12 +488,10 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
                          * can still track those times.
                          */
 
-                        registry
-                                .counter(
-                                        METER_DOWNSTREAM_TIMEOUT,
-                                        MetricsTags.TAG_TYPE, messageType,
-                                        MetricsTags.TAG_TENANT, tenantId)
-                                .increment();
+                        final Tags tags = Tags.of(
+                                Tag.of(MetricsTags.TAG_TYPE, messageType),
+                                MetricsTags.getTenantTag(tenantId));
+                        registry.counter(METER_DOWNSTREAM_TIMEOUT, tags).increment();
 
                     }
                 };
@@ -498,12 +501,10 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             @Override
             public void queueFull(final String tenantId) {
 
-                registry
-                        .counter(
-                                METER_DOWNSTREAM_FULL,
-                                MetricsTags.TAG_TYPE, messageType,
-                                MetricsTags.TAG_TENANT, tenantId)
-                        .increment();
+                final Tags tags = Tags.of(
+                        Tag.of(MetricsTags.TAG_TYPE, messageType),
+                        MetricsTags.getTenantTag(tenantId));
+                registry.counter(METER_DOWNSTREAM_FULL, tags).increment();
 
             }
         };

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,11 @@
 
 package org.eclipse.hono.service.metric;
 
-import java.util.Objects;
-
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Hostnames;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TelemetryConstants;
 
 import io.micrometer.core.instrument.Tag;
@@ -411,12 +410,12 @@ public final class MetricsTags {
     /**
      * Creates a tag for a tenant identifier.
      *
-     * @param tenant The tenant.
+     * @param tenant The tenant identifier or {@code null} if the tenant is unknown.
+     *               The value of the tag will be set to <em>UNKNOWN</em> if the tenant
+     *               identifier is {@code null} or an empty string.
      * @return The tag.
-     * @throws NullPointerException if outcome is {@code null}.
      */
     public static Tag getTenantTag(final String tenant) {
-        Objects.requireNonNull(tenant);
-        return Tag.of(MetricsTags.TAG_TENANT, tenant);
+        return Tag.of(MetricsTags.TAG_TENANT, Strings.isNullOrEmpty(tenant) ? "UNKNOWN" : tenant);
     }
 }

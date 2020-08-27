@@ -30,6 +30,7 @@ public interface SendMessageSampler {
          *
          * @param messageType The message type to create a sampler for.
          * @return A new sampler.
+         * @throws NullPointerException if message type is {@code null}.
          */
         SendMessageSampler create(String messageType);
 
@@ -138,7 +139,8 @@ public interface SendMessageSampler {
     /**
      * Start operation.
      *
-     * @param tenantId The tenant ID to sample for.
+     * @param tenantId The tenant ID to sample for. If {@code null} or an empty string,
+     *                 the value <em>UNKNOWN</em> will be used as the tenant identifier.
      * @return A sample instance.
      */
     Sample start(String tenantId);
@@ -146,7 +148,8 @@ public interface SendMessageSampler {
     /**
      * Record a case of "queue full".
      *
-     * @param tenantId The tenant ID to sample for.
+     * @param tenantId The tenant ID to sample for. If {@code null} or an empty string,
+     *                 the value <em>UNKNOWN</em> will be used as the tenant identifier.
      */
     void queueFull(String tenantId);
 
