@@ -42,6 +42,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <max.event-loop.execute-time>5000</max.event-loop.execute-time>
     <!-- should be set to false if testing against a registry that doesn't support GW mode -->
     <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
+    <deviceregistry.credentials.supportsClientContext>true</deviceregistry.credentials.supportsClientContext>
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
     <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
@@ -200,6 +201,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
         <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
         <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
+        <deviceregistry.credentials.supportsClientContext>false</deviceregistry.credentials.supportsClientContext>
       </properties>
     </profile>
     <profile>
@@ -1090,6 +1092,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
                 <deviceregistry.supportsGatewayMode>${deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
+                <deviceregistry.credentials.supportsClientContext>${deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
                 <coap.host>${coap.ip}</coap.host>
                 <coap.port>${coap.port}</coap.port>
                 <coaps.port>${coaps.port}</coaps.port>

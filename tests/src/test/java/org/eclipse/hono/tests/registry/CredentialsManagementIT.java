@@ -35,13 +35,11 @@ import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,6 +99,8 @@ public class CredentialsManagementIT {
 
     /**
      * Sets up the fixture.
+     * <p>
+     * In particular, registered a new device for a random tenant using a random device ID.
      *
      * @param ctx The test context.
      * @param testInfo The test meta data.
@@ -434,28 +434,47 @@ public class CredentialsManagementIT {
     /**
      * Verifies that the service accepts an update credentials request for existing credentials.
      *
-     * @param context The vert.x test context.
+     * @param ctx The vert.x test context.
      */
     @Test
-    @Disabled("Requires support for clear text passwords")
-    public void testUpdateCredentialsSucceedsForClearTextPassword(final VertxTestContext context) {
+    public void testUpdateCredentialsSucceedsForClearTextPassword(final VertxTestContext ctx) {
 
-        final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(authId, "newPassword");
+        final AtomicReference<PasswordSecret> originalSecret = new AtomicReference<>();
 
+        // GIVEN a device with a set of hashed password credentials
         registry.addCredentials(tenantId, deviceId, List.of(hashedPasswordCredential))
-                .compose(ar -> registry.updateCredentials(tenantId, deviceId, secret))
-                .compose(ur -> registry.getCredentials(tenantId, deviceId))
-                .onComplete(context.succeeding(gr -> {
-                    final CredentialsObject o = extractFirstCredential(gr.toJsonObject())
-                            .mapTo(CredentialsObject.class);
-                    context.verify(() -> {
-                        assertThat(o.getAuthId()).isEqualTo(authId);
-                        assertThat(o.getCandidateSecrets(CredentialsConstants::getPasswordHash)
-                                .stream().anyMatch(ORIG_BCRYPT_PWD::equals))
-                        .isFalse();
-                    });
-                    context.completeNow();
-                }));
+            .compose(ok -> registry.getCredentials(tenantId, deviceId))
+            .compose(buffer -> {
+                // WHEN updating the existing password
+                final JsonArray bodyAsJsonArray = buffer.toJsonArray();
+                LOG.debug("received original credentials list: {}", bodyAsJsonArray.encodePrettily());
+                ctx.verify(() -> assertThat(bodyAsJsonArray).hasSize(1));
+                final PasswordCredential existingCredentials = bodyAsJsonArray.getJsonObject(0).mapTo(PasswordCredential.class);
+                ctx.verify(() -> assertThat(existingCredentials.getSecrets()).hasSize(1));
+                originalSecret.set(existingCredentials.getSecrets().get(0));
+                final PasswordSecret updatedSecret = new PasswordSecret();
+                updatedSecret.setId(originalSecret.get().getId());
+                updatedSecret.setPasswordPlain("completely-different-password");
+                updatedSecret.setComment("updated");
+                final PasswordCredential updatedCredentials = new PasswordCredential(existingCredentials.getAuthId());
+                updatedCredentials.setSecrets(List.of(updatedSecret));
+                return registry.updateCredentials(tenantId, deviceId, updatedCredentials);
+            })
+            .compose(ur -> registry.getCredentials(tenantId, deviceId))
+            .onComplete(ctx.succeeding(buffer -> {
+                final JsonArray bodyAsJsonArray = buffer.toJsonArray();
+                LOG.debug("received updated credentials list: {}", bodyAsJsonArray.encodePrettily());
+                ctx.verify(() -> assertThat(bodyAsJsonArray).hasSize(1));
+                final PasswordCredential updatedCredentials = bodyAsJsonArray.getJsonObject(0).mapTo(PasswordCredential.class);
+                ctx.verify(() -> assertThat(updatedCredentials.getSecrets()).hasSize(1));
+                final PasswordSecret updatedSecret = updatedCredentials.getSecrets().get(0);
+                ctx.verify(() -> {
+                    // THEN the original secret has been updated
+                    assertThat(updatedSecret.getId()).isEqualTo(originalSecret.get().getId());
+                    assertThat(updatedSecret.getComment()).isEqualTo("updated");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -681,10 +700,6 @@ public class CredentialsManagementIT {
 
         return credential;
 
-    }
-
-    private JsonObject extractFirstCredential(final JsonObject json) {
-        return json.getJsonArray(CredentialsConstants.CREDENTIALS_ENDPOINT).getJsonObject(0);
     }
 
     private static JsonObject stripHashAndSaltFromPasswordSecret(final JsonObject credential) {

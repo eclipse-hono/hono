@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -41,8 +42,8 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -199,90 +200,91 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     @Test
-    @Disabled("credentials ext concept")
     public void testGetCredentialsByClientContext(final VertxTestContext ctx) {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
-
-        // FIXME: credentials.setProperty("client-id", "gateway-one");
+        final CommonCredential credentials = getRandomHashedPasswordCredential(authId)
+                .putExtension("client-id", "gateway-one");
 
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
-        getHelper().registry
-                .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
-                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
-                .onComplete(ctx.succeeding(result -> {
-                    ctx.verify(() -> {
-                        assertStandardProperties(
-                                result,
-                                deviceId,
-                                authId,
-                                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                                2);
-                        assertThat(result.getProperty("client-id", String.class)).isEqualTo("gateway-one");
-                    });
-                    ctx.completeNow();
+        getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
+            .compose(httpResponse -> getHelper().registry.addCredentials(Constants.DEFAULT_TENANT, deviceId, List.of(credentials)))
+            .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+            .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertStandardProperties(
+                            result,
+                            deviceId,
+                            authId,
+                            CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                            2);
+                });
+                ctx.completeNow();
         }));
     }
 
     /**
-     * Verifies that a request for credentials using a non-matching client context
-     * fails with a 404.
+     * Verifies that a request for credentials using a client context that does not match
+     * the credentials on record fails with a 404.
      *
      * @param ctx The vert.x test context.
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @EnabledIfSystemProperty(named = "deviceregistry.credentials.supportsClientContext", matches = "true")
     @Test
-    @Disabled("credentials ext concept")
     public void testGetCredentialsFailsForNonMatchingClientContext(final VertxTestContext ctx) {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
-        // FIXME: credentials.setProperty("client-id", "gateway-one");
+        final CommonCredential credentials = getRandomHashedPasswordCredential(authId)
+                .putExtension("client-id", UUID.randomUUID().toString());
 
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "non-matching");
 
-        getHelper().registry
-                .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
-                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
-                    ctx.completeNow();
-        }));
+        getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
+            .compose(httpResponse -> getHelper().registry.addCredentials(Constants.DEFAULT_TENANT, deviceId, List.of(credentials)))
+            .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+            .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
     }
 
     /**
-     * Verifies that a request for credentials using a non-existing client context
-     * fails with a 404.
+     * Verifies that a request for credentials using a client context succeeds if the credentials on record
+     * do not have any extension properties with keys matching the provided client context.
      *
      * @param ctx The vert.x test context.
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     @Test
-    public void testGetCredentialsFailsForNonExistingClientContext(final VertxTestContext ctx) {
+    public void testGetCredentialsSucceedsForNonExistingClientContext(final VertxTestContext ctx) {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final CommonCredential credentials = getRandomHashedPasswordCredential(authId)
+                .putExtension("other", "property");
 
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
         getHelper().registry
-                .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
-                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
-                    ctx.completeNow();
-        }));
+            .registerDevice(Constants.DEFAULT_TENANT, deviceId)
+            .compose(httpResponse -> getHelper().registry.addCredentials(Constants.DEFAULT_TENANT, deviceId, List.of(credentials)))
+            .compose(httpResponse -> getClient(Constants.DEFAULT_TENANT))
+            .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
+            .onComplete(ctx.succeeding(credentialsObject -> {
+                ctx.verify(() -> {
+                    assertThat(credentialsObject.getSecrets()).isNotEmpty();
+                });
+                ctx.completeNow();
+            }));
     }
 
     private Collection<CommonCredential> getRandomHashedPasswordCredentials(final String authId) {
