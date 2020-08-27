@@ -270,8 +270,9 @@ paths:
          summary: Delete tenant
          description: |
             Clients use this operation to remove an existing tenant from the registry.
-            Registry implementations may optionally perform a *cascading* delete of all
-            the tenant's devices and credentials as well.
+
+            When the operation succeeds, the data owned by this tenant (including devices and their
+            credentials) must no longer be accessible. These entities should be reported as *not found*.
          operationId: deleteTenant
          parameters:
             - $ref: '#/components/parameters/resourceVersion'
@@ -494,8 +495,9 @@ paths:
          summary: Delete an existing device registration
          description: |
             Clients use this operation to remove an existing device from the registry.
-            Registry implementations may optionally perform a *cascading* delete of all
-            the device's credentials as well.
+
+            When the operation succeeds, the data owned by this device (including its credentials)
+            must no longer be accessible. These entities should be reported as *not found*.
          operationId: deleteRegistration
          parameters:
             - $ref: '#/components/parameters/resourceVersion'
