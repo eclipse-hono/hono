@@ -199,12 +199,12 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
         final int pageSize = 1;
         final int pageOffset = 0;
         final Filter filter = new Filter("/enabled", true);
-        final Sort sortOption = new Sort("/id");
+        final Sort sortOption = new Sort("/ext/id");
 
         sortOption.setDirection(Sort.Direction.desc);
         createDevices(tenantId, Map.of(
-                "testDevice1", new Device().setEnabled(true),
-                "testDevice2", new Device().setEnabled(true)))
+                "testDevice1", new Device().setEnabled(true).setExtensions(Map.of("id", "aaa")),
+                "testDevice2", new Device().setEnabled(true).setExtensions(Map.of("id", "bbb"))))
                         .compose(ok -> getDeviceManagementService()
                                 .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(sortOption),
                                         NoopSpan.INSTANCE)

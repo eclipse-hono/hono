@@ -143,12 +143,7 @@ public final class MongoDbDocumentBuilder {
 
         filters.forEach(filter -> {
             // TODO: To implement when filter values contain patterns such as * or %
-            if (FIELD_ID.equals(filter.getField())) {
-                document.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, filter.getValue());
-            } else {
-                document.put(MongoDbDeviceRegistryUtils.FIELD_DEVICE + filter.getField().toString().replace("/", "."),
-                        filter.getValue());
-            }
+            document.put(mapDeviceField(filter.getField()), filter.getValue());
         });
 
         return this;
@@ -162,16 +157,18 @@ public final class MongoDbDocumentBuilder {
      */
     public MongoDbDocumentBuilder withDeviceSortOptions(final List<Sort> sortOptions) {
 
-        sortOptions.forEach(sortOption -> {
-            if (FIELD_ID.equals(sortOption.getField())) {
-                document.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID,
-                        mapSortingDirection(sortOption.getDirection()));
-            } else {
-                document.put(MongoDbDeviceRegistryUtils.FIELD_DEVICE + "." + sortOption.getField(),
-                        mapSortingDirection(sortOption.getDirection()));
-            }
-        });
+        sortOptions.forEach(sortOption -> document.put(mapDeviceField(sortOption.getField()),
+                mapSortingDirection(sortOption.getDirection())));
+
         return this;
+    }
+
+    private static String mapDeviceField(final JsonPointer field) {
+        if (FIELD_ID.equals(field)) {
+            return RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID;
+        } else {
+            return MongoDbDeviceRegistryUtils.FIELD_DEVICE + field.toString().replace("/", ".");
+        }
     }
 
     private static int mapSortingDirection(final Sort.Direction direction) {
