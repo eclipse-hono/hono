@@ -87,7 +87,9 @@ public class ServiceConfigProperties extends ServerConfig {
      * {@link org.eclipse.hono.util.Constants#DEFAULT_TENANT} instead.
      *
      * @return {@code true} if the server is configured to run in single-tenant mode.
+     * @deprecated The single-tenant mode will be removed in Hono 1.5.
      */
+    @Deprecated
     public final boolean isSingleTenant() {
         return singleTenant;
     }
@@ -103,7 +105,9 @@ public class ServiceConfigProperties extends ServerConfig {
      *
      * @param singleTenant {@code true} if the server should support a single tenant only.
      * @return This instance for setter chaining.
+     * @deprecated The single-tenant mode will be removed in Hono 1.5.
      */
+    @Deprecated
     public final ServiceConfigProperties setSingleTenant(final boolean singleTenant) {
         this.singleTenant = singleTenant;
         return this;

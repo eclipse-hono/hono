@@ -19,6 +19,12 @@ title = "Release Notes"
   in addition to the adapter level. If set, the tenant specific value is used for all devices of the
   particular tenant. If not set, the value defined at the adapter level is used.
 
+### Deprecations
+ 
+ * The configuration property `singleTenant` of the protocol adapters and the device registry is now deprecated
+   and planned to be removed in a future release. The use case of a system with just a single tenant should be
+   realized by configuring just one tenant in the device registry.
+
 ## 1.3.0
 
 ### New Features
