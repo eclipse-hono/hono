@@ -110,12 +110,13 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
         final int pageOffset = 0;
         final Filter filter1 = new Filter("/enabled", true);
         final Filter filter2 = new Filter("/via/0", "gw-1");
+        final Filter filter3 = new Filter("/id", "testDevice1");
 
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
                 "testDevice2", new Device().setEnabled(false)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
                                         List.of(), NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
