@@ -110,12 +110,13 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
         final int pageOffset = 0;
         final Filter filter1 = new Filter("/enabled", true);
         final Filter filter2 = new Filter("/via/0", "gw-1");
+        final Filter filter3 = new Filter("/id", "testDevice1");
 
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
                 "testDevice2", new Device().setEnabled(false)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
                                         List.of(), NoopSpan.INSTANCE)
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
@@ -199,12 +200,12 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
         final int pageSize = 1;
         final int pageOffset = 0;
         final Filter filter = new Filter("/enabled", true);
-        final Sort sortOption = new Sort("/id");
+        final Sort sortOption = new Sort("/ext/id");
 
         sortOption.setDirection(Sort.Direction.desc);
         createDevices(tenantId, Map.of(
-                "testDevice1", new Device().setEnabled(true),
-                "testDevice2", new Device().setEnabled(true)))
+                "testDevice1", new Device().setEnabled(true).setExtensions(Map.of("id", "aaa")),
+                "testDevice2", new Device().setEnabled(true).setExtensions(Map.of("id", "bbb"))))
                         .compose(ok -> getDeviceManagementService()
                                 .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(sortOption),
                                         NoopSpan.INSTANCE)
