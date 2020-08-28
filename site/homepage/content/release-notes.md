@@ -16,6 +16,12 @@ title = "Release Notes"
 * The LoraWAN protocol adapter has been extended with support for the *Orbiwise* provider.
 * Added metrics for tracking the RTT between sending an AMQP message to receiving the disposition.
 
+### Deprecations
+ 
+ * The configuration property `singleTenant` of the protocol adapters and the device registry is now deprecated
+   and planned to be removed in a future release. The use case of a system with just a single tenant should be
+   realized by configuring just one tenant in the device registry.
+
 ## 1.3.0
 
 ### New Features

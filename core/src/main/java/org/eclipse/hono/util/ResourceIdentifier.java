@@ -185,7 +185,9 @@ public final class ResourceIdentifier {
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
+     * @deprecated This method will be removed in Hono 1.5.
      */
+    @Deprecated
     public static ResourceIdentifier fromStringAssumingDefaultTenant(final String resource) {
         Objects.requireNonNull(resource);
         return new ResourceIdentifier(resource, true);
