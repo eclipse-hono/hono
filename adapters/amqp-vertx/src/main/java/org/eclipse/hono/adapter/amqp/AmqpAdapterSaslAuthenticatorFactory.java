@@ -50,6 +50,8 @@ import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.GenericExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -312,7 +314,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             currentSpan.log(items);
 
             final Promise<DeviceUser> authResult = Promise.promise();
-            usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
+            final ExecutionContext executionContext = new GenericExecutionContext(currentSpan.context());
+            usernamePasswordAuthProvider.authenticate(credentials, executionContext, authResult);
             return authResult.future()
                     .recover(t -> Future.failedFuture(new AuthorizationException(
                             credentials.getTenantId(),
@@ -361,7 +364,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         final Promise<DeviceUser> authResult = Promise.promise();
                         final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenant.getTenantId(),
                                 deviceCert.getSubjectX500Principal(), clientContext);
-                        clientCertAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
+                        final ExecutionContext executionContext = new GenericExecutionContext(currentSpan.context());
+                        clientCertAuthProvider.authenticate(credentials, executionContext, authResult);
                         return authResult.future()
                                 .recover(t -> Future.failedFuture(new AuthorizationException(
                                         credentials.getTenantId(),

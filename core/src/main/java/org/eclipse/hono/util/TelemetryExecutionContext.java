@@ -38,4 +38,11 @@ public interface TelemetryExecutionContext extends ExecutionContext {
     default boolean isDeviceAuthenticated() {
         return getAuthenticatedDevice() != null;
     }
+
+    /**
+     * Gets the QoS level as set in the request by the device.
+     *
+     * @return The QoS level requested by the device.
+     */
+    QoS getRequestedQos();
 }

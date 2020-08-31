@@ -14,10 +14,8 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.ExecutionContext;
 import org.slf4j.Logger;
@@ -25,8 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.ext.auth.AuthProvider;
-import io.vertx.ext.auth.User;
 
 
 /**
@@ -49,19 +45,19 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final AuthProvider authProvider;
+    private final HonoClientBasedAuthProvider<?> authProvider;
 
     /**
      * Creates a new handler for authenticating MQTT clients.
      *
      * @param authProvider The auth provider to use for verifying a client's credentials.
      */
-    protected ExecutionContextAuthHandler(final AuthProvider authProvider) {
+    protected ExecutionContextAuthHandler(final HonoClientBasedAuthProvider<?> authProvider) {
         this.authProvider = authProvider;
     }
 
     @Override
-    public final AuthProvider getAuthProvider() {
+    public final HonoClientBasedAuthProvider<?> getAuthProvider() {
         return authProvider;
     }
 
@@ -70,35 +66,21 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
 
         Objects.requireNonNull(context);
 
-        final Promise<DeviceUser> result = Promise.promise();
-        parseCredentials(context)
+        return parseCredentials(context)
                 .compose(authInfo -> {
-                    final Promise<User> authResult = Promise.promise();
-                    getAuthProvider(context).authenticate(authInfo, authResult);
+                    final Promise<DeviceUser> authResult = Promise.promise();
+                    getAuthProvider(context).authenticate(authInfo, context, authResult);
                     return authResult.future();
-                }).onComplete(authAttempt -> {
-                    if (authAttempt.succeeded()) {
-                        if (authAttempt.result() instanceof DeviceUser) {
-                            result.complete((DeviceUser) authAttempt.result());
-                        } else {
-                            log.warn("configured AuthProvider does not return DeviceUser instances [type returned: {}",
-                                    authAttempt.result().getClass().getName());
-                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
-                        }
-                    } else {
-                        result.fail(authAttempt.cause());
-                    }
                 });
-        return result.future();
     }
 
-    private AuthProvider getAuthProvider(final T ctx) {
+    private HonoClientBasedAuthProvider<?> getAuthProvider(final T ctx) {
 
         final Object obj = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
-        if (obj instanceof AuthProvider) {
+        if (obj instanceof HonoClientBasedAuthProvider<?>) {
             log.debug("using auth provider found in context [type: {}]", obj.getClass().getName());
             // we're overruling the configured one for this request
-            return (AuthProvider) obj;
+            return (HonoClientBasedAuthProvider<?>) obj;
         } else {
             // bad type, ignore and return default
             return authProvider;
