@@ -19,7 +19,6 @@ import org.eclipse.hono.util.ExecutionContext;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.AuthProvider;
 
 
 /**
@@ -56,5 +55,5 @@ public interface AuthHandler<T extends ExecutionContext> {
      *
      * @return The provider.
      */
-    AuthProvider getAuthProvider();
+    HonoClientBasedAuthProvider<?> getAuthProvider();
 }

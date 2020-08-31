@@ -30,6 +30,7 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.GenericExecutionContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -138,7 +139,7 @@ public class CredentialsApiAuthProviderTest {
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
         when(credentialsClient.get(eq("type"), eq("identity"), any(JsonObject.class), any()))
         .thenReturn(Future.succeededFuture(credentialsOnRecord));
-        provider.authenticate(creds, null, ctx.failing(t -> {
+        provider.authenticate(creds, new GenericExecutionContext(), ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
             ctx.completeNow();

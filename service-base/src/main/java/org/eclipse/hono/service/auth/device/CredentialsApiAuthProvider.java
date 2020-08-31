@@ -25,6 +25,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.GenericExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,13 +100,14 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
     @Override
     public final void authenticate(
             final T deviceCredentials,
-            final SpanContext spanContext,
+            final ExecutionContext executionContext,
             final Handler<AsyncResult<DeviceUser>> resultHandler) {
 
         Objects.requireNonNull(deviceCredentials);
+        Objects.requireNonNull(executionContext);
         Objects.requireNonNull(resultHandler);
 
-        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, spanContext, "authenticate device", getClass().getSimpleName())
+        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, executionContext.getTracingContext(), "authenticate device", getClass().getSimpleName())
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceCredentials.getTenantId())
                 .withTag(TracingHelper.TAG_AUTH_ID.getKey(), deviceCredentials.getAuthId())
                 .start();
@@ -202,18 +205,32 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
 
     @Override
     public final void authenticate(final JsonObject authInfo, final Handler<AsyncResult<User>> resultHandler) {
+        final ExecutionContext executionContext = new GenericExecutionContext(
+                TracingHelper.extractSpanContext(tracer, authInfo));
+        authenticate(authInfo, executionContext, s -> {
+            if (s.succeeded()) {
+                resultHandler.handle(Future.succeededFuture(s.result()));
+            } else {
+                resultHandler.handle(Future.failedFuture(s.cause()));
+            }
+        });
+    }
 
-        final T credentials = getCredentials(Objects.requireNonNull(authInfo));
+    @Override
+    public final void authenticate(
+            final JsonObject authInfo,
+            final ExecutionContext executionContext,
+            final Handler<AsyncResult<DeviceUser>> resultHandler) {
+
+        Objects.requireNonNull(authInfo);
+        Objects.requireNonNull(executionContext);
+        Objects.requireNonNull(resultHandler);
+
+        final T credentials = getCredentials(authInfo);
         if (credentials == null) {
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {
-            authenticate(credentials, TracingHelper.extractSpanContext(tracer, authInfo), s -> {
-                if (s.succeeded()) {
-                    resultHandler.handle(Future.succeededFuture(s.result()));
-                } else {
-                    resultHandler.handle(Future.failedFuture(s.cause()));
-                }
-            });
+            authenticate(credentials, executionContext, resultHandler);
         }
     }
 

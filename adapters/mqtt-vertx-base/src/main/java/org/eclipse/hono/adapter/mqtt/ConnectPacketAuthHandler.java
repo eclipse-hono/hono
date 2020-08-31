@@ -22,7 +22,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -98,7 +97,8 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
                     .put("username", auth.getUsername())
                     .put("password", auth.getPassword())
                     .put(PROPERTY_CLIENT_IDENTIFIER, context.deviceEndpoint().clientIdentifier());
-            TracingHelper.injectSpanContext(tracer, context.getTracingContext(), credentialsJSON);
+            // spanContext of MqttContext not injected into json here since authenticateDevice(mqttContext) will
+            // pass on the MqttContext as well as the json into authProvider.authenticate()
             result.complete(credentialsJSON);
         }
 
