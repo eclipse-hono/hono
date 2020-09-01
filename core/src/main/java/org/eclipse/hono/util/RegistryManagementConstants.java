@@ -23,23 +23,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String API_VERSION = "v1";
 
     /**
-     * The vert.x event bus event message <em>subject</em> property to use for the <em>create</em> operations.
-     */
-    public static final String ACTION_CREATE = "create";
-    /**
-     * The vert.x event bus event message <em>subject</em> property to use for the <em>get</em> operations.
-     */
-    public static final String ACTION_GET = "get";
-    /**
-     * The vert.x event bus event message <em>subject</em> property to use for the <em>delete</em> operations.
-     */
-    public static final String ACTION_DELETE = "delete";
-    /**
-     * The vert.x event bus event message <em>subject</em> property to use for the <em>update</em> operations.
-     */
-    public static final String ACTION_UPDATE = "update";
-
-    /**
      * The name of the Credentials Registration HTTP API endpoint.
      */
     public static final String DEVICES_HTTP_ENDPOINT = "devices";
@@ -54,7 +37,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String TENANT_HTTP_ENDPOINT = "tenants";
 
-    // FIELD DEFINTIONS
+    // FIELD DEFINITIONS
 
     // DEVICES
 
