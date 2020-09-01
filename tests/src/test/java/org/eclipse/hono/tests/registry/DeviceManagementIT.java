@@ -266,7 +266,7 @@ public class DeviceManagementIT {
         registry.registerDevice(tenantId, deviceId, device)
             .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId))
             .onComplete(ctx.succeeding(httpResponse -> {
-                ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class), deviceId, device));
+                ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class), device));
                 ctx.completeNow();
             }));
     }
@@ -330,7 +330,7 @@ public class DeviceManagementIT {
                 return registry.getRegistrationInfo(tenantId, deviceId);
             })
             .onComplete(ctx.succeeding(httpResponse -> {
-                ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class), deviceId,
+                ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class),
                         updatedData.mapTo(Device.class)));
                 ctx.completeNow();
             }));
@@ -436,10 +436,7 @@ public class DeviceManagementIT {
         return generatedId;
     }
 
-    private static void assertRegistrationInformation(
-            final Device response,
-            final String expectedDeviceId,
-            final Device expectedData) {
+    private static void assertRegistrationInformation(final Device response, final Device expectedData) {
 
         final Comparator<Instant> close = (Instant d1, Instant d2) -> d1.compareTo(d2) < 1000 ? 0 : 1;
 

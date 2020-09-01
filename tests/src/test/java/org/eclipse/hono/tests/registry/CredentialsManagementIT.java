@@ -213,7 +213,7 @@ public class CredentialsManagementIT {
                         assertThat(ext.getString("client-id")).isEqualTo("MQTT-client-2384236854");
 
                         // the device-id must not be part of the "ext" section
-                        assertThat(ext.getString("device-id")).isNull();;
+                        assertThat(ext.getString("device-id")).isNull();
                     });
                     context.completeNow();
                 }));
@@ -389,7 +389,7 @@ public class CredentialsManagementIT {
                 deviceId,
                 Optional.ofNullable(payload).map(JsonArray::toBuffer).orElse(null),
                 CrudHttpClient.CONTENT_TYPE_JSON,
-                HttpURLConnection.HTTP_BAD_REQUEST)
+                expectedStatus)
             .onComplete(context.completing());
     }
 
@@ -524,7 +524,7 @@ public class CredentialsManagementIT {
                         final PasswordCredential cred = credentials.getJsonObject(0).mapTo(PasswordCredential.class);
                         cred.getSecrets().forEach(secret -> assertThat(secret.getId()).isNotNull());
                     });
-                    context.completeNow();;
+                    context.completeNow();
                 }));
 
     }
