@@ -145,7 +145,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                                 .getJsonObject(RegistrationConstants.FIELD_DATA);
                                         return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
                                     } else {
-                                        LOG.debug("no such device");
+                                        LOG.debug("device not enabled");
                                         TracingHelper.logError(span, "device not enabled");
                                         return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                     }
