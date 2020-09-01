@@ -13,22 +13,11 @@
 
 package org.eclipse.hono.tests;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -43,6 +32,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 
 /**
  * A vert.x based HTTP client for invoking generic CRUD operations on HTTP APIs.
@@ -58,7 +48,6 @@ public final class CrudHttpClient {
      */
     public static final String ORIGIN_URI = "http://hono.eclipse.org";
 
-    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private final WebClient client;
     private final Context context;
     private final WebClientOptions options;
@@ -88,23 +77,34 @@ public final class CrudHttpClient {
         this.context = vertx.getOrCreateContext();
     }
 
+    private static void addResponsePredicates(final HttpRequest<?> request, final ResponsePredicate ... successPredicates) {
+        Optional.ofNullable(successPredicates).ifPresent(predicates -> {
+            for (final ResponsePredicate predicate : predicates) {
+                request.expect(predicate);
+            }
+        });
+    }
+
     /**
      * Gets options for a resource using an HTTP OPTIONS request.
      *
      * @param uri The resource URI.
      * @param requestHeaders The headers to include in the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
-     *         future will contain the response headers.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> options(
+    public Future<HttpResponse<Buffer>> options(
             final String uri,
             final MultiMap requestHeaders,
-            final IntPredicate successPredicate) {
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(uri);
-        return options(createRequestOptions().setURI(uri), requestHeaders, successPredicate);
+        return options(createRequestOptions().setURI(uri), requestHeaders, successPredicates);
     }
 
     /**
@@ -112,39 +112,28 @@ public final class CrudHttpClient {
      *
      * @param requestOptions The options to use for the request.
      * @param requestHeaders The headers to include in the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
-     *         future will contain the response headers.
-     * @throws NullPointerException if options or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if options is {@code null}.
      */
-    public Future<MultiMap> options(
+    public Future<HttpResponse<Buffer>> options(
             final RequestOptions requestOptions,
             final MultiMap requestHeaders,
-            final IntPredicate successPredicate) {
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
-        Objects.requireNonNull(successPredicate);
 
-        final Promise<MultiMap> result = Promise.promise();
+        final Promise<HttpResponse<Buffer>> result = Promise.promise();
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.OPTIONS, requestOptions);
-            if (requestHeaders != null) {
-                req.headers().addAll(requestHeaders);
-            }
-            req.send(ar -> {
-                if (ar.failed()) {
-                    // problem at the network-level
-                    result.tryFail(ar.cause());
-                } else {
-                    final HttpResponse<Buffer> response = ar.result();
-                    if (successPredicate.test(response.statusCode())) {
-                        result.tryComplete(response.headers());
-                    } else {
-                        result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
-                    }
-                }
-            });
+            Optional.ofNullable(requestHeaders).ifPresent(req::putHeaders);
+            addResponsePredicates(req, successPredicates);
+            req.send(result);
         });
         return result.future();
     }
@@ -156,13 +145,19 @@ public final class CrudHttpClient {
      *
      * @param uri The URI to post to.
      * @param body The body to post.
-     * @param successPredicate A predicate on the HTTP response for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> create(final String uri, final JsonObject body,
-            final Predicate<HttpResponse<Buffer>> successPredicate) {
-        return create(uri, body, CONTENT_TYPE_JSON, successPredicate, false);
+    public Future<HttpResponse<Buffer>> create(
+            final String uri,
+            final JsonObject body,
+            final ResponsePredicate ... successPredicates) {
+        return create(uri, body, CONTENT_TYPE_JSON, successPredicates);
     }
 
     /**
@@ -171,19 +166,24 @@ public final class CrudHttpClient {
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param contentType The content type to set in the request (may be {@code null}).
-     * @param successPredicate A predicate on the HTTP response for determining success.
-     * @param checkCorsHeaders Whether to set and check CORS headers.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI, content type or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> create(final String uri, final JsonObject body, final String contentType,
-            final Predicate<HttpResponse<Buffer>> successPredicate, final boolean checkCorsHeaders) {
+    public Future<HttpResponse<Buffer>> create(
+            final String uri,
+            final JsonObject body,
+            final String contentType,
+            final ResponsePredicate ... successPredicates) {
 
         return create(uri,
                 Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null),
                 contentType,
-                successPredicate,
-                checkCorsHeaders);
+                successPredicates);
     }
 
     /**
@@ -192,13 +192,19 @@ public final class CrudHttpClient {
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param contentType The content type to set in the request (may be {@code null}).
-     * @param successPredicate A predicate on the HTTP response for determining success.
-     * @param checkCorsHeaders Whether to set and check CORS headers.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> create(final String uri, final Buffer body, final String contentType,
-            final Predicate<HttpResponse<Buffer>> successPredicate, final boolean checkCorsHeaders) {
+    public Future<HttpResponse<Buffer>> create(
+            final String uri,
+            final Buffer body,
+            final String contentType,
+            final ResponsePredicate ... successPredicates) {
 
         final MultiMap requestHeaders = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, contentType))
@@ -208,8 +214,7 @@ public final class CrudHttpClient {
                 createRequestOptions().setURI(uri),
                 body,
                 requestHeaders,
-                successPredicate,
-                checkCorsHeaders);
+                successPredicates);
     }
 
     /**
@@ -218,25 +223,27 @@ public final class CrudHttpClient {
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param requestHeaders The headers to include in the request (may be {@code null}).
-     * @param successPredicate A predicate on the HTTP response for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> create(
+    public Future<HttpResponse<Buffer>> create(
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<HttpResponse<Buffer>> successPredicate) {
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(uri);
-        Objects.requireNonNull(successPredicate);
 
         return create(
                 createRequestOptions().setURI(uri),
                 body,
                 requestHeaders,
-                successPredicate,
-                false);
+                successPredicates);
     }
 
     /**
@@ -245,52 +252,32 @@ public final class CrudHttpClient {
      * @param requestOptions The options to use for the request.
      * @param body The body to post (may be {@code null}).
      * @param requestHeaders The headers to include in the request (may be {@code null}).
-     * @param successPredicate A predicate on the HTTP response for determining success.
-     * @param checkCorsHeaders Whether to set and check CORS headers.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if options or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if options is {@code null}.
      */
-    public Future<MultiMap> create(
+    public Future<HttpResponse<Buffer>> create(
             final RequestOptions requestOptions,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<HttpResponse<Buffer>> successPredicate,
-            final boolean checkCorsHeaders) {
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
-        Objects.requireNonNull(successPredicate);
 
-        final Promise<MultiMap> result = Promise.promise();
-
-        final Handler<AsyncResult<HttpResponse<Buffer>>> handler = ar -> {
-            if (ar.failed()) {
-                result.tryFail(ar.cause());
-            } else {
-                final HttpResponse<Buffer> response = ar.result();
-                LOGGER.trace("response status code {}", response.statusCode());
-                if (successPredicate.test(response)) {
-                    if (checkCorsHeaders) {
-                        checkCorsHeaders(response, result);
-                    }
-                    result.tryComplete(response.headers());
-                } else {
-                    result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
-                }
-            }
-        };
+        final Promise<HttpResponse<Buffer>> result = Promise.promise();
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.POST, requestOptions);
-            if (requestHeaders != null) {
-                req.headers().addAll(requestHeaders);
-            }
-            if (checkCorsHeaders) {
-                req.headers().add(HttpHeaders.ORIGIN, ORIGIN_URI);
-            }
+            Optional.ofNullable(requestHeaders).ifPresent(req::putHeaders);
+            addResponsePredicates(req, successPredicates);
             if (body == null) {
-                req.send(handler);
+                req.send(result);
             } else {
-                req.sendBuffer(body, handler);
+                req.sendBuffer(body, result);
             }
         });
         return result.future();
@@ -303,12 +290,19 @@ public final class CrudHttpClient {
      *
      * @param uri The resource to update.
      * @param body The content to update the resource with.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final JsonObject body, final IntPredicate successPredicate) {
-        return update(uri, body, CONTENT_TYPE_JSON, successPredicate);
+    public Future<HttpResponse<Buffer>> update(
+            final String uri,
+            final JsonObject body,
+            final ResponsePredicate ... successPredicates) {
+        return update(uri, body, CONTENT_TYPE_JSON, successPredicates);
     }
 
     /**
@@ -318,12 +312,19 @@ public final class CrudHttpClient {
      *
      * @param uri The resource to update.
      * @param body The content to update the resource with.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final JsonArray body, final IntPredicate successPredicate) {
-        return update(uri, body, CONTENT_TYPE_JSON, successPredicate);
+    public Future<HttpResponse<Buffer>> update(
+            final String uri,
+            final JsonArray body,
+            final ResponsePredicate ... successPredicates) {
+        return update(uri, body, CONTENT_TYPE_JSON, successPredicates);
     }
 
     /**
@@ -332,13 +333,20 @@ public final class CrudHttpClient {
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param contentType The content type to set in the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final JsonObject body, final String contentType,
-            final IntPredicate successPredicate) {
-        return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate, true);
+    public Future<HttpResponse<Buffer>> update(
+            final String uri,
+            final JsonObject body,
+            final String contentType,
+            final ResponsePredicate ... successPredicates) {
+        return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicates);
 
     }
 
@@ -348,13 +356,20 @@ public final class CrudHttpClient {
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param contentType The content type to set in the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final JsonArray body, final String contentType,
-            final IntPredicate successPredicate) {
-        return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate, true);
+    public Future<HttpResponse<Buffer>> update(
+            final String uri,
+            final JsonArray body,
+            final String contentType,
+            final ResponsePredicate ... successPredicates) {
+        return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicates);
 
     }
 
@@ -364,19 +379,25 @@ public final class CrudHttpClient {
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param contentType The content type to set in the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @param checkCorsHeaders Whether to set and check CORS headers.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final Buffer body, final String contentType,
-            final IntPredicate successPredicate, final boolean checkCorsHeaders) {
+    public Future<HttpResponse<Buffer>> update(
+            final String uri,
+            final Buffer body,
+            final String contentType,
+            final ResponsePredicate ... successPredicates) {
 
         final MultiMap headers = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, ct))
                 .orElse(null);
 
-        return update(uri, body, headers, successPredicate, checkCorsHeaders);
+        return update(uri, body, headers, successPredicates);
     }
 
     /**
@@ -385,54 +406,27 @@ public final class CrudHttpClient {
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param requestHeaders The headers to include in the request.
-     * @param successPredicate A predicate on the response for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<MultiMap> update(
+    public Future<HttpResponse<Buffer>> update(
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final IntPredicate successPredicate) {
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(uri);
-        Objects.requireNonNull(successPredicate);
 
         return update(
                 createRequestOptions().setURI(uri),
                 body,
                 requestHeaders,
-                successPredicate,
-                false);
-    }
-
-    /**
-     * Updates a resource using an HTTP PUT request.
-     *
-     * @param uri The resource to update.
-     * @param body The content to update the resource with.
-     * @param requestHeaders The headers to include in the request.
-     * @param successPredicate A predicate on the response for determining success.
-     * @param checkCorsHeaders Whether to set and check CORS headers.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
-     */
-    public Future<MultiMap> update(
-            final String uri,
-            final Buffer body,
-            final MultiMap requestHeaders,
-            final IntPredicate successPredicate,
-            final boolean checkCorsHeaders) {
-
-        Objects.requireNonNull(uri);
-        Objects.requireNonNull(successPredicate);
-
-        return update(
-                createRequestOptions().setURI(uri),
-                body,
-                requestHeaders,
-                successPredicate,
-                checkCorsHeaders);
+                successPredicates);
     }
 
     /**
@@ -441,50 +435,32 @@ public final class CrudHttpClient {
      * @param requestOptions The options to use for the request.
      * @param body The content to update the resource with.
      * @param requestHeaders The headers to include in the request.
-     * @param successPredicate A predicate on the response for determining success.
-     * @param checkCorsHeaders Whether to set and check CORS headers.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if options or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if options is {@code null}.
      */
-    public Future<MultiMap> update(
+    public Future<HttpResponse<Buffer>> update(
             final RequestOptions requestOptions,
             final Buffer body,
             final MultiMap requestHeaders,
-            final IntPredicate successPredicate,
-            final boolean checkCorsHeaders) {
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
-        Objects.requireNonNull(successPredicate);
 
-        final Promise<MultiMap> result = Promise.promise();
+        final Promise<HttpResponse<Buffer>> result = Promise.promise();
 
-        final Handler<AsyncResult<HttpResponse<Buffer>>> handler = ar -> {
-            if (ar.failed()) {
-                result.tryFail(ar.cause());
-            } else {
-                final HttpResponse<Buffer> response = ar.result();
-                if (successPredicate.test(response.statusCode())) {
-                    if (checkCorsHeaders) {
-                        checkCorsHeaders(response, result);
-                    }
-                    result.tryComplete(response.headers());
-                } else {
-                    result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
-                }
-            }
-        };
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.PUT, requestOptions);
-            if (requestHeaders != null) {
-                req.headers().addAll(requestHeaders);
-            }
-            if (checkCorsHeaders) {
-                req.headers().add(HttpHeaders.ORIGIN, ORIGIN_URI);
-            }
+            Optional.ofNullable(requestHeaders).ifPresent(req::putHeaders);
+            addResponsePredicates(req, successPredicates);
             if (body == null) {
-                req.send(handler);
+                req.send(result);
             } else {
-                req.sendBuffer(body, handler);
+                req.sendBuffer(body, result);
             }
         });
         return result.future();
@@ -494,52 +470,42 @@ public final class CrudHttpClient {
      * Retrieves a resource representation using an HTTP GET request.
      *
      * @param uri The resource to retrieve.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
-     *         future will contain the response body.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<Buffer> get(final String uri, final IntPredicate successPredicate) {
+    public Future<HttpResponse<Buffer>> get(final String uri, final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(uri);
-        Objects.requireNonNull(successPredicate);
-        return get(createRequestOptions().setURI(uri), successPredicate);
+        return get(createRequestOptions().setURI(uri), successPredicates);
     }
 
     /**
      * Retrieves a resource representation using an HTTP GET request.
      *
      * @param requestOptions The options to use for the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
-     *         future will contain the response body.
-     * @throws NullPointerException if options or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if options is {@code null}.
      */
-    public Future<Buffer> get(final RequestOptions requestOptions, final IntPredicate successPredicate) {
+    public Future<HttpResponse<Buffer>> get(final RequestOptions requestOptions, final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
-        Objects.requireNonNull(successPredicate);
 
-        final Promise<Buffer> result = Promise.promise();
+        final Promise<HttpResponse<Buffer>> result = Promise.promise();
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.GET, requestOptions);
-            req.headers().add(HttpHeaders.ORIGIN, ORIGIN_URI);
-            req.send(ar -> {
-                if (ar.failed()) {
-                    result.tryFail(ar.cause());
-                } else {
-                    final HttpResponse<Buffer> response = ar.result();
-                    if (successPredicate.test(response.statusCode())) {
-                        if (response.statusCode() < 400) {
-                            checkCorsHeaders(response, result);
-                        }
-                        result.tryComplete(response.body());
-                    } else {
-                        result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
-                    }
-                }
-            });
+            addResponsePredicates(req, successPredicates);
+            req.send(result);
         });
 
         return result.future();
@@ -549,77 +515,46 @@ public final class CrudHttpClient {
      * Deletes a resource using an HTTP DELETE request.
      *
      * @param uri The resource to delete.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if URI or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<Void> delete(final String uri, final IntPredicate successPredicate) {
+    public Future<HttpResponse<Buffer>> delete(final String uri, final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(uri);
-        Objects.requireNonNull(successPredicate);
 
-        return delete(createRequestOptions().setURI(uri), successPredicate);
+        return delete(createRequestOptions().setURI(uri), successPredicates);
     }
 
     /**
      * Deletes a resource using an HTTP DELETE request.
      *
      * @param requestOptions The options to use for the request.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
-     * @return A future that will succeed if the predicate evaluates to {@code true}.
-     * @throws NullPointerException if options or predicate are {@code null}.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if options is {@code null}.
      */
-    public Future<Void> delete(final RequestOptions requestOptions, final IntPredicate successPredicate) {
+    public Future<HttpResponse<Buffer>> delete(final RequestOptions requestOptions, final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
-        Objects.requireNonNull(successPredicate);
 
-        final Promise<Void> result = Promise.promise();
+        final Promise<HttpResponse<Buffer>> result = Promise.promise();
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.DELETE, requestOptions);
-            req.headers().add(HttpHeaders.ORIGIN, ORIGIN_URI);
-            req.send(ar -> {
-                if (ar.failed()) {
-                    result.tryFail(ar.cause());
-                } else {
-                    final HttpResponse<Buffer> response = ar.result();
-                    LOGGER.debug("got response [status: {}]", response.statusCode());
-                    if (successPredicate.test(response.statusCode())) {
-                        checkCorsHeaders(response, result);
-                        result.tryComplete();
-                    } else {
-                        result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
-                    }
-                }
-            });
+            addResponsePredicates(req, successPredicates);
+            req.send(result);
         });
 
         return result.future();
-    }
-
-    /**
-     * Checks if the the response have proper headers set.
-     *
-     * @param response The response to check.
-     * @param result the result will fail in case headers are not set
-     */
-    private void checkCorsHeaders(final HttpResponse<?> response, final Promise<?> result) {
-        final MultiMap headers = response.headers();
-        if (!"*".equals(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))) {
-            result.fail("Response does not contain proper Access-Control-Allow-Origin header");
-        }
-    }
-
-    private static ServiceInvocationException newUnexpectedResponseStatusException(final int statusCode) {
-        if (statusCode >= 400 && statusCode < 500) {
-            return new ClientErrorException(statusCode);
-        } else if (statusCode >= 500 && statusCode < 600) {
-            return new ServerErrorException(statusCode);
-        } else {
-            return new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
-                    "Unexpected response status " + statusCode);
-        }
     }
 
     private RequestOptions createRequestOptions() {

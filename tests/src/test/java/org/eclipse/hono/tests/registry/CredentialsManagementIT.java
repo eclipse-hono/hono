@@ -155,9 +155,9 @@ public class CredentialsManagementIT {
     public void testNewDeviceReturnsEmptyCredentials(final VertxTestContext context) {
 
         registry.getCredentials(tenantId, deviceId)
-            .onComplete(context.succeeding(responseBody -> {
+            .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
-                    final CommonCredential[] credentials = Json.decodeValue(responseBody,
+                    final CommonCredential[] credentials = Json.decodeValue(httpResponse.bodyAsBuffer(),
                             CommonCredential[].class);
                     assertThat(credentials).isEmpty();
                 });
@@ -179,9 +179,9 @@ public class CredentialsManagementIT {
                 deviceId,
                 List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-            .onComplete(context.succeeding(responseHeaders -> {
+            .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
-                    assertResourceVersionHasChanged(resourceVersion, responseHeaders);
+                    assertResourceVersionHasChanged(resourceVersion, httpResponse.headers());
                 });
                 context.completeNow();
             }));
@@ -199,13 +199,13 @@ public class CredentialsManagementIT {
         credential.getExtensions().put("client-id", "MQTT-client-2384236854");
 
         registry.addCredentials(tenantId, deviceId, List.of(credential))
-                .compose(responseHeaders -> {
-                    context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+                .compose(httpResponse -> {
+                    context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                     return registry.getCredentials(tenantId, deviceId);
                 })
-                .onComplete(context.succeeding(b -> {
+                .onComplete(context.succeeding(httpResponse -> {
                     context.verify(() -> {
-                        final JsonArray response = b.toJsonArray();
+                        final JsonArray response = httpResponse.bodyAsJsonArray();
                         assertThat(response.size()).isEqualTo(1);
                         final JsonObject credentialObject = response.getJsonObject(0);
                         final var ext = credentialObject.getJsonObject(RegistryManagementConstants.FIELD_EXT);
@@ -411,8 +411,8 @@ public class CredentialsManagementIT {
                 deviceId,
                 List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-            .compose(responseHeaders -> {
-                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+            .compose(httpResponse -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                 return registry.updateCredentialsWithVersion(
                         tenantId,
                         deviceId,
@@ -420,12 +420,12 @@ public class CredentialsManagementIT {
                         resourceVersion.get(),
                         HttpURLConnection.HTTP_NO_CONTENT);
             })
-            .compose(responseHeaders -> {
-                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+            .compose(httpResponse -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                 return registry.getCredentials(tenantId, deviceId);
             })
-            .onComplete(context.succeeding(gr -> {
-                final JsonObject retrievedSecret = gr.toJsonArray().getJsonObject(0).getJsonArray("secrets").getJsonObject(0);
+            .onComplete(context.succeeding(httpResponse -> {
+                final JsonObject retrievedSecret = httpResponse.bodyAsJsonArray().getJsonObject(0).getJsonArray("secrets").getJsonObject(0);
                 context.verify(() -> assertThat(retrievedSecret.getString("comment")).isEqualTo("test"));
                 context.completeNow();
             }));
@@ -444,9 +444,9 @@ public class CredentialsManagementIT {
         // GIVEN a device with a set of hashed password credentials
         registry.addCredentials(tenantId, deviceId, List.of(hashedPasswordCredential))
             .compose(ok -> registry.getCredentials(tenantId, deviceId))
-            .compose(buffer -> {
+            .compose(httpResponse -> {
                 // WHEN updating the existing password
-                final JsonArray bodyAsJsonArray = buffer.toJsonArray();
+                final JsonArray bodyAsJsonArray = httpResponse.bodyAsJsonArray();
                 LOG.debug("received original credentials list: {}", bodyAsJsonArray.encodePrettily());
                 ctx.verify(() -> assertThat(bodyAsJsonArray).hasSize(1));
                 final PasswordCredential existingCredentials = bodyAsJsonArray.getJsonObject(0).mapTo(PasswordCredential.class);
@@ -461,8 +461,8 @@ public class CredentialsManagementIT {
                 return registry.updateCredentials(tenantId, deviceId, updatedCredentials);
             })
             .compose(ur -> registry.getCredentials(tenantId, deviceId))
-            .onComplete(ctx.succeeding(buffer -> {
-                final JsonArray bodyAsJsonArray = buffer.toJsonArray();
+            .onComplete(ctx.succeeding(httpResponse -> {
+                final JsonArray bodyAsJsonArray = httpResponse.bodyAsJsonArray();
                 LOG.debug("received updated credentials list: {}", bodyAsJsonArray.encodePrettily());
                 ctx.verify(() -> assertThat(bodyAsJsonArray).hasSize(1));
                 final PasswordCredential updatedCredentials = bodyAsJsonArray.getJsonObject(0).mapTo(PasswordCredential.class);
@@ -491,8 +491,8 @@ public class CredentialsManagementIT {
                 deviceId,
                 List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-            .compose(responseHeaders -> {
-                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+            .compose(httpResponse -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                 // now try to update credentials with other version
                 return registry.updateCredentialsWithVersion(
                         tenantId,
@@ -516,9 +516,9 @@ public class CredentialsManagementIT {
 
         registry.updateCredentials(tenantId, deviceId, List.of(hashedPasswordCredential), HttpURLConnection.HTTP_NO_CONTENT)
                 .compose(ar -> registry.getCredentials(tenantId, deviceId))
-                .onComplete(context.succeeding(b -> {
+                .onComplete(context.succeeding(httpResponse -> {
                     context.verify(() -> {
-                        final JsonArray credentials = b.toJsonArray();
+                        final JsonArray credentials = httpResponse.bodyAsJsonArray();
                         LOG.trace("retrieved credentials [tenant-id: {}, device-id: {}]: {}",
                                 tenantId, deviceId, credentials);
                         final PasswordCredential cred = credentials.getJsonObject(0).mapTo(PasswordCredential.class);
@@ -541,8 +541,8 @@ public class CredentialsManagementIT {
                 tenantId,
                 deviceId, List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-            .onComplete(context.succeeding(responseHeaders -> {
-                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+            .onComplete(context.succeeding(httpResponse -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                 context.completeNow();
             }));
     }
@@ -562,8 +562,8 @@ public class CredentialsManagementIT {
 
         registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
             .compose(ar -> registry.getCredentials(tenantId, deviceId))
-            .onComplete(context.succeeding(b -> {
-                context.verify(() -> assertResponseBodyContainsAllCredentials(b.toJsonArray(), credentialsListToAdd));
+            .onComplete(context.succeeding(httpResponse -> {
+                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsListToAdd));
                 context.completeNow();
         }));
     }
@@ -585,8 +585,8 @@ public class CredentialsManagementIT {
 
         registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
             .compose(ar -> registry.getCredentials(tenantId, deviceId))
-            .onComplete(context.succeeding(b -> {
-                context.verify(() -> assertResponseBodyContainsAllCredentials(b.toJsonArray(), credentialsListToAdd));
+            .onComplete(context.succeeding(httpResponse -> {
+                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsListToAdd));
                 context.completeNow();
             }));
     }
@@ -616,8 +616,8 @@ public class CredentialsManagementIT {
 
         registry.addCredentials(tenantId, deviceId, credentialsToAdd)
             .compose(ar -> registry.getCredentials(tenantId, deviceId))
-            .onComplete(context.succeeding(b -> {
-                context.verify(() -> assertResponseBodyContainsAllCredentials(b.toJsonArray(), credentialsToAdd));
+            .onComplete(context.succeeding(httpResponse -> {
+                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsToAdd));
                 context.completeNow();
             }));
     }
