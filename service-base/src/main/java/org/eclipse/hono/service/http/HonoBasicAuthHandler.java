@@ -15,9 +15,7 @@ package org.eclipse.hono.service.http;
 
 import org.eclipse.hono.tracing.TracingHelper;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.noop.NoopSpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
@@ -83,10 +81,7 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
         };
         super.parseCredentials(routingContextDecorator, ar -> {
             if (ar.succeeded()) {
-                final SpanContext spanContext = TracingHandler.serverSpanContext(context);
-                if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
-                    TracingHelper.injectSpanContext(tracer, spanContext, ar.result());
-                }
+                TracingHelper.injectSpanContext(tracer, TracingHandler.serverSpanContext(context), ar.result());
             }
             handler.handle(ar);
         });

@@ -251,19 +251,20 @@ public final class TracingHelper {
      * The span context will be injected into a new JSON object under key <em>span-context</em>.
      *
      * @param tracer The Tracer to use for injecting the context.
-     * @param spanContext The context to inject.
+     * @param spanContext The context to inject or {@code null} if no context is available.
      * @param jsonObject The JSON object to inject the context into.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if tracer or jsonObject is {@code null}.
      */
     public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final JsonObject jsonObject) {
 
         Objects.requireNonNull(tracer);
-        Objects.requireNonNull(spanContext);
         Objects.requireNonNull(jsonObject);
 
-        final JsonObject spanContextJson = new JsonObject();
-        jsonObject.put(JSON_KEY_SPAN_CONTEXT, spanContextJson);
-        tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new JsonObjectInjectAdapter(spanContextJson));
+        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+            final JsonObject spanContextJson = new JsonObject();
+            jsonObject.put(JSON_KEY_SPAN_CONTEXT, spanContextJson);
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new JsonObjectInjectAdapter(spanContextJson));
+        }
     }
 
     /**
@@ -293,18 +294,19 @@ public final class TracingHelper {
      * The span context will be written to the message annotations of the given message.
      *
      * @param tracer The Tracer to use for injecting the context.
-     * @param spanContext The context to inject.
+     * @param spanContext The context to inject or {@code null} if no context is available.
      * @param message The AMQP {@code Message} object to inject the context into.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if tracer or message is {@code null}.
      */
     public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final Message message) {
 
         Objects.requireNonNull(tracer);
-        Objects.requireNonNull(spanContext);
         Objects.requireNonNull(message);
 
-        tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
-                new MessageAnnotationsInjectAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
+        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
+                    new MessageAnnotationsInjectAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
+        }
     }
 
     /**
@@ -332,7 +334,7 @@ public final class TracingHelper {
      * @param tracer The Tracer to use for injecting the context.
      * @param spanContext The context to inject or {@code null} if no context is available.
      * @param deliveryOptions The delivery options to inject the context into.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if tracer or deliveryOptions is {@code null}.
      */
     public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final DeliveryOptions deliveryOptions) {
 
@@ -375,29 +377,30 @@ public final class TracingHelper {
      * context from that data.
      *
      * @param tracer The Tracer to use for injecting the context.
-     * @param spanContext The context to inject.
+     * @param spanContext The context to inject or {@code null} if no context is available.
      * @param keyValueConsumer The operation that will receive the key-value pairs representing the context.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if tracer or keyValueConsumer is {@code null}.
      */
     public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext,
             final BiConsumer<String, String> keyValueConsumer) {
 
         Objects.requireNonNull(tracer);
-        Objects.requireNonNull(spanContext);
         Objects.requireNonNull(keyValueConsumer);
 
-        tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
-                new TextMap() {
-                    @Override
-                    public Iterator<Map.Entry<String, String>> iterator() {
-                        throw new UnsupportedOperationException();
-                    }
+        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
+                    new TextMap() {
+                        @Override
+                        public Iterator<Map.Entry<String, String>> iterator() {
+                            throw new UnsupportedOperationException();
+                        }
 
-                    @Override
-                    public void put(final String key, final String value) {
-                        keyValueConsumer.accept(key, value);
-                    }
-                });
+                        @Override
+                        public void put(final String key, final String value) {
+                            keyValueConsumer.accept(key, value);
+                        }
+                    });
+        }
     }
 
     /**
