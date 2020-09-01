@@ -15,7 +15,10 @@ title = "Release Notes"
 * The LoraWAN protocol adapter has been extended with support for the *Actility Enterprise* provider.
 * The LoraWAN protocol adapter has been extended with support for the *Orbiwise* provider.
 * Added metrics for tracking the RTT between sending an AMQP message to receiving the disposition.
-
+* The CoAP adapter now supports configuration of the *timeoutToAck* parameter at the tenant level
+  in addition to the adapter level. If set, the tenant specific value is used for all devices of the
+  particular tenant. if not set, the value defined at the adapter level is used.
+g
 ## 1.3.0
 
 ### New Features

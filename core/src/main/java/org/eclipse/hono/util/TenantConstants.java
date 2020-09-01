@@ -85,6 +85,10 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_EXT = "ext";
     /**
+     * The name of the property that contains the minimum message size in bytes.
+     */
+    public static final String FIELD_MINIMUM_MESSAGE_SIZE = "minimum-message-size";
+    /**
      * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
      */
     public static final String FIELD_MAX_BYTES = "max-bytes";
@@ -131,21 +135,12 @@ public final class TenantConstants extends RequestResponseApiConstants {
     /**
      * The name of the property that contains the number of days for which the data usage is calculated.
      */
-    public static final String FIELD_PERIOD_NO_OF_DAYS = "no-of-days";    
+    public static final String FIELD_PERIOD_NO_OF_DAYS = "no-of-days";
     /**
      * The name of the property that contains the mode of the period for which the data usage
      * is calculated.
      */
-    public static final String FIELD_PERIOD_MODE = "mode";    
-    /**
-     * The name of the property that contains the minimum message size in bytes.
-     */
-    public static final String FIELD_MINIMUM_MESSAGE_SIZE = "minimum-message-size";
-
-    /**
-     * The name of the Tenant API endpoint.
-     */
-    public static final String TENANT_ENDPOINT = "tenant";
+    public static final String FIELD_PERIOD_MODE = "mode";
 
     /**
      * The name of the property that contains the configuration options for the resource limits.
@@ -170,6 +165,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * a {@link TracingSamplingMode} value.
      */
     public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
+
+    /**
+     * The name of the Tenant API endpoint.
+     */
+    public static final String TENANT_ENDPOINT = "tenant";
 
     /**
      * Request actions that belong to the Tenant API.
