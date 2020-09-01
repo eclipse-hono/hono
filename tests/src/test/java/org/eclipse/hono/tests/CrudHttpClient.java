@@ -172,7 +172,7 @@ public final class CrudHttpClient {
      *         HTTP response if all checks on the response have succeeded.
      *         Otherwise the future will be failed with the error produced by the first failing
      *         predicate.
-     * @throws NullPointerException if URI or content type are {@code null}.
+     * @throws NullPointerException if URI is {@code null}.
      */
     public Future<HttpResponse<Buffer>> create(
             final String uri,
