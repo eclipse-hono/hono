@@ -48,17 +48,17 @@ public class CommandContext extends MapBasedExecutionContext {
 
     private final Command command;
     private final ProtonDelivery delivery;
-    private final Span currentSpan;
+    private final Span span;
 
     private CommandContext(
             final Command command,
             final ProtonDelivery delivery,
-            final Span currentSpan) {
+            final Span span) {
 
         this.command = command;
         this.delivery = delivery;
-        this.currentSpan = currentSpan;
-        setTracingContext(currentSpan.context());
+        this.span = span;
+        setTracingContext(span.context());
     }
 
     /**
@@ -66,19 +66,19 @@ public class CommandContext extends MapBasedExecutionContext {
      *
      * @param command The command to be processed.
      * @param delivery The delivery corresponding to the message.
-     * @param currentSpan The OpenTracing span to use for tracking the processing of the command.
+     * @param span The OpenTracing span to use for tracking the processing of the command.
      * @return The context.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static CommandContext from(
             final Command command,
             final ProtonDelivery delivery,
-            final Span currentSpan) {
+            final Span span) {
 
         Objects.requireNonNull(command);
         Objects.requireNonNull(delivery);
-        Objects.requireNonNull(currentSpan);
-        return new CommandContext(command, delivery, currentSpan);
+        Objects.requireNonNull(span);
+        return new CommandContext(command, delivery, span);
     }
 
     /**
@@ -104,57 +104,57 @@ public class CommandContext extends MapBasedExecutionContext {
      *
      * @return The span.
      */
-    public Span getCurrentSpan() {
-        return currentSpan;
+    public Span getTracingSpan() {
+        return span;
     }
 
     /**
      * Settles the command message with the <em>accepted</em> outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
-     * {@link #getCurrentSpan()}.
+     * {@link #getTracingSpan()}.
      */
     public void accept() {
         LOG.trace("accepting command message [{}]", getCommand());
         ProtonHelper.accepted(delivery, true);
-        currentSpan.log("accepted command for device");
-        currentSpan.finish();
+        span.log("accepted command for device");
+        span.finish();
     }
 
     /**
      * Settles the command message with the <em>released</em> outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
-     * {@link #getCurrentSpan()}.
+     * {@link #getTracingSpan()}.
      */
     public void release() {
         ProtonHelper.released(delivery, true);
-        TracingHelper.logError(currentSpan, "released command for device");
-        currentSpan.finish();
+        TracingHelper.logError(span, "released command for device");
+        span.finish();
     }
 
     /**
      * Settles the command message with the <em>modified</em> outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
-     * {@link #getCurrentSpan()}.
+     * {@link #getTracingSpan()}.
      *
      * @param deliveryFailed Whether the delivery should be treated as failed.
      * @param undeliverableHere Whether the delivery is considered undeliverable.
      */
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
         ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
-        TracingHelper.logError(currentSpan, "modified command for device"
+        TracingHelper.logError(span, "modified command for device"
                 + (deliveryFailed ? "; delivery failed" : "")
                 + (undeliverableHere ? "; undeliverable here" : ""));
-        currentSpan.finish();
+        span.finish();
     }
 
     /**
      * Settles the command message with the <em>rejected</em> outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
-     * {@link #getCurrentSpan()}.
+     * {@link #getTracingSpan()}.
      *
      * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
      */
@@ -164,16 +164,16 @@ public class CommandContext extends MapBasedExecutionContext {
             rejected.setError(errorCondition);
         }
         delivery.disposition(rejected, true);
-        TracingHelper.logError(currentSpan, "rejected command for device"
+        TracingHelper.logError(span, "rejected command for device"
                 + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
-        currentSpan.finish();
+        span.finish();
     }
 
     /**
      * Settles the command message with the given {@code DeliveryState} outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
-     * {@link #getCurrentSpan()}.
+     * {@link #getTracingSpan()}.
      *
      * @param deliveryState The deliveryState to set in the disposition frame.
      * @throws NullPointerException if deliveryState is {@code null}.
@@ -184,29 +184,29 @@ public class CommandContext extends MapBasedExecutionContext {
         delivery.disposition(deliveryState, true);
         if (Accepted.class.isInstance(deliveryState)) {
             LOG.trace("accepted command message [{}]", getCommand());
-            currentSpan.log("accepted command for device");
+            span.log("accepted command for device");
 
         } else if (Released.class.isInstance(deliveryState)) {
             LOG.debug("released command message [{}]", getCommand());
-            TracingHelper.logError(currentSpan, "released command for device");
+            TracingHelper.logError(span, "released command for device");
 
         } else if (Modified.class.isInstance(deliveryState)) {
             final Modified modified = (Modified) deliveryState;
             LOG.debug("modified command message [{}]", getCommand());
-            TracingHelper.logError(currentSpan, "modified command for device"
+            TracingHelper.logError(span, "modified command for device"
                     + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
                     + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
 
         } else if (Rejected.class.isInstance(deliveryState)) {
             final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
             LOG.debug("rejected command message [error: {}, command: {}]", errorCondition, getCommand());
-            TracingHelper.logError(currentSpan, "rejected command for device"
+            TracingHelper.logError(span, "rejected command for device"
                     + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
         } else {
             LOG.warn("unexpected delivery state [{}] when settling command message [{}]", deliveryState, getCommand());
-            TracingHelper.logError(currentSpan, "unexpected delivery state: " + deliveryState);
+            TracingHelper.logError(span, "unexpected delivery state: " + deliveryState);
         }
-        currentSpan.finish();
+        span.finish();
     }
 
     @Override

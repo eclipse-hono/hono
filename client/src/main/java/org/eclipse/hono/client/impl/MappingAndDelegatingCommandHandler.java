@@ -185,12 +185,12 @@ public class MappingAndDelegatingCommandHandler {
                 if (commandTargetResult.cause() instanceof ServiceInvocationException
                         && ((ServiceInvocationException) commandTargetResult.cause()).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
                     LOG.debug("no target adapter instance found for command for device {}", originalDeviceId);
-                    TracingHelper.logError(originalCommandContext.getCurrentSpan(),
+                    TracingHelper.logError(originalCommandContext.getTracingSpan(),
                             "no target adapter instance found for command with device id " + originalDeviceId);
                 } else {
                     LOG.debug("error getting target gateway and adapter instance for command with device id {}",
                             originalDeviceId, commandTargetResult.cause());
-                    TracingHelper.logError(originalCommandContext.getCurrentSpan(),
+                    TracingHelper.logError(originalCommandContext.getTracingSpan(),
                             "error getting target gateway and adapter instance for command with device id " + originalDeviceId,
                             commandTargetResult.cause());
                 }
@@ -215,7 +215,7 @@ public class MappingAndDelegatingCommandHandler {
         if (adapterInstanceId.equals(targetAdapterInstance) && commandHandler == null) {
             LOG.info("local command handler not found for target {} {} [{}]",
                     targetDeviceId.equals(originalDeviceId) ? "device" : "gateway", targetDeviceId, originalCommand);
-            TracingHelper.logError(originalCommandContext.getCurrentSpan(),
+            TracingHelper.logError(originalCommandContext.getTracingSpan(),
                     "local command handler not found for command; target device: " + targetDeviceId);
             if (originalCommand.isValid()) {
                 originalCommandContext.release();
@@ -266,14 +266,14 @@ public class MappingAndDelegatingCommandHandler {
             commandContext = originalCommandContext;
         } else {
             LOG.trace("determined target gateway {} for device {}", gatewayId, originalDeviceId);
-            originalCommandContext.getCurrentSpan().log("determined target gateway " + gatewayId);
+            originalCommandContext.getTracingSpan().log("determined target gateway " + gatewayId);
             if (!originalCommand.isOneWay()) {
                 originalCommand.getCommandMessage().setReplyTo(String.format("%s/%s/%s",
                         CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, originalCommand.getReplyToId()));
             }
             final Command command = Command.from(originalCommand.getCommandMessage(), tenantId, gatewayId);
             commandContext = CommandContext.from(command, originalCommandContext.getDelivery(),
-                    originalCommandContext.getCurrentSpan());
+                    originalCommandContext.getTracingSpan());
         }
         return commandContext;
     }
@@ -290,7 +290,7 @@ public class MappingAndDelegatingCommandHandler {
                         commandContext.disposition(delegatedMsgDelivery.getRemoteState());
                     } else {
                         LOG.debug("failed to send command [{}] to downstream peer", commandContext.getCommand(), ar.cause());
-                        TracingHelper.logError(commandContext.getCurrentSpan(),
+                        TracingHelper.logError(commandContext.getTracingSpan(),
                                 "failed to send command message to downstream peer: " + ar.cause());
                         commandContext.release();
                     }

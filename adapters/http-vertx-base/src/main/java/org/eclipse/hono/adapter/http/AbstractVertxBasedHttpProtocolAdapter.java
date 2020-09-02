@@ -714,7 +714,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     log.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId);
                     if (commandContext != null) {
-                        commandContext.getCurrentSpan().log("forwarded command to device in HTTP response body");
+                        commandContext.getTracingSpan().log("forwarded command to device in HTTP response body");
                         commandContext.accept();
                         metrics.reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -744,8 +744,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId, t);
                     if (commandContext != null) {
-                        commandContext.getCurrentSpan().log("failed to forward command to device in HTTP response body");
-                        TracingHelper.logError(commandContext.getCurrentSpan(), t);
+                        commandContext.getTracingSpan().log("failed to forward command to device in HTTP response body");
+                        TracingHelper.logError(commandContext.getTracingSpan(), t);
                         commandContext.release();
                         metrics.reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -979,7 +979,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
         final Handler<CommandContext> commandHandler = commandContext -> {
 
-            Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+            Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
             final Command command = commandContext.getCommand();
             final Sample commandSample = getMetrics().startTimer();
             if (isCommandValid(command, currentSpan)) {

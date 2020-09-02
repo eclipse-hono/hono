@@ -792,7 +792,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
-            Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+            Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
             final Sample timer = metrics.startTimer();
             final Command command = commandContext.getCommand();
             final Future<TenantObject> tenantTracker = getTenantConfiguration(sub.getTenant(),
@@ -1417,7 +1417,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
 
-        TracingHelper.TAG_CLIENT_ID.set(commandContext.getCurrentSpan(), endpoint.clientIdentifier());
+        TracingHelper.TAG_CLIENT_ID.set(commandContext.getTracingSpan(), endpoint.clientIdentifier());
         final Command command = commandContext.getCommand();
 
         // build topic string; examples:
@@ -1444,7 +1444,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
                     subscription.getQos());
         }
-        logSubscriptionEventToSpan(commandContext.getCurrentSpan(), subscription, true,
+        logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, true,
                 "Publishing command to device");
 
         endpoint.publish(publishTopic, command.getPayload(), subscription.getQos(), false, false, sentHandler -> {
@@ -1454,7 +1454,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 log.debug("Error publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                         subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier(), subscription.getQos(),
                         sentHandler.cause());
-                TracingHelper.logError(commandContext.getCurrentSpan(), sentHandler.cause());
+                TracingHelper.logError(commandContext.getTracingSpan(), sentHandler.cause());
                 reportPublishedCommand(tenantObject, subscription, commandContext,
                         ProcessingOutcome.from(sentHandler.cause()));
                 commandContext.release();
@@ -1474,7 +1474,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         log.debug("Published command to device{} [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                 waitForAck ? ", waiting for ack" : "", subscription.getTenant(), subscription.getDeviceId(),
                 subscription.getClientId(), subscription.getQos());
-        logSubscriptionEventToSpan(commandContext.getCurrentSpan(), subscription, true,
+        logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, true,
                 waitForAck ? "Published command to device, waiting for ack" : "Published command to device");
 
         if (waitForAck) {
@@ -1483,7 +1483,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 log.debug("Acknowledged [Msg-id: {}] command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                         msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
                         subscription.getQos());
-                logSubscriptionEventToSpan(commandContext.getCurrentSpan(), subscription, false,
+                logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, false,
                         "Published command has been acknowledged");
                 commandContext.accept();
             };
@@ -1491,7 +1491,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Handler<Void> onAckTimeoutHandler = v -> {
                 log.debug("Timed out waiting for acknowledgment for command sent to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                         subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(), subscription.getQos());
-                logSubscriptionEventToSpan(commandContext.getCurrentSpan(), subscription, false,
+                logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, false,
                         "Timed out waiting for acknowledgment for command sent to device");
                 commandContext.release();
                 reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);

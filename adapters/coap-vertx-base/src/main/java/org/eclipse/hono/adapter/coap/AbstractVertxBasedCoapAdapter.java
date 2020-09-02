@@ -874,7 +874,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
         log.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                 command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
-        commandContext.getCurrentSpan().log("forwarding command to device in CoAP response");
+        commandContext.getTracingSpan().log("forwarding command to device in CoAP response");
 
         if (command.isTargetedAtGateway()) {
             options.addLocationPath(command.getTenant());
@@ -945,7 +945,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
-            Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+            Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
             final Command command = commandContext.getCommand();
             final Sample commandSample = getMetrics().startTimer();
             if (isCommandValid(command, currentSpan)) {

@@ -836,7 +836,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             final Sample timer = metrics.startTimer();
             addMicrometerSample(commandContext, timer);
-            Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+            Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
             final Command command = commandContext.getCommand();
             final Future<TenantObject> tenantTracker = getTenantConfiguration(sourceAddress.getTenantId(),
                     commandContext.getTracingContext());
@@ -915,7 +915,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             log.debug("cannot send command to device: no credit available [{}]", command);
             final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                     "no credit available for sending command to device");
-            TracingHelper.logError(commandContext.getCurrentSpan(), ex);
+            TracingHelper.logError(commandContext.getTracingSpan(), ex);
             commandContext.release();
             reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
         } else {
@@ -927,7 +927,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     // timeout reached -> release command
                     final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                             "timeout waiting for delivery update from device");
-                    TracingHelper.logError(commandContext.getCurrentSpan(), ex);
+                    TracingHelper.logError(commandContext.getTracingSpan(), ex);
                     commandContext.release();
                     reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 } else {
@@ -965,7 +965,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         final Map<String, Object> logItems = new HashMap<>(2);
                         logItems.put(Fields.EVENT, "device did not settle command");
                         logItems.put("remote state", remoteState);
-                        commandContext.getCurrentSpan().log(logItems);
+                        commandContext.getTracingSpan().log(logItems);
                         commandContext.release();
                         outcome = ProcessingOutcome.UNDELIVERABLE;
                     }
@@ -980,7 +980,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             items.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().name());
             items.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
-            commandContext.getCurrentSpan().log(items);
+            commandContext.getTracingSpan().log(items);
         }
     }
 

@@ -962,7 +962,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 tenantId,
                 deviceId,
                 commandContext -> {
-                    Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+                    Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
                     commandConsumer.handle(commandContext);
                 },
                 null,
