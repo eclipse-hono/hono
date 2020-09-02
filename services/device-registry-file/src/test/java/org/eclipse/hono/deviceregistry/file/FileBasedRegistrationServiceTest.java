@@ -62,7 +62,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests {@link FileBasedRegistrationService}.
  */
 @ExtendWith(VertxExtension.class)
-public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
+public class FileBasedRegistrationServiceTest implements RegistrationServiceTests {
 
     private static final String FILE_NAME = "/device-identities.json";
 

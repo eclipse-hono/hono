@@ -13,6 +13,7 @@
 package org.eclipse.hono.tests.amqp;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.LongSummaryStatistics;
 import java.util.concurrent.CountDownLatch;
@@ -80,6 +81,16 @@ public class TelemetryJmsQoS1IT {
     }
 
     /**
+     * Clean up after the test.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
+        helper.deleteObjects(ctx);
+    }
+
+    /**
      * Closes the downstream consumer an the connection
      * to the AMQP adapter.
      * Closes the connection to the AMQP Messaging Network.
@@ -87,10 +98,8 @@ public class TelemetryJmsQoS1IT {
      * @param ctx The vert.x test context.
      */
     @AfterEach
-    public void after(final VertxTestContext ctx) {
-
+    public void disconnect(final VertxTestContext ctx) {
         final Checkpoint closeConnections = ctx.checkpoint(2);
-        helper.deleteObjects(ctx);
         if (amqpMessagingNetwork != null) {
             LOG.info("closing connection to AMQP Messaging Network");
             amqpMessagingNetwork.disconnect(r -> closeConnections.flag());
@@ -126,8 +135,12 @@ public class TelemetryJmsQoS1IT {
         .onComplete(setup.succeeding(connection -> {
             amqpAdapter = connection;
             setup.completeNow();
-        }));
+        }))
+        .onFailure(setup::failNow);
         assertTrue(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS));
+        if (setup.failed()) {
+            fail(setup.causeOfFailure());
+        }
 
         final CountDownLatch latch = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();

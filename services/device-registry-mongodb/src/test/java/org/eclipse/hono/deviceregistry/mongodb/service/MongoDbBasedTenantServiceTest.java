@@ -42,7 +42,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
+class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantServiceTest.class);
 

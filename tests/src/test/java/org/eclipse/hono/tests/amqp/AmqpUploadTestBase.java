@@ -116,14 +116,22 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     }
 
     /**
-     * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and close senders and consumers.
-     * Also delete all random tenants and devices generated during the execution of a test case.
+     * Delete all random tenants and devices generated during the execution of a test case.
      *
      * @param context The Vert.x test context.
      */
     @AfterEach
     public void after(final VertxTestContext context) {
         helper.deleteObjects(context);
+    }
+
+    /**
+     * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and close senders and consumers.
+     *
+     * @param context The Vert.x test context.
+     */
+    @AfterEach
+    public void disconnectAdapter(final VertxTestContext context) {
         close(context);
     }
 

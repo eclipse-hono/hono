@@ -16,6 +16,7 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,6 +60,20 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
                                 IntegrationTestSupport.HONO_PWD)));
 
         client.connect().onComplete(ctx.completing());
+
+    }
+
+    /**
+     * Setup device registry.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @BeforeEach
+    public void setupDeviceRegistry(final VertxTestContext ctx) {
+        helper.addTenantIdForRemoval(Constants.DEFAULT_TENANT);
+        helper.registry
+                .addTenant(Constants.DEFAULT_TENANT)
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -79,7 +94,6 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
     @AfterEach
     public void cleanupDeviceRegistry(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
-        ctx.completeNow();
     }
 
     /**

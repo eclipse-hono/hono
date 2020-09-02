@@ -50,21 +50,21 @@ import io.vertx.junit5.VertxTestContext;
  * in device registry implementations.
  *
  */
-public abstract class AbstractTenantServiceTest {
+public interface AbstractTenantServiceTest {
 
     /**
      * Gets tenant service being tested.
      *
      * @return The tenant service
      */
-    public abstract TenantService getTenantService();
+    TenantService getTenantService();
 
     /**
      * Gets tenant management service being tested.
      *
      * @return The tenant management service
      */
-    public abstract TenantManagementService getTenantManagementService();
+    TenantManagementService getTenantManagementService();
 
     /**
      * Verifies that a tenant cannot be added if it uses an already registered
@@ -73,7 +73,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForDuplicateTenantId(final VertxTestContext ctx) {
+    default void testAddTenantFailsForDuplicateTenantId(final VertxTestContext ctx) {
 
         addTenant("tenant")
                 .compose(ok -> getTenantManagementService()
@@ -89,7 +89,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantSucceedsWithGeneratedTenantId(final VertxTestContext ctx) {
+    default void testAddTenantSucceedsWithGeneratedTenantId(final VertxTestContext ctx) {
 
         getTenantManagementService().createTenant(
                 Optional.empty(),
@@ -110,7 +110,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantSucceedsAndContainResourceVersion(final VertxTestContext ctx) {
+    default void testAddTenantSucceedsAndContainResourceVersion(final VertxTestContext ctx) {
 
         getTenantManagementService().createTenant(
                 Optional.of("tenant"),
@@ -134,7 +134,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteTenantWithEmptyResourceVersionSucceed(final VertxTestContext ctx) {
+    default void testDeleteTenantWithEmptyResourceVersionSucceed(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(ok -> {
@@ -156,7 +156,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteTenantWithMatchingResourceVersionSucceed(final VertxTestContext ctx) {
+    default void testDeleteTenantWithMatchingResourceVersionSucceed(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(cr -> {
@@ -180,7 +180,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteTenantWithNonMatchingResourceVersionFails(final VertxTestContext ctx) {
+    default void testDeleteTenantWithNonMatchingResourceVersionFails(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(cr -> {
@@ -204,7 +204,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantWithNonMatchingResourceVersionFails(final VertxTestContext ctx) {
+    default void testUpdateTenantWithNonMatchingResourceVersionFails(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(cr -> {
@@ -230,7 +230,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantWithMatchingResourceVersionSucceeds(final VertxTestContext ctx) {
+    default void testUpdateTenantWithMatchingResourceVersionSucceeds(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(cr -> {
@@ -255,7 +255,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantWithEmptyResourceVersionSucceed(final VertxTestContext ctx) {
+    default void testUpdateTenantWithEmptyResourceVersionSucceed(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(cr -> {
@@ -279,7 +279,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
+    default void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
 
         final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
                 .setSubjectDn("CN=taken")
@@ -309,7 +309,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
+    default void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
 
         getTenantService().get(
                 "notExistingTenant",
@@ -328,7 +328,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetTenantSucceedsForExistingTenant(final VertxTestContext ctx) {
+    default void testGetTenantSucceedsForExistingTenant(final VertxTestContext ctx) {
 
         final Tenant tenantSpec = buildTenantPayload()
                 .setExtensions(new JsonObject().put("plan", "unlimited").getMap())
@@ -379,7 +379,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantVersionSucceedsForExistingTenantVersion(final VertxTestContext ctx) {
+    default void testUpdateTenantVersionSucceedsForExistingTenantVersion(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .map(ok -> {
@@ -404,7 +404,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetForCertificateAuthoritySucceeds(final VertxTestContext ctx) {
+    default void testGetForCertificateAuthoritySucceeds(final VertxTestContext ctx) {
 
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
 
@@ -446,7 +446,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetForCertificateAuthorityFailsForUnknownSubjectDn(final VertxTestContext ctx) {
+    default void testGetForCertificateAuthorityFailsForUnknownSubjectDn(final VertxTestContext ctx) {
 
         final X500Principal unknownSubjectDn = new X500Principal("O=Eclipse, OU=NotHono, CN=ca");
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
@@ -473,7 +473,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testRemoveTenantSucceeds(final VertxTestContext ctx) {
+    default void testRemoveTenantSucceeds(final VertxTestContext ctx) {
 
         addTenant("tenant")
         .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
@@ -492,7 +492,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantSucceeds(final VertxTestContext ctx) {
+    default void testUpdateTenantSucceeds(final VertxTestContext ctx) {
 
         final Tenant origPayload = buildTenantPayload();
         final JsonObject extensions = new JsonObject().put("custom-prop", "something");
@@ -520,8 +520,6 @@ public abstract class AbstractTenantServiceTest {
         }));
     }
 
-
-
     /**
      * Verifies that a tenant cannot be updated to use a trusted certificate authority
      * with the same subject DN as another tenant.
@@ -529,7 +527,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantFailsForDuplicateCa(final VertxTestContext ctx) {
+    default void testUpdateTenantFailsForDuplicateCa(final VertxTestContext ctx) {
 
         final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority();
         trustedCa.setSubjectDn("CN=taken");
@@ -567,7 +565,7 @@ public abstract class AbstractTenantServiceTest {
      * @param tenant The tenant.
      * @return A succeeded future if the tenant exists.
      */
-    protected static Future<OperationResult<Tenant>> assertTenantExists(
+    default Future<OperationResult<Tenant>> assertTenantExists(
             final TenantManagementService svc,
             final String tenant) {
 
@@ -581,13 +579,21 @@ public abstract class AbstractTenantServiceTest {
      * @param tenant The tenant.
      * @return A succeeded future if the tenant does not exist.
      */
-    protected static Future<OperationResult<Tenant>> assertTenantDoesNotExist(
+    default Future<OperationResult<Tenant>> assertTenantDoesNotExist(
             final TenantManagementService svc,
             final String tenant) {
 
         return assertGet(svc, tenant, HttpURLConnection.HTTP_NOT_FOUND);
     }
 
+    /**
+     * Asserts a get operation result.
+     *
+     * @param svc The service to use.
+     * @param tenantId The ID of the tenant.
+     * @param expectedStatusCode The expected status code.
+     * @return A future, tracking the outcome of the assertion.
+     */
     private static Future<OperationResult<Tenant>> assertGet(
             final TenantManagementService svc,
             final String tenantId,
@@ -609,8 +615,7 @@ public abstract class AbstractTenantServiceTest {
      * @param tenantId The identifier of the tenant.
      * @return A succeeded future if the tenant has been created.
      */
-    protected Future<OperationResult<Id>> addTenant(final String tenantId) {
-
+    default Future<OperationResult<Id>> addTenant(final String tenantId) {
         return addTenant(tenantId, buildTenantPayload());
     }
 
@@ -621,7 +626,7 @@ public abstract class AbstractTenantServiceTest {
      * @param tenant The tenant.
      * @return A succeeded future if the tenant has been created.
      */
-    protected Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenant) {
+    default Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenant) {
 
         return getTenantManagementService().createTenant(Optional.ofNullable(tenantId), tenant, NoopSpan.INSTANCE)
                 .map(response -> {
@@ -640,7 +645,7 @@ public abstract class AbstractTenantServiceTest {
      * @param payload The properties to register for the tenant.
      * @return A succeeded future if the tenant has been created.
      */
-    protected Future<OperationResult<Id>> addTenant(final String tenantId, final JsonObject payload) {
+    default Future<OperationResult<Id>> addTenant(final String tenantId, final JsonObject payload) {
         return addTenant(tenantId, payload.mapTo(Tenant.class));
     }
 

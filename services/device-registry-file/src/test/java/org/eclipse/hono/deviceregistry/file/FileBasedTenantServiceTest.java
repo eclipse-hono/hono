@@ -71,7 +71,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 3)
-public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
+public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
 
     private static final String FILE_NAME = "/tenants.json";
 

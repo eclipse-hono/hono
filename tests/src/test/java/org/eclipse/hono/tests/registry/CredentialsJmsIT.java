@@ -69,6 +69,20 @@ public class CredentialsJmsIT extends CredentialsApiTests {
 
         connection = JmsBasedHonoConnection.newConnection(props);
         connection.connect().onComplete(ctx.completing());
+
+    }
+
+    /**
+     * Setup device registry.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @BeforeEach
+    public void setupDeviceRegistry(final VertxTestContext ctx) {
+        helper.addTenantIdForRemoval(Constants.DEFAULT_TENANT);
+        helper.registry
+                .addTenant(Constants.DEFAULT_TENANT)
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -89,7 +103,6 @@ public class CredentialsJmsIT extends CredentialsApiTests {
     @AfterEach
     public void cleanUp(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
-        ctx.completeNow();
     }
 
     /**

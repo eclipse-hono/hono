@@ -116,12 +116,10 @@ public class TenantJmsIT extends TenantApiTests {
      * Removes all temporary objects from the registry.
      *
      * @param ctx The vert.x test context.
-     * @throws InterruptedException if the current thread is interrupted while waiting for the clean up to finish.
      */
     @AfterEach
-    public void cleanUp(final VertxTestContext ctx) throws InterruptedException {
+    public void cleanUp(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
-        ctx.completeNow();
     }
 
     /**
@@ -169,7 +167,7 @@ public class TenantJmsIT extends TenantApiTests {
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     @Test
-    public void testGetTenantFailsForUnsupportedSearchCiteria(final VertxTestContext ctx) {
+    public void testGetTenantFailsForUnsupportedSearchCriteria(final VertxTestContext ctx) {
 
         final JsonObject unsupportedSearchCriteria = new JsonObject().put("color", "blue");
         allTenantClient
@@ -188,7 +186,7 @@ public class TenantJmsIT extends TenantApiTests {
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     @Test
-    public void testGetTenantFailsForMalformedSearchCiteria(final VertxTestContext ctx) {
+    public void testGetTenantFailsForMalformedSearchCriteria(final VertxTestContext ctx) {
 
         allTenantClient
         .get(Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 })) // not JSON

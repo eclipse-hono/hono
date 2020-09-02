@@ -34,13 +34,13 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,7 +78,6 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     private String tenantId;
     private String deviceId;
     private final String password = "secret";
-    private Tenant tenant;
 
     static Stream<MqttCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
@@ -103,12 +102,22 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         helper = new IntegrationTestSupport(vertx);
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        tenant = new Tenant();
-        helper.init().onComplete(ctx.completing());
+        helper.init()
+                .flatMap(x -> helper.registry.addTenant(tenantId))
+                .onComplete(ctx.completing());
+    }
+
+    /**
+     * Clean up after the test.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
+        helper.deleteObjects(ctx);
     }
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-
         return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
@@ -269,7 +278,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Checkpoint ready = setup.checkpoint(2);
 
         helper.registry
-        .addDeviceForTenant(tenantId, tenant, deviceId, password)
+        .addDeviceToTenant(tenantId, deviceId, password)
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .compose(ok -> createConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
@@ -359,7 +368,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 : deviceId;
 
         helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                .addDeviceToTenant(tenantId, deviceId, password)
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
                 .compose(ok -> createConsumer(tenantId, msg -> {
                     // expect empty notification with TTD -1
@@ -461,7 +470,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         };
 
         helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                .addDeviceToTenant(tenantId, deviceId, password)
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
                 // let the MqttClient skip sending the PubAck messages
                 .compose(ok -> injectMqttClientPubAckBlocker(new AtomicBoolean(true)))

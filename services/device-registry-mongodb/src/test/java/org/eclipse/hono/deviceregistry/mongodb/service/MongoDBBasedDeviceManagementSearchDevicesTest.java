@@ -42,7 +42,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public final class MongoDBBasedDeviceManagementSearchDevicesTest extends AbstractDeviceManagementSearchDevicesTest {
+public final class MongoDBBasedDeviceManagementSearchDevicesTest implements AbstractDeviceManagementSearchDevicesTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedDeviceManagementSearchDevicesTest.class);
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();

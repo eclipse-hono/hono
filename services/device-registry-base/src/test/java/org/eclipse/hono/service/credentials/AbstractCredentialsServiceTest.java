@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.service.credentials;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,24 +21,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.UUID;
 
-import org.eclipse.hono.auth.EncodedPassword;
-import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PasswordSecret;
-import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.util.CacheDirective;
@@ -61,23 +56,23 @@ import io.vertx.junit5.VertxTestContext.ExecutionBlock;
  * {@link CredentialsManagementService} in device registry implementations.
  *
  */
-public abstract class AbstractCredentialsServiceTest {
+public interface AbstractCredentialsServiceTest {
 
-    protected static final JsonObject CLIENT_CONTEXT = new JsonObject()
+    JsonObject CLIENT_CONTEXT = new JsonObject()
             .put("client-id", "some-client-identifier");
 
     /**
      * Gets credentials service being tested.
      * @return The credentials service
      */
-    public abstract CredentialsService getCredentialsService();
+    CredentialsService getCredentialsService();
 
     /**
      * Gets credentials service being tested.
      *
      * @return The credentials service
      */
-    public abstract CredentialsManagementService getCredentialsManagementService();
+    CredentialsManagementService getCredentialsManagementService();
 
     /**
      * Gets the device management service.
@@ -87,7 +82,7 @@ public abstract class AbstractCredentialsServiceTest {
      *
      * @return The device management service.
      */
-    public abstract DeviceManagementService getDeviceManagementService();
+    DeviceManagementService getDeviceManagementService();
 
     /**
      * Gets the cache directive that is supposed to be used for a given type of credentials.
@@ -97,7 +92,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param credentialsType The type of credentials.
      * @return The expected cache directive.
      */
-    protected CacheDirective getExpectedCacheDirective(final String credentialsType) {
+    default CacheDirective getExpectedCacheDirective(final String credentialsType) {
         return CacheDirective.noCacheDirective();
     }
 
@@ -108,7 +103,7 @@ public abstract class AbstractCredentialsServiceTest {
      *
      * @return {@code true} if the implementation supports resource versions, {@code false} otherwise.
      */
-    protected boolean supportsResourceVersion() {
+    default boolean supportsResourceVersion() {
         return true;
     }
 
@@ -118,7 +113,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetCredentialsFailsForNonExistingCredentials(final VertxTestContext ctx) {
+    default void testGetCredentialsFailsForNonExistingCredentials(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
@@ -136,7 +131,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetCredentialsSucceedsForExistingDevice(final VertxTestContext ctx) {
+    default void testGetCredentialsSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
@@ -157,88 +152,10 @@ public abstract class AbstractCredentialsServiceTest {
     }
 
     /**
-     * Creates a PSK type based credential containing a psk secret.
-     *
-     * @param authId The authentication to use.
-     * @param psk The psk to use.
-     * @return The fully populated secret.
-     */
-    public static PskCredential createPSKCredential(final String authId, final String psk) {
-        final PskCredential p = new PskCredential(authId);
-
-        final PskSecret s = new PskSecret();
-        s.setKey(psk.getBytes());
-
-        p.setSecrets(Collections.singletonList(s));
-
-        return p;
-    }
-
-    /**
-     * Creates a password type based credential containing a hashed password secret.
-     *
-     * @param authId The authentication to use.
-     * @param password The password to use.
-     * @param maxBcryptIterations max bcrypt iterations to use.
-     * @return The fully populated credential.
-     */
-    public static PasswordCredential createPasswordCredential(final String authId, final String password,
-            final OptionalInt maxBcryptIterations) {
-        final PasswordCredential p = new PasswordCredential(authId);
-
-        p.setSecrets(Collections.singletonList(createPasswordSecret(password, maxBcryptIterations)));
-
-        return p;
-    }
-
-    /**
-     * Create a password type based credential containing a plain password secret.
-     *
-     * @param authId The authentication to use.
-     * @param password The password to use.
-     * @return The fully populated credential.
-     */
-    public static PasswordCredential createPlainPasswordCredential(final String authId, final String password) {
-        final PasswordCredential p = new PasswordCredential(authId);
-
-        final PasswordSecret secret = new PasswordSecret();
-        secret.setPasswordPlain(password);
-
-        p.setSecrets(Collections.singletonList(secret));
-
-        return p;
-    }
-
-    private static PasswordCredential createPasswordCredential(final String authId, final String password) {
-        return createPasswordCredential(authId, password, OptionalInt.empty());
-    }
-
-    /**
-     * Create a new password secret.
-     *
-     * @param password The password to use.
-     * @param maxBcryptIterations max bcrypt iterations to use.
-     * @return The password secret instance.
-     */
-    public static PasswordSecret createPasswordSecret(final String password, final OptionalInt maxBcryptIterations) {
-        final SpringBasedHonoPasswordEncoder encoder = new SpringBasedHonoPasswordEncoder(
-                maxBcryptIterations.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
-        final EncodedPassword encodedPwd = EncodedPassword.fromHonoSecret(encoder.encode(password));
-
-        final PasswordSecret s = new PasswordSecret();
-        s.setHashFunction(encodedPwd.hashFunction);
-        if (encodedPwd.salt != null) {
-            s.setSalt(Base64.getEncoder().encodeToString(encodedPwd.salt));
-        }
-        s.setPasswordHash(encodedPwd.password);
-        return s;
-    }
-
-    /**
      * Verify that provided secret does contains any of the hash, the salt, or the hash function.
      * @param secret Secret to check.
      */
-    public void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
+    default void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
         assertNull(secret.getPasswordHash());
         assertNull(secret.getHashFunction());
         assertNull(secret.getSalt());
@@ -254,7 +171,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param type The credentials type to check for.
      * @param whenComplete Call when this assertion was successful.
      */
-    protected void assertGetMissing(final VertxTestContext ctx,
+    default void assertGetMissing(final VertxTestContext ctx,
             final String tenantId, final String deviceId, final String authId, final String type,
             final ExecutionBlock whenComplete) {
 
@@ -278,7 +195,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param type The credentials type to check for.
      * @param whenComplete Call when this assertion was successful.
      */
-    protected void assertGetEmpty(final VertxTestContext ctx,
+    default void assertGetEmpty(final VertxTestContext ctx,
             final String tenantId, final String deviceId, final String authId, final String type,
             final ExecutionBlock whenComplete) {
 
@@ -305,7 +222,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param adapterValidation The validation logic for the protocol adapter data.
      * @param whenComplete Call when this assertion was successful.
      */
-    protected void assertGet(final VertxTestContext ctx,
+    default void assertGet(final VertxTestContext ctx,
             final String tenantId, final String deviceId, final String authId, final String type,
             final ThrowingConsumer<OperationResult<List<CommonCredential>>> mangementValidation,
             final ThrowingConsumer<CredentialsResult<JsonObject>> adapterValidation,
@@ -343,12 +260,12 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreatePasswordSecret(final VertxTestContext ctx) {
+    default void testCreatePasswordSecret(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
-        final var secret = createPasswordCredential(authId, "bar");
+        final var secret = Credentials.createPasswordCredential(authId, "bar");
 
         //create device and set credentials.
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
@@ -376,13 +293,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreatePlainPasswordSecret(final VertxTestContext ctx) {
+    default void testCreatePlainPasswordSecret(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
         final var password = "bar";
-        final var secret = createPlainPasswordCredential(authId, password);
+        final var secret = Credentials.createPlainPasswordCredential(authId, password);
 
         //create device and set credentials.
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.FIELD_SECRETS_PWD_PLAIN,
@@ -415,6 +332,11 @@ public abstract class AbstractCredentialsServiceTest {
                                 }))))));
     }
 
+    /**
+     * Assert if the resource version is present.
+     *
+     * @param result The result to check.
+     */
     private void assertResourceVersion(final OperationResult<?> result) {
         if (result == null) {
             return;
@@ -440,12 +362,12 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdatePasswordSecret(final VertxTestContext ctx) {
+    default void testUpdatePasswordSecret(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
-        final var secret = createPasswordCredential(authId, "bar");
+        final var secret = Credentials.createPasswordCredential(authId, "bar");
 
         final Promise<?> phase1 = Promise.promise();
 
@@ -474,7 +396,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().onComplete(ctx.succeeding(v -> {
 
-            final var newSecret = createPasswordCredential(authId, "baz");
+            final var newSecret = Credentials.createPasswordCredential(authId, "baz");
 
             getCredentialsManagementService().updateCredentials(tenantId, deviceId,
                     Collections.singletonList(newSecret), Optional.empty(),
@@ -502,11 +424,11 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialWithWrongResourceVersionFails(final VertxTestContext ctx) {
+    default void testUpdateCredentialWithWrongResourceVersionFails(final VertxTestContext ctx) {
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
-        final var secret = createPasswordCredential(authId, "bar");
+        final var secret = Credentials.createPasswordCredential(authId, "bar");
 
         final Checkpoint checkpoint = ctx.checkpoint(3);
 
@@ -563,12 +485,12 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndDeletePasswordSecret(final VertxTestContext ctx) {
+    default void testCreateAndDeletePasswordSecret(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
-        final var secret = createPasswordCredential(authId, "bar");
+        final var secret = Credentials.createPasswordCredential(authId, "bar");
 
         final Checkpoint checkpoint = ctx.checkpoint(7);
 
@@ -658,14 +580,14 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDisableCredentials(final VertxTestContext ctx) {
+    default void testDisableCredentials(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
-        final CommonCredential disabledCredential = createPSKCredential(authId, "baz");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
+        final CommonCredential disabledCredential = Credentials.createPSKCredential(authId, "baz");
         disabledCredential.setEnabled(false);
 
         final List<CommonCredential> credentials = Arrays.asList(credential, disabledCredential);
@@ -725,13 +647,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testReturnedSecretContainAnId(final VertxTestContext ctx) {
+    default void testReturnedSecretContainAnId(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
 
         final List<CommonCredential> credentials = Arrays.asList(credential);
 
@@ -778,13 +700,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateSecretFailsWithWrongSecretId(final VertxTestContext ctx) {
+    default void testUpdateSecretFailsWithWrongSecretId(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
 
         final List<CommonCredential> credentials = Arrays.asList(credential);
 
@@ -802,7 +724,7 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase2 = Promise.promise();
 
         // Change the password
-        final CommonCredential newCredential = createPasswordCredential(authId, "foo");
+        final CommonCredential newCredential = Credentials.createPasswordCredential(authId, "foo");
         ((PasswordCredential) newCredential).getSecrets().get(0).setId("randomId");
 
         phase1.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
@@ -826,13 +748,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testHashedPasswordsDetailsAreRemoved(final VertxTestContext ctx) {
+    default void testHashedPasswordsDetailsAreRemoved(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
 
         final List<CommonCredential> credentials = Arrays.asList(credential);
 
@@ -883,7 +805,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSecretsWithMissingIDsAreRemoved(final VertxTestContext ctx) {
+    default void testSecretsWithMissingIDsAreRemoved(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
@@ -988,13 +910,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSecretsIDisNotChangedWhenSecretIsUpdated(final VertxTestContext ctx) {
+    default void testSecretsIDisNotChangedWhenSecretIsUpdated(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
 
         final List<CommonCredential> credentials = Collections.singletonList(credential);
 
@@ -1011,6 +933,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase2 = Promise.promise();
         final List<String> secretIDs = new ArrayList<>();
+        final PasswordCredential newCredential = Credentials.createPasswordCredential(authId, "foo");
 
         phase1.future()
                 .onComplete(ctx.succeeding(n -> getCredentialsService()
@@ -1025,10 +948,13 @@ public abstract class AbstractCredentialsServiceTest {
                             assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
                             assertEquals(1, creds.getSecrets().size());
 
-                            final String id = (creds.getSecrets().getJsonObject(0))
+                            final String id = creds.getSecrets()
+                                    .getJsonObject(0)
                                     .getString(RegistryManagementConstants.FIELD_ID);
+
                             assertNotNull(id);
                             secretIDs.add(id);
+                            newCredential.getSecrets().get(0).setId(secretIDs.get(0));
 
                             phase2.complete();
                         })))));
@@ -1037,8 +963,6 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase3 = Promise.promise();
 
         // Change the password
-        final CommonCredential newCredential = createPasswordCredential(authId, "foo");
-        ((PasswordCredential) newCredential).getSecrets().get(0).setId(secretIDs.get(0));
 
         phase2.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
@@ -1063,7 +987,8 @@ public abstract class AbstractCredentialsServiceTest {
                             assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
                             assertEquals(1, creds.getSecrets().size());
 
-                            final String id = creds.getSecrets().getJsonObject(0)
+                            final String id = creds.getSecrets()
+                                    .getJsonObject(0)
                                     .getString(RegistryManagementConstants.FIELD_ID);
                             assertEquals(id, secretIDs.get(0));
 
@@ -1072,7 +997,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
+        phase4.future().onComplete(ctx.completing());
     }
 
     /**
@@ -1081,13 +1006,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSecretMetadataUpdateDoesntChangeSecretID(final VertxTestContext ctx) {
+    default void testSecretMetadataUpdateDoesntChangeSecretID(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
 
         final List<CommonCredential> credentials = Collections.singletonList(credential);
 
@@ -1188,13 +1113,13 @@ public abstract class AbstractCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSecretMetadataDeletion(final VertxTestContext ctx) {
+    default void testSecretMetadataDeletion(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
         ((PasswordCredential) credential).getSecrets().get(0).setNotBefore(new Date().toInstant());
 
         final List<CommonCredential> credentials = Collections.singletonList(credential);
@@ -1302,7 +1227,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param secrets The secrets to register.
      * @return A succeeded future if the credentials have been registered successfully.
      */
-    protected static Future<OperationResult<Void>> setCredentials(
+    default Future<OperationResult<Void>> setCredentials(
             final CredentialsManagementService svc,
             final String tenantId,
             final String deviceId,
@@ -1327,7 +1252,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param type The type of credentials.
      * @return A succeeded future if the credentials exist.
      */
-    protected static Future<Void> assertRegistered(
+    default Future<Void> assertRegistered(
             final CredentialsService svc,
             final String tenant,
             final String authId,
@@ -1345,7 +1270,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @param type The type of credentials.
      * @return A succeeded future if the credentials do not exist.
      */
-    protected static Future<Void> assertNotRegistered(
+    default Future<Void> assertNotRegistered(
             final CredentialsService svc,
             final String tenant,
             final String authId,
@@ -1354,6 +1279,18 @@ public abstract class AbstractCredentialsServiceTest {
         return assertGet(svc, tenant, authId, type, HttpURLConnection.HTTP_NOT_FOUND);
     }
 
+    /**
+     * Asserts a get operation.
+     *
+     * @param svc The service to use.
+     * @param tenant The ID of the tenant.
+     * @param authId The auth ID.
+     * @param type The type.
+     * @param expectedStatusCode The expected status code.
+     *
+     * @return A future, tracking the outcome of the operation.
+     * @throws ClientErrorException reported by the future if the check fails
+     */
     private static Future<Void> assertGet(
             final CredentialsService svc,
             final String tenant,

@@ -36,7 +36,6 @@ import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +67,6 @@ public class CredentialsManagementIT {
     private static final Logger LOG = LoggerFactory.getLogger(CredentialsManagementIT.class);
 
     private static final String PREFIX_AUTH_ID = "sensor20";
-    private static final Vertx VERTX = Vertx.vertx();
     private static final String ORIG_BCRYPT_PWD;
 
     private static IntegrationTestSupport helper;
@@ -88,11 +86,12 @@ public class CredentialsManagementIT {
 
     /**
      * Creates the HTTP client for accessing the registry.
+     *
+     * @param vertx The vert.x context.
      */
     @BeforeAll
-    public static void setUpClient() {
-
-        helper = new IntegrationTestSupport(VERTX);
+    public static void setUpClient(final Vertx vertx) {
+        helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
         registry = helper.registry;
     }
@@ -115,8 +114,11 @@ public class CredentialsManagementIT {
         resourceVersion = new AtomicReference<>();
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = newPskCredentials(authId);
-        registry.registerDevice(tenantId, deviceId)
-            .onComplete(ctx.completing());
+        registry
+                .addTenant(tenantId)
+                .flatMap(x -> registry.registerDevice(tenantId, deviceId))
+                .onComplete(ctx.completing());
+
     }
 
     /**
@@ -127,16 +129,6 @@ public class CredentialsManagementIT {
     @AfterEach
     public void removeCredentials(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
-    }
-
-    /**
-     * Shuts down the client.
-     *
-     * @param context The vert.x test context.
-     */
-    @AfterAll
-    public static void tearDown(final VertxTestContext context) {
-        VERTX.close(context.completing());
     }
 
     private static void assertResourceVersionHasChanged(final AtomicReference<String> originalVersion, final MultiMap responseHeaders) {
@@ -663,7 +655,9 @@ public class CredentialsManagementIT {
                     .forEach(secret -> {
                         // each secret should contain an ID.
                         assertThat(JsonObject.mapFrom(secret)
-                                .getString(RegistryManagementConstants.FIELD_ID)).isNotNull();
+                                .getString(RegistryManagementConstants.FIELD_ID))
+                                .as("contains 'id' field")
+                                .isNotNull();
                     });
         });
 
@@ -677,13 +671,14 @@ public class CredentialsManagementIT {
 
         // The returned secrets won't contains the hashed password details fields, strip them from the expected values.
         final JsonArray expectedArray = new JsonArray();
-        expected.stream().forEach(credential -> {
+        expected.forEach(credential -> {
             final JsonObject jsonCredential = JsonObject.mapFrom(credential);
             expectedArray.add(stripHashAndSaltFromPasswordSecret(jsonCredential));
         });
 
         // now compare
-        assertThat(responseBody).isEqualTo(expectedArray);
+        assertThat(responseBody)
+                .isEqualTo(expectedArray);
     }
 
     private static String getRandomAuthId(final String authIdPrefix) {

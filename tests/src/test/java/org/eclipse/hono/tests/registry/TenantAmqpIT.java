@@ -110,7 +110,6 @@ public class TenantAmqpIT extends TenantApiTests {
     @AfterEach
     public void cleanUp(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
-        ctx.completeNow();
     }
 
     /**

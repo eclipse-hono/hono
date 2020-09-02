@@ -50,6 +50,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.ext.web.client.predicate.ResponsePredicateResult;
 
 /**
  * A client for accessing the Device Registry's HTTP resources for the Device Registration, Credentials and Tenant API.
@@ -320,6 +321,22 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Removes configuration information for a tenant.
+     * <p>
+     * This method simply invokes {@link #removeTenant(String, ResponsePredicate...)} requiring an outcome of
+     * {@link HttpURLConnection#HTTP_NO_CONTENT} or {@link HttpURLConnection#HTTP_NOT_FOUND} if {@code ignoreMissing} is
+     * {@code true}.
+     *
+     * @param tenantId The tenant to remove.
+     * @param ignoreMissing Ignore a missing tenant.
+     * @return A future indicating the outcome of the operation. The future will succeed if the tenant has been removed.
+     *         Otherwise the future will fail.
+     */
+    public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final boolean ignoreMissing) {
+        return removeTenant(tenantId, okOrIgnoreMissing(ignoreMissing));
+    }
+
+    /**
+     * Removes configuration information for a tenant.
      *
      * @param tenantId The tenant to remove.
      * @param expectedStatusCode The status code indicating a successful outcome.
@@ -327,11 +344,21 @@ public final class DeviceRegistryHttpClient {
      *         expected status code. Otherwise the future will fail.
      */
     public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final int expectedStatusCode) {
+        return removeTenant(tenantId, ResponsePredicate.status(expectedStatusCode));
+    }
 
+    /**
+     * Removes configuration information for a tenant.
+     *
+     * @param tenantId The tenant to remove.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
+     *         expected status code. Otherwise the future will fail.
+     */
+    public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final ResponsePredicate ... successPredicates) {
         final String uri = tenantInstanceUri(tenantId);
-        return httpClient.delete(
-                uri,
-                ResponsePredicate.status(expectedStatusCode));
+        return httpClient.delete(uri, successPredicates);
     }
 
     // device registration
@@ -570,11 +597,49 @@ public final class DeviceRegistryHttpClient {
             final String deviceId,
             final int expectedStatus) {
 
+        return deregisterDevice(tenantId, deviceId, ResponsePredicate.status(expectedStatus));
+
+    }
+
+    /**
+     * Removes registration information for a device.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the operation. The future will succeed if the registration information
+     *         has been removed. Otherwise the future will fail.
+     * @throws NullPointerException if the tenant is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> deregisterDevice(
+            final String tenantId,
+            final String deviceId,
+            final ResponsePredicate ... successPredicates) {
+
         Objects.requireNonNull(tenantId);
         final String requestUri = registrationInstanceUri(tenantId, deviceId);
-        return httpClient.delete(
-                requestUri,
-                ResponsePredicate.status(expectedStatus));
+        return httpClient.delete(requestUri, successPredicates);
+
+    }
+
+    /**
+     * Removes registration information for a device.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param ignoreMissing Ignore a missing device.
+     * @return A future indicating the outcome of the operation. The future will succeed if the registration information
+     *         has been removed. Otherwise the future will fail.
+     * @throws NullPointerException if the tenant is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> deregisterDevice(
+            final String tenantId,
+            final String deviceId,
+            final boolean ignoreMissing) {
+
+        return deregisterDevice(tenantId, deviceId, okOrIgnoreMissing(ignoreMissing));
+
     }
 
     // credentials management
@@ -1032,6 +1097,20 @@ public final class DeviceRegistryHttpClient {
 
         return registerDevice(tenantId, deviceId)
                 .compose(ok -> addCredentials(tenantId, deviceId, Collections.singleton(credential)));
+    }
+
+    private static ResponsePredicate okOrIgnoreMissing(final boolean ignoreMissing) {
+        if (ignoreMissing) {
+            return response -> {
+                if (response.statusCode() == HttpURLConnection.HTTP_NO_CONTENT || response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND ) {
+                    return ResponsePredicateResult.success();
+                } else {
+                    return ResponsePredicateResult.failure("Response code must be either 204 or 404: was " + response.statusCode());
+                }
+            };
+        } else {
+            return ResponsePredicate.SC_NO_CONTENT;
+        }
     }
 
 }

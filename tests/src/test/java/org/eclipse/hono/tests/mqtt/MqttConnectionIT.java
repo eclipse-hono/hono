@@ -317,10 +317,8 @@ public class MqttConnectionIT extends MqttTestBase {
     @Test
     public void testConnectFailsForDisabledCredentials(final VertxTestContext ctx) {
 
-        final Tenant tenant = new Tenant();
-
         helper.registry
-                .addTenant(tenantId, tenant)
+                .addTenant(tenantId)
                 .compose(ok -> {
                     return helper.registry.registerDevice(tenantId, deviceId);
                 })
