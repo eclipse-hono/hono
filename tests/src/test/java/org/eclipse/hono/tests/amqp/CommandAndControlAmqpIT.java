@@ -46,6 +46,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -80,7 +81,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     private String tenantId;
     private String deviceId;
     private final String password = "secret";
-    private Tenant tenant;
+    private final Tenant tenant = new Tenant();
 
     static Stream<AmqpCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
@@ -94,6 +95,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * Sets up the fixture.
      *
      * @param testInfo Meta info about the test being run.
+     * @param ctx The vert.x test context.
      */
     @Override
     @BeforeEach
@@ -103,12 +105,22 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         helper = new IntegrationTestSupport(vertx);
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        tenant = new Tenant();
-        helper.init().onComplete(ctx.completing());
+        helper.init()
+                .flatMap(x -> helper.registry.addTenant(tenantId))
+                .onComplete(ctx.completing());
+    }
+
+    /**
+     * Clean up after the test.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
+        helper.deleteObjects(ctx);
     }
 
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-
         return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
@@ -141,7 +153,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint notificationReceived = setup.checkpoint();
 
-        connectToAdapter(tenantId, tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
@@ -502,7 +514,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint preconditions = setup.checkpoint(2);
 
-        connectToAdapter(tenantId, tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
@@ -578,7 +590,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint preconditions = setup.checkpoint(1);
 
-        connectToAdapter(tenantId, tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
@@ -829,7 +841,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * the device's credentials.
      *
      * @param tenantId The ID of the tenant that the device belongs to.
-     * @param tenant The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param password The password to use for authentication.
      * @param consumerFactory The factory for creating the consumer of messages published by the device or {@code null}
@@ -839,13 +850,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     protected final Future<ProtonConnection> connectToAdapter(
             final String tenantId,
-            final Tenant tenant,
             final String deviceId,
             final String password,
             final Supplier<Future<MessageConsumer>> consumerFactory) {
 
         return helper.registry
-        .addDeviceForTenant(tenantId, tenant, deviceId, password)
+        .addDeviceToTenant(tenantId, deviceId, password)
         .compose(ok -> Optional.ofNullable(consumerFactory)
                 .map(Supplier::get)
                 .orElse(Future.succeededFuture()))

@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
@@ -293,12 +293,12 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
     private CommonCredential getRandomHashedPasswordCredential(final String authId) {
 
-        final var secret1 = AbstractCredentialsServiceTest.createPasswordSecret("ClearTextPWD",
+        final var secret1 = Credentials.createPasswordSecret("ClearTextPWD",
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
         secret1.setNotBefore(Instant.parse("2017-05-01T14:00:00Z"));
         secret1.setNotAfter(Instant.parse("2037-06-01T14:00:00Z"));
 
-        final var secret2 = AbstractCredentialsServiceTest.createPasswordSecret("hono-password",
+        final var secret2 = Credentials.createPasswordSecret("hono-password",
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
 
         final var credential = new PasswordCredential(authId);

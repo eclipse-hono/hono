@@ -43,16 +43,16 @@ public class CorsIT {
      */
     protected static CrudHttpClient httpClient;
 
-    private static final Vertx VERTX = Vertx.vertx();
-
     /**
      * Sets up clients.
+     *
+     * @param vertx The vert.x instance.
      */
     @BeforeAll
-    public static void init() {
+    public static void init(final Vertx vertx) {
 
         httpClient = new CrudHttpClient(
-                VERTX,
+                vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
     }

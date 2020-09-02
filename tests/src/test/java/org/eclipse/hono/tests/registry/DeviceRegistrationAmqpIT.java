@@ -17,9 +17,11 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -34,17 +36,17 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
 
-    private static final Vertx vertx = Vertx.vertx();
     private static IntegrationTestSupport helper;
     private static RegistrationClientFactory registrationClientFactory;
 
     /**
      * Starts the device registry and connects a client.
      *
+     * @param vertx The vert.x instance.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void init(final VertxTestContext ctx) {
+    public static void init(final Vertx vertx, final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
@@ -59,6 +61,19 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
     }
 
     /**
+     * Setup device registry.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @BeforeEach
+    public void setupDeviceRegistry(final VertxTestContext ctx) {
+        helper.addTenantIdForRemoval(Constants.DEFAULT_TENANT);
+        helper.registry
+                .addTenant(Constants.DEFAULT_TENANT)
+                .onComplete(ctx.completing());
+    }
+
+    /**
      * Removes all temporary objects from the registry.
      *
      * @param ctx The vert.x test context.
@@ -66,7 +81,6 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
     @AfterEach
     public void cleanUp(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
-        ctx.completeNow();
     }
 
     /**

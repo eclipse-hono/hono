@@ -169,14 +169,22 @@ public abstract class CoapTestBase {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
-     * Closes the AMQP 1.0 Messaging Network client.
+     *
      *
      * @param ctx The vert.x context.
      */
     @AfterEach
     public void deleteObjects(final VertxTestContext ctx) {
-
         helper.deleteObjects(ctx);
+    }
+
+    /**
+     * Closes the AMQP 1.0 Messaging Network client.
+     *
+     * @param ctx The Vert.x test context.
+     */
+    @AfterEach
+    public void disconnect(final VertxTestContext ctx) {
         helper.disconnect().onComplete(ctx.completing());
     }
 

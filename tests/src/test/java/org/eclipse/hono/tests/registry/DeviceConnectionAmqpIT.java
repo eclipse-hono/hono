@@ -35,17 +35,16 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
 
-    private static final Vertx vertx = Vertx.vertx();
-
     private static DeviceConnectionClientFactory client;
 
     /**
      * Connects the factory.
      *
+     * @param vertx The vert.x instance.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void prepareDeviceRegistry(final VertxTestContext ctx) {
+    public static void prepareDeviceRegistry(final Vertx vertx, final VertxTestContext ctx) {
 
         client = DeviceConnectionClientFactory.create(
                 HonoConnection.newConnection(

@@ -11,14 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.net.HttpURLConnection;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -53,7 +51,6 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     protected abstract Future<RegistrationClient> getClient(String tenant);
 
     private Boolean isGatewayModeSupported() {
-
         return getHelper().isGatewayModeSupported();
     }
 
@@ -99,7 +96,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
-        final List<String> via = Arrays.asList(gatewayId, "another-gateway");
+        final List<String> via = List.of(gatewayId, "another-gateway");
         final Device device = new Device();
         device.setVia(via);
 
@@ -132,25 +129,25 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
-        final List<String> viaGroups = Arrays.asList("group");
         final Device device = new Device();
-        device.setViaGroups(viaGroups);
+        device.setViaGroups(List.of("group"));
 
         final Device gateway = new Device();
-        final List<String> memberOf = Arrays.asList("group");
-        gateway.setMemberOf(memberOf);
+        gateway.setMemberOf(List.of("group"));
 
-        getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, gatewayId, gateway)
+        Future.succeededFuture()
                 .compose(ok -> getHelper().registry.registerDevice(
-                        Constants.DEFAULT_TENANT,
-                        deviceId, device))
+                        Constants.DEFAULT_TENANT, gatewayId, gateway))
+                .compose(ok -> getHelper().registry.registerDevice(
+                        Constants.DEFAULT_TENANT, deviceId, device))
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
-                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactly(gatewayId);
+                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID))
+                                .isEqualTo(deviceId);
+                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA))
+                                .containsExactly(gatewayId);
                     });
                     ctx.completeNow();
                 }));
@@ -187,13 +184,13 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
         getHelper().registry
-        .registerDevice(Constants.DEFAULT_TENANT, deviceId)
-        .compose(r -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATEWAY_ID))
-        .onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN));
-            ctx.completeNow();
-        }));
+                .registerDevice(Constants.DEFAULT_TENANT, deviceId)
+                .compose(r -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATEWAY_ID))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN));
+                    ctx.completeNow();
+                }));
     }
 
     /**

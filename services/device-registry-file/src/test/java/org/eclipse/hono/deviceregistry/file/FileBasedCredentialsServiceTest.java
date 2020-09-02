@@ -36,6 +36,7 @@ import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -74,7 +75,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceTest {
+public class FileBasedCredentialsServiceTest implements AbstractCredentialsServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedCredentialsServiceTest.class);
 
@@ -138,7 +139,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
      * {@inheritDoc}
      */
     @Override
-    protected CacheDirective getExpectedCacheDirective(final String credentialsType) {
+    public CacheDirective getExpectedCacheDirective(final String credentialsType) {
         switch (credentialsType) {
         case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
         case CredentialsConstants.SECRETS_TYPE_X509_CERT:
@@ -468,13 +469,13 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         // GIVEN a registry that has been configured to not allow modification of entries
         credentialsConfig.setModificationEnabled(false);
 
-        final CommonCredential secret = createPasswordCredential("myId", "bar", OptionalInt.empty());
+        final CommonCredential secret = Credentials.createPasswordCredential("myId", "bar", OptionalInt.empty());
 
         // containing a set of credentials
         setCredentials(getCredentialsManagementService(), "tenant", "device", Collections.singletonList(secret))
                 .compose(ok -> {
                     // WHEN trying to update the credentials
-                    final PasswordCredential newSecret = createPasswordCredential("myId", "baz", OptionalInt.empty());
+                    final PasswordCredential newSecret = Credentials.createPasswordCredential("myId", "baz", OptionalInt.empty());
                     return svc.updateCredentials("tenant", "device",
                             Collections.singletonList(newSecret),
                             Optional.empty(),

@@ -83,6 +83,15 @@ public abstract class MqttTestBase {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
+     *
+     * @param ctx The vert.x context.
+     */
+    @AfterEach
+    public void deleteObjects(final VertxTestContext ctx) {
+        helper.deleteObjects(ctx);
+    }
+
+    /**
      * Closes the AMQP 1.0 Messaging Network client.
      *
      * @param ctx The vert.x context.
@@ -99,7 +108,6 @@ public abstract class MqttTestBase {
                 mqttClient.disconnect(disconnectHandler);
             });
         }
-        helper.deleteObjects(ctx);
         disconnectHandler.future().onComplete(closeAttempt -> {
             LOGGER.info("connection to MQTT adapter closed");
             context = null;

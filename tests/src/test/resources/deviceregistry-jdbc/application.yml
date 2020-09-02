@@ -1,0 +1,65 @@
+hono:
+
+  app:
+    maxInstances: 1
+    startupTimeout: 90
+
+  healthCheck:
+    insecurePortBindAddress: 0.0.0.0
+    insecurePort: ${vertx.health.port}
+
+  auth:
+    host: ${hono.auth.host}
+    port: 5672
+    name: device-registry
+    validation:
+      certPath: /etc/hono/certs/auth-server-cert.pem
+
+  registry:
+    amqp:
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+    http:
+      authenticationRequired: false
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+    jdbc:
+      adapter:
+        url: jdbc:h2:tcp://${hono.h2.host}:${hono.h2.port}//data/devices
+        driverClass: org.h2.Driver
+        username: ${hono.jdbc.h2.registry.username}
+        password: ${hono.jdbc.h2.registry.password}
+      management:
+        url: jdbc:h2:tcp://${hono.h2.host}:${hono.h2.port}//data/devices
+        driverClass: org.h2.Driver
+        username: ${hono.jdbc.h2.registry.username}
+        password: ${hono.jdbc.h2.registry.password}
+    svc:
+      maxBcryptIterations: ${max.bcrypt.iterations}
+
+  tenant:
+    jdbc:
+      adapter:
+        url: jdbc:h2:tcp://${hono.h2.host}:${hono.h2.port}//data/tenants
+        driverClass: org.h2.Driver
+        username: ${hono.jdbc.h2.registry.username}
+        password: ${hono.jdbc.h2.registry.password}
+      management:
+        url: jdbc:h2:tcp://${hono.h2.host}:${hono.h2.port}//data/tenants
+        driverClass: org.h2.Driver
+        username: ${hono.jdbc.h2.registry.username}
+        password: ${hono.jdbc.h2.registry.password}
+    svc:
+
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+
+spring:
+  jmx:
+    enabled: false
+
+management:
+  port: -1
+
+server:
+  port: -1

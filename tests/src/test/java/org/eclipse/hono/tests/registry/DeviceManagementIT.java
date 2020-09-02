@@ -28,7 +28,6 @@ import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +55,6 @@ public class DeviceManagementIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceManagementIT.class);
 
-    private static final Vertx vertx = Vertx.vertx();
     private static DeviceRegistryHttpClient registry;
     private static IntegrationTestSupport helper;
     private String tenantId;
@@ -64,10 +62,11 @@ public class DeviceManagementIT {
 
     /**
      * Creates the HTTP client for accessing the registry.
+     *
+     * @param vertx The vert.x instance.
      */
     @BeforeAll
-    public static void setUpClient() {
-
+    public static void setUpClient(final Vertx vertx) {
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
         registry = helper.registry;
@@ -77,12 +76,19 @@ public class DeviceManagementIT {
      * Sets up the fixture.
      *
      * @param testInfo Meta information about the currently running test case.
+     * @param ctx The vert.x test context.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo) {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
         LOG.info("running {}", testInfo.getDisplayName());
+
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
+
+        helper.registry
+                .addTenant(tenantId)
+                .onComplete(ctx.completing());
+
     }
 
     /**
@@ -96,16 +102,6 @@ public class DeviceManagementIT {
     }
 
     /**
-     * Shuts down the client.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void tearDown(final VertxTestContext ctx) {
-        vertx.close(ctx.completing());
-    }
-
-    /**
      * Verifies that a device can be properly registered.
      *
      * @param ctx The vert.x test context
@@ -116,7 +112,8 @@ public class DeviceManagementIT {
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(tenantId, deviceId, device).onComplete(ctx.completing());
+        registry.registerDevice(tenantId, deviceId, device)
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -318,22 +315,22 @@ public class DeviceManagementIT {
         final AtomicReference<String> latestVersion = new AtomicReference<>();
 
         registry.registerDevice(tenantId, deviceId, originalData.mapTo(Device.class))
-            .compose(httpResponse -> {
-                latestVersion.set(httpResponse.getHeader(HttpHeaders.ETAG.toString()));
-                assertThat(latestVersion.get()).isNotNull();
-                return registry.updateDevice(tenantId, deviceId, updatedData);
-            })
-            .compose(httpResponse -> {
-                final String updatedVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
-                assertThat(updatedVersion).isNotNull();
-                assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
-                return registry.getRegistrationInfo(tenantId, deviceId);
-            })
-            .onComplete(ctx.succeeding(httpResponse -> {
-                ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class),
-                        updatedData.mapTo(Device.class)));
-                ctx.completeNow();
-            }));
+                .compose(httpResponse -> {
+                    latestVersion.set(httpResponse.getHeader(HttpHeaders.ETAG.toString()));
+                    assertThat(latestVersion.get()).isNotNull();
+                    return registry.updateDevice(tenantId, deviceId, updatedData);
+                })
+                .compose(httpResponse -> {
+                    final String updatedVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
+                    assertThat(updatedVersion).isNotNull();
+                    assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
+                    return registry.getRegistrationInfo(tenantId, deviceId);
+                })
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class),
+                            updatedData.mapTo(Device.class)));
+                    ctx.completeNow();
+                }));
     }
 
     /**

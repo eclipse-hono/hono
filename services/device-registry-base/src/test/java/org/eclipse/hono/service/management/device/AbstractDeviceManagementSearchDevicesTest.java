@@ -35,14 +35,14 @@ import io.vertx.junit5.VertxTestContext;
  * Also the subclasses should clean up any fixture in the database that has
  * been created by individual test cases.
  */
-public abstract class AbstractDeviceManagementSearchDevicesTest {
+public interface AbstractDeviceManagementSearchDevicesTest {
 
     /**
      * Gets device management service being tested.
      *
      * @return The device management service
      */
-    public abstract DeviceManagementService getDeviceManagementService();
+    DeviceManagementService getDeviceManagementService();
 
     /**
      * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND}
@@ -51,7 +51,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSearchDevicesWhenNoDevicesAreFound(final VertxTestContext ctx) {
+    default void testSearchDevicesWhenNoDevicesAreFound(final VertxTestContext ctx) {
         final String deviceId = DeviceRegistryUtils.getUniqueIdentifier();
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
@@ -76,7 +76,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSearchDevicesWithAFilterSucceeds(final VertxTestContext ctx) {
+    default void testSearchDevicesWithAFilterSucceeds(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -104,7 +104,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSearchDevicesWithMultipleFiltersSucceeds(final VertxTestContext ctx) {
+    default void testSearchDevicesWithMultipleFiltersSucceeds(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -135,7 +135,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSearchDevicesWithPageSize(final VertxTestContext ctx) {
+    default void testSearchDevicesWithPageSize(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
         final int pageOffset = 0;
@@ -163,7 +163,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
+    default void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
         final int pageOffset = 1;
@@ -195,7 +195,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSearchDevicesWithSortOption(final VertxTestContext ctx) {
+    default void testSearchDevicesWithSortOption(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
         final int pageOffset = 0;
@@ -222,12 +222,11 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
     /**
      * Creates a set of devices.
      *
-     *
      * @param tenantId The tenant identifier.
      * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
-    protected Future<?> createDevices(final String tenantId, final Map<String, Device> devices) {
+    default Future<?> createDevices(final String tenantId, final Map<String, Device> devices) {
         Future<?> current = Future.succeededFuture();
 
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {

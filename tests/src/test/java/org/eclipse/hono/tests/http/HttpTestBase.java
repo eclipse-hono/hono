@@ -188,7 +188,7 @@ public abstract class HttpTestBase {
      * have been created during the last test execution.
      * Disconnects from the AMQP Messaging Network.
      *
-     * @param ctx The vert.x context.
+     * @param ctx The vert.x test context.
      */
     @AfterEach
     public void deleteObjects(final VertxTestContext ctx) {
@@ -197,6 +197,16 @@ public abstract class HttpTestBase {
         if (deviceCert != null) {
             deviceCert.delete();
         }
+
+    }
+
+    /**
+     * Disconnect helper.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void disconnect(final VertxTestContext ctx) {
         helper.disconnect().onComplete(ctx.completing());
     }
 

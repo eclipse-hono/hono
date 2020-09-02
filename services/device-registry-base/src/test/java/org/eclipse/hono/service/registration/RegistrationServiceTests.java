@@ -48,34 +48,39 @@ import io.vertx.junit5.VertxTestContext;
  * by means of implementing the {@link #getDeviceManagementService()} and
  * {@link #getRegistrationService()} methods.
  */
-public abstract class RegistrationServiceTests {
+public interface RegistrationServiceTests {
 
     /**
      * The tenant used in tests.
      */
-    protected static final String TENANT = Constants.DEFAULT_TENANT;
+    String TENANT = Constants.DEFAULT_TENANT;
     /**
      * The device identifier used in tests.
      */
-    protected static final String DEVICE = "4711";
+    String DEVICE = "4711";
     /**
      * The gateway identifier used in the tests.
      */
-    protected static final String GW = "gw-1";
+    String GW = "gw-1";
 
     /**
      * Gets registration service being tested.
      * @return The registration service
      */
-    public abstract RegistrationService getRegistrationService();
+    RegistrationService getRegistrationService();
 
     /**
      * Gets device management service being tested.
      *
      * @return The device management service
      */
-    public abstract DeviceManagementService getDeviceManagementService();
+    DeviceManagementService getDeviceManagementService();
 
+    /**
+     * Create a random device ID.
+     *
+     * @return A new device ID, never returns {@code null}.
+     */
     private String randomDeviceId() {
         return UUID.randomUUID().toString();
     }
@@ -90,7 +95,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationSucceedsForExistingDevice(final VertxTestContext ctx) {
+    default void testAssertRegistrationSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final List<String> authorizedGateways = List.of("a", "b");
@@ -114,7 +119,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationSucceedsForDeviceViaGateway(final VertxTestContext ctx) {
+    default void testAssertRegistrationSucceedsForDeviceViaGateway(final VertxTestContext ctx) {
 
         final String gatewayId = randomDeviceId();
         final Device gateway = new Device();
@@ -145,7 +150,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationSucceedsForDeviceViaGatewayGroup(final VertxTestContext ctx) {
+    default void testAssertRegistrationSucceedsForDeviceViaGatewayGroup(final VertxTestContext ctx) {
 
         final String gatewayIdA = randomDeviceId();
         final Device gatewayA = new Device();
@@ -185,7 +190,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationFailsForNonExistingDevice(final VertxTestContext ctx) {
+    default void testAssertRegistrationFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         getRegistrationService().assertRegistration(TENANT, "non-existing-device")
             .onComplete(ctx.succeeding(registrationResult -> {
@@ -203,7 +208,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationFailsForDisabledDevice(final VertxTestContext ctx) {
+    default void testAssertRegistrationFailsForDisabledDevice(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Device device = new Device().setEnabled(Boolean.FALSE);
@@ -226,7 +231,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationFailsForDeviceViaNonExistingGateway(final VertxTestContext ctx) {
+    default void testAssertRegistrationFailsForDeviceViaNonExistingGateway(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Device device = new Device().setVia(List.of("non-existing-gateway"));
@@ -249,7 +254,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationFailsForDeviceViaDisabledGateway(final VertxTestContext ctx) {
+    default void testAssertRegistrationFailsForDeviceViaDisabledGateway(final VertxTestContext ctx) {
 
         final String gatewayId = randomDeviceId();
         final Device gateway = new Device().setEnabled(Boolean.FALSE);
@@ -276,7 +281,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationFailsForDeviceViaUnauthorizedGateway(final VertxTestContext ctx) {
+    default void testAssertRegistrationFailsForDeviceViaUnauthorizedGateway(final VertxTestContext ctx) {
 
         final String gatewayIdA = randomDeviceId();
         final Device gatewayA = new Device();
@@ -321,7 +326,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateDeviceFailsForExistingDeviceId(final VertxTestContext ctx) {
+    default void testCreateDeviceFailsForExistingDeviceId(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
 
@@ -342,7 +347,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateDeviceWithoutIdSucceeds(final VertxTestContext ctx) {
+    default void testCreateDeviceWithoutIdSucceeds(final VertxTestContext ctx) {
 
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(response -> {
@@ -361,7 +366,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateDeviceWithIdSucceeds(final VertxTestContext ctx) {
+    default void testCreateDeviceWithIdSucceeds(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
 
@@ -384,7 +389,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testReadDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
+    default void testReadDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         getDeviceManagementService().readDevice(TENANT, "non-existing-device-id", NoopSpan.INSTANCE)
             .onComplete(ctx.succeeding(response -> ctx.verify(() -> {
@@ -399,7 +404,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testReadDeviceSucceedsForExistingDevice(final VertxTestContext ctx) {
+    default void testReadDeviceSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Device device = new Device()
@@ -428,7 +433,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testReadDeviceReturnsCopyOfOriginalData(final VertxTestContext ctx) {
+    default void testReadDeviceReturnsCopyOfOriginalData(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Promise<OperationResult<Device>> getResult = Promise.promise();
@@ -462,7 +467,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testReadDeviceFailsForDeletedDevice(final VertxTestContext ctx) {
+    default void testReadDeviceFailsForDeletedDevice(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint get = ctx.checkpoint(2);
@@ -488,7 +493,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
+    default void testDeleteDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         getDeviceManagementService()
                 .deleteDevice(TENANT, "non-existing-device", Optional.empty(), NoopSpan.INSTANCE)
@@ -505,7 +510,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteDeviceFailsForNonMatchingResourceVersion(final VertxTestContext ctx) {
+    default void testDeleteDeviceFailsForNonMatchingResourceVersion(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint register = ctx.checkpoint(2);
@@ -533,7 +538,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteDeviceSucceeds(final VertxTestContext ctx) {
+    default void testDeleteDeviceSucceeds(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint register = ctx.checkpoint(2);
@@ -560,7 +565,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteDeviceSucceedsForMatchingResourceVersion(final VertxTestContext ctx) {
+    default void testDeleteDeviceSucceedsForMatchingResourceVersion(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint register = ctx.checkpoint(2);
@@ -591,7 +596,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceFailsForNonMatchingResourceVersion(final VertxTestContext ctx) {
+    default void testUpdateDeviceFailsForNonMatchingResourceVersion(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint register = ctx.checkpoint(2);
@@ -623,7 +628,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceSucceeds(final VertxTestContext ctx) {
+    default void testUpdateDeviceSucceeds(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint register = ctx.checkpoint(2);
@@ -657,7 +662,7 @@ public abstract class RegistrationServiceTests {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceSucceedsForMatchingResourceVersion(final VertxTestContext ctx) {
+    default void testUpdateDeviceSucceedsForMatchingResourceVersion(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
         final Checkpoint register = ctx.checkpoint(2);
@@ -693,7 +698,7 @@ public abstract class RegistrationServiceTests {
      * @param deviceId The identifier of the device.
      * @return A succeeded future if the device is registered.
      */
-    protected final Future<?> assertCanReadDevice(final String tenantId, final String deviceId) {
+    default Future<?> assertCanReadDevice(final String tenantId, final String deviceId) {
 
         return getDeviceManagementService().readDevice(tenantId, deviceId, NoopSpan.INSTANCE)
             .compose(r -> {
@@ -716,7 +721,7 @@ public abstract class RegistrationServiceTests {
      * @return A new future that will succeed when the read/get operations succeed and the assertions are valid.
      *         Otherwise the future must fail.
      */
-    protected Future<?> assertDevice(final String tenant, final String deviceId, final Optional<String> gatewayId,
+    default Future<?> assertDevice(final String tenant, final String deviceId, final Optional<String> gatewayId,
             final Handler<OperationResult<Device>> managementAssertions,
             final Handler<RegistrationResult> adapterAssertions) {
 
@@ -747,7 +752,7 @@ public abstract class RegistrationServiceTests {
      * @param devices The map of devices to assert.
      * @return A future, reporting the assertion status.
      */
-    protected Future<?> assertDevicesNotFound(final Map<String, Device> devices) {
+    default Future<?> assertDevicesNotFound(final Map<String, Device> devices) {
 
         Future<?> current = Future.succeededFuture();
 
@@ -773,7 +778,7 @@ public abstract class RegistrationServiceTests {
      * @param devices The devices and device information.
      * @return A future, reporting the assertion status.
      */
-    protected Future<?> assertDevices(final Map<String, Device> devices) {
+    default Future<?> assertDevices(final Map<String, Device> devices) {
 
         Future<?> current = Future.succeededFuture();
 
@@ -812,7 +817,7 @@ public abstract class RegistrationServiceTests {
      * @param device The device data.
      * @return A succeeded future if the device has been created successfully.
      */
-    protected Future<?> createDevice(final String deviceId, final Device device) {
+    default Future<?> createDevice(final String deviceId, final Device device) {
         return createDevices(Map.of(deviceId, device));
     }
 
@@ -822,7 +827,7 @@ public abstract class RegistrationServiceTests {
      * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
-    protected Future<?> createDevices(final Map<String, Device> devices) {
+    default Future<?> createDevices(final Map<String, Device> devices) {
 
         Future<?> current = Future.succeededFuture();
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {

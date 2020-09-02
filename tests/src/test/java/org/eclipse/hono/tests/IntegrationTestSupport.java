@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
@@ -35,17 +37,17 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.BufferResult;
@@ -55,6 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -62,47 +65,45 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 
 /**
  * A helper class for integration tests.
- *
  */
 public final class IntegrationTestSupport {
 
     /**
      * The default port exposed by the AMQP adapter.
      */
-    public static final int    DEFAULT_AMQP_PORT = 5672;
+    public static final int DEFAULT_AMQP_PORT = 5672;
     /**
      * The default TLS secured port exposed by the AMQP adapter.
      */
-    public static final int    DEFAULT_AMQPS_PORT = 5671;
+    public static final int DEFAULT_AMQPS_PORT = 5671;
     /**
      * The default port exposed by the CoAP adapter.
      */
-    public static final int    DEFAULT_COAP_PORT = 5683;
+    public static final int DEFAULT_COAP_PORT = 5683;
     /**
      * The default DTLS secured port exposed by the CoAP adapter.
      */
-    public static final int    DEFAULT_COAPS_PORT = 5684;
+    public static final int DEFAULT_COAPS_PORT = 5684;
     /**
      * The default AMQP port exposed by the Device Connection service.
      */
-    public static final int    DEFAULT_DEVICECONNECTION_AMQP_PORT = 35672;
+    public static final int DEFAULT_DEVICECONNECTION_AMQP_PORT = 35672;
     /**
      * The default AMQP port exposed by the device registry.
      */
-    public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
+    public static final int DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
     /**
      * The default HTTP port exposed by the device registry.
      */
-    public static final int    DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
+    public static final int DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
     /**
      * The default AMQP port exposed by the AMQP Messaging Network.
      */
-    public static final int    DEFAULT_DOWNSTREAM_PORT = 15672;
+    public static final int DEFAULT_DOWNSTREAM_PORT = 15672;
     /**
      * The default IP address that services and adapters bind their endpoints to.
      */
@@ -110,23 +111,23 @@ public final class IntegrationTestSupport {
     /**
      * The default port exposed by the HTTP adapter.
      */
-    public static final int    DEFAULT_HTTP_PORT = 8080;
+    public static final int DEFAULT_HTTP_PORT = 8080;
     /**
      * The default TLS secured port exposed by the HTTP adapter.
      */
-    public static final int    DEFAULT_HTTPS_PORT = 8443;
+    public static final int DEFAULT_HTTPS_PORT = 8443;
     /**
      * The default number of iterations to use with the BCrypt hash algorithm.
      */
-    public static final int    DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
+    public static final int DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
     /**
      * The default port exposed by the MQTT adapter.
      */
-    public static final int    DEFAULT_MQTT_PORT = 1883;
+    public static final int DEFAULT_MQTT_PORT = 1883;
     /**
      * The default TLS secured port exposed by the MQTT adapter.
      */
-    public static final int    DEFAULT_MQTTS_PORT = 8883;
+    public static final int DEFAULT_MQTTS_PORT = 8883;
 
     /**
      * The name of the system property to use for setting the IP address of the Auth service.
@@ -166,10 +167,6 @@ public final class IntegrationTestSupport {
      * service should listen on for AMQP connections.
      */
     public static final String PROPERTY_DEVICECONNECTION_AMQP_PORT = "deviceconnection.amqp.port";
-    /**
-     * The name of the system property to use for setting the port number that the Device Registry
-     * should listen on for HTTP connections.
-     */
     /**
      * The name of the system property to use for setting the IP address of the Device Registry.
      */
@@ -278,7 +275,7 @@ public final class IntegrationTestSupport {
     /**
      * The port number that the Auth service listens on.
      */
-    public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
+    public static final int AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
 
     /**
      * The username of the principal that has access to the DEFAULT_TENANT only.
@@ -305,11 +302,11 @@ public final class IntegrationTestSupport {
     /**
      * The port number that the Device Registry listens on for AMQP connections.
      */
-    public static final int    HONO_DEVICEREGISTRY_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_AMQP_PORT, DEFAULT_DEVICEREGISTRY_AMQP_PORT);
+    public static final int HONO_DEVICEREGISTRY_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_AMQP_PORT, DEFAULT_DEVICEREGISTRY_AMQP_PORT);
     /**
      * The port number that the Device Registry listens on for HTTP requests.
      */
-    public static final int    HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
+    public static final int HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
 
     /**
      * The IP address of the Device Connection service.
@@ -318,7 +315,7 @@ public final class IntegrationTestSupport {
     /**
      * The port number that the Device Connection service listens on for AMQP connections.
      */
-    public static final int    HONO_DEVICECONNECTION_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICECONNECTION_AMQP_PORT, DEFAULT_DEVICECONNECTION_AMQP_PORT);
+    public static final int HONO_DEVICECONNECTION_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICECONNECTION_AMQP_PORT, DEFAULT_DEVICECONNECTION_AMQP_PORT);
 
     /**
      * The IP address of the AMQP Messaging Network.
@@ -327,7 +324,7 @@ public final class IntegrationTestSupport {
     /**
      * The port number that the AMQP Messaging Network listens on for connections.
      */
-    public static final int    DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, DEFAULT_DOWNSTREAM_PORT);
+    public static final int DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, DEFAULT_DOWNSTREAM_PORT);
     /**
      * The username that applications use for authenticating to the AMQP Messaging Network.
      */
@@ -344,11 +341,11 @@ public final class IntegrationTestSupport {
     /**
      * The  port number that the CoAP adapter listens on for requests.
      */
-    public static final int    COAP_PORT = Integer.getInteger(PROPERTY_COAP_PORT, DEFAULT_COAP_PORT);
+    public static final int COAP_PORT = Integer.getInteger(PROPERTY_COAP_PORT, DEFAULT_COAP_PORT);
     /**
      * The  port number that the CoAP adapter listens on for secure requests.
      */
-    public static final int    COAPS_PORT = Integer.getInteger(PROPERTY_COAPS_PORT, DEFAULT_COAPS_PORT);
+    public static final int COAPS_PORT = Integer.getInteger(PROPERTY_COAPS_PORT, DEFAULT_COAPS_PORT);
     /**
      * The IP address of the HTTP protocol adapter.
      */
@@ -356,11 +353,11 @@ public final class IntegrationTestSupport {
     /**
      * The  port number that the HTTP adapter listens on for requests.
      */
-    public static final int    HTTP_PORT = Integer.getInteger(PROPERTY_HTTP_PORT, DEFAULT_HTTP_PORT);
+    public static final int HTTP_PORT = Integer.getInteger(PROPERTY_HTTP_PORT, DEFAULT_HTTP_PORT);
     /**
      * The  port number that the HTTP adapter listens on for secure requests.
      */
-    public static final int    HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
+    public static final int HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
     /**
      * The IP address of the MQTT protocol adapter.
      */
@@ -368,11 +365,11 @@ public final class IntegrationTestSupport {
     /**
      * The  port number that the MQTT adapter listens on for connections.
      */
-    public static final int    MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
+    public static final int MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
     /**
      * The  port number that the MQTT adapter listens on for secure connections.
      */
-    public static final int    MQTTS_PORT = Integer.getInteger(PROPERTY_MQTTS_PORT, DEFAULT_MQTTS_PORT);
+    public static final int MQTTS_PORT = Integer.getInteger(PROPERTY_MQTTS_PORT, DEFAULT_MQTTS_PORT);
     /**
      * The IP address of the AMQP protocol adapter.
      */
@@ -380,21 +377,21 @@ public final class IntegrationTestSupport {
     /**
      * The  port number that the AMQP adapter listens on for connections.
      */
-    public static final int    AMQP_PORT = Integer.getInteger(PROPERTY_AMQP_PORT, DEFAULT_AMQP_PORT);
+    public static final int AMQP_PORT = Integer.getInteger(PROPERTY_AMQP_PORT, DEFAULT_AMQP_PORT);
     /**
      * The  port number that the AMQP adapter listens on for secure connections.
      */
-    public static final int    AMQPS_PORT = Integer.getInteger(PROPERTY_AMQPS_PORT, DEFAULT_AMQPS_PORT);
+    public static final int AMQPS_PORT = Integer.getInteger(PROPERTY_AMQPS_PORT, DEFAULT_AMQPS_PORT);
 
     /**
      * The number of messages to send by default in protocol adapter tests.
      */
-    public static final int    MSG_COUNT = Integer.getInteger("msg.count", 400);
+    public static final int MSG_COUNT = Integer.getInteger("msg.count", 400);
 
     /**
      * The maximum number of BCrypt iterations supported by Hono.
      */
-    public static final int    MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPERTY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
+    public static final int MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPERTY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
 
     /**
      * The absolute path to the trust store to use for establishing secure connections with Hono.
@@ -439,20 +436,20 @@ public final class IntegrationTestSupport {
         final String gatewayModeFlag = System.getProperty(PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE, "true");
         gatewayModeSupported = Boolean.parseBoolean(gatewayModeFlag);
         testEnv = Optional.ofNullable(System.getenv("CI"))
-            .map(s -> {
-                final boolean runningOnCiEnvironment = Boolean.parseBoolean(s);
-                if (runningOnCiEnvironment) {
-                    LOGGER.info("running on CI environment");
-                }
-                return runningOnCiEnvironment;
-            })
-            .orElseGet(() -> {
-                final boolean runningOnTestEnvironment = Boolean.getBoolean("test.env");
-                if (runningOnTestEnvironment) {
-                    LOGGER.info("running on test environment");
-                }
-                return runningOnTestEnvironment;
-            });
+                .map(s -> {
+                    final boolean runningOnCiEnvironment = Boolean.parseBoolean(s);
+                    if (runningOnCiEnvironment) {
+                        LOGGER.info("running on CI environment");
+                    }
+                    return runningOnCiEnvironment;
+                })
+                .orElseGet(() -> {
+                    final boolean runningOnTestEnvironment = Boolean.getBoolean("test.env");
+                    if (runningOnTestEnvironment) {
+                        LOGGER.info("running on test environment");
+                    }
+                    return runningOnTestEnvironment;
+                });
     }
 
     private static ClientConfigProperties getClientConfigProperties(
@@ -639,30 +636,58 @@ public final class IntegrationTestSupport {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
+     * <p>
+     * <strong>Note:</strong> This wil consume the test context.
      *
      * @param ctx The vert.x context.
      */
     public void deleteObjects(final VertxTestContext ctx) {
 
-        if (!devicesToDelete.isEmpty()) {
-            devicesToDelete.forEach((tenantId, devices) -> {
-                final Checkpoint deviceDeletion = ctx.checkpoint(devices.size());
-                devices.forEach(deviceId -> {
-                    registry.deregisterDevice(tenantId, deviceId).onComplete(ok -> deviceDeletion.flag());
-                });
-                LOGGER.debug("deleted {} devices from tenant {}", devicesToDelete.size(), tenantId);
-            });
-            devicesToDelete.clear();
-        }
+        // copy and reset
 
-        if (!tenantsToDelete.isEmpty()) {
-            final Checkpoint tenantDeletion = ctx.checkpoint(tenantsToDelete.size());
-            tenantsToDelete.forEach(tenantId -> {
-                registry.removeTenant(tenantId).onComplete(ok -> tenantDeletion.flag());
-            });
-            LOGGER.debug("deleted {} tenants", tenantsToDelete.size());
-            tenantsToDelete.clear();
-        }
+        final var devicesToDelete = Map.copyOf(this.devicesToDelete);
+        this.devicesToDelete.clear();
+        final var tenantsToDelete = List.copyOf(this.tenantsToDelete);
+        this.tenantsToDelete.clear();
+
+        // first delete devices
+
+        final var deleteDevices = CompositeFuture
+                .join(devicesToDelete.entrySet()
+                        .stream().flatMap(entry ->
+                                entry.getValue().stream()
+                                        .map(deviceId -> registry.deregisterDevice(entry.getKey(), deviceId, true)))
+                        .collect(Collectors.toList()));
+
+        final var devicesDeleted = new AtomicBoolean();
+
+        deleteDevices
+
+                // record success of first operation ...
+
+                .onSuccess(x -> devicesDeleted.set(true))
+
+                // ... and reset error, will be checked at the end
+
+                .otherwiseEmpty()
+
+                // then delete tenants
+
+                .flatMap(x -> CompositeFuture
+                        .join(tenantsToDelete
+                                .stream()
+                                .map(tenantId -> registry.removeTenant(tenantId, true))
+                                .collect(Collectors.toList())))
+
+                // complete, and check if we successfully deleted the devices
+
+                .onComplete(ctx.succeeding(x -> {
+                    ctx.verify(() -> assertThat(devicesDeleted.get())
+                            .as("successfully deleted devices")
+                            .isTrue());
+                    ctx.completeNow();
+                }));
+
     }
 
     /**
@@ -745,16 +770,8 @@ public final class IntegrationTestSupport {
             final String gatewayId,
             final int timeoutSeconds) {
 
-        final CompletableFuture<String> result = new CompletableFuture<>();
-
-        setupGatewayDevice(tenantId, gatewayId)
-        .onComplete(attempt -> {
-            if (attempt.succeeded()) {
-                result.complete(attempt.result());
-            } else {
-                result.completeExceptionally(attempt.cause());
-            }
-        });
+        final var result = setupGatewayDevice(tenantId, gatewayId)
+                .toCompletionStage().toCompletableFuture();
 
         try {
             return result.get(timeoutSeconds, TimeUnit.SECONDS);
@@ -774,13 +791,11 @@ public final class IntegrationTestSupport {
      */
     public Future<String> setupGatewayDevice(final String tenantId, final String gatewayId) {
 
-        final Promise<String> result = Promise.promise();
         final String newDeviceId = getRandomDeviceId(tenantId);
         final Device newDevice = new Device().setVia(List.of(gatewayId));
-        registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
-                .map(ok -> newDeviceId)
-                .onComplete(result);
-        return result.future();
+        return registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
+                .map(newDeviceId);
+
     }
 
     /**
@@ -956,6 +971,7 @@ public final class IntegrationTestSupport {
      * JsonArrays are tested for containment as well: all elements in a JsonArray belonging to the contained JsonObject
      * must be present in the corresponding JsonArray of the other JsonObject as well. The sequence of the array elements
      * is not important (suitable for the current tests).
+     *
      * @param jsonObject The JsonObject that must fully contain the other JsonObject (but may contain more entries as well).
      * @param jsonObjectToBeContained The JsonObject that needs to be fully contained inside the other JsonObject.
      * @return The result of the containment test.
@@ -1028,14 +1044,14 @@ public final class IntegrationTestSupport {
      * @return The result of the containment test.
      */
     public static boolean testJsonArrayToBeContained(final JsonArray containingArray, final JsonArray containedArray) {
-        for (final Object containedElem: containedArray) {
+        for (final Object containedElem : containedArray) {
             // currently only support contained JsonObjects
             if (!(containedElem instanceof JsonObject)) {
                 return false;
             }
 
             boolean containingElemFound = false;
-            for (final Object elemOfBiggerArray: containingArray) {
+            for (final Object elemOfBiggerArray : containingArray) {
                 if (!(elemOfBiggerArray instanceof JsonObject)) {
                     return false;
                 }
@@ -1145,7 +1161,7 @@ public final class IntegrationTestSupport {
      * @return The new instance.
      */
     public static PasswordCredential createPasswordCredential(final String authId, final String password) {
-        return AbstractCredentialsServiceTest.createPasswordCredential(authId, password,
+        return Credentials.createPasswordCredential(authId, password,
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
     }
 

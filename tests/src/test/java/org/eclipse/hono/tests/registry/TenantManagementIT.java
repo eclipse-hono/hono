@@ -91,7 +91,6 @@ public class TenantManagementIT {
      */
     @AfterEach
     public void removeTenant(final VertxTestContext ctx) {
-
         helper.deleteObjects(ctx);
     }
 
