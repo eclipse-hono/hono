@@ -663,7 +663,7 @@ public final class DeviceRegistryHttpClient {
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will contain the response if the
      *         response contained the expected status code. Otherwise the future will fail.
-     * @throws NullPointerException if the tenant is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public Future<HttpResponse<Buffer>> searchDevices(
             final String tenantId,
@@ -674,6 +674,10 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(pageSize);
+        Objects.requireNonNull(pageOffset);
+        Objects.requireNonNull(filters);
+        Objects.requireNonNull(sortOptions);
 
         final String requestUri = searchDevicesUri(tenantId);
         final MultiMap queryParams = MultiMap.caseInsensitiveMultiMap();
@@ -682,15 +686,8 @@ public final class DeviceRegistryHttpClient {
                 pSize -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_SIZE, String.valueOf(pSize)));
         pageOffset.ifPresent(
                 pOffset -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, String.valueOf(pOffset)));
-        Optional.ofNullable(filters)
-                .filter(fltrs -> !fltrs.isEmpty())
-                .ifPresent(fltrs -> fltrs
-                        .forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON,
-                                filterJson)));
-        Optional.ofNullable(sortOptions)
-                .filter(sortOpts -> !sortOpts.isEmpty())
-                .ifPresent(sortOpts -> sortOpts
-                        .forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson)));
+        filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
+        sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
 
         return httpClient.get(requestUri, queryParams, ResponsePredicate.status(expectedStatusCode));
     }

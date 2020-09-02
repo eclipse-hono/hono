@@ -449,7 +449,7 @@ public class DeviceManagementIT {
 
             registry.registerDevice(tenantId, deviceId, device)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson), null, HttpURLConnection.HTTP_NOT_FOUND))
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.completing());
         }
 
@@ -459,28 +459,29 @@ public class DeviceManagementIT {
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesFailsForInvalidPageSize(final VertxTestContext ctx) {
+        public void testSearchDevicesWithInvalidPageSizeFails(final VertxTestContext ctx) {
             final int invalidPageSize = -100;
 
             registry.registerDevice(tenantId, deviceId)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.of(invalidPageSize), Optional.empty(),
-                            null, null, HttpURLConnection.HTTP_BAD_REQUEST))
+                            List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.completing());
         }
 
         /**
-         * Verifies that a request to search devices with a valid page size.
+         * Verifies that a request to search devices with pageSize succeeds and the result is in accordance
+         * with the specified page size.
          *
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesWithPageSize(final VertxTestContext ctx) {
+        public void testSearchDevicesWithValidPageSizeSucceeds(final VertxTestContext ctx) {
             final int pageSize = 1;
 
             CompositeFuture.all(registry.registerDevice(tenantId, new Device()), registry
                     .registerDevice(tenantId, new Device())
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.empty(), null, null,
-                            HttpURLConnection.HTTP_OK))
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.empty(), List.of(),
+                            List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
                             final JsonArray response = httpResponse.bodyAsJsonArray();
@@ -496,22 +497,23 @@ public class DeviceManagementIT {
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesFailsForInvalidPageOffset(final VertxTestContext ctx) {
+        public void testSearchDevicesWithInvalidPageOffsetFails(final VertxTestContext ctx) {
             final int invalidPageOffset = -100;
 
             registry.registerDevice(tenantId, deviceId)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.of(invalidPageOffset),
-                            null, null, HttpURLConnection.HTTP_BAD_REQUEST))
+                            List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.completing());
         }
 
         /**
-         * Verifies that a request to search devices with a valid page offset.
+         * Verifies that a request to search devices with page offset succeeds and the result is in accordance with
+         * the specified page offset.
          *
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
+        public void testSearchDevicesWithValidPageOffsetSucceeds(final VertxTestContext ctx) {
             final String deviceId1 = helper.getRandomDeviceId(tenantId);
             final String deviceId2 = helper.getRandomDeviceId(tenantId);
             final Device device1 = new Device().setExtensions(Map.of("id", "aaa"));
@@ -523,7 +525,7 @@ public class DeviceManagementIT {
             CompositeFuture.all(registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
                     .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.of(pageOffset),
-                            null, List.of(sortJson), HttpURLConnection.HTTP_OK))
+                            List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
                             final JsonArray response = httpResponse.bodyAsJsonArray();
@@ -542,11 +544,11 @@ public class DeviceManagementIT {
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesFailsForInvalidFilterJson(final VertxTestContext ctx) {
+        public void testSearchDevicesWithInvalidFilterJsonFails(final VertxTestContext ctx) {
 
             registry.registerDevice(tenantId, deviceId)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of("Invalid filterJson"), null, HttpURLConnection.HTTP_BAD_REQUEST))
+                            List.of("Invalid filterJson"), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.completing());
         }
 
@@ -556,16 +558,32 @@ public class DeviceManagementIT {
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesWithMutlipleFilters(final VertxTestContext ctx) {
+        public void testSearchDevicesWithValidMultipleFiltersSucceeds(final VertxTestContext ctx) {
+            final String deviceId1 = helper.getRandomDeviceId(tenantId);
+            final String deviceId2 = helper.getRandomDeviceId(tenantId);
             final Device device1 = new Device().setEnabled(false).setExtensions(Map.of("id", "1"));
             final Device device2 = new Device().setEnabled(true).setExtensions(Map.of("id", "2"));
             final String filterJson1 = getFilterJson("/ext/id", "1", "eq");
             final String filterJson2 = getFilterJson("/enabled", true, "eq");
+            final String filterJson3 = getFilterJson("/enabled", false, "eq");
 
-            CompositeFuture.all(registry.registerDevice(tenantId, device1), registry.registerDevice(tenantId, device2))
+            CompositeFuture
+                    .all(registry.registerDevice(tenantId, deviceId1, device1),
+                            registry.registerDevice(tenantId, deviceId2, device2))
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson1, filterJson2), null, HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final JsonArray response = httpResponse.bodyAsJsonArray();
+                            assertThat(response.size()).isEqualTo(1);
+
+                            final JsonObject deviceObject = response.getJsonObject(0);
+                            assertThat(deviceObject.getString("id")).isEqualTo(deviceId1);
+                        });
+                        ctx.completeNow();
+                    }));
         }
 
         /**
@@ -574,21 +592,22 @@ public class DeviceManagementIT {
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesFailsForInvalidSortJson(final VertxTestContext ctx) {
+        public void testSearchDevicesWithInvalidSortJsonFails(final VertxTestContext ctx) {
 
             registry.registerDevice(tenantId, deviceId)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), null,
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
                             List.of("Invalid sortJson"), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.completing());
         }
 
         /**
-         * Verifies that a request to search devices with a valid sort option succeeds and the result is sorted accordingly.
+         * Verifies that a request to search devices with a valid sort option succeeds and the result is sorted
+         * accordingly.
          *
          * @param ctx The vert.x test context.
          */
         @Test
-        public void testSearchDevicesWithSortOption(final VertxTestContext ctx) {
+        public void testSearchDevicesWithValidSortOptionSucceeds(final VertxTestContext ctx) {
             final String deviceId1 = helper.getRandomDeviceId(tenantId);
             final String deviceId2 = helper.getRandomDeviceId(tenantId);
             final Device device1 = new Device().setExtensions(Map.of("id", "aaa"));
@@ -597,15 +616,18 @@ public class DeviceManagementIT {
 
             CompositeFuture.all(registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), null,
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
                             List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
                             final JsonArray response = httpResponse.bodyAsJsonArray();
                             assertThat(response.size()).isEqualTo(2);
 
-                            final JsonObject deviceObject = response.getJsonObject(0);
-                            assertThat(deviceObject.getString("id")).isEqualTo(deviceId2);
+                            final JsonObject deviceObject1 = response.getJsonObject(0);
+                            assertThat(deviceObject1.getString("id")).isEqualTo(deviceId2);
+
+                            final JsonObject deviceObject2 = response.getJsonObject(1);
+                            assertThat(deviceObject2.getString("id")).isEqualTo(deviceId1);
                         });
                         ctx.completeNow();
                     }));

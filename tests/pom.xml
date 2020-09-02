@@ -44,7 +44,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
     <deviceregistry.credentials.supportsClientContext>true</deviceregistry.credentials.supportsClientContext>
     <!-- should be set to true if testing against a registry that supports search devices operation -->
-    <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
+    <deviceregistry.supportsSearchDevices>false</deviceregistry.supportsSearchDevices>
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
     <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
@@ -204,7 +204,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
         <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
         <deviceregistry.credentials.supportsClientContext>false</deviceregistry.credentials.supportsClientContext>
-        <hono.deviceregistry.supportsSearchDevices>true</hono.deviceregistry.supportsSearchDevices>
+        <deviceregistry.supportsSearchDevices>true</deviceregistry.supportsSearchDevices>
       </properties>
     </profile>
     <profile>
@@ -1096,7 +1096,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
                 <deviceregistry.supportsGatewayMode>${deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
                 <deviceregistry.credentials.supportsClientContext>${deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
-                <hono.deviceregistry.supportsSearchDevices>${hono.deviceregistry.supportsSearchDevices}</hono.deviceregistry.supportsSearchDevices>
+                <deviceregistry.supportsSearchDevices>${deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
                 <coap.host>${coap.ip}</coap.host>
                 <coap.port>${coap.port}</coap.port>
                 <coaps.port>${coaps.port}</coaps.port>
