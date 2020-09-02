@@ -787,50 +787,61 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
     }
 
-    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint,
-            final CommandSubscription sub, final CommandSubscriptionsManager<T> cmdHandler, final Span span) {
+    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
+            final MqttEndpoint mqttEndpoint,
+            final CommandSubscription subscription,
+            final CommandSubscriptionsManager<T> cmdHandler,
+            final Span span) {
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
+            TracingHelper.TAG_CLIENT_ID.set(commandContext.getTracingSpan(), mqttEndpoint.clientIdentifier());
             final Sample timer = metrics.startTimer();
             final Command command = commandContext.getCommand();
-            final Future<TenantObject> tenantTracker = getTenantConfiguration(sub.getTenant(),
-                    commandContext.getTracingContext());
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(subscription.getTenant(), commandContext.getTracingContext());
 
             tenantTracker.compose(tenantObject -> {
-                if (!command.isValid()) {
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                            "malformed command message"));
+                if (command.isValid()) {
+                    return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
+                } else {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
                 }
-                return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
             }).compose(success -> {
                 addMicrometerSample(commandContext, timer);
-                onCommandReceived(tenantTracker.result(), mqttEndpoint, sub, commandContext, cmdHandler);
+                onCommandReceived(tenantTracker.result(), mqttEndpoint, subscription, commandContext, cmdHandler);
                 return Future.succeededFuture();
-            }).otherwise(failure -> {
-                if (failure instanceof ClientErrorException) {
-                    commandContext.reject(getErrorCondition(failure));
+            }).onFailure(t -> {
+                if (t instanceof ClientErrorException) {
+                    commandContext.reject(getErrorCondition(t));
                 } else {
                     commandContext.release();
                 }
                 metrics.reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                        sub.getTenant(),
+                        subscription.getTenant(),
                         tenantTracker.result(),
-                        ProcessingOutcome.from(failure),
+                        ProcessingOutcome.from(t),
                         command.getPayloadSize(),
                         timer);
-                return null;
             });
         };
-        if (sub.isGatewaySubscriptionForSpecificDevice()) {
+        if (subscription.isGatewaySubscriptionForSpecificDevice()) {
             // gateway scenario
-            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(),
-                    sub.getAuthenticatedDeviceId(), commandHandler, null, span.context());
+            return getCommandConsumerFactory().createCommandConsumer(
+                    subscription.getTenant(),
+                    subscription.getDeviceId(),
+                    subscription.getAuthenticatedDeviceId(),
+                    commandHandler,
+                    null,
+                    span.context());
         } else {
-            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler,
-                    null, span.context());
+            return getCommandConsumerFactory().createCommandConsumer(
+                    subscription.getTenant(),
+                    subscription.getDeviceId(),
+                    commandHandler,
+                    null,
+                    span.context());
         }
     }
 
@@ -1413,11 +1424,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final CommandContext commandContext,
             final CommandSubscriptionsManager<T> cmdSubscriptionsManager) {
 
+        Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
+        Objects.requireNonNull(cmdSubscriptionsManager);
 
-        TracingHelper.TAG_CLIENT_ID.set(commandContext.getTracingSpan(), endpoint.clientIdentifier());
         final Command command = commandContext.getCommand();
 
         // build topic string; examples:
@@ -1431,31 +1443,48 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 : subscription.isAuthenticated() ? "" : subscription.getDeviceId();
         final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
 
-        final String publishTopic = String.format("%s/%s/%s/%s/%s/%s",
-                subscription.getEndpoint(), topicTenantId, topicDeviceId, subscription.getRequestPart(),
-                topicCommandRequestId, command.getName());
-
-        if (command.isTargetedAtGateway()) {
-            log.debug("Publishing command to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                    subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
-                    subscription.getClientId(), subscription.getQos());
-        } else {
-            log.debug("Publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                    subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
-                    subscription.getQos());
-        }
-        logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, true,
-                "Publishing command to device");
+        final String publishTopic = String.format(
+                "%s/%s/%s/%s/%s/%s",
+                subscription.getEndpoint(),
+                topicTenantId,
+                topicDeviceId,
+                subscription.getRequestPart(),
+                topicCommandRequestId,
+                command.getName());
+        Tags.MESSAGE_BUS_DESTINATION.set(commandContext.getTracingSpan(), publishTopic);
+        TracingHelper.TAG_QOS.set(commandContext.getTracingSpan(), subscription.getQos().name());
 
         endpoint.publish(publishTopic, command.getPayload(), subscription.getQos(), false, false, sentHandler -> {
             if (sentHandler.succeeded()) {
+
+                if (command.isTargetedAtGateway()) {
+                    log.debug("published command [packet-id: {}] to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                            sentHandler.result(), subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
+                            subscription.getClientId(), subscription.getQos(), publishTopic);
+                } else {
+                    log.debug("published command [packet-id: {}] to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                            sentHandler.result(), subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
+                            subscription.getQos(), publishTopic);
+                }
+                commandContext.getTracingSpan().log("published command");
                 afterCommandPublished(sentHandler.result(), commandContext, tenantObject, subscription, cmdSubscriptionsManager);
+
             } else {
-                log.debug("Error publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                        subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier(), subscription.getQos(),
-                        sentHandler.cause());
-                TracingHelper.logError(commandContext.getTracingSpan(), sentHandler.cause());
-                reportPublishedCommand(tenantObject, subscription, commandContext,
+
+                if (command.isTargetedAtGateway()) {
+                    log.debug("error publishing command to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                            subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
+                            subscription.getClientId(), subscription.getQos(), publishTopic, sentHandler.cause());
+                } else {
+                    log.debug("error publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                            subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
+                            subscription.getQos(), publishTopic, sentHandler.cause());
+                }
+                TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", sentHandler.cause());
+                reportPublishedCommand(
+                        tenantObject,
+                        subscription,
+                        commandContext,
                         ProcessingOutcome.from(sentHandler.cause()));
                 commandContext.release();
             }
@@ -1469,30 +1498,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final CommandSubscription subscription,
             final CommandSubscriptionsManager<T> cmdSubscriptionsManager) {
 
-        final boolean waitForAck = MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos());
+        final boolean requiresPuback = MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos());
 
-        log.debug("Published command to device{} [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                waitForAck ? ", waiting for ack" : "", subscription.getTenant(), subscription.getDeviceId(),
-                subscription.getClientId(), subscription.getQos());
-        logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, true,
-                waitForAck ? "Published command to device, waiting for ack" : "Published command to device");
-
-        if (waitForAck) {
+        if (requiresPuback) {
             final Handler<Integer> onAckHandler = msgId -> {
                 reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
-                log.debug("Acknowledged [Msg-id: {}] command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                        msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
-                        subscription.getQos());
-                logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, false,
-                        "Published command has been acknowledged");
+                log.debug("received PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
+                        msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId());
+                commandContext.getTracingSpan().log("received PUBACK from device");
                 commandContext.accept();
             };
 
             final Handler<Void> onAckTimeoutHandler = v -> {
-                log.debug("Timed out waiting for acknowledgment for command sent to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                        subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(), subscription.getQos());
-                logSubscriptionEventToSpan(commandContext.getTracingSpan(), subscription, false,
-                        "Timed out waiting for acknowledgment for command sent to device");
+                log.debug("did not receive PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
+                        publishedMsgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId());
+                TracingHelper.logError(commandContext.getTracingSpan(), "did not receive PUBACK from device");
                 commandContext.release();
                 reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
             };
@@ -1503,8 +1523,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    private void reportPublishedCommand(final TenantObject tenantObject, final CommandSubscription subscription,
-            final CommandContext commandContext, final ProcessingOutcome outcome) {
+    private void reportPublishedCommand(
+            final TenantObject tenantObject,
+            final CommandSubscription subscription,
+            final CommandContext commandContext,
+            final ProcessingOutcome outcome) {
+
         metrics.reportCommand(
                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                 subscription.getTenant(),
@@ -1512,18 +1536,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 outcome,
                 commandContext.getCommand().getPayloadSize(),
                 getMicrometerSample(commandContext));
-    }
-
-    private void logSubscriptionEventToSpan(final Span span, final CommandSubscription subscription,
-            final boolean includeDestination, final String eventMessage) {
-        final Map<String, String> items = new HashMap<>(4);
-        items.put(Fields.EVENT, eventMessage);
-        if (includeDestination) {
-            items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), subscription.getTopic());
-        }
-        items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
-        items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
-        span.log(items);
     }
 
     /**

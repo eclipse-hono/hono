@@ -26,19 +26,18 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.MqttTopicSubscription;
 
 /**
- * The MQTT subscription of devices, to get commands.
- *
+ * A device's MQTT subscription for command messages.
  * <p>
- * Format of subscription needs to be: {@code command|control|c/[TENANT]/[+|DEVICE_ID]/req|q/#}
+ * Supported topic names: {@code command|c/[+|TENANT]/[+|DEVICE_ID]/req|q/#}
  * <p>
  * Examples:
  * <ol>
- * <li>{@code command///req/#} - authenticated device and verbose format</li>
- * <li>{@code c///q/#} - authenticated device with short format</li>
+ * <li>{@code command/+/+/req/#} - authenticated device and verbose format</li>
+ * <li>{@code c/+/+/q/#} - authenticated device with short format</li>
  * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format</li>
  * </ol>
  */
-public class CommandSubscription {
+public final class CommandSubscription {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandSubscription.class);
 
