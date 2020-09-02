@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +48,18 @@ public final class CacheDirective {
             throw new IllegalArgumentException("max age must be > 0");
         }
         return new CacheDirective(false, maxAge);
+    }
+
+    /**
+     * Creates a new <em>max-age</em> directive.
+     *
+     * @param maxAge The maximum age.
+     * @return The directive.
+     * @throws IllegalArgumentException if the given value is less or equal to zero seconds.
+     */
+    public static CacheDirective maxAgeDirective(final Duration maxAge) {
+        // TODO: switch to maxAge.toSeconds() once we can use Java 9+
+        return maxAgeDirective(maxAge.toMillis() / 1000);
     }
 
     /**

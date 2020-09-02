@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Optional;
+import java.util.function.Function;
+
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 
 /**
@@ -84,5 +87,21 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
         return new TenantResult<>(status, payload, cacheDirective, applicationProperties);
+    }
+
+    /**
+     * Map the payload type, if set.
+     *
+     * @param mapper The mapper to apply, if a payload is set.
+     * @param <U> The target type.
+     * @return The mapped result.
+     */
+    public <U> TenantResult<U> map(final Function<? super T, ? extends U> mapper) {
+        return new TenantResult<U>(
+                getStatus(),
+                Optional.ofNullable(getPayload()).map(mapper).orElse(null),
+                getCacheDirective(),
+                new ApplicationProperties(getApplicationProperties())
+        );
     }
 }

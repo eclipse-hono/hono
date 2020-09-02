@@ -149,10 +149,34 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
 
+        return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, autoProvisioningEnabled);
+
+    }
+
+    /**
+     * Adds a trusted certificate authority to use for authenticating devices of this tenant.
+     *
+     * @param publicKey The CA's public key in encoded form.
+     * @param publicKeyAlgorithm The algorithm of the public key.
+     * @param subjectDn The CA's subject DN.
+     * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if the public key, algorithm or subjectDN parameters is {@code null}.
+     */
+    @JsonIgnore
+    public TenantObject addTrustAnchor(final byte[] publicKey,
+                                       final String publicKeyAlgorithm,
+                                       final X500Principal subjectDn,
+                                       final Boolean autoProvisioningEnabled) {
+
+        Objects.requireNonNull(publicKey);
+        Objects.requireNonNull(publicKeyAlgorithm);
+        Objects.requireNonNull(subjectDn);
+
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKeyAlgorithm);
         trustedCa.put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, autoProvisioningEnabled);
         final JsonArray cas = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray());
         trustAnchors = null;
