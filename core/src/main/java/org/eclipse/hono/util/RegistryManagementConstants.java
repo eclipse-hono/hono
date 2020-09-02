@@ -124,6 +124,17 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String PARAM_SORT_JSON = "sortJson";
 
+    /**
+     * The name of the field that contains the total number of objects in the result set of the search devices
+     * operation.
+     */
+    public static final String FIELD_SEARCH_DEVICES_RESULT_TOTAL = "total";
+
+    /**
+     * The name of the field that contains the result of the search devices operation.
+     */
+    public static final String FIELD_SEARCH_DEVICES_RESULT = "result";
+
     // CREDENTIALS
 
     /**
