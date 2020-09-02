@@ -759,7 +759,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
                 if (waitForOutcome) {
                     // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
-                    context.startAcceptTimer(vertx, getConfig().getTimeoutToAck());
+                    context.startAcceptTimer(vertx, tenantTracker.result(), getConfig().getTimeoutToAck());
                     return CompositeFuture.all(
                             sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
                             responseReady.future())
@@ -1021,7 +1021,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
                         addCommandReceptionTimer(context, requestProcessed, responseReady, ttdSecs);
-                        context.startAcceptTimer(vertx, getConfig().getTimeoutToAck());
+                        context.startAcceptTimer(vertx, tenantObject, getConfig().getTimeoutToAck());
                     }
                     return consumer;
                 });

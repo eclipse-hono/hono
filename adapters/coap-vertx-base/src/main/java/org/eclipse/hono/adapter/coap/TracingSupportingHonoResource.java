@@ -23,7 +23,6 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -153,7 +152,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param coapExchange The CoAP exchange to process.
      * @return A future indicating the outcome of processing the request.
      *         The future will be succeeded with the created CoAP context,
-     *         otherwise the future will be failed with a {@link ClientErrorException}.
+     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ClientErrorException}.
      */
     protected abstract Future<CoapContext> createCoapContextForPost(CoapExchange coapExchange);
 
@@ -163,7 +162,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param coapExchange The CoAP exchange to process.
      * @return A future indicating the outcome of processing the request.
      *         The future will be succeeded with the created CoAP context,
-     *         otherwise the future will be failed with a {@link ClientErrorException}.
+     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ClientErrorException}.
      */
     protected abstract Future<CoapContext> createCoapContextForPut(CoapExchange coapExchange);
 

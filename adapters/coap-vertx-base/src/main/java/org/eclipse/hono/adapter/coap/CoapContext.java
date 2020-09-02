@@ -27,6 +27,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.vertx.core.Vertx;
@@ -158,24 +159,44 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     /**
      * Sets a timer to trigger the sending of a separate ACK to a device.
      * <p>
+     * This method first tries to find a {@value CoapConstants#TIMEOUT_TO_ACK} property value
+     * in the tenant's CoAP adapter configuration.
+     * If no such property is found, the value given in the timeoutMillis parameter is used instead.
      *
-     * @param vertx Vertx to schedule the timer
-     * @param timeoutMillis The number of milliseconds to wait for a separate ACK. {@code -1}, never use separate
-     *            response, {@code 0}, always use separate response.
+     * @param vertx The vert.x instance to set the timer on.
+     * @param tenant The tenant that the device belongs to which the request being processed originates from.
+     * @param timeoutMillis The number of milliseconds to wait for a separate ACK if no tenant specific value
+     *            has been configured. {@code -1}, never use separate response, {@code 0}, always use separate response.
+     * @throws NullPointerException if vertx or tenant are {@code null}.
      */
     public void startAcceptTimer(
             final Vertx vertx,
+            final TenantObject tenant,
             final long timeoutMillis) {
 
+        Objects.requireNonNull(vertx, "vert.x");
+        Objects.requireNonNull(tenant, "tenant");
+
+        final long ackTimeout = Optional.ofNullable(tenant.getAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP))
+                .map(config -> {
+                    final Object value = config.getExtensions().get(CoapConstants.TIMEOUT_TO_ACK);
+                    if (value instanceof Number) {
+                        return ((Number) value).longValue();
+                    } else {
+                        return timeoutMillis;
+                    }
+                })
+                .orElse(timeoutMillis);
+
         if (acceptTimerFlag.compareAndSet(false, true)) {
-            if (timeoutMillis < 0) {
+            if (ackTimeout < 0) {
                 // always use piggybacked response, never send separate ACK
                 return;
-            } else if (timeoutMillis == 0) {
+            } else if (ackTimeout == 0) {
                 // always send separate ACK and separate response
                 accept();
             } else if (!acceptFlag.get()) {
-                vertx.setTimer(timeoutMillis, id -> {
+                vertx.setTimer(ackTimeout, id -> {
                     if (!acceptFlag.get()) {
                         accept();
                     }
@@ -387,5 +408,4 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     public QoS getRequestedQos() {
         return isConfirmable() ? QoS.AT_LEAST_ONCE : QoS.AT_MOST_ONCE;
     }
-
 }
