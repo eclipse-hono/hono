@@ -165,8 +165,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      *
      * @param vertx The vert.x instance to set the timer on.
      * @param tenant The tenant that the device belongs to which the request being processed originates from.
-     * @param timeoutMillis The number of milliseconds to wait for a separate ACK. {@code -1}, never use separate
-     *            response, {@code 0}, always use separate response.
+     * @param timeoutMillis The number of milliseconds to wait for a separate ACK if no tenant specific value
+     *            has been configured. {@code -1}, never use separate response, {@code 0}, always use separate response.
      * @throws NullPointerException if vertx or tenant are {@code null}.
      */
     public void startAcceptTimer(
@@ -175,10 +175,17 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
             final long timeoutMillis) {
 
         Objects.requireNonNull(vertx, "vert.x");
-        Objects.requireNonNull("tenant");
+        Objects.requireNonNull(tenant, "tenant");
 
         final long ackTimeout = Optional.ofNullable(tenant.getAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP))
-                .map(config -> (Long) config.getExtensions().get(CoapConstants.TIMEOUT_TO_ACK))
+                .map(config -> {
+                    final Object value = config.getExtensions().get(CoapConstants.TIMEOUT_TO_ACK);
+                    if (value instanceof Number) {
+                        return ((Number) value).longValue();
+                    } else {
+                        return timeoutMillis;
+                    }
+                })
                 .orElse(timeoutMillis);
 
         if (acceptTimerFlag.compareAndSet(false, true)) {

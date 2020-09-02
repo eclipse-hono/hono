@@ -77,7 +77,7 @@ public class CoapContextTest {
     void testStartAckTimerUsesTenantSpecificTimeout() {
         final CoapExchange exchange = mock(CoapExchange.class);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
-        coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, 200L);
+        coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, 200);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");
@@ -93,6 +93,22 @@ public class CoapContextTest {
     void testStartAckTimerFallsBackToGlobalTimeout() {
         final CoapExchange exchange = mock(CoapExchange.class);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");
+        ctx.startAcceptTimer(vertx, tenant, 500);
+        verify(vertx).setTimer(eq(500L), any(Handler.class));
+    }
+
+    /**
+     * Verifies that the global ACK timeout is used if a tenant specific value is configured that is not a number.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    void testStartAckTimerHandlesNonNumberPropertyValue() {
+        final CoapExchange exchange = mock(CoapExchange.class);
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, "not-a-number");
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");

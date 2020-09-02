@@ -17,8 +17,8 @@ title = "Release Notes"
 * Added metrics for tracking the RTT between sending an AMQP message to receiving the disposition.
 * The CoAP adapter now supports configuration of the *timeoutToAck* parameter at the tenant level
   in addition to the adapter level. If set, the tenant specific value is used for all devices of the
-  particular tenant. if not set, the value defined at the adapter level is used.
-g
+  particular tenant. If not set, the value defined at the adapter level is used.
+
 ## 1.3.0
 
 ### New Features
