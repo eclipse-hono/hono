@@ -43,7 +43,7 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AuthorizationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -86,8 +86,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     private final AmqpAdapterMetrics metrics;
     private final Supplier<Span> spanFactory;
     private final DeviceCertificateValidator certValidator;
-    private final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
-    private final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
+    private final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private final DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
     private final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler;
 
     /**
@@ -113,8 +113,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final ProtocolAdapterProperties config,
             final AmqpAdapterMetrics metrics,
             final Supplier<Span> spanFactory,
-            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
-            final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider,
+            final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
+            final DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider,
             final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler) {
 
         this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory, "Tenant client factory cannot be null");

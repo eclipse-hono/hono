@@ -45,19 +45,19 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final HonoClientBasedAuthProvider<?> authProvider;
+    private final DeviceCredentialsAuthProvider<?> authProvider;
 
     /**
      * Creates a new handler for authenticating MQTT clients.
      *
      * @param authProvider The auth provider to use for verifying a client's credentials.
      */
-    protected ExecutionContextAuthHandler(final HonoClientBasedAuthProvider<?> authProvider) {
+    protected ExecutionContextAuthHandler(final DeviceCredentialsAuthProvider<?> authProvider) {
         this.authProvider = authProvider;
     }
 
     @Override
-    public final HonoClientBasedAuthProvider<?> getAuthProvider() {
+    public final DeviceCredentialsAuthProvider<?> getAuthProvider() {
         return authProvider;
     }
 
@@ -74,13 +74,13 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
                 });
     }
 
-    private HonoClientBasedAuthProvider<?> getAuthProvider(final T ctx) {
+    private DeviceCredentialsAuthProvider<?> getAuthProvider(final T ctx) {
 
         final Object obj = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
-        if (obj instanceof HonoClientBasedAuthProvider<?>) {
+        if (obj instanceof DeviceCredentialsAuthProvider<?>) {
             log.debug("using auth provider found in context [type: {}]", obj.getClass().getName());
             // we're overruling the configured one for this request
-            return (HonoClientBasedAuthProvider<?>) obj;
+            return (DeviceCredentialsAuthProvider<?>) obj;
         } else {
             // bad type, ignore and return default
             return authProvider;

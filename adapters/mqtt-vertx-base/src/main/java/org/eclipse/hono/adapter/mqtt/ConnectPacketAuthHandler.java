@@ -19,8 +19,8 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 
 import io.opentracing.Tracer;
@@ -44,7 +44,7 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
      * @param authProvider The provider to use for verifying a device's credentials.
      * @param tracer The tracer instance.
      */
-    public ConnectPacketAuthHandler(final HonoClientBasedAuthProvider<UsernamePasswordCredentials> authProvider,
+    public ConnectPacketAuthHandler(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider,
             final Tracer tracer) {
         super(authProvider);
         this.tracer = tracer;

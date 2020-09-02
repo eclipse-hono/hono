@@ -30,7 +30,7 @@ import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
@@ -77,8 +77,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private final List<LoraProvider> loraProviders = new ArrayList<>();
 
-    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
-    private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
+    private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
 
     /**
      * Sets the LoRa providers that this adapter should support.
@@ -101,7 +101,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider<UsernamePasswordCredentials> provider) {
+    public void setUsernamePasswordAuthProvider(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
@@ -113,7 +113,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setClientCertAuthProvider(final HonoClientBasedAuthProvider<SubjectDnCredentials> provider) {
+    public void setClientCertAuthProvider(final DeviceCredentialsAuthProvider<SubjectDnCredentials> provider) {
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
     }
 

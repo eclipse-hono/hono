@@ -19,7 +19,7 @@ import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -63,7 +63,7 @@ public class X509AuthHandler extends AuthHandlerImpl {
      */
     public X509AuthHandler(
             final X509Authentication clientAuth,
-            final HonoClientBasedAuthProvider<SubjectDnCredentials> authProvider,
+            final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider,
             final Tracer tracer) {
         super(authProvider);
         this.auth = Objects.requireNonNull(clientAuth);

@@ -23,7 +23,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
@@ -79,7 +79,7 @@ public final class SigfoxProtocolAdapter
 
     private static final Logger LOG = LoggerFactory.getLogger(SigfoxProtocolAdapter.class);
 
-    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
 
     private ExecutionContextTenantAndAuthIdProvider<HttpContext> tenantObjectWithAuthIdProvider;
 
@@ -100,7 +100,7 @@ public final class SigfoxProtocolAdapter
      * @throws NullPointerException if provider is {@code null}.
      */
     public void setUsernamePasswordAuthProvider(
-            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> provider) {
+            final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 

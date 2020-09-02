@@ -55,5 +55,5 @@ public interface AuthHandler<T extends ExecutionContext> {
      *
      * @return The provider.
      */
-    HonoClientBasedAuthProvider<?> getAuthProvider();
+    DeviceCredentialsAuthProvider<?> getAuthProvider();
 }

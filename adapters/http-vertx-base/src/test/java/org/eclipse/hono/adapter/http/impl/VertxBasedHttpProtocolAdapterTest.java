@@ -46,7 +46,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
@@ -103,7 +103,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private DownstreamSender telemetrySender;
     private DownstreamSender eventSender;
     private RegistrationClientFactory registrationClientFactory;
-    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private HttpProtocolAdapterProperties config;
     private VertxBasedHttpProtocolAdapter httpAdapter;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
@@ -180,7 +180,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
             .thenReturn(Future.succeededFuture(commandResponseSender));
 
-        usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
+        usernamePasswordAuthProvider = mock(DeviceCredentialsAuthProvider.class);
 
         final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
         when(metrics.startTimer()).thenReturn(Timer.start());

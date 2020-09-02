@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ import io.vertx.mqtt.MqttEndpoint;
 public class ConnectPacketAuthHandlerTest {
 
     private ConnectPacketAuthHandler authHandler;
-    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> authProvider;
+    private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider;
 
     /**
      * Sets up the fixture.
@@ -49,7 +49,7 @@ public class ConnectPacketAuthHandlerTest {
     @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
-        authProvider = mock(HonoClientBasedAuthProvider.class);
+        authProvider = mock(DeviceCredentialsAuthProvider.class);
         authHandler = new ConnectPacketAuthHandler(authProvider, NoopTracerFactory.create());
     }
 

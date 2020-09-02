@@ -26,7 +26,7 @@ import io.vertx.ext.auth.AuthProvider;
  *
  * @param <T> The type of credentials that this provider can validate.
  */
-public interface HonoClientBasedAuthProvider<T extends AbstractDeviceCredentials> extends AuthProvider {
+public interface DeviceCredentialsAuthProvider<T extends AbstractDeviceCredentials> extends AuthProvider {
 
     /**
      * Validates credentials provided by a device against the credentials on record

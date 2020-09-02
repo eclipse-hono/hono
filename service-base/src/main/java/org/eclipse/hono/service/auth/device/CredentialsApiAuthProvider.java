@@ -48,7 +48,8 @@ import io.vertx.ext.auth.User;
  *
  * @param <T> The type of credentials this provider can validate.
  */
-public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredentials> implements HonoClientBasedAuthProvider<T> {
+public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredentials> implements
+        DeviceCredentialsAuthProvider<T> {
 
     /**
      * A logger to be used by subclasses.
