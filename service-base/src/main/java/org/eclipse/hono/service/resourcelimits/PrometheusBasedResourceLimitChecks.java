@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
@@ -194,9 +195,10 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 traceItems.put(Fields.EVENT, "no connection limit configured");
                 result.complete(Boolean.FALSE);
             } else {
+                final AtomicBoolean cacheHit = new AtomicBoolean(true);
                 connectionCountCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                     final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
-                    TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                    cacheHit.set(false);
                     final String queryParams = String.format(
                             "sum(%s{tenant=\"%s\"})",
                             METRIC_NAME_CONNECTIONS,
@@ -207,6 +209,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                     return r;
                 })
                 .whenComplete((value, error) -> {
+                    TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
                     if (error != null) {
                         TracingHelper.logError(span, error);
                         result.complete(Boolean.FALSE);
@@ -319,9 +322,10 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             result.complete(Boolean.FALSE);
         } else {
 
+            final AtomicBoolean cacheHit = new AtomicBoolean(true);
             dataVolumeCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
-                TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                cacheHit.set(false);
                 final Instant nowUtc = Instant.now(clock);
                 final Long allowedMaxBytes = calculateEffectiveLimit(
                         effectiveSince,
@@ -348,6 +352,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 return r;
             })
             .whenComplete((value, error) -> {
+                TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
                 if (error != null) {
                     TracingHelper.logError(span, error);
                     result.complete(Boolean.FALSE);
@@ -425,9 +430,10 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             result.complete(Boolean.FALSE);
         } else {
 
+            final AtomicBoolean cacheHit = new AtomicBoolean(true);
             connectionDurationCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Duration>> r = new CompletableFuture<>();
-                TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                cacheHit.set(false);
                 final Instant nowUtc = Instant.now(clock);
                 final Duration allowedMaxMinutes = Duration.ofMinutes(calculateEffectiveLimit(
                                 effectiveSince,
@@ -455,6 +461,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 return r;
             })
             .whenComplete((value, error) -> {
+                TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
                 if (error != null) {
                     TracingHelper.logError(span, error);
                     result.complete(Boolean.FALSE);
