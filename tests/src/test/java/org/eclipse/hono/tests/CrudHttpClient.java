@@ -485,6 +485,28 @@ public final class CrudHttpClient {
     }
 
     /**
+     * Retrieves a resource representation using a HTTP GET request.
+     *
+     * @param uri The resource to retrieve.
+     * @param queryParams The query parameters for the request.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> get(
+            final String uri,
+            final MultiMap queryParams,
+            final ResponsePredicate ... successPredicates) {
+
+        Objects.requireNonNull(uri);
+        return get(createRequestOptions().setURI(uri), queryParams, successPredicates);
+    }
+
+    /**
      * Retrieves a resource representation using an HTTP GET request.
      *
      * @param requestOptions The options to use for the request.
@@ -494,9 +516,31 @@ public final class CrudHttpClient {
      *         HTTP response if all checks on the response have succeeded.
      *         Otherwise the future will be failed with the error produced by the first failing
      *         predicate.
+     */
+    public Future<HttpResponse<Buffer>> get(
+            final RequestOptions requestOptions,
+            final ResponsePredicate... successPredicates) {
+
+        return get(requestOptions, null, successPredicates);
+    }
+
+    /**
+     * Retrieves a resource representation using a HTTP GET request.
+     *
+     * @param requestOptions The options to use for the request.
+     * @param queryParams The query parameters for the request.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
      * @throws NullPointerException if options is {@code null}.
      */
-    public Future<HttpResponse<Buffer>> get(final RequestOptions requestOptions, final ResponsePredicate ... successPredicates) {
+    public Future<HttpResponse<Buffer>> get(
+            final RequestOptions requestOptions,
+            final MultiMap queryParams,
+            final ResponsePredicate... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 
@@ -505,6 +549,8 @@ public final class CrudHttpClient {
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.GET, requestOptions);
             addResponsePredicates(req, successPredicates);
+            Optional.ofNullable(queryParams)
+                    .ifPresent(params -> req.queryParams().addAll(queryParams));
             req.send(result);
         });
 
