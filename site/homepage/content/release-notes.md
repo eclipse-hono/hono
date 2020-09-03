@@ -18,6 +18,12 @@ title = "Release Notes"
 * The CoAP adapter now supports configuration of the *timeoutToAck* parameter at the tenant level
   in addition to the adapter level. If set, the tenant specific value is used for all devices of the
   particular tenant. If not set, the value defined at the adapter level is used.
+* The Device Registry Management API has been extended now to support searching devices for a tenant
+  with optional filters, paging and sorting options.
+  Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
+  for details. 
+* The MongoDB based device registry now supports searching devices for a tenant with optional filters,
+  paging and sorting options.
 
 ### Fixes & Enhancements
 
