@@ -91,8 +91,10 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        assertThat(s.getPayload()).hasSize(1);
-                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice1");
+
+                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        assertThat(searchResult.getTotal()).isEqualTo(1);
+                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
                                     });
                                     ctx.completeNow();
                                 })));
@@ -121,8 +123,11 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        assertThat(s.getPayload()).hasSize(1);
-                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice1");
+
+                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        assertThat(searchResult.getTotal()).isEqualTo(1);
+                                        assertThat(searchResult.getResult()).hasSize(1);
+                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
                                     });
                                     ctx.completeNow();
                                 })));
@@ -150,7 +155,8 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        assertThat(s.getPayload()).hasSize(1);
+                                        assertThat(s.getPayload().getTotal()).isEqualTo(2);
+                                        assertThat(s.getPayload().getResult()).hasSize(1);
                                     });
                                     ctx.completeNow();
                                 })));
@@ -181,8 +187,11 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        assertThat(s.getPayload()).hasSize(1);
-                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice1");
+
+                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        assertThat(searchResult.getTotal()).isEqualTo(2);
+                                        assertThat(searchResult.getResult()).hasSize(1);
+                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
                                     });
                                     ctx.completeNow();
                                 })));
@@ -212,8 +221,11 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                 .onComplete(ctx.succeeding(s -> {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        assertThat(s.getPayload()).hasSize(1);
-                                        assertThat(s.getPayload().get(0).getId()).isEqualTo("testDevice2");
+
+                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        assertThat(searchResult.getTotal()).isEqualTo(2);
+                                        assertThat(searchResult.getResult()).hasSize(1);
+                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice2");
                                     });
                                     ctx.completeNow();
                                 })));

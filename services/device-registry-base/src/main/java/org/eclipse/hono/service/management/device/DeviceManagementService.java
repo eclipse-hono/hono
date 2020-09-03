@@ -94,7 +94,7 @@ public interface DeviceManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
      *      Management API - Search Devices</a>
      */
-    default Future<OperationResult<List<DeviceWithId>>> searchDevices(
+    default Future<OperationResult<SearchDevicesResult>> searchDevices(
             final String tenantId,
             final int pageSize,
             final int pageOffset,

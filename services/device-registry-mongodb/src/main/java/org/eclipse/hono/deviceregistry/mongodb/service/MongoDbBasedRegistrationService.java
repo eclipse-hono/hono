@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,6 +37,7 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.device.Filter;
+import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -71,6 +73,9 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     private static final String PROPERTY_DEVICE_MEMBER_OF = String.format("%s.%s",
             MongoDbDeviceRegistryUtils.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
+    private static final String FIELD_SEARCH_DEVICES_COUNT = "count";
+    private static final String FIELD_SEARCH_DEVICES_TOTAL_COUNT = String.format("$%s.%s",
+            RegistryManagementConstants.FIELD_RESULT_SET_SIZE, FIELD_SEARCH_DEVICES_COUNT);
 
     private final MongoClient mongoClient;
     private final MongoDbBasedRegistrationConfigProperties config;
@@ -153,7 +158,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Future<OperationResult<List<DeviceWithId>>> searchDevices(
+    public Future<OperationResult<SearchDevicesResult>> searchDevices(
             final String tenantId,
             final int pageSize,
             final int pageOffset,
@@ -354,53 +359,96 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 });
     }
 
-    private Future<OperationResult<List<DeviceWithId>>> processSearchDevices(
+    private Future<OperationResult<SearchDevicesResult>> processSearchDevices(
             final String tenantId,
             final int pageSize,
             final int pageOffset,
             final List<Filter> filters,
             final List<Sort> sortOptions) {
 
-        final FindOptions searchDevicesOptions = new FindOptions()
-                .setLimit(pageSize)
-                .setSkip(pageOffset);
-        final JsonObject searchDevicesQuery = MongoDbDocumentBuilder.builder()
-                .withTenantId(tenantId)
-                .withDeviceFilters(filters)
-                .document();
-        final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
-                .withDeviceSortOptions(sortOptions)
-                .document();
-        final Promise<List<JsonObject>> searchDevicesPromise = Promise.promise();
+        final Promise<JsonObject> searchDevicesPromise = Promise.promise();
+        final JsonArray searchDevicesAggregatePipelineQuery = getSearchDevicesAggregatePipelineQuery(tenantId,
+                pageSize, pageOffset, filters, sortOptions);
 
-        searchDevicesOptions.setSort(sortDocument);
         if (LOG.isTraceEnabled()) {
-            LOG.trace("pageSize: [{}], pageOffset: [{}], searchDevicesQuery: [{}], sortOptions: [{}]", pageSize,
-                    pageOffset, searchDevicesQuery.encodePrettily(), sortDocument.encodePrettily());
+            LOG.trace("search devices aggregate pipeline query: [{}]",
+                    searchDevicesAggregatePipelineQuery.encodePrettily());
         }
-        mongoClient.findWithOptions(
-                config.getCollectionName(),
-                searchDevicesQuery,
-                searchDevicesOptions,
-                searchDevicesPromise);
+        mongoClient.aggregate(config.getCollectionName(), searchDevicesAggregatePipelineQuery)
+                .exceptionHandler(searchDevicesPromise::fail)
+                .handler(searchDevicesPromise::complete);
 
         return searchDevicesPromise.future()
                 .map(result -> {
-                    final List<DeviceWithId> devicesWithId = Optional.ofNullable(result)
-                            .map(devices -> devices.stream()
-                                    .map(json -> json.mapTo(DeviceDto.class))
-                                    .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getDevice()))
-                                    .collect(Collectors.toList()))
-                            .map(devices -> devices.isEmpty() ? null : devices)
+                    // if no devices are found then return 404, else the result
+                    final Integer total = Optional
+                            .ofNullable(
+                                    result.getInteger(RegistryManagementConstants.FIELD_RESULT_SET_SIZE))
+                            .filter(value -> value > 0)
                             .orElseThrow(() -> new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
 
                     return OperationResult.ok(
                             HttpURLConnection.HTTP_OK,
-                            devicesWithId,
+                            new SearchDevicesResult(total, getDevicesWithId(result)),
                             Optional.ofNullable(
                                     DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                             Optional.empty());
                 });
+    }
+
+    private static List<DeviceWithId> getDevicesWithId(final JsonObject searchDevicesResult) {
+
+        return Optional
+                .ofNullable(
+                        searchDevicesResult.getJsonArray(RegistryManagementConstants.FIELD_RESULT_SET_PAGE))
+                .map(devices -> devices.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .map(json -> json.mapTo(DeviceDto.class))
+                        .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getDevice()))
+                        .collect(Collectors.toList()))
+                .orElse(new ArrayList<>());
+    }
+
+    private static JsonArray getSearchDevicesAggregatePipelineQuery(final String tenantId, final int pageSize,
+            final int pageOffset, final List<Filter> filters, final List<Sort> sortOptions) {
+        final JsonArray searchDevicesAggregationPipeline = new JsonArray();
+
+        // match documents based on the provided filters
+        if (!filters.isEmpty()) {
+            final JsonObject matchDocument = MongoDbDocumentBuilder.builder()
+                    .withTenantId(tenantId)
+                    .withDeviceFilters(filters)
+                    .document();
+            searchDevicesAggregationPipeline.add(new JsonObject().put("$match", matchDocument));
+        }
+
+        // sort documents based on the provided sort options
+        if (!sortOptions.isEmpty()) {
+            final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
+                    .withDeviceSortOptions(sortOptions)
+                    .document();
+            searchDevicesAggregationPipeline.add(new JsonObject().put("$sort", sortDocument));
+        }
+
+        // count all matched documents, skip and limit results using facet
+        final JsonObject facetDocument = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_RESULT_SET_SIZE,
+                        new JsonArray().add(new JsonObject().put("$count", FIELD_SEARCH_DEVICES_COUNT)))
+                .put(RegistryManagementConstants.FIELD_RESULT_SET_PAGE,
+                        new JsonArray().add(new JsonObject().put("$skip", pageOffset * pageSize))
+                                .add(new JsonObject().put("$limit", pageSize)));
+        searchDevicesAggregationPipeline.add(new JsonObject().put("$facet", facetDocument));
+
+        // project the required fields for the search devices result
+        final JsonObject projectDocument = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_RESULT_SET_SIZE,
+                        new JsonObject().put("$arrayElemAt",
+                                new JsonArray().add(FIELD_SEARCH_DEVICES_TOTAL_COUNT).add(0)))
+                .put(RegistryManagementConstants.FIELD_RESULT_SET_PAGE, 1);
+        searchDevicesAggregationPipeline.add(new JsonObject().put("$project", projectDocument));
+
+        return searchDevicesAggregationPipeline;
     }
 
     private Future<OperationResult<Id>> processUpdateDevice(
