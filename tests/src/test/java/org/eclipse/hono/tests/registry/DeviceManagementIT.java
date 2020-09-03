@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -46,7 +47,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -484,8 +484,13 @@ public class DeviceManagementIT {
                             List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonArray response = httpResponse.bodyAsJsonArray();
-                            assertThat(response.size()).isEqualTo(1);
+                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
+                            assertThat(searchDevicesResultJson).isNotNull();
+
+                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
+                                    .mapTo(SearchDevicesResult.class);
+                            assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                            assertThat(searchDevicesResult.getResult()).hasSize(1);
                         });
                         ctx.completeNow();
                     })));
@@ -528,11 +533,14 @@ public class DeviceManagementIT {
                             List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonArray response = httpResponse.bodyAsJsonArray();
-                            assertThat(response.size()).isEqualTo(1);
+                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
+                            assertThat(searchDevicesResultJson).isNotNull();
 
-                            final JsonObject deviceObject = response.getJsonObject(0);
-                            assertThat(deviceObject.getString("id")).isEqualTo(deviceId1);
+                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
+                                    .mapTo(SearchDevicesResult.class);
+                            assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                            assertThat(searchDevicesResult.getResult()).hasSize(1);
+                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
                         });
                         ctx.completeNow();
                     }));
@@ -576,11 +584,14 @@ public class DeviceManagementIT {
                             List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonArray response = httpResponse.bodyAsJsonArray();
-                            assertThat(response.size()).isEqualTo(1);
+                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
+                            assertThat(searchDevicesResultJson).isNotNull();
 
-                            final JsonObject deviceObject = response.getJsonObject(0);
-                            assertThat(deviceObject.getString("id")).isEqualTo(deviceId1);
+                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
+                                    .mapTo(SearchDevicesResult.class);
+                            assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
+                            assertThat(searchDevicesResult.getResult()).hasSize(1);
+                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
                         });
                         ctx.completeNow();
                     }));
@@ -620,14 +631,15 @@ public class DeviceManagementIT {
                             List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonArray response = httpResponse.bodyAsJsonArray();
-                            assertThat(response.size()).isEqualTo(2);
+                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
+                            assertThat(searchDevicesResultJson).isNotNull();
 
-                            final JsonObject deviceObject1 = response.getJsonObject(0);
-                            assertThat(deviceObject1.getString("id")).isEqualTo(deviceId2);
-
-                            final JsonObject deviceObject2 = response.getJsonObject(1);
-                            assertThat(deviceObject2.getString("id")).isEqualTo(deviceId1);
+                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
+                                    .mapTo(SearchDevicesResult.class);
+                            assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                            assertThat(searchDevicesResult.getResult()).hasSize(2);
+                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                            assertThat(searchDevicesResult.getResult().get(1).getId()).isEqualTo(deviceId1);
                         });
                         ctx.completeNow();
                     }));
