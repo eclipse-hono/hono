@@ -39,8 +39,8 @@ public final class SearchDevicesResult {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public SearchDevicesResult(
-            @JsonProperty(value = RegistryManagementConstants.FIELD_SEARCH_DEVICES_RESULT_TOTAL) final int total,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_SEARCH_DEVICES_RESULT) final List<DeviceWithId> result) {
+            @JsonProperty(value = RegistryManagementConstants.FIELD_RESULT_SET_SIZE) final int total,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_RESULT_SET_PAGE) final List<DeviceWithId> result) {
         this.total = total;
         this.result = Objects.requireNonNull(result);
     }

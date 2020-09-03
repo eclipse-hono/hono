@@ -126,7 +126,7 @@ public abstract class AbstractDeviceManagementSearchDevicesTest {
 
                                         final SearchDevicesResult searchResult = s.getPayload();
                                         assertThat(searchResult.getTotal()).isEqualTo(1);
-                                        assertThat(s.getPayload().getResult()).hasSize(1);
+                                        assertThat(searchResult.getResult()).hasSize(1);
                                         assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
                                     });
                                     ctx.completeNow();
