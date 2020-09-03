@@ -484,11 +484,8 @@ public class DeviceManagementIT {
                             List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
-                            assertThat(searchDevicesResultJson).isNotNull();
-
-                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
-                                    .mapTo(SearchDevicesResult.class);
+                            final SearchDevicesResult searchDevicesResult = httpResponse
+                                    .bodyAsJson(SearchDevicesResult.class);
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                         });
@@ -533,11 +530,8 @@ public class DeviceManagementIT {
                             List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
-                            assertThat(searchDevicesResultJson).isNotNull();
-
-                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
-                                    .mapTo(SearchDevicesResult.class);
+                            final SearchDevicesResult searchDevicesResult = httpResponse
+                                    .bodyAsJson(SearchDevicesResult.class);
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
@@ -584,11 +578,8 @@ public class DeviceManagementIT {
                             List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
-                            assertThat(searchDevicesResultJson).isNotNull();
-
-                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
-                                    .mapTo(SearchDevicesResult.class);
+                            final SearchDevicesResult searchDevicesResult = httpResponse
+                                    .bodyAsJson(SearchDevicesResult.class);
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
@@ -631,11 +622,8 @@ public class DeviceManagementIT {
                             List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final JsonObject searchDevicesResultJson = httpResponse.bodyAsJsonObject();
-                            assertThat(searchDevicesResultJson).isNotNull();
-
-                            final SearchDevicesResult searchDevicesResult = searchDevicesResultJson
-                                    .mapTo(SearchDevicesResult.class);
+                            final SearchDevicesResult searchDevicesResult = httpResponse
+                                    .bodyAsJson(SearchDevicesResult.class);
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
                             assertThat(searchDevicesResult.getResult()).hasSize(2);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
