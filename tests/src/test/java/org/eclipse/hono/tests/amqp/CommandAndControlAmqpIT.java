@@ -38,7 +38,6 @@ import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.BufferResult;
@@ -81,7 +80,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     private String tenantId;
     private String deviceId;
     private final String password = "secret";
-    private final Tenant tenant = new Tenant();
 
     static Stream<AmqpCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
