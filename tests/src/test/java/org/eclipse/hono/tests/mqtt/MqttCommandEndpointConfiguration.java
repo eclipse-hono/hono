@@ -108,6 +108,9 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
 
 
         switch (getSubscriberRole()) {
+        case UNAUTHENTICATED_DEVICE:
+            // TODO: anything to assert in this case?
+            break;
         case DEVICE:
             assertThat(topic.getResourceId())
             .as("command topic does not contain device ID")
