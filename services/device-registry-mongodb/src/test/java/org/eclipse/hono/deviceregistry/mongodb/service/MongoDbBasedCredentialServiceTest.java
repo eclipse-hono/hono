@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -79,7 +80,8 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                registrationServiceConfig);
+                registrationServiceConfig,
+                new NoopTenantInformationService());
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
         credentialsService.start().onSuccess(ok -> started.flag());
         registrationService.start().onSuccess(ok -> started.flag());

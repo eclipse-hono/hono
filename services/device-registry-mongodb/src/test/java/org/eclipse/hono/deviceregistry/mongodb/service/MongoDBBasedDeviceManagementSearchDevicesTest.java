@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.management.device.AbstractDeviceManagementSearchDevicesTest;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.junit.jupiter.api.AfterAll;
@@ -63,7 +64,8 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                config);
+                config,
+                new NoopTenantInformationService());
         registrationService.start().onComplete(testContext.completing());
     }
 

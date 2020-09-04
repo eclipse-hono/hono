@@ -31,6 +31,7 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationS
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -296,7 +297,8 @@ public class ApplicationConfig {
         return new MongoDbBasedRegistrationService(
                 vertx(),
                 mongoClient(),
-                registrationServiceProperties());
+                registrationServiceProperties(),
+                tenantInformationService());
     }
 
     /**
@@ -328,6 +330,17 @@ public class ApplicationConfig {
                 mongoClient(),
                 tenantsServiceProperties()
         );
+    }
+
+    /**
+     * Exposes the autowired tenant information service as a Spring bean.
+     *
+     * @return The MongoDB tenant service.
+     */
+    @Bean
+    @Scope("prototype")
+    public AutowiredTenantInformationService tenantInformationService() {
+        return new AutowiredTenantInformationService();
     }
 
     /**
