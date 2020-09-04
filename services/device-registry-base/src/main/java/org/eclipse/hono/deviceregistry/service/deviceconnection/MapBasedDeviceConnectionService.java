@@ -185,7 +185,7 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
         final ExpiringValue<JsonObject> adapterInstanceIdJsonHolder = adapterInstancesForTenantMap.get(deviceId);
         final Promise<DeviceConnectionResult> result = Promise.promise();
         if (adapterInstanceIdJsonHolder == null) {
-            result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+            result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED));
         } else {
             // remove entry only if existing value contains matching adapterInstanceId
             final boolean removed = adapterInstanceId.equals(getAdapterInstanceIdFromJson(adapterInstanceIdJsonHolder.getValue()))

@@ -241,7 +241,7 @@ public class MapBasedDeviceConnectionServiceTest {
         svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "non-existing", "adapterInstance", span)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                         assertNull(result.getPayload());
                     });
                     ctx.completeNow();
@@ -301,7 +301,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     return instancesPromise.future();
                 }).onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                         assertNull(result.getPayload());
                     });
                     ctx.completeNow();
