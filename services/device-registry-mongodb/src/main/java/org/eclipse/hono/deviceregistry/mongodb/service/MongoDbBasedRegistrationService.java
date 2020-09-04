@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
@@ -221,15 +222,12 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);
 
-        return tenantExists(deviceKey.getTenantId(), span)
-                .compose(ok -> findDeviceDocument(deviceKey.getTenantId(), deviceKey.getDeviceId()))
+        return findDeviceDocument(deviceKey.getTenantId(), deviceKey.getDeviceId())
                 .map(result -> Optional.ofNullable(result)
                         .map(ok -> getRegistrationResult(
                                 deviceKey.getDeviceId(),
                                 result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)))
-                        .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span))
-                        .map(result -> RegistrationResult.from(result.getStatus())));
+                        .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
     @Override
@@ -239,8 +237,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(span);
 
-        return tenantExists(tenantId, span)
-                .compose(ok -> processResolveGroupMembers(tenantId, viaGroups, span));
+        return processResolveGroupMembers(tenantId, viaGroups, span);
     }
 
     private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
@@ -525,8 +522,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     private Future<Void> tenantExists(final String tenantId, final Span span) {
 
         return tenantInformationService.tenantExists(tenantId, span)
-                .compose(result -> result.isError()
-                        ? Future.failedFuture(new ClientErrorException(result.getStatus()))
-                        : Future.succeededFuture());
+                .compose(result -> result.isOk() ? Future.succeededFuture()
+                        : Future.failedFuture(StatusCodeMapper.from(result.getStatus(), null)));
+
     }
 }
