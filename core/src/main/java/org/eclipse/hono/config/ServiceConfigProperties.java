@@ -25,6 +25,11 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 public class ServiceConfigProperties extends ServerConfig {
 
     /**
+     * The default maximum payload size for messages uploaded by devices.
+     */
+    public static final int DEFAULT_MAX_PAYLOAD_SIZE = 2048;
+
+    /**
      * The default number of credits to flow to a client.
      */
     public static final int DEFAULT_RECEIVER_LINK_CREDITS = 100;
@@ -46,7 +51,7 @@ public class ServiceConfigProperties extends ServerConfig {
     private boolean singleTenant = false;
     private boolean networkDebugLoggingEnabled = false;
     private boolean waitForDownstreamConnectionEnabled = false;
-    private int maxPayloadSize = 2048;
+    private int maxPayloadSize = DEFAULT_MAX_PAYLOAD_SIZE;
     private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
     private String corsAllowedOrigin = "*";
     private long sendTimeOut = DEFAULT_SEND_TIMEOUT_IN_MS;
@@ -56,7 +61,7 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Sets the maximum size of a message payload this server accepts from clients.
      * <p>
-     * The default value of this property is 2048 (bytes).
+     * The default value of this property is {@value #DEFAULT_MAX_PAYLOAD_SIZE} bytes.
      *
      * @param bytes The maximum number of bytes.
      * @throws IllegalArgumentException if bytes is &lt; 128.
@@ -71,7 +76,7 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Gets the maximum size of a message payload this server accepts from clients.
      * <p>
-     * The default value of this property is 2048 (bytes).
+     * The default value of this property is {@value #DEFAULT_MAX_PAYLOAD_SIZE} bytes.
      *
      * @return The maximum number of bytes.
      */

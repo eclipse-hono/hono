@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -152,11 +153,16 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final VertxTestContext setup = new VertxTestContext();
 
         setupProtocolAdapter(tenantId, deviceId, false)
-        .map(s -> {
-            sender = s;
-            return s;
-        })
-        .onComplete(setup.completing());
+            .map(s -> {
+                setup.verify(() -> {
+                    final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
+                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
+                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                });
+                sender = s;
+                return s;
+            })
+            .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -196,17 +202,17 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final Tenant tenant = new Tenant();
         helper.registry
-        .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
-        // connect and create sender (with a valid target address)
-        .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
-        .compose(con -> {
-            this.connection = con;
-            return createProducer(targetAddress);
-        })
-        .onComplete(context.failing(t -> {
-            log.info("failed to open sender", t);
-            context.completeNow();
-        }));
+            .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
+            // connect and create sender (with a valid target address)
+            .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
+            .compose(con -> {
+                this.connection = con;
+                return createProducer(targetAddress);
+            })
+            .onComplete(context.failing(t -> {
+                log.info("failed to open sender", t);
+                context.completeNow();
+            }));
     }
 
     /**
@@ -225,15 +231,20 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         setupProtocolAdapter(tenantId, deviceId, false)
-        .onComplete(setup.succeeding(s -> {
-            sender = s;
-            setup.completeNow();
-        }));
+            .onComplete(setup.succeeding(s -> {
+                setup.verify(() -> {
+                    final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
+                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
+                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                });
+                sender = s;
+                setup.completeNow();
+            }));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(setup.failed())
-        .as("successfully connect to adapter")
-        .isFalse();
+            .as("successfully connect to adapter")
+            .isFalse();
 
         testUploadMessages(tenantId, senderQos);
     }
@@ -257,21 +268,26 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final VertxTestContext setup = new VertxTestContext();
 
         helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            final var tenant = Tenants.createTenantForTrustAnchor(cert);
-            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        })
-        .compose(ok -> connectToAdapter(deviceCert))
-        .compose(con -> createProducer(null))
-        .onComplete(setup.succeeding(s -> {
-            sender = s;
-            setup.completeNow();
-        }));
+            .compose(cert -> {
+                final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+            })
+            .compose(ok -> connectToAdapter(deviceCert))
+            .compose(con -> createProducer(null))
+            .onComplete(setup.succeeding(s -> {
+                setup.verify(() -> {
+                    final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
+                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
+                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                });
+                sender = s;
+                setup.completeNow();
+            }));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(setup.failed())
-        .as("successfully connect to adapter")
-        .isFalse();
+            .as("successfully connect to adapter")
+            .isFalse();
 
         testUploadMessages(tenantId, senderQos);
     }
