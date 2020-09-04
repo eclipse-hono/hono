@@ -32,6 +32,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
@@ -55,6 +56,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -700,13 +702,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
         })
         .map(proceed -> {
+            // downstream message sent and (if ttd was set) command was received or ttd has timed out
+            final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
+                    ? commandConsumerTracker.result().close(currentSpan.context())
+                    : Future.succeededFuture();
 
             if (ctx.response().closed()) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
                         endpoint, tenant, deviceId);
                 TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
-                currentSpan.finish();
-                ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
+                commandConsumerClosedTracker.onComplete(res -> {
+                    currentSpan.finish();
+                    ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
+                });
             } else {
                 final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                 setResponsePayload(ctx.response(), commandContext, currentSpan);
@@ -733,19 +741,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             payloadSize,
                             ctx.getTtdStatus(),
                             getMicrometerSample(ctx.getRoutingContext()));
-                    // Before Hono 1.2, closing the consumer needed to be done AFTER having accepted a command (consumer used for single request only);
-                    // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
-                    Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
-                            consumer -> consumer.close(currentSpan.context())
-                                    .onComplete(res -> currentSpan.finish()),
-                            currentSpan::finish);
+                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
                 });
                 ctx.response().exceptionHandler(t -> {
                     log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId, t);
                     if (commandContext != null) {
-                        commandContext.getTracingSpan().log("failed to forward command to device in HTTP response body");
-                        TracingHelper.logError(commandContext.getTracingSpan(), t);
+                        TracingHelper.logError(commandContext.getTracingSpan(),
+                                "failed to forward command to device in HTTP response body", t);
                         commandContext.release();
                         metrics.reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -757,12 +760,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }
                     currentSpan.log("failed to send HTTP response to device");
                     TracingHelper.logError(currentSpan, t);
-                    // Before Hono 1.2, closing the consumer needed to be done AFTER having released a command (consumer used for single request only);
-                    // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
-                    Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
-                            consumer -> consumer.close(currentSpan.context())
-                                    .onComplete(res -> currentSpan.finish()),
-                            currentSpan::finish);
+                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
                 });
                 ctx.response().end();
             }
@@ -775,9 +773,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             log.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                     endpoint, tenant, deviceId, t);
             final boolean responseClosedPrematurely = ctx.response().closed();
+            final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
+                    ? commandConsumerTracker.result().close(currentSpan.context())
+                    : Future.succeededFuture();
             final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
             if (commandContext != null) {
+                TracingHelper.logError(commandContext.getTracingSpan(),
+                        "command won't be forwarded to device in HTTP response body, HTTP request handling failed", t);
                 commandContext.release();
+                currentSpan.log("released command for device");
             }
             final ProcessingOutcome outcome;
             if (ClientErrorException.class.isInstance(t)) {
@@ -802,12 +806,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     ctx.getTtdStatus(),
                     getMicrometerSample(ctx.getRoutingContext()));
             TracingHelper.logError(currentSpan, t);
-            // Before Hono 1.2, closing the consumer needed to be done AFTER having released a command (consumer used for single request only);
-            // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
-            Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
-                    consumer -> consumer.close(currentSpan.context())
-                            .onComplete(res -> currentSpan.finish()),
-                    currentSpan::finish);
+            commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
             return Future.failedFuture(t);
         });
     }
@@ -940,7 +939,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *              completed or</li>
      *              <li>the ttd has expired</li>
      *              </ul>
-     * @param currentSpan The OpenTracing Span to use for tracking the processing
+     * @param uploadMessageSpan The OpenTracing Span used for tracking the processing
      *                       of the request.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -958,13 +957,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String gatewayId,
             final RoutingContext ctx,
             final Handler<AsyncResult<Void>> responseReady,
-            final Span currentSpan) {
+            final Span uploadMessageSpan) {
 
         Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(responseReady);
-        Objects.requireNonNull(currentSpan);
+        Objects.requireNonNull(uploadMessageSpan);
 
         final AtomicBoolean requestProcessed = new AtomicBoolean(false);
 
@@ -975,17 +974,26 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
             return Future.succeededFuture();
         }
+        uploadMessageSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
 
-        currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
+        final Span waitForCommandSpan = TracingHelper
+                .buildChildSpan(tracer, uploadMessageSpan.context(),
+                        "wait for command", getTypeName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                .start();
+
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
             final Command command = commandContext.getCommand();
+            CommandConsumer.logReceivedCommandToSpan(command, waitForCommandSpan);
             final Sample commandSample = getMetrics().startTimer();
-            if (isCommandValid(command, currentSpan)) {
+            if (isCommandValid(command, waitForCommandSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
-                    checkMessageLimit(tenantObject, command.getPayloadSize(), currentSpan.context())
+                    checkMessageLimit(tenantObject, command.getPayloadSize(), waitForCommandSpan.context())
                     .onComplete(result -> {
                         if (result.succeeded()) {
                             addMicrometerSample(commandContext, commandSample);
@@ -993,6 +1001,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                         } else {
                             commandContext.reject(getErrorCondition(result.cause()));
+                            TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
                             metrics.reportCommand(
                                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                     tenantObject.getTenantId(),
@@ -1006,7 +1015,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         responseReady.handle(Future.succeededFuture());
                     });
                 } else {
-                    // the timer has already fired, release the command
+                    log.debug("waiting time for command has elapsed or another command has already been processed [tenantId: {}, deviceId: {}]",
+                            tenantObject.getTenantId(), deviceId);
                     getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenantObject.getTenantId(),
@@ -1014,8 +1024,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    log.debug("command for device has already fired [tenantId: {}, deviceId: {}]",
-                            tenantObject.getTenantId(), deviceId);
+                    TracingHelper.logError(commandContext.getTracingSpan(),
+                            "waiting time for command has elapsed or another command has already been processed");
                     commandContext.release();
                 }
 
@@ -1030,9 +1040,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 log.debug("command message is invalid: {}", command);
                 commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
             }
-            // we do not issue any new credit because the
-            // consumer is supposed to deliver a single command
-            // only per HTTP request
         };
 
         final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
@@ -1044,22 +1051,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     gatewayId,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
-                    currentSpan.context());
+                    waitForCommandSpan.context());
         } else {
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
-                    currentSpan.context());
+                    waitForCommandSpan.context());
         }
         return commandConsumerFuture
                 .map(consumer -> {
                     if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
-                        addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs);
+                        addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
                     }
-                    return consumer;
+                    // wrap the consumer so that when it is closed, the waitForCommandSpan will be finished as well
+                    return new ProtocolAdapterCommandConsumer() {
+                        @Override
+                        public Future<Void> close(final SpanContext ignored) {
+                            return consumer.close(waitForCommandSpan.context()).onComplete(ar -> waitForCommandSpan.finish());
+                        }
+                    };
                 });
     }
 
@@ -1087,12 +1100,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param ctx The device's currently executing HTTP request.
      * @param responseReady The future to complete when the time has expired.
      * @param delaySecs The number of seconds to wait for a command.
+     * @param waitForCommandSpan The span tracking the command reception.
      */
     private void addCommandReceptionTimer(
             final RoutingContext ctx,
             final AtomicBoolean requestProcessed,
             final Handler<AsyncResult<Void>> responseReady,
-            final long delaySecs) {
+            final long delaySecs,
+            final Span waitForCommandSpan) {
 
         final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
@@ -1102,6 +1117,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 // no command to be sent,
                 // send empty response
                 setTtdStatus(ctx, TtdStatus.EXPIRED);
+                waitForCommandSpan.log(String.format("time to wait for command expired (%ds)", delaySecs));
                 responseReady.handle(Future.succeededFuture());
             } else {
                 // a command has been sent to the device already
