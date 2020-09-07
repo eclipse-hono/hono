@@ -20,20 +20,19 @@
     <relativePath>../base-quarkus</relativePath>
     <version>1.5.0-SNAPSHOT</version>
   </parent>
-  <artifactId>hono-adapter-http-vertx-quarkus</artifactId>
-  <name>Hono HTTP Adapter</name>
+  <artifactId>hono-adapter-mqtt-vertx-quarkus</artifactId>
+  <name>Hono MQTT Adapter</name>
 
-  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP.</description>
+  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via MQTT.</description>
   <url>https://www.eclipse.org/hono</url>
 
-
-    <dependencies>
-        <dependency>
-          <groupId>org.eclipse.hono</groupId>
-          <artifactId>hono-adapter-http-vertx-base</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-    </dependencies>
+  <dependencies>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-adapter-mqtt-vertx-base</artifactId>
+        <version>${project.version}</version>
+        <scope>compile</scope>
+      </dependency>
+  </dependencies>
 
 </project>
