@@ -1,0 +1,95 @@
+
+create: |
+   INSERT INTO %s (
+      tenant_id,
+      version,
+      data
+   ) VALUES (
+      :tenant_id,
+      :version,
+      :data
+   )
+
+read: |
+   SELECT
+      tenant_id,
+      version,
+      data
+   FROM
+      %s
+   WHERE
+      tenant_id=:tenant_id
+
+readByTrustAnchor: |
+   SELECT
+      T.tenant_id as TENANT_ID,
+      T.version as VERSION,
+      T.data as DATA,
+   FROM
+      %1$s as T
+   INNER JOIN
+      %2$s as TA
+   ON
+      T.tenant_id=TA.tenant_id
+   WHERE
+      TA.subject_dn=:subject_dn
+
+readTrustAnchors: |
+   SELECT
+      tenant_id,
+      subject_dn,
+      data
+   FROM
+      %2$s
+   WHERE
+      tenant_id=:tenant_id
+
+delete: |
+   DELETE FROM
+      %s
+   WHERE
+      tenant_id=:tenant_id
+
+deleteVersioned: |
+   DELETE FROM
+      %s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      version=:expected_version
+
+insertTrustAnchor: |
+   INSERT INTO %2$s (
+      tenant_id,
+      subject_dn,
+      data
+   ) VALUES (
+      :tenant_id,
+      :subject_dn,
+      :data
+   )
+
+deleteAllTrustAnchors: |
+   DELETE FROM
+      %2$s
+   WHERE
+      tenant_id=:tenant_id
+
+update: |
+   UPDATE %s
+   SET
+      data=:data,
+      version=:next_version
+   WHERE
+      tenant_id=:tenant_id
+
+updateVersioned: |
+   UPDATE %s
+   SET
+      data=:data,
+      version=:next_version
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      version=:expected_version
+

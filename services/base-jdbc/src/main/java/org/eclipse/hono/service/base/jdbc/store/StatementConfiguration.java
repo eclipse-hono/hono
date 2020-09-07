@@ -35,6 +35,7 @@ import org.yaml.snakeyaml.constructor.Constructor;
 public class StatementConfiguration {
 
     public static final Path DEFAULT_PATH = Paths.get("/etc/config/sql");
+    private static final boolean SKIP_DUMPING_CONFIG = Boolean.getBoolean("org.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration");
 
     private static final Logger log = LoggerFactory.getLogger(StatementConfiguration.class);
 
@@ -201,9 +202,9 @@ public class StatementConfiguration {
 
             final Path overridePath = path.resolve(basename + ".sql.yaml");
 
-            log.debug("Loading - class: {}, name: {}, input: {}", clazz, base, resource);
-            log.debug("Loading - class: {}, name: {}, input: {}", clazz, dialected, dialectResource);
-            log.debug("Loading - path: {}", overridePath);
+            log.info("Loading - class: {}, name: {}, input: {}", clazz, base, resource);
+            log.info("Loading - class: {}, name: {}, input: {}", clazz, dialected, dialectResource);
+            log.info("Loading - path: {}", overridePath);
 
             return this
                     .overrideWith(resource, false)
@@ -220,6 +221,9 @@ public class StatementConfiguration {
      */
     public void dump(final Logger logger) {
 
+        if (SKIP_DUMPING_CONFIG) {
+            return;
+        }
         if (!logger.isInfoEnabled()) {
             return;
         }

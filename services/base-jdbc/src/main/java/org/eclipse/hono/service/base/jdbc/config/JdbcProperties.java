@@ -88,7 +88,7 @@ public class JdbcProperties {
      * @param dataSourceProperties The properties.
      * @return The new SQL client.
      */
-    public static SQLClient dataSource(final Vertx vertx, final JdbcProperties dataSourceProperties) {
+    public static JDBCClient dataSource(final Vertx vertx, final JdbcProperties dataSourceProperties) {
 
         final JsonObject config = new JsonObject()
                 .put("url", dataSourceProperties.getUrl())
@@ -112,7 +112,7 @@ public class JdbcProperties {
 
         // create new client
 
-        return JDBCClient.createShared(vertx, config);
+        return JDBCClient.create(vertx, config);
 
     }
 

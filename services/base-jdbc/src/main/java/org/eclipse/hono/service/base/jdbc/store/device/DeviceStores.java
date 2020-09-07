@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Function;
 
-import org.eclipse.hono.service.base.jdbc.config.JdbcDeviceProperties;
+import org.eclipse.hono.service.base.jdbc.config.JdbcDeviceStoreProperties;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
 
 import io.opentracing.Tracer;
@@ -36,7 +36,7 @@ public final class DeviceStores {
      *
      * @return A new instance for an adapter store.
      */
-    public static StoreFactory<AbstractDeviceAdapterStore> adapterStoreFactory() {
+    public static StoreFactory<TableAdapterStore> adapterStoreFactory() {
         return AdapterStoreFactory.INSTANCE;
     }
 
@@ -45,7 +45,7 @@ public final class DeviceStores {
      *
      * @return A new instance for an management store.
      */
-    public static StoreFactory<AbstractDeviceManagementStore> managementStoreFactory() {
+    public static StoreFactory<TableManagementStore> managementStoreFactory() {
         return ManagementStoreFactory.INSTANCE;
     }
 
@@ -56,19 +56,6 @@ public final class DeviceStores {
      */
     public interface StoreFactory<T extends AbstractDeviceStore> {
         /**
-         * Create a new JSON store.
-         *
-         * @param vertx The vertx instance to use.
-         * @param tracer The tracer to use.
-         * @param properties The configuration properties.
-         * @param hierarchical If the JSON store uses a hierarchical model for a flat one.
-         * @return The new store.
-         *
-         * @throws IOException if any IO error occurs when reading the SQL statement configuration.
-         */
-        T createJson(Vertx vertx, Tracer tracer, JdbcProperties properties, boolean hierarchical) throws IOException;
-
-        /**
          * Create a new flat table store.
          *
          * @param vertx The vertx instance to use.
@@ -76,63 +63,66 @@ public final class DeviceStores {
          * @param properties The configuration properties.
          * @param credentials An optional table name for the credentials table.
          * @param registrations An optional table name for the registrations table.
+         * @param groups An optional table name for the groups table.
          * @return The new store.
          *
          * @throws IOException if any IO error occurs when reading the SQL statement configuration.
          */
-        T createTable(Vertx vertx, Tracer tracer, JdbcProperties properties,  Optional<String> credentials, Optional<String> registrations)
+        T createTable(
+                Vertx vertx,
+                Tracer tracer,
+                JdbcProperties properties,
+                Optional<String> credentials,
+                Optional<String> registrations,
+                Optional<String> groups)
                 throws IOException;
     }
 
-    private static final class AdapterStoreFactory implements StoreFactory<AbstractDeviceAdapterStore> {
+    private static final class AdapterStoreFactory implements StoreFactory<TableAdapterStore> {
 
-        private static final StoreFactory<AbstractDeviceAdapterStore> INSTANCE = new AdapterStoreFactory();
+        private static final StoreFactory<TableAdapterStore> INSTANCE = new AdapterStoreFactory();
 
         private AdapterStoreFactory() {
         }
 
         @Override
-        public AbstractDeviceAdapterStore createJson(final Vertx vertx, final Tracer tracer, final JdbcProperties properties, final boolean hierarchical) throws IOException {
-            return new JsonAdapterStore(
-                    JdbcProperties.dataSource(vertx, properties),
-                    tracer,
-                    hierarchical,
-                    Configurations.jsonConfiguration(properties.getUrl(), Optional.ofNullable(properties.getTableName()), hierarchical));
-        }
+        public TableAdapterStore createTable(
+                final Vertx vertx,
+                final Tracer tracer,
+                final JdbcProperties properties,
+                final Optional<String> credentials,
+                final Optional<String> registrations,
+                final Optional<String> groups) throws IOException {
 
-        @Override
-        public AbstractDeviceAdapterStore createTable(final Vertx vertx, final Tracer tracer, final JdbcProperties properties, final Optional<String> credentials,
-                final Optional<String> registrations) throws IOException {
             return new TableAdapterStore(
                     JdbcProperties.dataSource(vertx, properties),
                     tracer,
-                    Configurations.tableConfiguration(properties.getUrl(), credentials, registrations));
+                    Configurations.tableConfiguration(properties.getUrl(), credentials, registrations, groups));
+
         }
     }
 
-    private static final class ManagementStoreFactory implements StoreFactory<AbstractDeviceManagementStore> {
+    private static final class ManagementStoreFactory implements StoreFactory<TableManagementStore> {
 
-        private static final StoreFactory<AbstractDeviceManagementStore> INSTANCE = new ManagementStoreFactory();
+        private static final StoreFactory<TableManagementStore> INSTANCE = new ManagementStoreFactory();
 
         private ManagementStoreFactory() {
         }
 
         @Override
-        public AbstractDeviceManagementStore createJson(final Vertx vertx, final Tracer tracer, final JdbcProperties properties, final boolean hierarchical) throws IOException {
-            return new JsonManagementStore(
-                    JdbcProperties.dataSource(vertx, properties),
-                    tracer,
-                    hierarchical,
-                    Configurations.jsonConfiguration(properties.getUrl(), Optional.ofNullable(properties.getTableName()), hierarchical));
-        }
+        public TableManagementStore createTable(
+                final Vertx vertx,
+                final Tracer tracer,
+                final JdbcProperties properties,
+                final Optional<String> credentials,
+                final Optional<String> registrations,
+                final Optional<String> groups) throws IOException {
 
-        @Override
-        public AbstractDeviceManagementStore createTable(final Vertx vertx, final Tracer tracer, final JdbcProperties properties, final Optional<String> credentials,
-                final Optional<String> registrations) throws IOException {
             return new TableManagementStore(
                     JdbcProperties.dataSource(vertx, properties),
                     tracer,
-                    Configurations.tableConfiguration(properties.getUrl(), credentials, registrations));
+                    Configurations.tableConfiguration(properties.getUrl(), credentials, registrations, groups));
+
         }
     }
 
@@ -150,24 +140,17 @@ public final class DeviceStores {
      * @return A new store factory.
      * @throws IOException if any IO error occurs when reading the SQL statement configuration.
      */
-    public static <T extends AbstractDeviceStore> T store(final Vertx vertx, final Tracer tracer, final JdbcDeviceProperties deviceProperties,
-            final Function<JdbcDeviceProperties, JdbcProperties> extractor, final StoreFactory<T> factory) throws IOException {
+    public static <T extends AbstractDeviceStore> T store(final Vertx vertx, final Tracer tracer, final JdbcDeviceStoreProperties deviceProperties,
+                                                          final Function<JdbcDeviceStoreProperties, JdbcProperties> extractor, final StoreFactory<T> factory) throws IOException {
 
         final var properties = extractor.apply(deviceProperties);
 
-        switch (deviceProperties.getMode()) {
-            case JSON_FLAT:
-                return factory.createJson(vertx, tracer, properties, false);
-            case JSON_TREE:
-                return factory.createJson(vertx, tracer, properties, true);
-            case TABLE:
-                final var prefix = Optional.ofNullable(properties.getTableName());
-                final var credentials = prefix.map(s -> s + "_credentials");
-                final var registrations = prefix.map(s -> s + "_registrations");
-                return factory.createTable(vertx, tracer, properties, credentials, registrations);
-            default:
-                throw new IllegalStateException(String.format("Unknown store type: %s", deviceProperties.getMode()));
-        }
+        final var prefix = Optional.ofNullable(properties.getTableName());
+        final var credentials = prefix.map(s -> s + "_credentials");
+        final var registrations = prefix.map(s -> s + "_registrations");
+        final var groups = prefix.map(s -> s + "_groups");
+
+        return factory.createTable(vertx, tracer, properties, credentials, registrations, groups);
 
     }
 

@@ -118,8 +118,8 @@ public class Store extends AbstractStore {
     public Future<Optional<DeviceState>> readDeviceState(final DeviceConnectionKey key, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "read device state", getClass().getSimpleName())
-                .withTag("tenant_instance_id", key.getTenantId())
-                .withTag("device_id", key.getDeviceId())
+                .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
         final var expanded = this.readStatement.expand(map -> {
@@ -128,7 +128,7 @@ public class Store extends AbstractStore {
         });
 
         log.debug("readDeviceState - statement: {}", expanded);
-        final var result = expanded.trace(this.tracer, span).query(this.client);
+        final var result = expanded.trace(this.tracer, span.context()).query(this.client);
 
         final var f = result
                 .<Optional<DeviceState>>flatMap(r -> {
@@ -167,9 +167,9 @@ public class Store extends AbstractStore {
     public Future<UpdateResult> setLastKnownGateway(final DeviceConnectionKey key, final String gatewayId, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "update device state", getClass().getSimpleName())
-                .withTag("tenant_instance_id", key.getTenantId())
-                .withTag("device_id", key.getDeviceId())
-                .withTag("gateway_id", gatewayId)
+                .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
+                .withTag(TracingHelper.TAG_GATEWAY_ID, gatewayId)
                 .start();
 
         final var expanded = this.updateStatement.expand(params -> {
@@ -179,7 +179,7 @@ public class Store extends AbstractStore {
         });
 
         log.debug("setLastKnownGateway - statement: {}", expanded);
-        final var result = expanded.trace(this.tracer, span).update(this.client);
+        final var result = expanded.trace(this.tracer, span.context()).update(this.client);
 
         return result.onComplete(x -> span.finish());
 
@@ -196,7 +196,7 @@ public class Store extends AbstractStore {
     public Future<UpdateResult> dropTenant(final String tenantId, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "drop tenant", getClass().getSimpleName())
-                .withTag("tenant_instance_id", tenantId)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
         final var expanded = this.dropTenantStatement.expand(params -> {
@@ -204,7 +204,7 @@ public class Store extends AbstractStore {
         });
 
         log.debug("dropTenant - statement: {}", expanded);
-        final var result = expanded.trace(this.tracer, span).update(this.client);
+        final var result = expanded.trace(this.tracer, span.context()).update(this.client);
 
         return result.onComplete(x -> span.finish());
 

@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import org.eclipse.hono.tracing.TracingHelper;
@@ -35,6 +36,7 @@ import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLConnection;
 
 /**
@@ -62,7 +64,7 @@ public final class SQL {
             return Future.failedFuture(e);
         }
 
-        log.debug("SQL Error: {}", sqlError.getSQLState());
+        log.debug("SQL Error: {}: {}", sqlError.getSQLState(), sqlError.getMessage());
         final String code = sqlError.getSQLState();
         if (code == null) {
             return Future.failedFuture(e);
@@ -101,7 +103,6 @@ public final class SQL {
      * @param tracer The tracer.
      * @param context The span.
      * @param connection The database connection to work on.
-     *
      * @return A future for tracking the outcome.
      */
     public static Future<SQLConnection> commit(final Tracer tracer, final SpanContext context, final SQLConnection connection) {
@@ -117,7 +118,6 @@ public final class SQL {
      * @param tracer The tracer.
      * @param context The span.
      * @param connection The database connection to work on.
-     *
      * @return A future for tracking the outcome.
      */
     public static Future<SQLConnection> rollback(final Tracer tracer, final SpanContext context, final SQLConnection connection) {
@@ -250,4 +250,61 @@ public final class SQL {
     public static <T extends Throwable> boolean hasCauseOf(final Throwable e, final Class<T> clazz) {
         return causeOf(e, clazz).isPresent();
     }
+
+    /**
+     * Run operation transactionally.
+     * <p>
+     * This function will perform the following operations:
+     * <ul>
+     *     <li>Open a new connection</li>
+     *     <li>Turn off auto-commit mode</li>
+     *     <li>Call the provided function</li>
+     *     <li>If the provided function failed, perform a <em>Rollback</em> operation</li>
+     *     <li>If the provided function succeeded, perform a <em>Commit</em> operation</li>
+     *     <li>Close the connection</li>
+     * </ul>
+     *
+     * @param client The client to use.
+     * @param tracer The tracer to use.
+     * @param function The function to execute while the transaction is open.
+     * @param context The span to log to.
+     * @param <T> The type of the result.
+     * @return A future, tracking the outcome of the operation.
+     */
+    public static <T> Future<T> runTransactionally(final SQLClient client, final Tracer tracer, final SpanContext context, final BiFunction<SQLConnection, SpanContext, Future<T>> function) {
+
+        final Span span = startSqlSpan(tracer, context, "run transactionally", builder -> {
+        });
+
+        final Promise<SQLConnection> promise = Promise.promise();
+        client.getConnection(promise);
+
+        return promise.future()
+
+                // log open connection
+                .onSuccess(x -> {
+                    final Map<String, Object> log = new HashMap<>();
+                    log.put(Fields.EVENT, "success");
+                    log.put(Fields.MESSAGE, "connection opened");
+                    span.log(log);
+                })
+
+                // disable autocommit, which is enabled by default
+                .flatMap(connection -> SQL.setAutoCommit(tracer, span.context(), connection, false)
+
+                        // run code
+                        .flatMap(y -> function.apply(connection, span.context())
+
+                                // commit or rollback ... return original result
+                                .compose(
+                                        v -> SQL.commit(tracer, span.context(), connection).map(v),
+                                        x -> SQL.rollback(tracer, span.context(), connection).flatMap(unused -> Future.failedFuture(x))))
+
+                        // close the connection
+                        .onComplete(x -> connection.close()))
+
+                .onComplete(x -> span.finish());
+
+    }
+
 }

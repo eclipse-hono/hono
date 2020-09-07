@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.base.jdbc.store;
 
+import java.io.Serializable;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,6 +31,7 @@ import java.util.regex.Pattern;
 import com.google.common.base.MoreObjects;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
@@ -123,6 +125,11 @@ public final class Statement {
     public ExpandedStatement expand(final Consumer<Map<String, Object>> mapBuilder) {
         final Map<String, Object> map = new HashMap<>();
         mapBuilder.accept(map);
+        map.forEach((key, value) -> {
+            if (value != null && !(value instanceof Serializable)) {
+                throw new RuntimeException(String.format("%s of type %s is not serializable", key, value.getClass()));
+            }
+        });
         return expand(map);
     }
 
@@ -175,8 +182,7 @@ public final class Statement {
 
         final String sqlFormatted = String.format(sql, values);
 
-        final Pattern pattern = DEFAULT_PATTERN;
-        final Matcher m = pattern.matcher(sqlFormatted);
+        final Matcher m = DEFAULT_PATTERN.matcher(sqlFormatted);
 
         int idx = 0;
         final StringBuilder sb = new StringBuilder();
@@ -202,13 +208,13 @@ public final class Statement {
         private final Object[] parameters;
 
         private final Tracer tracer;
-        private final Span span;
+        private final SpanContext spanContext;
 
-        private ExpandedStatement(final String sql, final Object[] parameters, final Tracer tracer, final Span span) {
+        private ExpandedStatement(final String sql, final Object[] parameters, final Tracer tracer, final SpanContext spanContext) {
             this.sql = sql;
             this.parameters = parameters;
             this.tracer = tracer;
-            this.span = span;
+            this.spanContext = spanContext;
         }
 
         private ExpandedStatement(final String sql, final Object[] parameters) {
@@ -239,11 +245,11 @@ public final class Statement {
          * Attach a span to an expanded statement.
          *
          * @param tracer The tracer to create spans with.
-         * @param span The span to log to.
+         * @param spanContext The span to log to.
          * @return The new instance, containing the span.
          */
-        public ExpandedStatement trace(final Tracer tracer, final Span span) {
-            return new ExpandedStatement(this.sql, this.parameters, tracer, span);
+        public ExpandedStatement trace(final Tracer tracer, final SpanContext spanContext) {
+            return new ExpandedStatement(this.sql, this.parameters, tracer, spanContext);
         }
 
         @FunctionalInterface
@@ -262,11 +268,11 @@ public final class Statement {
          * @return The newly created span.
          */
         public Span startSqlSpan() {
-            if (this.tracer == null || this.span == null) {
+            if (this.tracer == null || this.spanContext == null) {
                 return null;
             }
 
-            return SQL.startSqlSpan(this.tracer, this.span.context(), "execute SQL", builder -> {
+            return SQL.startSqlSpan(this.tracer, this.spanContext, "execute SQL", builder -> {
                 builder.withTag(Tags.DB_STATEMENT.getKey(), this.sql);
             });
         }

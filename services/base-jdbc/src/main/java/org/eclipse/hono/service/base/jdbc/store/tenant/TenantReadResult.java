@@ -11,46 +11,60 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.base.jdbc.store.device;
+package org.eclipse.hono.service.base.jdbc.store.tenant;
 
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Tenant;
 
 import com.google.common.base.MoreObjects;
 
 /**
- * A read result for device information.
+ * The result of a tenant read operation.
  */
-public class DeviceReadResult {
+public class TenantReadResult {
 
-    private final Device device;
+    private final String id;
+    private final Tenant tenant;
     private final Optional<String> resourceVersion;
 
     /**
      * Create a new instance.
-     * @param device The device.
+     *
+     * @param id The tenant ID.
+     * @param tenant The tenant information.
      * @param resourceVersion The optional resource version.
      */
-    public DeviceReadResult(final Device device, final Optional<String> resourceVersion) {
-        this.device = device;
-        this.resourceVersion = Objects.requireNonNull(resourceVersion);
-    }
+    public TenantReadResult(final String id, final Tenant tenant, final Optional<String> resourceVersion) {
+        Objects.requireNonNull(id);
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(resourceVersion);
 
-    public Device getDevice() {
-        return this.device;
+        this.id = id;
+        this.tenant = tenant;
+        this.resourceVersion = resourceVersion;
     }
 
     public Optional<String> getResourceVersion() {
         return this.resourceVersion;
     }
 
+    public Tenant getTenant() {
+        return this.tenant;
+    }
+
+    public String getId() {
+        return this.id;
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                .add("id", this.id)
                 .add("resourceVersion", this.resourceVersion)
-                .add("org/eclipse/hono/service/base/jdbc/store/device", this.device)
+                .add("tenant", this.tenant)
                 .toString();
     }
+
 }

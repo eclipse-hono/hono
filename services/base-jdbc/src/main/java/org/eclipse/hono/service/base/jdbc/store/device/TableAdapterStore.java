@@ -15,14 +15,17 @@ package org.eclipse.hono.service.base.jdbc.store.device;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
+import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +35,19 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLClient;
 
 /**
  * A data store for devices and credentials, based on a table data model.
  */
-public class TableAdapterStore extends AbstractDeviceAdapterStore {
+public class TableAdapterStore extends AbstractDeviceStore {
 
     private static final Logger log = LoggerFactory.getLogger(TableAdapterStore.class);
 
     private final Statement findCredentialsStatement;
+    private final Statement resolveGroupsStatement;
 
     /**
      * Create a new instance.
@@ -61,15 +67,88 @@ public class TableAdapterStore extends AbstractDeviceAdapterStore {
                         "type",
                         "auth_id");
 
+        this.resolveGroupsStatement = cfg
+                .getRequiredStatement("resolveGroups")
+                .validateParameters(
+                        "tenant_id",
+                        "group_ids");
+
     }
 
-    @Override
+
+    /**
+     * Read a device using {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)} and the
+     * current SQL client.
+     *
+     * @param key The key of the device to read.
+     * @param span The span to contribute to.
+     *
+     * @return The result from {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)}.
+     */
+    protected Future<ResultSet> readDevice(final DeviceKey key, final Span span) {
+        return readDevice(this.client, key, span);
+    }
+
+    /**
+     * Reads the device data.
+     * <p>
+     * This reads the device data using
+     * {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)} and
+     * transforms the plain result into a {@link DeviceReadResult}.
+     * <p>
+     * If now rows where found, the result will be empty. If more than one row is found,
+     * the result will be failed with an {@link IllegalStateException}.
+     * <p>
+     * If there is exactly one row, it will read the device registration information from the column
+     * {@code data} and optionally current resource version from the column {@code version}.
+     *
+     * @param key The key of the device to read.
+     * @param spanContext The span to contribute to.
+     *
+     * @return A future, tracking the outcome of the operation.
+     */
+    public Future<Optional<DeviceReadResult>> readDevice(final DeviceKey key, final SpanContext spanContext) {
+
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "read device", getClass().getSimpleName())
+                .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
+                .start();
+
+        return readDevice(this.client, key, span)
+
+                .<Optional<DeviceReadResult>>flatMap(r -> {
+                    final var entries = r.getRows(true);
+                    switch (entries.size()) {
+                        case 0:
+                            return Future.succeededFuture((Optional.empty()));
+                        case 1:
+                            final var entry = entries.get(0);
+                            final var device = Json.decodeValue(entry.getString("data"), Device.class);
+                            final var version = Optional.ofNullable(entry.getString("version"));
+                            return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));
+                        default:
+                            return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
+                    }
+                })
+
+                .onComplete(x -> span.finish());
+
+    }
+
+    /**
+     * Find credentials for a device.
+     *
+     * @param key The credentials key to look for.
+     * @param spanContext The span context.
+     *
+     * @return A future tracking the outcome of the operation.
+     */
     public Future<Optional<CredentialsReadResult>> findCredentials(final CredentialKey key, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find credentials", getClass().getSimpleName())
-                .withTag("auth_id", key.getAuthId())
-                .withTag("type", key.getType())
-                .withTag("tenant_instance_id", key.getTenantId())
+                .withTag(TracingHelper.TAG_AUTH_ID, key.getAuthId())
+                .withTag(TracingHelper.TAG_CREDENTIALS_TYPE, key.getType())
+                .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
                 .start();
 
         final var expanded = this.findCredentialsStatement.expand(params -> {
@@ -79,7 +158,9 @@ public class TableAdapterStore extends AbstractDeviceAdapterStore {
         });
 
         log.debug("findCredentials - statement: {}", expanded);
-        return expanded.trace(this.tracer, span).query(this.client)
+        return expanded
+                .trace(this.tracer, span.context())
+                .query(this.client)
                 .<Optional<CredentialsReadResult>>flatMap(r -> {
                     final var entries = r.getRows(true);
                     span.log(Map.of(
@@ -88,7 +169,7 @@ public class TableAdapterStore extends AbstractDeviceAdapterStore {
 
                     final Set<String> deviceIds = entries.stream()
                             .map(o -> o.getString("device_id"))
-                            .filter(o -> o != null)
+                            .filter(Objects::nonNull)
                             .collect(Collectors.toSet());
 
                     final int num = deviceIds.size();
@@ -114,4 +195,52 @@ public class TableAdapterStore extends AbstractDeviceAdapterStore {
 
     }
 
+    /**
+     * Resolve a list of group members.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param viaGroups The viaGroups list of a device. This list contains the ids of groups.
+     * @param spanContext The span to contribute to.
+     *
+     * @return A future tracking the outcome of the operation.
+     *
+     * @see org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService#resolveGroupMembers(String, JsonArray, Span)
+     */
+    public Future<Set<String>> resolveGroupMembers(final String tenantId, final Set<String> viaGroups, final SpanContext spanContext) {
+
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "resolve group members", getClass().getSimpleName())
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .withTag("via_groups", String.join(", ", viaGroups))
+                .start();
+
+        final var expanded = this.resolveGroupsStatement.expand(params -> {
+            params.put("tenant_id", tenantId);
+            params.put("group_ids", viaGroups.toArray(String[]::new));
+        });
+
+        log.debug("resolveGroupMembers - statement: {}", expanded);
+
+        return expanded
+
+                .trace(this.tracer, span.context())
+                .query(this.client)
+
+                .flatMap(r -> {
+
+                    final var entries = r.getRows(true);
+                    span.log(Map.of(
+                            "event", "read result",
+                            "rows", entries.size()));
+
+                    return Future.succeededFuture(
+                            entries.stream()
+                                    .map(o -> o.getString("device_id"))
+                                    .filter(Objects::nonNull)
+                                    .collect(Collectors.toSet()));
+
+                })
+
+                .onComplete(x -> span.finish());
+
+    }
 }

@@ -109,7 +109,9 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
      *         broken optimistic lock, and a failed future will be returned. Otherwise it is considered
      *         an "object not found" condition.
      */
-    protected Future<UpdateResult> checkOptimisticLock(final Future<UpdateResult> result, final Span span,
+    protected Future<UpdateResult> checkOptimisticLock(
+            final Future<UpdateResult> result,
+            final Span span,
             final Optional<String> resourceVersion,
             final Function<Span, Future<ResultSet>> reader) {
 
@@ -120,7 +122,7 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
         }
 
         return result
-                .<UpdateResult>flatMap(r -> {
+                .flatMap(r -> {
 
                     span.log(ImmutableMap.<String, Object>builder()
                             .put("event", "check update result")
@@ -139,7 +141,7 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
 
                     // we did not update anything, we need to check why ...
                     final var f = reader.apply(readSpan)
-                            .<UpdateResult>flatMap(readResult -> {
+                            .flatMap(readResult -> {
 
                                 span.log(Map.of(
                                         "event", "check read result",

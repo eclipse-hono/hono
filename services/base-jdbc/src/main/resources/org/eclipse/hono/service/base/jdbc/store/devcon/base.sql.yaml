@@ -1,0 +1,27 @@
+
+#
+# For other databases, this can be provided using extensions
+# An example for H2 is available at: https://github.com/EnMasseProject/h2-iot-container-images
+#
+
+read: |
+   SELECT
+      last_known_gateway,
+      adapter_instance_id
+   FROM
+      %s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      device_id=:device_id
+
+dropTenant: |
+   DELETE FROM %s
+   WHERE
+      tenant_id=:tenant_id
+
+# This generic file is explicitly missing the statements for:
+#  * updateLastKnownGateway:
+#  * updateAdapterInstance:
+# As they do require an "upsert" operation, which is different
+# for every database
