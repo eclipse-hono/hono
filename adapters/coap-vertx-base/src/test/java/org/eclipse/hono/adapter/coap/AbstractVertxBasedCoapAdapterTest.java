@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.CoapServer;
@@ -50,6 +51,7 @@ import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
@@ -62,6 +64,7 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -80,6 +83,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -637,6 +641,67 @@ public class AbstractVertxBasedCoapAdapterTest {
     }
 
     /**
+     * Verifies that the adapter will release an incoming command delivery if the delivery of the preceding telemetry
+     * message hasn't been accepted.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadTelemetryWithFailedDeliveryReleasesCommand() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final Promise<ProtonDelivery> sendTelemetryOutcome = Promise.promise();
+        final DownstreamSender sender = givenATelemetrySender(sendTelemetryOutcome);
+        final CoapServer server = getCoapServer(false);
+
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+
+        // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
+        final Message commandMessage = newMockedCommandMessage("tenant", "device", "doThis");
+        final Command pendingCommand = Command.from(commandMessage, "tenant", "device");
+        final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
+        final CommandContext commandContext = CommandContext.from(pendingCommand, commandDelivery, mock(Span.class));
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any(), any()))
+        .thenAnswer(invocation -> {
+            final Handler<CommandContext> consumer = invocation.getArgument(2);
+            consumer.handle(commandContext);
+            return Future.succeededFuture(commandConsumer);
+        });
+
+        // WHEN a device publishes a telemetry message with a hono-ttd parameter
+        final Buffer payload = Buffer.buffer("some payload");
+        final OptionSet options = new OptionSet();
+        options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
+        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device");
+
+        adapter.uploadTelemetryMessage(context);
+
+        // THEN the message is being forwarded downstream
+        verify(sender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        // with no response being sent to the device yet
+        verify(coapExchange, never()).respond(any(Response.class));
+
+        // WHEN the telemetry message delivery gets failed with an exception representing a "released" delivery outcome
+        sendTelemetryOutcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+
+        // the device gets a response with code SERVICE_UNAVAILABLE
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.SERVICE_UNAVAILABLE.equals(res.getCode())));
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.TELEMETRY),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.UNDELIVERABLE),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                eq(TtdStatus.COMMAND),
+                any());
+        // and the command delivery is released
+        verify(commandDelivery).disposition(eq(Released.getInstance()), eq(true));
+    }
+
+    /**
      * Verifies that the adapter waits for a command response being settled and accepted
      * by a downstream peer before responding with a 2.04 status to the device.
      */
@@ -869,9 +934,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(request.getType()).thenReturn(requestType);
         when(request.isConfirmable()).thenReturn(requestType == Type.CON);
         when(request.getOptions()).thenReturn(options);
-        final Exchange echange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
         final CoapExchange coapExchange = mock(CoapExchange.class);
-        when(coapExchange.advanced()).thenReturn(echange);
+        when(coapExchange.advanced()).thenReturn(exchange);
         Optional.ofNullable(payload).ifPresent(b -> when(coapExchange.getRequestPayload()).thenReturn(b.getBytes()));
         when(coapExchange.getRequestOptions()).thenReturn(options);
         when(coapExchange.getQueryParameter(anyString())).thenAnswer(invocation -> {
@@ -895,6 +960,17 @@ public class AbstractVertxBasedCoapAdapterTest {
             doNothing().when(server).start();
         }
         return server;
+    }
+
+    private static Message newMockedCommandMessage(final String tenantId, final String deviceId, final String name) {
+        final Message msg = mock(Message.class);
+        when(msg.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
+        when(msg.getSubject()).thenReturn(name);
+        when(msg.getCorrelationId()).thenReturn("the-correlation-id");
+        when(msg.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
+                tenantId, deviceId, "the-reply-to-id"));
+        return msg;
     }
 
     /**
