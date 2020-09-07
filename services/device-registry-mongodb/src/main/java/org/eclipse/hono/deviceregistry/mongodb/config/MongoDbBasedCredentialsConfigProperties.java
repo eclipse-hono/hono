@@ -66,7 +66,6 @@ public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongo
         }
     }
 
-
     /**
      * Gets the list of supported hashing algorithms for pre-hashed passwords.
      * <p>

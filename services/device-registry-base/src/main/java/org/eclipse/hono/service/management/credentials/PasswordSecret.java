@@ -208,27 +208,31 @@ public class PasswordSecret extends CommonSecret {
 
         if (containsOnlySecretId()) {
             return;
-        } else if (hashFunction != null) {
+        }
+
+        if (hashFunction != null) {
 
             if (!hashAlgorithmsWhitelist.isEmpty() && !hashAlgorithmsWhitelist.contains(hashFunction)) {
                 throw new IllegalStateException(String.format("unsupported hashing algorithm [%s]", hashFunction));
             }
+
             switch (hashFunction) {
-            case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
-                try {
-                    if (BCryptHelper.getIterations(passwordHash) > maxBcryptIterations) {
-                        throw new IllegalStateException("BCrypt hash algorithm uses too many iterations, max is " + maxBcryptIterations);
+                case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
+                    try {
+                        if (BCryptHelper.getIterations(passwordHash) > maxBcryptIterations) {
+                            throw new IllegalStateException("BCrypt hash algorithm uses too many iterations, max is " + maxBcryptIterations);
+                        }
+                        break;
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalStateException("password hash is not a supported BCrypt hash", e);
                     }
+                default:
+                    // no additional checks for other hash algorithms
                     break;
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalStateException("password hash is not a supported BCrypt hash", e);
-                }
-            default:
-                // no additional checks for other hash algorithms
-                break;
             }
+
         }
-        return;
+
     }
 
     void stripPrivateInfo() {

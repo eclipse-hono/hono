@@ -15,6 +15,8 @@ package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
@@ -44,7 +46,6 @@ import io.vertx.core.json.JsonObject;
  * {@link AbstractRegistrationService#processAssertRegistration(DeviceKey, Span)} to retrieve a device's registration
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
- *
  */
 public abstract class AbstractRegistrationService implements RegistrationService {
 
@@ -103,11 +104,43 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. A failed future with 
+     * @return A future indicating the outcome of the operation. A failed future with
      *           a {@link ServiceInvocationException} is returned, if there was an error resolving the groups.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected abstract Future<JsonArray> resolveGroupMembers(String tenantId, JsonArray viaGroups, Span span);
+    Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(viaGroups);
+        Objects.requireNonNull(span);
+
+        final var viaGroupsAsString = viaGroups.stream()
+                .filter(String.class::isInstance).map(String.class::cast)
+                .collect(Collectors.toSet());
+
+        return processResolveGroupMembers(tenantId, viaGroupsAsString, span)
+                .map(deviceIds -> {
+                    final var result = new JsonArray();
+                    deviceIds.forEach(result::add);
+                    return result;
+                });
+
+    }
+
+    /**
+     * Takes the 'viaGroups' list of a device and resolves all group ids with the ids of the devices that are
+     * a member of those groups.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param viaGroups The viaGroups list of a device. This list contains the ids of groups.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     * implementation should log (error) events on this span and it may set tags and use this span as the
+     * parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation. A set of device ID that belong to the provided groups.
+     * A failed future with a {@link ServiceInvocationException} is returned, if there was an error resolving the groups.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected abstract Future<Set<String>> processResolveGroupMembers(String tenantId, Set<String> viaGroups, Span span);
 
     @Override
     public final Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
@@ -176,7 +209,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .compose(result ->  {
+                .compose(result -> {
 
                     if (result.isError()) {
                         return Future.succeededFuture(RegistrationResult.from(result.getStatus()));

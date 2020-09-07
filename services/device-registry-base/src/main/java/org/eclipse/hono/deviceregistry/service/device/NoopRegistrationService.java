@@ -14,13 +14,13 @@
 package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
+import java.util.Set;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.RegistrationResult;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -53,7 +53,7 @@ public final class NoopRegistrationService extends AbstractRegistrationService {
     }
 
     @Override
-    protected Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+    protected Future<Set<String>> processResolveGroupMembers(final String tenantId, final Set<String> viaGroups, final Span span) {
         return Future.failedFuture("Not implemented");
     }
 }
