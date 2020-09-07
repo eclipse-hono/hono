@@ -361,7 +361,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
     private Future<CredentialsResult<JsonObject>> getCredentialsResult(
             final String tenantId,
             final String authId,
-            final String type) {
+            final String type,
+            final JsonObject clientContext) {
         final JsonObject findCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
                 .withAuthId(authId)
@@ -382,6 +383,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         .flatMap(ok -> Optional
                                 .ofNullable(result.getJsonArray(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS))
                                 .map(credential -> credential.getJsonObject(0))
+                                .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential,
+                                        clientContext))
                                 .map(credential -> credential.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID,
                                         result.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID))))
                         .filter(this::isCredentialEnabled)
@@ -418,8 +421,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
             final String authId,
             final JsonObject clientContext) {
 
-        //TODO: To implement to make use of the client context.
-        return getCredentialsResult(tenantId, authId, type);
+        return getCredentialsResult(tenantId, authId, type, clientContext);
     }
 
     private Future<Result<Void>> processAddCredentials(
