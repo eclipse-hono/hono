@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        device-registry: [file,mongodb]
+        device-registry: [file,jdbc,mongodb]
 
     steps:
     - uses: actions/checkout@v2
@@ -46,5 +46,5 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: '11'
-    - name: Build all components ()incl. unit tests) and run integration tests
+    - name: Build all components (incl. unit tests) and run integration tests
       run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests

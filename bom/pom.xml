@@ -38,6 +38,7 @@
     <flapdoodle.version>2.2.0</flapdoodle.version>
     <guava.version>28.0-jre</guava.version>
     <gson.version>2.8.5</gson.version>
+    <h2.version>1.4.200</h2.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
     <infinispan.version>10.1.8.Final</infinispan.version>
     <jackson.version>2.10.5</jackson.version>
@@ -63,6 +64,7 @@
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
+    <postgresql.version>42.2.15</postgresql.version>
     <protobuf.version>3.6.1</protobuf.version>
     <protoparser.version>4.0.3</protoparser.version>
     <protostream.version>4.3.2.Final</protostream.version>
@@ -128,7 +130,7 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>service-base-jdbc</artifactId>
+        <artifactId>hono-service-base-jdbc</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -330,6 +332,11 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-auth-common</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-auth-jdbc</artifactId>
         <version>${vertx.version}</version>
       </dependency>
       <dependency>
@@ -658,6 +665,20 @@
         <groupId>org.wildfly.security</groupId>
         <artifactId>wildfly-elytron-sasl-scram</artifactId>
         <version>${wildfly-elytron.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+
+      <!-- JDBC -->
+      <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <version>${h2.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${postgresql.version}</version>
         <scope>runtime</scope>
       </dependency>
 
