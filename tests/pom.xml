@@ -61,6 +61,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <mqtt.java.options></mqtt.java.options>
     <deviceregistry.image>hono-service-device-registry-file</deviceregistry.image>
     <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
+    <hono.deviceregistry.spring.profiles></hono.deviceregistry.spring.profiles>
+    <hono.h2.disabled>true</hono.h2.disabled>
     <hono.mongodb.image.repository>mongo</hono.mongodb.image.repository>
     <hono.mongodb.disabled>true</hono.mongodb.disabled>
     <!-- logging profile: either prod, dev or trace -->
@@ -212,6 +214,23 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
+      <id>device-registry-jdbc</id>
+      <properties>
+        <deviceregistry.image>hono-service-device-registry-jdbc</deviceregistry.image>
+        <hono.h2.disabled>false</hono.h2.disabled>
+        <hono.h2.host>hono-h2.hono</hono.h2.host>
+        <hono.h2.port>9092</hono.h2.port>
+        <hono.h2.password>seriously-change-me</hono.h2.password> <!-- the server process password -->
+        <hono.jdbc.h2.admin.username>admin</hono.jdbc.h2.admin.username>
+        <hono.jdbc.h2.admin.password>admin1234</hono.jdbc.h2.admin.password>
+        <hono.jdbc.h2.registry.username>registry</hono.jdbc.h2.registry.username>
+        <hono.jdbc.h2.registry.password>user12</hono.jdbc.h2.registry.password>
+        <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,</hono.deviceregistry.spring.profiles>
+        <deviceregistry.credentials.supportsClientContext>false</deviceregistry.credentials.supportsClientContext>
+      </properties>
+    </profile>
+    <profile>
       <id>device-registry-mongodb</id>
       <properties>
         <deviceregistry.image>hono-service-device-registry-mongodb</deviceregistry.image>
@@ -267,6 +286,74 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>false</startParallel>
               <images>
+                <!-- ##### H2 instance for the device registry ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-h2-test</name>
+                  <alias>h2</alias>
+                  <build>
+                    <skip>${hono.h2.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>registry.access.redhat.com/ubi8/ubi-minimal</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>sql</id>
+                        <fileSet>
+                          <directory>${project.build.directory}/../../services/base-jdbc/src/main/sql</directory>
+                          <outputDirectory>sql/</outputDirectory>
+                          <includes>
+                            <include>**/*</include>
+                          </includes>
+                        </fileSet>
+                      </inline>
+                    </assembly>
+                    <runCmds>
+
+                      <run>microdnf -y install java-11-openjdk-headless</run>
+                      <run>curl -sL https://repo1.maven.org/maven2/com/h2database/h2/1.4.200/h2-1.4.200.jar -o h2.jar</run>
+
+                      <run>java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/data/devices -sql "create user if not exists ${hono.jdbc.h2.admin.username} password '${hono.jdbc.h2.admin.password}' admin;"</run>
+                      <run>java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/data/devices -sql "create user if not exists ${hono.jdbc.h2.registry.username} password '${hono.jdbc.h2.registry.password}';"</run>
+                      <run>java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/data/devices -sql "grant all on schema public to ${hono.jdbc.h2.registry.username};"</run>
+                      <run>java -cp h2.jar org.h2.tools.RunScript -url jdbc:h2:/data/devices -showResults -script /sql/h2/create.devices.sql</run>
+
+                      <run>java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/data/tenants -sql "create user if not exists ${hono.jdbc.h2.admin.username} password '${hono.jdbc.h2.admin.password}' admin;"</run>
+                      <run>java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/data/tenants -sql "create user if not exists ${hono.jdbc.h2.registry.username} password '${hono.jdbc.h2.registry.password}';"</run>
+                      <run>java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/data/tenants -sql "grant all on schema public to ${hono.jdbc.h2.registry.username};"</run>
+                      <run>java -cp h2.jar org.h2.tools.RunScript -url jdbc:h2:/data/tenants -showResults -script /sql/h2/create.tenants.sql</run>
+
+                    </runCmds>
+                    <cmd>
+                      <shell>java -cp h2.jar org.h2.tools.Server -tcp -baseDir /data -ifExists -tcpAllowOthers -tcpPassword "${hono.h2.password}"</shell>
+                    </cmd>
+                    <ports>
+                      <port>9092</port>
+                    </ports>
+                  </build>
+                  <run>
+                    <skip>${hono.h2.disabled}</skip>
+                    <ports>
+                      <port>+h2.ip:h2.port:${hono.h2.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/h2.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>${hono.h2.host}</alias>
+                    </network>
+                    <memorySwap>134217728</memorySwap>
+                    <memory>134217728</memory>
+                    <log>
+                      <prefix>H2</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(server running at).*</log>
+                    </wait>
+                  </run>
+                </image>
                 <!-- ##### Mongo DB instance for the device registry ##### -->
                 <image>
                   <name>${docker.image.org-name}/hono-mongodb-test</name>
@@ -313,6 +400,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <alias>${hono.mongodb.host}</alias>
                     </network>
                     <memorySwap>524288000</memorySwap>
+                    <memory>524288000</memory>
                     <memory>524288000</memory>
                     <log>
                       <prefix>MONGODB</prefix>
@@ -502,7 +590,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
