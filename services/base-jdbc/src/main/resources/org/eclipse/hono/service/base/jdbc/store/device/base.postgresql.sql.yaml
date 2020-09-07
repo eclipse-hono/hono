@@ -1,0 +1,39 @@
+create: |
+   INSERT INTO %s (
+      tenant_id,
+      device_id,
+      version,
+      data
+   ) VALUES (
+      :tenant_id,
+      :device_id,
+      :version,
+      :data::jsonb
+   )
+
+updateRegistrationVersioned: |
+   UPDATE %s
+   SET
+      data=:data::jsonb,
+      version=:next_version
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      device_id=:device_id
+   AND
+      version=:expected_version
+
+insertCredentialEntry: |
+   INSERT INTO %2$s (
+      tenant_id,
+      device_id,
+      type,
+      auth_id,
+      data
+   ) VALUES (
+      :tenant_id,
+      :device_id,
+      :type,
+      :auth_id,
+      :data::jsonb
+   )

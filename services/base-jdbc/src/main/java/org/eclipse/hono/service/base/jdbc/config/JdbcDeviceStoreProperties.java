@@ -17,14 +17,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 /**
- *
+ * JDBC properties for the device store.
  */
 @JsonInclude(value = Include.NON_NULL)
-public class JdbcDeviceProperties {
+public class JdbcDeviceStoreProperties {
 
     private JdbcProperties adapter;
     private JdbcProperties management;
-    private Mode mode = Mode.JSON_TREE;
 
     public JdbcProperties getAdapter() {
         return adapter;
@@ -40,14 +39,6 @@ public class JdbcDeviceProperties {
 
     public void setManagement(final JdbcProperties management) {
         this.management = management;
-    }
-
-    public Mode getMode() {
-        return mode;
-    }
-
-    public void setMode(final Mode mode) {
-        this.mode = mode;
     }
 
 }

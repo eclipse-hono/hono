@@ -26,9 +26,9 @@ import com.google.common.base.MoreObjects;
  */
 public class CredentialsReadResult {
 
-    private String deviceId;
-    private List<CommonCredential> credentials;
-    private Optional<String> resourceVersion;
+    private final String deviceId;
+    private final List<CommonCredential> credentials;
+    private final Optional<String> resourceVersion;
 
     /**
      * Create a new instance.
