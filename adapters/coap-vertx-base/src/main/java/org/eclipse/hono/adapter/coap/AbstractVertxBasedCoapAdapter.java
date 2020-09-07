@@ -54,6 +54,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
@@ -74,6 +75,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -693,31 +695,33 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             return Future.succeededFuture(ResponseCode.BAD_REQUEST);
         } else {
             final String gatewayId = context.getGatewayId();
+            final String tenantId = context.getOriginDevice().getTenantId();
+            final String deviceId = context.getOriginDevice().getDeviceId();
+            final MetricsTags.QoS qos = waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE;
 
             final Span currentSpan = TracingHelper
                     .buildChildSpan(tracer, context.getTracingContext(),
                             "upload " + endpoint.getCanonicalName(), getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(TracingHelper.TAG_TENANT_ID, context.getOriginDevice().getTenantId())
-                    .withTag(TracingHelper.TAG_DEVICE_ID, context.getOriginDevice().getDeviceId())
+                    .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                     .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), context.isDeviceAuthenticated())
+                    .withTag(Constants.HEADER_QOS_LEVEL, qos.asTag().getValue())
                     .start();
 
             final Promise<Void> responseReady = Promise.promise();
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(
-                    context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(),
+                    tenantId,
+                    deviceId,
                     context.getAuthenticatedDevice(),
                     currentSpan.context());
-            final Future<TenantObject> tenantTracker = getTenantConfiguration(
-                    context.getOriginDevice().getTenantId(),
-                    currentSpan.context());
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(tenantId, currentSpan.context());
             final Future<TenantObject> tenantValidationTracker = tenantTracker
-                    .compose(tenantObject ->
-                        CompositeFuture.all(
-                            isAdapterEnabled(tenantObject),
-                            checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
-                        .map(tenantObject));
+                    .compose(tenantObject -> CompositeFuture
+                            .all(isAdapterEnabled(tenantObject),
+                                    checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
+                            .map(tenantObject));
 
             // we only need to consider TTD if the device and tenant are enabled and the adapter
             // is enabled for the tenant
@@ -736,7 +740,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     .compose(ttd -> createCommandConsumer(
                             ttd,
                             tenantTracker.result(),
-                            context.getOriginDevice().getDeviceId(),
+                            deviceId,
                             gatewayId,
                             context,
                             responseReady,
@@ -745,15 +749,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             return CompositeFuture.join(senderTracker, commandConsumerTracker)
             .compose(ok -> {
                 final DownstreamSender sender = senderTracker.result();
-                final Integer ttd = ttdTracker.result();
+                final Integer ttd = Optional.ofNullable(commandConsumerTracker.result())
+                        .map(c -> ttdTracker.result())
+                        .orElse(null);
                 final Message downstreamMessage = newMessage(
                         context.getRequestedQos(),
-                        ResourceIdentifier.from(endpoint.getCanonicalName(), context.getOriginDevice().getTenantId(),
-                                context.getOriginDevice().getDeviceId()),
+                        ResourceIdentifier.from(endpoint.getCanonicalName(), tenantId, deviceId),
                         "/" + context.getExchange().getRequestOptions().getUriPathString(),
                         contentType,
                         payload,
-                        tenantValidationTracker.result(),
+                        tenantTracker.result(),
                         tokenTracker.result(),
                         ttd);
                 customizeDownstreamMessage(downstreamMessage, context);
@@ -771,27 +776,20 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             responseReady.future())
                             .mapEmpty();
                 }
-            }).compose(ok -> {
+            }).map(proceed -> {
+                // downstream message sent and (if ttd was set) command was received or ttd has timed out
+                final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
+                        ? commandConsumerTracker.result().close(currentSpan.context())
+                        : Future.succeededFuture();
 
                 final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                 final Response response = new Response(ResponseCode.CHANGED);
-                if (commandContext == null) {
-
-                    if (ttdTracker.result() != null) {
-                        if (responseReady.future().isComplete()) {
-                            log.debug("==>> no command, ready!");
-                        } else {
-                            log.warn("==>> no command, failed: {}!", responseReady.future().cause());
-                        }
-                    }
-
-                } else {
-
+                if (commandContext != null) {
                     addCommandToResponse(response, commandContext, currentSpan);
                     commandContext.accept();
                     metrics.reportCommand(
                             commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                            context.getOriginDevice().getTenantId(),
+                            tenantId,
                             tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
                             commandContext.getCommand().getPayloadSize(),
@@ -799,55 +797,49 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 }
 
                 log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(), endpoint.getCanonicalName());
+                        tenantId, deviceId, endpoint.getCanonicalName());
                 metrics.reportTelemetry(
                         endpoint,
-                        context.getOriginDevice().getTenantId(),
+                        tenantId,
                         tenantTracker.result(),
                         MetricsTags.ProcessingOutcome.FORWARDED,
-                        waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
+                        qos,
                         payload.length(),
                         getTtdStatus(context),
                         context.getTimer());
-                final Promise<ResponseCode> result = Promise.promise();
-                final Handler<AsyncResult<Void>> onClosedHandler = res -> {
-                    context.getExchange().respond(response);
-                    result.complete(response.getCode());
-                    currentSpan.finish();
-                };
-                Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
-                        consumer -> consumer.close(currentSpan.context())
-                                .onComplete(onClosedHandler),
-                        () -> onClosedHandler.handle(Future.succeededFuture()));
-                return result.future();
+
+                context.getExchange().respond(response);
+                commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                return response.getCode();
+
             }).recover(t -> {
-                log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(), endpoint.getCanonicalName(), t);
+
+                log.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                        tenantId, deviceId, endpoint.getCanonicalName(), t);
+                final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
+                        ? commandConsumerTracker.result().close(currentSpan.context())
+                        : Future.succeededFuture();
                 final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                 if (commandContext != null) {
+                    TracingHelper.logError(commandContext.getTracingSpan(),
+                            "command won't be forwarded to device in CoAP response, CoAP request handling failed", t);
                     commandContext.release();
+                    currentSpan.log("released command for device");
                 }
                 metrics.reportTelemetry(
                         endpoint,
-                        context.getOriginDevice().getTenantId(),
+                        tenantId,
                         tenantTracker.result(),
                         ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
-                        waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
+                        qos,
                         payload.length(),
                         getTtdStatus(context),
                         context.getTimer());
                 TracingHelper.logError(currentSpan, t);
-                final Promise<ResponseCode> result = Promise.promise();
-                final Handler<AsyncResult<Void>> onClosedHandler = res -> {
-                    final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
-                    result.complete(context.respond(response));
-                    currentSpan.finish();
-                };
-                Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
-                        consumer -> consumer.close(currentSpan.context())
-                                .onComplete(onClosedHandler),
-                        () -> onClosedHandler.handle(Future.succeededFuture()));
-                return result.future();
+                final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
+                final ResponseCode responseCode = context.respond(response);
+                commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                return Future.succeededFuture(responseCode);
             });
         }
     }
@@ -913,7 +905,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      *            <li>a command has been received and the response ready future has not yet been completed or</li>
      *            <li>the ttd has expired</li>
      *            </ul>
-     * @param currentSpan The OpenTracing Span to use for tracking the processing of the request.
+     * @param uploadMessageSpan The OpenTracing Span used for tracking the processing of the request.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be completed with the created message consumer or {@code null}, if the response can be
@@ -930,13 +922,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final String gatewayId,
             final CoapContext context,
             final Handler<AsyncResult<Void>> responseReady,
-            final Span currentSpan) {
+            final Span uploadMessageSpan) {
 
         Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(context);
         Objects.requireNonNull(responseReady);
-        Objects.requireNonNull(currentSpan);
+        Objects.requireNonNull(uploadMessageSpan);
 
         final AtomicBoolean requestProcessed = new AtomicBoolean(false);
 
@@ -947,16 +939,26 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             }
             return Future.succeededFuture();
         }
+        uploadMessageSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
+
+        final Span waitForCommandSpan = TracingHelper
+                .buildChildSpan(tracer, uploadMessageSpan.context(),
+                        "wait for command", getTypeName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                .start();
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
             final Command command = commandContext.getCommand();
+            CommandConsumer.logReceivedCommandToSpan(command, waitForCommandSpan);
             final Sample commandSample = getMetrics().startTimer();
-            if (isCommandValid(command, currentSpan)) {
+            if (isCommandValid(command, waitForCommandSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
-                    checkMessageLimit(tenantObject, command.getPayloadSize(), currentSpan.context())
+                    checkMessageLimit(tenantObject, command.getPayloadSize(), waitForCommandSpan.context())
                             .onComplete(result -> {
                                 if (result.succeeded()) {
                                     addMicrometerSample(commandContext, commandSample);
@@ -964,6 +966,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                     context.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 } else {
                                     commandContext.reject(getErrorCondition(result.cause()));
+                                    TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
                                     metrics.reportCommand(
                                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                             tenantObject.getTenantId(),
@@ -977,7 +980,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 responseReady.handle(Future.succeededFuture());
                             });
                 } else {
-                    // the timer has already fired, release the command
+                    log.debug("waiting time for command has elapsed or another command has already been processed [tenantId: {}, deviceId: {}]",
+                            tenantObject.getTenantId(), deviceId);
                     getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenantObject.getTenantId(),
@@ -985,8 +989,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    log.debug("command for device has already fired [tenantId: {}, deviceId: {}]",
-                            tenantObject.getTenantId(), deviceId);
+                    TracingHelper.logError(commandContext.getTracingSpan(),
+                            "waiting time for command has elapsed or another command has already been processed");
                     commandContext.release();
                 }
 
@@ -1012,23 +1016,29 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     gatewayId,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
-                    currentSpan.context());
+                    waitForCommandSpan.context());
         } else {
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
-                    currentSpan.context());
+                    waitForCommandSpan.context());
         }
         return commandConsumerFuture
                 .map(consumer -> {
                     if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
-                        addCommandReceptionTimer(context, requestProcessed, responseReady, ttdSecs);
+                        addCommandReceptionTimer(context, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
                         context.startAcceptTimer(vertx, tenantObject, getConfig().getTimeoutToAck());
                     }
-                    return consumer;
+                    // wrap the consumer so that when it is closed, the waitForCommandSpan will be finished as well
+                    return new ProtocolAdapterCommandConsumer() {
+                        @Override
+                        public Future<Void> close(final SpanContext ignored) {
+                            return consumer.close(waitForCommandSpan.context()).onComplete(ar -> waitForCommandSpan.finish());
+                        }
+                    };
                 });
     }
 
@@ -1056,12 +1066,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param requestProcessed protect request from multiple responses
      * @param responseReady The future to complete when the time has expired.
      * @param delaySecs The number of seconds to wait for a command.
+     * @param waitForCommandSpan The span tracking the command reception.
      */
     private void addCommandReceptionTimer(
             final CoapContext context,
             final AtomicBoolean requestProcessed,
             final Handler<AsyncResult<Void>> responseReady,
-            final long delaySecs) {
+            final long delaySecs,
+            final Span waitForCommandSpan) {
 
         final Long timerId = vertx.setTimer(delaySecs * 1000L, id -> {
 
@@ -1071,6 +1083,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 // no command to be sent,
                 // send empty response
                 setTtdStatus(context, TtdStatus.EXPIRED);
+                waitForCommandSpan.log(String.format("time to wait for command expired (%ds)", delaySecs));
                 responseReady.handle(Future.succeededFuture());
             } else {
                 // a command has been sent to the device already
