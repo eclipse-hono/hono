@@ -13,18 +13,9 @@
 
 package org.eclipse.hono.service.management.device;
 
-import java.net.HttpURLConnection;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
-import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
-import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -39,7 +30,6 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
 
     /**
      * Registers a device together with a set of credentials for the given client certificate.
-     *
      *
      * @param tenantId The tenant to which the device belongs.
      * @param clientCertificate The X.509 certificate of the device to be provisioned.
@@ -58,46 +48,12 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
             final X509Certificate clientCertificate,
             final Span span) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(clientCertificate);
-        Objects.requireNonNull(span);
+        return AutoProvisioning.provisionDevice(
+                this,
+                this,
+                tenantId,
+                clientCertificate,
+                span);
 
-        span.log("Start auto-provisioning");
-        final String comment = "Auto-provisioned at " + Instant.now().toString();
-
-        // 1. create device
-        final Device device = new Device().setEnabled(true).putExtension("comment", comment);
-        return createDevice(tenantId, Optional.empty(), device, span)
-                .compose(r -> {
-                    if (r.isError()) {
-                        return Future.succeededFuture(OperationResult.ok(r.getStatus(),
-                                "Auto-provisioning failed: device could not be created", Optional.empty(),
-                                Optional.empty()));
-                    }
-
-                    // 2. set the certificate credential
-                    final String authId = clientCertificate.getSubjectX500Principal().getName(X500Principal.RFC2253);
-                    final X509CertificateCredential certCredential = new X509CertificateCredential(authId)
-                            .setSecrets(List.of(new X509CertificateSecret()));
-                    certCredential.setEnabled(true).setComment(comment);
-
-                    final String deviceId = r.getPayload().getId();
-
-                    return updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
-                            .compose(v -> {
-                                if (v.isError()) {
-                                    return deleteDevice(tenantId, deviceId, Optional.empty(), span)
-                                            .map(OperationResult.ok(v.getStatus(),
-                                                    "Auto-provisioning failed: credentials could not be set for device ["
-                                                            + deviceId + "]",
-                                                    Optional.empty(),
-                                                    Optional.empty()));
-                                } else {
-                                    span.log("Auto-provisioning successful for device [" + deviceId + "]");
-                                    return Future
-                                            .succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CREATED));
-                                }
-                            });
-                });
     }
 }
