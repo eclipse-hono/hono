@@ -742,7 +742,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             responseReady,
                             currentSpan));
 
-            return CompositeFuture.join(senderTracker, commandConsumerTracker).compose(ok -> {
+            return CompositeFuture.join(senderTracker, commandConsumerTracker)
+            .compose(ok -> {
                 final DownstreamSender sender = senderTracker.result();
                 final Integer ttd = ttdTracker.result();
                 final Message downstreamMessage = newMessage(
@@ -822,6 +823,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             }).recover(t -> {
                 log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         context.getOriginDevice().getTenantId(), context.getOriginDevice().getDeviceId(), endpoint.getCanonicalName(), t);
+                final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
+                if (commandContext != null) {
+                    commandContext.release();
+                }
                 metrics.reportTelemetry(
                         endpoint,
                         context.getOriginDevice().getTenantId(),
