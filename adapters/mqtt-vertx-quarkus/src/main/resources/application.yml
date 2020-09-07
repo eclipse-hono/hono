@@ -1,0 +1,62 @@
+hono:
+  app:
+    maxInstances: 1
+
+  healthCheck:
+    insecurePortBindAddress: 0.0.0.0
+    insecurePort: 8088
+
+  mqtt:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+
+  messaging:
+    name: 'Hono MQTT Adapter'
+    host: 127.0.0.1
+    port: 5672
+    amqpHostname: hono-internal
+
+  registration:
+    name: 'Hono MQTT Adapter'
+    host: 127.0.0.1
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+
+  credentials:
+    name: 'Hono MQTT Adapter'
+    host: 127.0.0.1
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+
+  tenant:
+    name: 'Hono MQTT Adapter'
+    host: 127.0.0.1
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+
+  deviceConnection:
+    name: 'Hono MQTT Adapter'
+    host: 127.0.0.1
+    port: 5672
+    username: http-adapter@HONO
+    password: http-secret
+
+  command:
+    name: 'Hono MQTT Adapter'
+    host: 127.0.0.1
+    port: 5672
+    amqpHostname: hono-internal
+
+quarkus:
+  ssl:
+    native: true
+  vertx:
+    prefer-native-transport: true
+  log:
+    category:
+      "org.eclipse.hono":
+        level: INFO

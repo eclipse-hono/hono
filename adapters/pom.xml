@@ -36,8 +36,10 @@
     <module>lora-vertx</module>
     <module>mqtt-vertx</module>
     <module>mqtt-vertx-base</module>
+    <module>mqtt-vertx-quarkus</module>
     <module>sigfox-vertx</module>
     <module>base-spring</module>
+    <module>base-quarkus</module>
   </modules>
 
   <name>Hono Protocol Adapters</name>

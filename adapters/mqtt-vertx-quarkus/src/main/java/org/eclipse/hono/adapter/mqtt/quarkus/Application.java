@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.http.quarkus;
+package org.eclipse.hono.adapter.mqtt.quarkus;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,8 +23,8 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
-import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
+import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.CommandTargetMapper;
@@ -55,7 +55,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 
 /**
- * The Hono HTTP adapter main application class.
+ * The Hono MQTT adapter main application class.
  */
 @ApplicationScoped
 @Startup
@@ -73,7 +73,7 @@ public class Application {
     Tracer tracer;
 
     @Inject
-    MicrometerBasedHttpAdapterMetrics metrics;
+    MicrometerBasedMqttAdapterMetrics metrics;
 
     @Inject
     List<Handler<Router>> healthCheckResourceProviders;
@@ -82,7 +82,7 @@ public class Application {
     ResourceLimitChecks resourceLimitChecks;
 
     void onStart(final @Observes StartupEvent ev) {
-        LOG.info("deploying {} HTTP adapter instances ...", config.app.getMaxInstances());
+        LOG.info("deploying {} MQTT adapter instances ...", config.app.getMaxInstances());
 
         final CompletableFuture<Void> startup = new CompletableFuture<>();
         final Promise<String> deploymentTracker = Promise.promise();
@@ -115,12 +115,12 @@ public class Application {
     }
 
     @Produces
-    VertxBasedHttpProtocolAdapter adapter() {
+    VertxBasedMqttProtocolAdapter adapter() {
 
-        final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
+        final VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setCommandConsumerFactory(commandConsumerFactory());
         adapter.setCommandTargetMapper(commandTargetMapper());
-        adapter.setConfig(config.http);
+        adapter.setConfig(config.mqtt);
         adapter.setCredentialsClientFactory(credentialsClientFactory());
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory());
         adapter.setDownstreamSenderFactory(downstreamSenderFactory());

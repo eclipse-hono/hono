@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.http.quarkus;
+package org.eclipse.hono.service.quarkus;
 
 import java.time.Duration;
 import java.time.Instant;
