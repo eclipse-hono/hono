@@ -14,6 +14,7 @@ hono:
     insecurePortEnabled: true
     keyPath: /etc/hono/certs/amqp-adapter-key.pem
     certPath: /etc/hono/certs/amqp-adapter-cert.pem
+    sendMessageToDeviceTimeout: ${adapter.sendMessageToDeviceTimeout}
   messaging:
     name: 'Hono AMQP Adapter'
     host: ${hono.amqp-network.host}

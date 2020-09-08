@@ -37,6 +37,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <link.establishment.timeout>5000</link.establishment.timeout>
     <flow.latency>1000</flow.latency>
     <request.timeout>500</request.timeout>
+    <adapter.sendMessageToDeviceTimeout>1000</adapter.sendMessageToDeviceTimeout>
     <!-- use minimum number of iterations in order to speed up test execution --> 
     <max.bcrypt.iterations>4</max.bcrypt.iterations>
     <max.event-loop.execute-time>5000</max.event-loop.execute-time>
@@ -197,6 +198,24 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
   </build>
 
   <profiles>
+    <profile>
+      <id>ci_environment</id>
+      <activation>
+        <property>
+          <name>CI</name>
+        </property>
+      </activation>
+      <!-- 
+        relax timeouts when running on CI environment in order to account for (very) limited
+        CPU resources.
+       -->
+      <properties>
+        <adapter.sendMessageToDeviceTimeout>3000</adapter.sendMessageToDeviceTimeout>
+        <max.event-loop.execute-time>20000</max.event-loop.execute-time>
+        <request.timeout>3000</request.timeout>
+        <service.startup.timeout>240000</service.startup.timeout>
+      </properties>
+    </profile>
     <profile>
       <id>device-registry-mongodb</id>
       <properties>

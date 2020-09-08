@@ -360,40 +360,37 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
-        final VertxTestContext setup = new VertxTestContext();
-        final Checkpoint ready = setup.checkpoint(3);
-
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
-
-        helper.registry
-                .addDeviceToTenant(tenantId, deviceId, password)
-                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .compose(ok -> createConsumer(tenantId, msg -> {
-                    // expect empty notification with TTD -1
-                    setup.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-                    final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification
-                            .fromMessage(msg).orElse(null);
-                    LOGGER.info("received notification [{}]", notification);
-                    if (notification.getTtd() == -1) {
-                        ready.flag();
-                    }
-                }))
-                .compose(conAck -> subscribeToCommands(commandTargetDeviceId, msg -> {
-                    setup.failNow(new IllegalStateException("should not have received command"));
-                }, endpointConfig, MqttQoS.AT_MOST_ONCE))
-                .onComplete(ctx.succeeding(ok -> ready.flag()));
-
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
         final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
-        helper.applicationClientFactory.createGenericMessageSender(linkTargetAddress)
-            .onSuccess(s -> {
-                LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
-                sender.set(s);
+        final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint ready = setup.checkpoint(2);
+
+        createConsumer(tenantId, msg -> {
+            // expect empty notification with TTD -1
+            setup.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification
+                    .fromMessage(msg).orElse(null);
+            LOGGER.info("received notification [{}]", notification);
+            if (notification.getTtd() == -1) {
                 ready.flag();
-            });
+            }
+        })
+        .compose(consumer -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .compose(conAck -> subscribeToCommands(commandTargetDeviceId, msg -> {
+            // all commands should get rejected because they fail to pass the validity check
+            ctx.failNow(new IllegalStateException("should not have received command"));
+        }, endpointConfig, MqttQoS.AT_MOST_ONCE))
+        .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(linkTargetAddress))
+        .onComplete(setup.succeeding(genericSender -> {
+            LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
+            sender.set(genericSender);
+            ready.flag();
+        }));
 
         assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
