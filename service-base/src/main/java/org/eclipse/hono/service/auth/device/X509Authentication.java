@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,7 @@ public interface X509Authentication {
      * Validates a certificate path.
      *
      * @param path The certificate path to validate.
-     * @param currentSpan The <em>OpenTracing</em> context in which the
+     * @param spanContext The <em>OpenTracing</em> context in which the
      *                    validation should be executed, or {@code null}
      *                    if no context exists (yet).
      * @return A future indicating the outcome of the validation.
@@ -49,5 +49,5 @@ public interface X509Authentication {
      */
     Future<JsonObject> validateClientCertificate(
             Certificate[] path,
-            SpanContext currentSpan);
+            SpanContext spanContext);
 }

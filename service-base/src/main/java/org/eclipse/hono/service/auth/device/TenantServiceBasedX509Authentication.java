@@ -113,7 +113,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      * the Tenant service.
      *
      * @param path The certificate path to validate.
-     * @param currentSpan The <em>OpenTracing</em> context in which the
+     * @param spanContext The <em>OpenTracing</em> context in which the
      *                    validation should be executed, or {@code null}
      *                    if no context exists (yet).
      * @return A future indicating the outcome of the validation.
@@ -138,11 +138,11 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     @Override
     public Future<JsonObject> validateClientCertificate(
             final Certificate[] path,
-            final SpanContext currentSpan) {
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(path);
 
-        final Span span = TracingHelper.buildChildSpan(tracer, currentSpan, "verify device certificate", getClass().getSimpleName())
+        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "verify device certificate", getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .start();
 
