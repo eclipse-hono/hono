@@ -13,33 +13,37 @@
 package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumingThat;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.amqp.transport.LinkError;
 import org.apache.qpid.proton.message.Message;
+import org.assertj.core.api.Assertions;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -47,6 +51,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
@@ -107,16 +112,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     protected abstract String getEndpointName();
 
     /**
-     * Logs a message before running a test case.
-     *
-     * @param testInfo Meta information about the test being run.
-     */
-    @BeforeEach
-    public void before(final TestInfo testInfo) {
-        log.info("running {}", testInfo.getDisplayName());
-    }
-
-    /**
      * Delete all random tenants and devices generated during the execution of a test case.
      *
      * @param context The Vert.x test context.
@@ -134,6 +129,17 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     @AfterEach
     public void disconnectAdapter(final VertxTestContext context) {
         close(context);
+    }
+
+    /**
+     * Checks if the AMQP adapter supports enforcing the max-message-size announced
+     * in its attach frames.
+     *
+     * @return {@code true} if system property <em>vertx-proton.issue57.fixed</em> is set to <em>true</em>
+     *         or is not defined at all.
+     */
+    protected final boolean adapterEnforcesMessageSizeLimit() {
+        return System.getProperty("vertx-proton.issue57.fixed", "true").equals("true");
     }
 
     /**
@@ -180,6 +186,63 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 final Rejected rejected = (Rejected) delivery.getRemoteState();
                 final ErrorCondition error = rejected.getError();
                 assertThat((Object) error.getCondition()).isEqualTo(Constants.AMQP_BAD_REQUEST);
+            });
+            context.completeNow();
+        });
+
+    }
+
+    /**
+     * Verifies that a message containing a payload which exceeds the configured max payload size is rejected by the adapter.
+     *
+     * @param context The Vert.x context for running asynchronous tests.
+     * @throws InterruptedException if test is interrupted while running.
+     */
+    @Disabled
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    public void testAdapterRejectsMessageExceedingMaxPayloadSize(final VertxTestContext context) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        final VertxTestContext setup = new VertxTestContext();
+        final AtomicInteger maxPayloadSize = new AtomicInteger();
+
+        createConsumer(tenantId, msg -> {
+            context.failNow(new AssertionError("should not have received message"));
+        })
+        .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, false))
+            .map(s -> {
+                setup.verify(() -> {
+                    final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
+                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
+                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                    maxPayloadSize.set(maxMessageSize.intValue());
+                });
+                sender = s;
+                return s;
+            })
+            .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            context.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final Message msg = ProtonHelper.message();
+        msg.setContentType("opaque/binary");
+        msg.setAddress(getEndpointName());
+        msg.setBody(new Data(new Binary(IntegrationTestSupport.getPayload(maxPayloadSize.get()))));
+
+        sender.send(msg, delivery -> {
+
+            context.verify(() -> {
+                assertThat(delivery.getRemoteState()).isInstanceOf(Rejected.class);
+                final Rejected rejected = (Rejected) delivery.getRemoteState();
+                final ErrorCondition error = rejected.getError();
+                assertThat((Object) error.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
             });
             context.completeNow();
         });
@@ -317,7 +380,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         doUploadMessages(messageSending, receiver, payload -> {
 
             final Message msg = ProtonHelper.message();
-            MessageHelper.setPayload(msg, "text/plain", payload.getBytes(StandardCharsets.UTF_8));
+            MessageHelper.setPayload(msg, "opaque/binary", payload);
             msg.setAddress(getEndpointName());
             final Promise<?> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
@@ -328,7 +391,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                         if (Accepted.class.isInstance(delivery.getRemoteState())) {
                             sendingComplete.complete();
                         } else {
-                            sendingComplete.fail(new IllegalStateException("peer did not accept message"));
+                            sendingComplete.fail(AmqpErrorException.from(delivery.getRemoteState()));
                         }
                     });
                     break;
@@ -347,7 +410,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 }
             });
             return sendingComplete.future();
-        });
+        }, senderQoS);
     }
 
     /**
@@ -357,12 +420,14 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param receiverFactory The factory to use for creating the receiver for consuming
      *                        messages from the messaging network.
      * @param sender The sender for sending messaging to the Hono server.
+     * @param senderQoS The QoS used by the sender.
      * @throws InterruptedException if test execution is interrupted.
      */
     protected void doUploadMessages(
             final VertxTestContext messageSending,
             final Function<Handler<Void>, Future<Void>> receiverFactory,
-            final Function<String, Future<?>> sender) throws InterruptedException {
+            final Function<Buffer, Future<?>> sender,
+            final ProtonQoS senderQoS) throws InterruptedException {
 
         final AtomicInteger messagesReceived = new AtomicInteger(0);
 
@@ -379,6 +444,28 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertThat(receiverCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(receiverCreation.failed()).isFalse();
 
+        final int maxMessageSize = this.sender.getRemoteMaxMessageSize().intValue();
+        log.debug("adapter uses max-message-size of {} bytes", maxMessageSize);
+
+        assumingThat(adapterEnforcesMessageSizeLimit() && senderQoS == ProtonQoS.AT_LEAST_ONCE,
+                () -> {
+                    final CountDownLatch maxMessageSizeLatch = new CountDownLatch(1);
+                    sender.apply(Buffer.buffer(IntegrationTestSupport.getPayload(maxMessageSize)))
+                        .onSuccess(v -> {
+                            messageSending.failNow(new AssertionError("should not have been able to send message exceeding max payload size"));
+                        })
+                        .onFailure(t -> {
+                            log.debug("failed to send message exceeding max-message-size using {} delivery semantics", senderQoS);
+                            messageSending.verify(() -> {
+                                assertThat(t).isInstanceOf(AmqpErrorException.class);
+                                final AmqpErrorException amqpError = (AmqpErrorException) t;
+                                assertThat((Object) amqpError.getError()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
+                            });
+                        })
+                        .onComplete(o -> maxMessageSizeLatch.countDown());
+                    maxMessageSizeLatch.await(helper.getTestSetupTimeout(), TimeUnit.SECONDS);
+                    });
+
         final AtomicInteger messagesSent = new AtomicInteger(0);
 
         new Thread(() -> {
@@ -390,7 +477,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
                 final CountDownLatch msgSent = new CountDownLatch(1);
 
-                sender.apply(payload).onComplete(sendAttempt -> {
+                sender.apply(Buffer.buffer(payload)).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         if (sendAttempt.cause() instanceof ServerErrorException &&
                                 ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
@@ -421,10 +508,12 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
         assertThat(messageSending.awaitCompletion(timeToWait, TimeUnit.MILLISECONDS)).isTrue();
-        assertThat(messageSending.failed()).isFalse();
+        if (messageSending.failed()) {
+            Assertions.fail("failed to upload messages", messageSending.causeOfFailure());
+        }
         assertThat(messagesReceived.get())
-        .as(String.format("assert all %d expected messages are received", IntegrationTestSupport.MSG_COUNT))
-        .isGreaterThanOrEqualTo(IntegrationTestSupport.MSG_COUNT);
+            .as(String.format("assert all %d expected messages are received", IntegrationTestSupport.MSG_COUNT))
+            .isGreaterThanOrEqualTo(IntegrationTestSupport.MSG_COUNT);
     }
 
     /**
