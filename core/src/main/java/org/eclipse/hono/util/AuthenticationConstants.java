@@ -131,13 +131,14 @@ public final class AuthenticationConstants {
     /**
      * Parses the SASL response and extracts the authzid, authcid and pwd from the response.
      * <p>
-     * <a href="https://tools.ietf.org/html/rfc4616">The specification for the SASL PLAIN mechanism</a> mandates the format
-     * of the credentials to be of the form: {@code [authzid] UTF8NUL authcid UTF8NUL passwd}.
+     * <a href="https://tools.ietf.org/html/rfc4616">The specification for the SASL PLAIN mechanism</a> mandates the
+     * format of the credentials to be of the form: {@code [authzid] UTF8NUL authcid UTF8NUL passwd}.
      *
      * @param saslResponse The SASL response to parse.
      * @return A String array containing the elements in the SASL response.
      *
-     * @throws CredentialException If one the elements (authzid, authcid and pwd) is missing from the SASL response.
+     * @throws CredentialException If one of the elements (authzid, authcid and pwd) is missing from the SASL response
+     *             or if the authcid or passwd element is empty.
      */
     public static String[] parseSaslResponse(final byte[] saslResponse) throws CredentialException {
         final List<String> fields = new ArrayList<>();

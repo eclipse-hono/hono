@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,25 +17,30 @@ import java.security.cert.Certificate;
 import java.util.Objects;
 
 import org.eclipse.hono.util.AuthenticationConstants;
+import org.eclipse.hono.util.MapBasedExecutionContext;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.proton.ProtonConnection;
 
 /**
  * Keeps information about the SASL handshake.
  */
-public final class SaslResponseContext {
+public final class SaslResponseContext extends MapBasedExecutionContext {
 
     private final ProtonConnection protonConnection;
     private final Certificate[] peerCertificateChain;
     private final String[] saslResponseFields;
     private final String remoteMechanism;
+    private final Span span;
 
     private SaslResponseContext(final ProtonConnection protonConnection, final String remoteMechanism,
-            final String[] saslResponseFields, final Certificate[] peerCertificateChain) {
+            final String[] saslResponseFields, final Certificate[] peerCertificateChain, final Span span) {
         this.protonConnection = Objects.requireNonNull(protonConnection);
         this.remoteMechanism = Objects.requireNonNull(remoteMechanism);
         this.saslResponseFields = saslResponseFields;
         this.peerCertificateChain = peerCertificateChain;
+        this.span = Objects.requireNonNull(span);
     }
 
     /**
@@ -43,15 +48,17 @@ public final class SaslResponseContext {
      *
      * @param protonConnection The connection on which the SASL handshake is done.
      * @param saslResponseFields The <em>authzid</em>, <em>authcid</em> and <em>pwd</em> parts of the saslResponse.
+     * @param span The OpenTracing span to track the opening of an AMQP connection.
      * @return The created SaslResponseContext.
-     * @throws NullPointerException if protonConnection or saslResponseFields is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static SaslResponseContext forMechanismPlain(final ProtonConnection protonConnection,
-            final String[] saslResponseFields) {
+            final String[] saslResponseFields, final Span span) {
         Objects.requireNonNull(protonConnection);
         Objects.requireNonNull(saslResponseFields);
+        Objects.requireNonNull(span);
         return new SaslResponseContext(protonConnection, AuthenticationConstants.MECHANISM_PLAIN, saslResponseFields,
-                null);
+                null, span);
     }
 
     /**
@@ -59,14 +66,27 @@ public final class SaslResponseContext {
      *
      * @param protonConnection The connection on which the SASL handshake is done.
      * @param peerCertificateChain The client certificates. May be {@code null} if none were provided.
+     * @param span The OpenTracing span to track the opening of an AMQP connection.
      * @return The created SaslResponseContext.
-     * @throws NullPointerException if protonConnection is {@code null}.
+     * @throws NullPointerException if protonConnection or span is {@code null}.
      */
     public static SaslResponseContext forMechanismExternal(final ProtonConnection protonConnection,
-            final Certificate[] peerCertificateChain) {
+            final Certificate[] peerCertificateChain, final Span span) {
         Objects.requireNonNull(protonConnection);
+        Objects.requireNonNull(span);
         return new SaslResponseContext(protonConnection, AuthenticationConstants.MECHANISM_EXTERNAL, null,
-                peerCertificateChain);
+                peerCertificateChain, span);
+    }
+
+    @Override
+    public SpanContext getTracingContext() {
+        return span.context();
+    }
+
+    @Override
+    public void setTracingContext(final SpanContext spanContext) {
+        // not supported
+        // TODO: this method shall get removed as part of adapting span handling in contexts
     }
 
     /**

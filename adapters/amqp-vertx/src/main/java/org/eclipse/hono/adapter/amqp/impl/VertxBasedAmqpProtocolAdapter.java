@@ -39,6 +39,8 @@ import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterSaslAuthenticatorFactory;
+import org.eclipse.hono.adapter.amqp.SaslExternalAuthHandler;
+import org.eclipse.hono.adapter.amqp.SaslPlainAuthHandler;
 import org.eclipse.hono.adapter.amqp.SaslResponseContext;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -52,6 +54,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
 import org.eclipse.hono.service.AdapterDisabledException;
+import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
@@ -175,16 +178,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
                 authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
-                        getTenantClientFactory(),
-                        getConfig(),
                         getMetrics(),
                         () -> tracer.buildSpan("open connection")
-                            .ignoreActiveSpan()
-                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                            .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                            .start(),
-                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
-                        new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
+                                .ignoreActiveSpan()
+                                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                                .start(),
+                        new SaslPlainAuthHandler(new UsernamePasswordAuthProvider(getCredentialsClientFactory(),
+                                getConfig(), tracer)),
+                        new SaslExternalAuthHandler(
+                                new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
+                                new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
                         (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
             }
             return Future.succeededFuture();
