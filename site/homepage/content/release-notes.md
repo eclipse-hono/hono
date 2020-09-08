@@ -19,6 +19,10 @@ title = "Release Notes"
   in addition to the adapter level. If set, the tenant specific value is used for all devices of the
   particular tenant. If not set, the value defined at the adapter level is used.
 
+### Fixes & Enhancements
+
+* The MongoDB based device registry now checks for tenant existence during device registration and credentials management operations.
+
 ### Deprecations
  
  * The configuration property `singleTenant` of the protocol adapters and the device registry is now deprecated
