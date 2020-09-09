@@ -212,6 +212,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                         if (adapterInstanceId == null) {
                             LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
                                     tenantId, deviceId);
+                            span.log("no command handling adapter instances found for device (no via-gateways given)");
                             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
                         } else {
                             LOG.debug("found command handling adapter instance '{}' [tenant: {}, device-id: {}]",
@@ -243,7 +244,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                     if (deviceToInstanceMap.isEmpty()) {
                         LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
                                 tenantId, deviceId);
-                        span.log("no command handling adapter instances found");
+                        span.log("no command handling adapter instances found for device or given via-gateways ("
+                                + String.join(", ", viaGateways) + ")");
                         resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
                     } else if (deviceToInstanceMap.containsKey(deviceId)) {
                         // there is a adapter instance set for the device itself - that gets precedence
@@ -355,6 +357,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                     if (deviceToInstanceMap.isEmpty()) {
                         LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
                                 tenantId, deviceId);
+                        span.log("no command handling adapter instances found for device or given via-gateways ("
+                                + String.join(", ", viaGateways) + ")");
                         resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
                     } else if (deviceToInstanceMap.containsKey(deviceId)) {
                         // there is a command handling instance set for the device itself - that gets precedence
