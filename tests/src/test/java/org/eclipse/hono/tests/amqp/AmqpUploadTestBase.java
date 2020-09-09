@@ -13,7 +13,6 @@
 package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumingThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.CountDownLatch;
@@ -23,6 +22,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -42,8 +42,8 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -132,17 +132,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     }
 
     /**
-     * Checks if the AMQP adapter supports enforcing the max-message-size announced
-     * in its attach frames.
-     *
-     * @return {@code true} if system property <em>vertx-proton.issue57.fixed</em> is set to <em>true</em>
-     *         or is not defined at all.
-     */
-    protected final boolean adapterEnforcesMessageSizeLimit() {
-        return System.getProperty("vertx-proton.issue57.fixed", "true").equals("true");
-    }
-
-    /**
      * Verifies that a message containing a payload which has the <em>emtpy notification</em>
      * content type is rejected by the adapter.
      *
@@ -193,59 +182,57 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that a message containing a payload which exceeds the configured max payload size is rejected by the adapter.
+     * Verifies that the adapter closes the link when a device sends a message containing a payload which
+     * exceeds the configured max payload size.
      *
-     * @param context The Vert.x context for running asynchronous tests.
+     * @param ctx The Vert.x test context.
      * @throws InterruptedException if test is interrupted while running.
      */
-    @Disabled
+    @EnabledIfSystemProperty(named = "vertx-proton.issue57.fixed", matches = "true")
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    public void testAdapterRejectsMessageExceedingMaxPayloadSize(final VertxTestContext context) throws InterruptedException {
+    public void testAdapterClosesLinkOnMessageExceedingMaxPayloadSize(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        final VertxTestContext setup = new VertxTestContext();
-        final AtomicInteger maxPayloadSize = new AtomicInteger();
-
         createConsumer(tenantId, msg -> {
-            context.failNow(new AssertionError("should not have received message"));
+            ctx.failNow(new AssertionError("should not have received message"));
         })
         .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, false))
-            .map(s -> {
-                setup.verify(() -> {
-                    final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
-                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
-                    maxPayloadSize.set(maxMessageSize.intValue());
+        .onComplete(ctx.succeeding(s -> {
+
+            s.closeHandler(remoteDetach -> {
+                log.debug("received remote close");
+                ctx.verify(() -> {
+                    final ErrorCondition errorCondition = s.getRemoteCondition();
+                    assertThat(remoteDetach.succeeded()).isFalse();
+                    assertThat(errorCondition).isNotNull();
+                    assertThat((Comparable<Symbol>) errorCondition.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
                 });
-                sender = s;
-                return s;
-            })
-            .onComplete(setup.completing());
-
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            context.failNow(setup.causeOfFailure());
-            return;
-        }
-
-        final Message msg = ProtonHelper.message();
-        msg.setContentType("opaque/binary");
-        msg.setAddress(getEndpointName());
-        msg.setBody(new Data(new Binary(IntegrationTestSupport.getPayload(maxPayloadSize.get()))));
-
-        sender.send(msg, delivery -> {
-
-            context.verify(() -> {
-                assertThat(delivery.getRemoteState()).isInstanceOf(Rejected.class);
-                final Rejected rejected = (Rejected) delivery.getRemoteState();
-                final ErrorCondition error = rejected.getError();
-                assertThat((Object) error.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
+                s.close();
+                ctx.completeNow();
             });
-            context.completeNow();
-        });
+
+            final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
+            log.debug("AMQP adapter uses max-message-size {}", maxMessageSize);
+
+            ctx.verify(() -> {
+                assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
+                assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+            });
+
+            final Message msg = ProtonHelper.message();
+            msg.setContentType("opaque/binary");
+            msg.setAddress(getEndpointName());
+            msg.setBody(new Data(new Binary(IntegrationTestSupport.getPayload(maxMessageSize.intValue()))));
+
+            context.runOnContext(go -> {
+                log.debug("sending message");
+                s.send(msg);
+            });
+        }));
+
 
     }
 
@@ -444,28 +431,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertThat(receiverCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(receiverCreation.failed()).isFalse();
 
-        final int maxMessageSize = this.sender.getRemoteMaxMessageSize().intValue();
-        log.debug("adapter uses max-message-size of {} bytes", maxMessageSize);
-
-        assumingThat(adapterEnforcesMessageSizeLimit() && senderQoS == ProtonQoS.AT_LEAST_ONCE,
-                () -> {
-                    final CountDownLatch maxMessageSizeLatch = new CountDownLatch(1);
-                    sender.apply(Buffer.buffer(IntegrationTestSupport.getPayload(maxMessageSize)))
-                        .onSuccess(v -> {
-                            messageSending.failNow(new AssertionError("should not have been able to send message exceeding max payload size"));
-                        })
-                        .onFailure(t -> {
-                            log.debug("failed to send message exceeding max-message-size using {} delivery semantics", senderQoS);
-                            messageSending.verify(() -> {
-                                assertThat(t).isInstanceOf(AmqpErrorException.class);
-                                final AmqpErrorException amqpError = (AmqpErrorException) t;
-                                assertThat((Object) amqpError.getError()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
-                            });
-                        })
-                        .onComplete(o -> maxMessageSizeLatch.countDown());
-                    maxMessageSizeLatch.await(helper.getTestSetupTimeout(), TimeUnit.SECONDS);
-                    });
-
         final AtomicInteger messagesSent = new AtomicInteger(0);
 
         new Thread(() -> {
@@ -558,7 +523,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final Promise<ProtonSender> senderTracker = Promise.promise();
         final Promise<Void> receiverTracker = Promise.promise();
 
-        if (sender == null) {
+        if (sender == null || !sender.isOpen()) {
             senderTracker.complete();
         } else {
             context.runOnContext(go -> {

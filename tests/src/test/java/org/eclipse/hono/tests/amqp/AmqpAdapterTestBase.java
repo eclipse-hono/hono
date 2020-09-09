@@ -121,7 +121,7 @@ public abstract class AmqpAdapterTestBase {
      */
     protected Future<ProtonSender> createProducer(final String target) {
 
-        final Promise<ProtonSender>  result = Promise.promise();
+        final Promise<ProtonSender> result = Promise.promise();
         if (context == null) {
             result.fail(new IllegalStateException("not connected"));
         } else {

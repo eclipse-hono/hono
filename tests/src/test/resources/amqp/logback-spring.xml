@@ -43,7 +43,6 @@
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
-    <logger name="org.eclipse.hono" level="INFO"/>
   </springProfile>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
