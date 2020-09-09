@@ -244,12 +244,19 @@ public final class DeviceRegistryUtils {
     }
 
     /**
-     * Checks if the properties in the given client context matches with the extension properties of 
-     * the given credential.
+     * Checks if the properties in the given client context matches with the extension properties of the
+     * given credential.
+     * <p>
+     * The matching properties in the client context and credential extensions are filtered out based 
+     * on their property names. If their values are equal then {@code true} is returned. Otherwise {@code false}.
+     * <p>
+     * The properties that exist only in the client context but not in the extension properties are ignored.
+     * If none of the properties in the client context are found in the credential extensions,
+     * then {@code true} is returned.
      *
      * @param credential The credential object to match.
      * @param clientContext The client context, which contains properties that can be used to identify the device.
-     * @return {@code true} if the properties from client context matches with those of the given credential, 
+     * @return {@code true} if the properties from client context matches with those of the given credential,
      *         {@code false} otherwise.
      * @throws NullPointerException if credential is {@code null}.
      */
