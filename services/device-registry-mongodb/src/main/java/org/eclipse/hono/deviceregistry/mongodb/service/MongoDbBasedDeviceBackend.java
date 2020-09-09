@@ -37,6 +37,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -167,6 +168,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
                 .compose(result -> {
                     if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
                             && isAutoProvisioningEnabled(type, clientContext)) {
+                        Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
                         return DeviceRegistryUtils
                                 .getCertificateFromClientContext(tenantId, authId, clientContext, span)
                                 .compose(optionalCert -> optionalCert

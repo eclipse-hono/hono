@@ -44,6 +44,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
+import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -198,6 +199,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
                 .compose(result -> {
                     if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
                             && isAutoProvisioningEnabled(type, clientContext)) {
+                        Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
                         return provisionDevice(tenantId, authId, clientContext, span);
                     }
                     return Future.succeededFuture(result);
