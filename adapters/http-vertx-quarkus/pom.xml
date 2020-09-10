@@ -76,7 +76,6 @@
     <dependency>
       <groupId>io.jaegertracing</groupId>
       <artifactId>jaeger-core</artifactId>
-      <version>${jaeger.version}</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
