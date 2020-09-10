@@ -619,7 +619,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         if (!(peerIdentity instanceof ExtensiblePrincipal)) {
             return null;
         }
-        final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
+        final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
         return extPrincipal.getExtendedInfo().get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
     }
 
