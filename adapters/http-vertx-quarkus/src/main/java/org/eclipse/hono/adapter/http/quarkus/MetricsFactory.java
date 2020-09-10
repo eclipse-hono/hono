@@ -48,6 +48,7 @@ public class MetricsFactory {
         return Collections.singletonList(new PrometheusScrapingResource((PrometheusMeterRegistry) registry));
     }
 
+    @SuppressWarnings("unchecked")
     @Produces
     @DefaultBean
     List<Handler<Router>> emptyResources() {
