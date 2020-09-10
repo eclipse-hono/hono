@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,10 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 
-import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -36,18 +34,13 @@ import io.vertx.mqtt.MqttAuth;
  */
 public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttContext> {
 
-    private final Tracer tracer;
-
     /**
      * Creates a new handler for a Hono client based auth provider.
      *
      * @param authProvider The provider to use for verifying a device's credentials.
-     * @param tracer The tracer instance.
      */
-    public ConnectPacketAuthHandler(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider,
-            final Tracer tracer) {
+    public ConnectPacketAuthHandler(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider) {
         super(authProvider);
-        this.tracer = tracer;
     }
 
     /**

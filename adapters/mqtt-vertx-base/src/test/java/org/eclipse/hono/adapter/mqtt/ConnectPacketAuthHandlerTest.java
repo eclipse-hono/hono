@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttAuth;
@@ -50,7 +49,7 @@ public class ConnectPacketAuthHandlerTest {
     @BeforeEach
     public void setUp() {
         authProvider = mock(DeviceCredentialsAuthProvider.class);
-        authHandler = new ConnectPacketAuthHandler(authProvider, NoopTracerFactory.create());
+        authHandler = new ConnectPacketAuthHandler(authProvider);
     }
 
     /**
