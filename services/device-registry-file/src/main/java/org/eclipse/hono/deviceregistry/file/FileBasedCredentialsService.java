@@ -399,27 +399,8 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
                 continue;
             }
 
-            if (clientContext != null && !clientContext.isEmpty()) {
-
-                final JsonObject extensionProperties = authIdCredential.getJsonObject(RegistryManagementConstants.FIELD_EXT, new JsonObject());
-
-                final boolean credentialsOnRecordMatchClientContext = clientContext.stream()
-                        .filter(entry -> entry.getValue() != null)
-                        .allMatch(entry -> {
-                            final Object valueOnRecord = extensionProperties.getValue(entry.getKey());
-                            LOG.debug("comparing client context property [name: {}, value: {}] to value on record: {}",
-                                    entry.getKey(), entry.getValue(), valueOnRecord);
-                            if (valueOnRecord == null) {
-                                return true;
-                            } else {
-                                return entry.getValue().equals(valueOnRecord);
-                            }
-                        });
-
-                if (!credentialsOnRecordMatchClientContext) {
-                    continue;
-                }
-
+            if (!DeviceRegistryUtils.matchesWithClientContext(authIdCredential, clientContext)) {
+                continue;
             }
 
             // copy

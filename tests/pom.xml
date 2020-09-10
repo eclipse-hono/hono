@@ -227,7 +227,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
         <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
         <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
-        <deviceregistry.credentials.supportsClientContext>false</deviceregistry.credentials.supportsClientContext>
         <deviceregistry.supportsSearchDevices>true</deviceregistry.supportsSearchDevices>
       </properties>
     </profile>
