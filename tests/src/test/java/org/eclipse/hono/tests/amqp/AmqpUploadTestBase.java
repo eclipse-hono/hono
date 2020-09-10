@@ -202,20 +202,20 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, false))
         .onComplete(ctx.succeeding(s -> {
 
-            s.closeHandler(remoteDetach -> {
-                log.debug("received remote close");
+            s.detachHandler(remoteDetach -> {
                 ctx.verify(() -> {
                     final ErrorCondition errorCondition = s.getRemoteCondition();
                     assertThat(remoteDetach.succeeded()).isFalse();
                     assertThat(errorCondition).isNotNull();
                     assertThat((Comparable<Symbol>) errorCondition.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
                 });
+                log.info("AMQP adapter detached link as expected");
                 s.close();
                 ctx.completeNow();
             });
 
             final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-            log.debug("AMQP adapter uses max-message-size {}", maxMessageSize);
+            log.info("AMQP adapter uses max-message-size {}", maxMessageSize);
 
             ctx.verify(() -> {
                 assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
