@@ -57,7 +57,8 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
      * @param context The MQTT context for the client's CONNECT packet.
      * @return A future indicating the outcome of the operation.
      *         The future will succeed with the client's credentials extracted from the CONNECT packet
-     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
+     *         or it will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} indicating the
+     *         cause of the failure.
      * @throws NullPointerException if the context is {@code null}
      * @throws IllegalArgumentException if the context does not contain an MQTT endpoint.
      */
