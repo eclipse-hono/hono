@@ -191,18 +191,18 @@ public class PasswordSecret extends CommonSecret {
      * <li>if this secret contains a hashed password, the
      * <ul>
      * <li>hash algorithm is contained in the given white list and</li>
-     * <li>if the hash algorithm used is bcrypt, the {@link BCryptHelper#getIterations(String)}
-     * method returns a value that is &le; the max iterations.</li>
+     * <li>if the hash algorithm used is bcrypt, the {@link BCryptHelper#getCostFactor(String)}
+     * method returns a value that is &le; the given maximum cost factor.</li>
      * </ul>
      * </li>
      * </ol>
      *
      * @param hashAlgorithmsWhitelist The list of supported hashing algorithms for pre-hashed passwords.
-     * @param maxBcryptIterations The maximum number of iterations to use for bcrypt password hashes.
+     * @param maxBcryptCostFactor The maximum cost factor to use for bcrypt password hashes.
      * @throws IllegalStateException if this secret doesn't use a supported and valid hash algorithm.
      * @throws NullPointerException if the white list is {@code null}.
      */
-    public final void verifyHashAlgorithm(final Set<String> hashAlgorithmsWhitelist, final int maxBcryptIterations) {
+    public final void verifyHashAlgorithm(final Set<String> hashAlgorithmsWhitelist, final int maxBcryptCostFactor) {
 
         Objects.requireNonNull(hashAlgorithmsWhitelist);
 
@@ -219,8 +219,8 @@ public class PasswordSecret extends CommonSecret {
             switch (hashFunction) {
                 case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
                     try {
-                        if (BCryptHelper.getIterations(passwordHash) > maxBcryptIterations) {
-                            throw new IllegalStateException("BCrypt hash algorithm uses too many iterations, max is " + maxBcryptIterations);
+                        if (BCryptHelper.getCostFactor(passwordHash) > maxBcryptCostFactor) {
+                            throw new IllegalStateException("BCrypt hash algorithm cost factor exceeds configured maximum value of " + maxBcryptCostFactor);
                         }
                         break;
                     } catch (IllegalArgumentException e) {

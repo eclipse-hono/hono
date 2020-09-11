@@ -55,14 +55,17 @@ public final class Credentials {
      *
      * @param authId The authentication to use.
      * @param password The password to use.
-     * @param maxBcryptIterations max bcrypt iterations to use.
+     * @param bcryptCostFactor The cost factor to use for creating a bcrypt password hash.
      * @return The fully populated credential.
      */
-    public static PasswordCredential createPasswordCredential(final String authId, final String password,
-                                                        final OptionalInt maxBcryptIterations) {
+    public static PasswordCredential createPasswordCredential(
+            final String authId,
+            final String password,
+            final OptionalInt bcryptCostFactor) {
+
         final PasswordCredential p = new PasswordCredential(authId);
 
-        p.setSecrets(Collections.singletonList(createPasswordSecret(password, maxBcryptIterations)));
+        p.setSecrets(Collections.singletonList(createPasswordSecret(password, bcryptCostFactor)));
 
         return p;
     }
@@ -100,12 +103,13 @@ public final class Credentials {
      * Create a new password secret.
      *
      * @param password The password to use.
-     * @param maxBcryptIterations max bcrypt iterations to use.
+     * @param bcryptCostFactor The cost factor to use for creating a bcrypt password hash.
      * @return The password secret instance.
      */
-    public static PasswordSecret createPasswordSecret(final String password, final OptionalInt maxBcryptIterations) {
+    public static PasswordSecret createPasswordSecret(final String password, final OptionalInt bcryptCostFactor) {
+
         final SpringBasedHonoPasswordEncoder encoder = new SpringBasedHonoPasswordEncoder(
-                maxBcryptIterations.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
+                bcryptCostFactor.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
         final EncodedPassword encodedPwd = EncodedPassword.fromHonoSecret(encoder.encode(password));
 
         final PasswordSecret s = new PasswordSecret();

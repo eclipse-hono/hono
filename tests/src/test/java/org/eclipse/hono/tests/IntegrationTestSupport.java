@@ -117,9 +117,9 @@ public final class IntegrationTestSupport {
      */
     public static final int DEFAULT_HTTPS_PORT = 8443;
     /**
-     * The default number of iterations to use with the BCrypt hash algorithm.
+     * The default cost factor to use with the BCrypt hash algorithm.
      */
-    public static final int DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
+    public static final int DEFAULT_MAX_BCRYPT_COST_FACTOR = 10;
     /**
      * The default port exposed by the MQTT adapter.
      */
@@ -262,10 +262,10 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_AMQPS_PORT = "adapter.amqps.port";
     /**
-     * The name of the system property to use for setting the maximum number of BCrypt iterations supported
+     * The name of the system property to use for setting the maximum BCrypt cost factor supported
      * by Hono.
      */
-    public static final String PROPERTY_MAX_BCRYPT_ITERATIONS = "max.bcrypt.iterations";
+    public static final String PROPERTY_MAX_BCRYPT_COST_FACTOR = "max.bcrypt.costFactor";
 
 
     /**
@@ -389,9 +389,9 @@ public final class IntegrationTestSupport {
     public static final int MSG_COUNT = Integer.getInteger("msg.count", 400);
 
     /**
-     * The maximum number of BCrypt iterations supported by Hono.
+     * The maximum BCrypt cost factor supported by Hono.
      */
-    public static final int MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPERTY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
+    public static final int MAX_BCRYPT_COST_FACTOR = Integer.getInteger(PROPERTY_MAX_BCRYPT_COST_FACTOR, DEFAULT_MAX_BCRYPT_COST_FACTOR);
 
     /**
      * The absolute path to the trust store to use for establishing secure connections with Hono.
@@ -1162,7 +1162,7 @@ public final class IntegrationTestSupport {
      */
     public static PasswordCredential createPasswordCredential(final String authId, final String password) {
         return Credentials.createPasswordCredential(authId, password,
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
+                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR));
     }
 
 }

@@ -123,7 +123,7 @@ public class FileBasedServiceConfig {
      */
     @Bean
     public HonoPasswordEncoder passwordEncoder() {
-        return new SpringBasedHonoPasswordEncoder(credentialsProperties().getMaxBcryptIterations());
+        return new SpringBasedHonoPasswordEncoder(credentialsProperties().getMaxBcryptCostFactor());
     }
 
     /**

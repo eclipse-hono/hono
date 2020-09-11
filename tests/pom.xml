@@ -38,8 +38,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <flow.latency>1000</flow.latency>
     <request.timeout>500</request.timeout>
     <adapter.sendMessageToDeviceTimeout>1000</adapter.sendMessageToDeviceTimeout>
-    <!-- use minimum number of iterations in order to speed up test execution --> 
-    <max.bcrypt.iterations>4</max.bcrypt.iterations>
+    <!-- use minimum cost factor in order to speed up test execution --> 
+    <max.bcrypt.costFactor>4</max.bcrypt.costFactor>
     <max.event-loop.execute-time>5000</max.event-loop.execute-time>
     <!-- should be set to false if testing against a registry that doesn't support GW mode -->
     <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
@@ -1135,7 +1135,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
-                <max.bcrypt.iterations>${max.bcrypt.iterations}</max.bcrypt.iterations>
+                <max.bcrypt.costFactor>${max.bcrypt.costFactor}</max.bcrypt.costFactor>
                 <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
               </systemProperties>

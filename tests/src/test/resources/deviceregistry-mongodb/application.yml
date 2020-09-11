@@ -22,7 +22,7 @@ hono:
     svc:
   credentials:
     svc:
-      maxBcryptIterations: ${max.bcrypt.iterations}
+      maxBcryptCostFactor: ${max.bcrypt.costFactor}
   tenant:
     svc:
   mongodb:

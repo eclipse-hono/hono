@@ -18,11 +18,16 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Configuration properties for Hono's credentials API as own server.
  *
  */
 public final class FileBasedCredentialsConfigProperties extends AbstractFileBasedRegistryConfigProperties {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FileBasedCredentialsConfigProperties.class);
 
     /**
      * The default name of the file that the registry persists credentials to.
@@ -31,7 +36,7 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
 
     private final Set<String> hashAlgorithmsWhitelist = new HashSet<>();
 
-    private int maxBcryptIterations = 10;
+    private int maxBcryptCostFactor = 10;
 
     /**
      * {@inheritDoc}
@@ -42,32 +47,62 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
     }
 
     /**
-     * Gets the maximum number of iterations to use for bcrypt
+     * Gets the maximum cost factor to use for bcrypt
      * password hashes.
      * <p>
      * The default value of this property is 10.
      *
-     * @return The maximum number.
+     * @return The maximum cost factor.
      */
-    public int getMaxBcryptIterations() {
-        return maxBcryptIterations;
+    public int getMaxBcryptCostFactor() {
+        return maxBcryptCostFactor;
     }
 
     /**
-     * Sets the maximum number of iterations to use for bcrypt
+     * Gets the maximum cost factor to use for bcrypt
      * password hashes.
      * <p>
      * The default value of this property is 10.
      *
-     * @param iterations The maximum number.
+     * @return The maximum cost factor.
+     * @deprecated Use {@link #getMaxBcryptCostFactor()} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public int getMaxBcryptIterations() {
+        return getMaxBcryptCostFactor();
+    }
+
+    /**
+     * Sets the maximum cost factor to use for bcrypt
+     * password hashes.
+     * <p>
+     * The default value of this property is 10.
+     *
+     * @param costFactor The maximum cost factor.
      * @throws IllegalArgumentException if iterations is &lt; 4 or &gt; 31.
      */
-    public void setMaxBcryptIterations(final int iterations) {
-        if (iterations < 4 || iterations > 31) {
-            throw new IllegalArgumentException("iterations must be > 3 and < 32");
+    public void setMaxBcryptCostFactor(final int costFactor) {
+        if (costFactor < 4 || costFactor > 31) {
+            throw new IllegalArgumentException("cost factor must be > 3 and < 32");
         } else {
-            maxBcryptIterations = iterations;
+            maxBcryptCostFactor = costFactor;
         }
+    }
+
+    /**
+     * Sets the maximum cost factor to use for bcrypt
+     * password hashes.
+     * <p>
+     * The default value of this property is 10.
+     *
+     * @param costFactor The maximum cost factor.
+     * @throws IllegalArgumentException if iterations is &lt; 4 or &gt; 31.
+     * @deprecated Use {@link #setMaxBcryptCostFactor(int)} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public void setMaxBcryptIterations(final int costFactor) {
+        LOG.warn("the maxBcryptIterations property is deprecated, please update your configuration to use maxBcryptCostFactor instead");
+        setMaxBcryptCostFactor(costFactor);
     }
 
 

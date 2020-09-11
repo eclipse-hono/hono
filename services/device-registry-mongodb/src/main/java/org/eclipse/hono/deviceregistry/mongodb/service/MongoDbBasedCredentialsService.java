@@ -89,7 +89,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         super(Objects.requireNonNull(vertx),
                 Objects.requireNonNull(passwordEncoder),
-                config.getMaxBcryptIterations(),
+                config.getMaxBcryptCostFactor(),
                 config.getHashAlgorithmsWhitelist());
 
         Objects.requireNonNull(mongoClient);
