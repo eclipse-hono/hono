@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,13 +22,21 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
@@ -37,6 +45,7 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 
 /**
  * Verifies {@link CommonCredential} and others.
@@ -58,6 +67,16 @@ public class CredentialsTest {
         secret.setNotBefore(NOT_BEFORE);
         secret.setNotAfter(NOT_AFTER);
         return secret;
+    }
+
+    private static X509Certificate getCertificate() {
+        try {
+            final var selfSignedCert = SelfSignedCertificate.create("hono.eclipse.org");
+            final var factory = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) factory.generateCertificate(new FileInputStream(selfSignedCert.certificatePath()));
+        } catch (final CertificateException | FileNotFoundException e) {
+            throw new RuntimeException("cannot create certificate", e);
+        }
     }
 
     private void assertCommonSecretProperties(final JsonObject secret) {
@@ -200,7 +219,7 @@ public class CredentialsTest {
 
         final X509CertificateSecret x509Secret = new X509CertificateSecret();
         addCommonProperties(x509Secret);
-        final X509CertificateCredential credential = new X509CertificateCredential("CN=foo, O=bar", List.of(x509Secret));
+        final var credential = X509CertificateCredential.fromSubjectDn("CN=foo, O=bar", List.of(x509Secret));
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
@@ -210,10 +229,10 @@ public class CredentialsTest {
     }
 
     /**
-     * Verifies that a JSON object can be decoded into an X.509 credential.
+     * Verifies that a JSON object containing an auth-id and a secret can be decoded into an X.509 credential.
      */
     @Test
-    public void testDecodeX509Credential() {
+    public void testDecodeX509CredentialFromSubjectDn() {
 
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
@@ -234,6 +253,37 @@ public class CredentialsTest {
 
         final X509CertificateSecret secret = credential.getSecrets().get(0);
         assertCommonSecretProperties(secret);
+    }
+
+    /**
+     * Verifies that a JSON object containing a client certificate can be decoded into an X.509 credential.
+     *
+     * @throws CertificateEncodingException if the client certificate's DER encoding cannot be created.
+     */
+    @Test
+    public void testDecodeX509CredentialFromClientCertificate() throws CertificateEncodingException {
+
+        final var cert = getCertificate();
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, cert.getEncoded())
+                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
+                        .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, NOT_BEFORE_STRING)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, NOT_AFTER_STRING)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_COMMENT, SECRET_COMMENT)));
+
+        final var credential = jsonCredential.mapTo(X509CertificateCredential.class);
+
+        assertThat(credential.getAuthId()).isEqualTo(cert.getSubjectX500Principal().getName(X500Principal.RFC2253));
+        assertThat(credential.isEnabled()).isTrue();
+        assertThat(credential.getSecrets()).hasSize(1);
+
+        final X509CertificateSecret secret = credential.getSecrets().get(0);
+        assertThat(secret.getNotBefore()).isEqualTo(cert.getNotBefore().toInstant());
+        assertThat(secret.getNotAfter()).isEqualTo(cert.getNotAfter().toInstant());
     }
 
     /**
@@ -500,7 +550,7 @@ public class CredentialsTest {
                 .isInstanceOf(IllegalArgumentException.class);
         });
 
-        assertThatThrownBy(() -> new X509CertificateCredential("not-a-subject-DN", List.of(new X509CertificateSecret())))
+        assertThatThrownBy(() -> X509CertificateCredential.fromSubjectDn("not-a-subject-DN", List.of(new X509CertificateSecret())))
             .isInstanceOf(IllegalArgumentException.class);
     }
 

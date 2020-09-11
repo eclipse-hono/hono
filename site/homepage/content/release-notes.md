@@ -29,6 +29,11 @@ title = "Release Notes"
   This should reduce the load on the Tenant service significantly in scenarios where devices of the same
   tenant connect to an adapter at a high rate, e.g. in when re-connecting after one or more adapter pods have
   crashed.
+* The Device Registry Management API's *update credentials* operation has been extended to allow specifying the
+  *auth-id* and validity period implicitly by means of including a (Base64 encoded) client certificate in the new
+  *cert* property. This can be used instead of specifying the client certificate's subject DN and public key's
+  validity period explicitly in the *auth-id* and *secrets* properties. This should make setting the correct *auth-id*
+  value much less error prone.
 
 ### Fixes & Enhancements
 
