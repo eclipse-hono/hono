@@ -30,6 +30,7 @@ import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.opentracing.Span;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
@@ -55,8 +56,9 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
             final CoapExchange exchange,
             final Device originDevice,
             final Device authenticatedDevice,
-            final String authId) {
-        super(authenticatedDevice);
+            final String authId,
+            final Span span) {
+        super(span, authenticatedDevice);
         this.exchange = exchange;
         this.originDevice = originDevice;
         this.authId = authId;
@@ -70,18 +72,21 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
      *                            if the device has not been authenticated.
      * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @return The context.
-     * @throws NullPointerException if request or origin device are {@code null}.
+     * @throws NullPointerException if request, originDevice or span are {@code null}.
      */
     public static CoapContext fromRequest(
             final CoapExchange request,
             final Device originDevice,
             final Device authenticatedDevice,
-            final String authId) {
+            final String authId,
+            final Span span) {
 
         Objects.requireNonNull(request);
         Objects.requireNonNull(originDevice);
-        return new CoapContext(request, originDevice, authenticatedDevice, authId);
+        Objects.requireNonNull(span);
+        return new CoapContext(request, originDevice, authenticatedDevice, authId, span);
     }
 
     /**
@@ -92,22 +97,25 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
      *                            if the device has not been authenticated.
      * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @param timer The object to use for measuring the time it takes to process the request.
      * @return The context.
-     * @throws NullPointerException if request, origin device or timer are {@code null}.
+     * @throws NullPointerException if request, originDevice, span or timer are {@code null}.
      */
     public static CoapContext fromRequest(
             final CoapExchange request,
             final Device originDevice,
             final Device authenticatedDevice,
             final String authId,
+            final Span span,
             final Sample timer) {
 
         Objects.requireNonNull(request);
         Objects.requireNonNull(originDevice);
+        Objects.requireNonNull(span);
         Objects.requireNonNull(timer);
 
-        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId);
+        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId, span);
         result.timer = timer;
         return result;
     }

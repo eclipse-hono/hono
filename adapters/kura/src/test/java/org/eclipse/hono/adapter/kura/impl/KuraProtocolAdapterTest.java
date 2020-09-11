@@ -29,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -46,6 +48,7 @@ public class KuraProtocolAdapterTest {
 
     private KuraAdapterProperties config;
     private KuraProtocolAdapter adapter;
+    private Span span;
 
     /**
      * Sets up the fixture.
@@ -56,6 +59,10 @@ public class KuraProtocolAdapterTest {
         config = new KuraAdapterProperties();
         adapter = new KuraProtocolAdapter();
         adapter.setConfig(config);
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
     }
 
     /**
@@ -70,7 +77,7 @@ public class KuraProtocolAdapterTest {
         // GIVEN an adapter configured to use the standard topic.control-prefix $EDC
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
-        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "$EDC/my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "$EDC/my-scope/4711", span);
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
                 ctx.verify(() -> {
                     // THEN the message is mapped to the event API
@@ -96,7 +103,7 @@ public class KuraProtocolAdapterTest {
         config.setCtrlMsgContentType("control-msg");
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "$EDC/my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "$EDC/my-scope/4711", span);
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the telemetry API
@@ -121,7 +128,7 @@ public class KuraProtocolAdapterTest {
         config.setControlPrefix("bumlux");
 
         // WHEN a message is published to a topic with the custom prefix as endpoint
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "bumlux/my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "bumlux/my-scope/4711", span);
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the event API
@@ -147,7 +154,7 @@ public class KuraProtocolAdapterTest {
         config.setDataMsgContentType("data-msg");
 
         // WHEN a message is published to an application topic with QoS 0
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "my-scope/4711", span);
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the telemetry API
@@ -172,7 +179,7 @@ public class KuraProtocolAdapterTest {
         // GIVEN an adapter
 
         // WHEN a message is published to an application topic with QoS 1
-        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "my-scope/4711");
+        final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "my-scope/4711", span);
         adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is forwarded to the event API
@@ -204,17 +211,17 @@ public class KuraProtocolAdapterTest {
         return message;
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic) {
-        return newContext(qosLevel, topic, null);
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Span span) {
+        return newContext(qosLevel, topic, null, span);
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Device authenticatedDevice) {
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Device authenticatedDevice, final Span span) {
 
         final MqttPublishMessage message = newMessage(qosLevel, topic);
-        return newContext(message, authenticatedDevice);
+        return newContext(message, authenticatedDevice, span);
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
+    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice, final Span span) {
+        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
     }
 }

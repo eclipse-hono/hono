@@ -24,6 +24,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -43,8 +44,8 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private MetricsTags.EndpointType endpoint;
     private PropertyBag propertyBag;
 
-    private MqttContext(final Device authenticatedDevice) {
-        super(authenticatedDevice);
+    private MqttContext(final Span span, final Device authenticatedDevice) {
+        super(span, authenticatedDevice);
     }
 
     @Override
@@ -66,14 +67,16 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * @param publishedMessage The MQTT message to process.
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @return The context.
-     * @throws NullPointerException if message or endpoint are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static MqttContext fromPublishPacket(
             final MqttPublishMessage publishedMessage,
-            final MqttEndpoint deviceEndpoint) {
+            final MqttEndpoint deviceEndpoint,
+            final Span span) {
 
-        return fromPublishPacket(publishedMessage, deviceEndpoint, null);
+        return fromPublishPacket(publishedMessage, deviceEndpoint, span, null);
     }
 
     /**
@@ -82,19 +85,22 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * @param publishedMessage The published MQTT message.
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @param authenticatedDevice The authenticated device identity.
      * @return The context.
-     * @throws NullPointerException if message or endpoint are {@code null}.
+     * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
      */
     public static MqttContext fromPublishPacket(
             final MqttPublishMessage publishedMessage,
             final MqttEndpoint deviceEndpoint,
+            final Span span,
             final Device authenticatedDevice) {
 
         Objects.requireNonNull(publishedMessage);
         Objects.requireNonNull(deviceEndpoint);
+        Objects.requireNonNull(span);
 
-        final MqttContext result = new MqttContext(authenticatedDevice);
+        final MqttContext result = new MqttContext(span, authenticatedDevice);
         result.message = publishedMessage;
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
@@ -113,11 +119,15 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * Creates a new context for a connection attempt.
      *
      * @param endpoint The endpoint representing the client's connection attempt.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @return The context.
-     * @throws NullPointerException if endpoint is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static MqttContext fromConnectPacket(final MqttEndpoint endpoint) {
-        final MqttContext result = new MqttContext(null);
+    public static MqttContext fromConnectPacket(final MqttEndpoint endpoint, final Span span) {
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(span);
+
+        final MqttContext result = new MqttContext(span, null);
         result.deviceEndpoint = endpoint;
         return result;
     }

@@ -24,8 +24,11 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -35,6 +38,18 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public class MqttContextTest {
 
+    private Span span;
+
+    /**
+     * Setups the fixture.
+     */
+    @BeforeEach
+    public void setup() {
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
+    }
+
     /**
      * Verifies that the tenant is determined from the authenticated device.
      */
@@ -43,7 +58,7 @@ public class MqttContextTest {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t");
         final Device device = new Device("tenant", "device");
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
         assertEquals("tenant", context.tenant());
     }
 
@@ -54,7 +69,7 @@ public class MqttContextTest {
     @Test
     public void testTenantIsRetrievedFromTopic() {
         final MqttPublishMessage msg = newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device");
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span);
         assertEquals("tenant", context.tenant());
     }
 
@@ -66,7 +81,7 @@ public class MqttContextTest {
         final Device device = new Device("tenant", "device");
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("event/tenant/device/?param1=value1&param2=value2");
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
 
         assertNotNull(context.propertyBag());
         assertEquals("value1", context.propertyBag().getProperty("param1"));
@@ -82,17 +97,20 @@ public class MqttContextTest {
 
         assertEndpoint(
                 newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device"),
-                MetricsTags.EndpointType.TELEMETRY);
+                MetricsTags.EndpointType.TELEMETRY,
+                span);
         assertEndpoint(
                 newMessage(EventConstants.EVENT_ENDPOINT_SHORT, "tenant", "device"),
-                MetricsTags.EndpointType.EVENT);
+                MetricsTags.EndpointType.EVENT,
+                span);
         assertEndpoint(
                 newMessage(CommandConstants.COMMAND_ENDPOINT_SHORT, "tenant", "device"),
-                MetricsTags.EndpointType.COMMAND);
+                MetricsTags.EndpointType.COMMAND,
+                span);
     }
 
-    private static void assertEndpoint(final MqttPublishMessage msg, final MetricsTags.EndpointType expectedEndpoint) {
-        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
+    private static void assertEndpoint(final MqttPublishMessage msg, final MetricsTags.EndpointType expectedEndpoint, final Span span) {
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span);
         assertEquals(expectedEndpoint, context.endpoint());
     }
 

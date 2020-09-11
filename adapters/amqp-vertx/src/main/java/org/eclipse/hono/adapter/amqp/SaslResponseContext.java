@@ -20,7 +20,6 @@ import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.proton.ProtonConnection;
 
 /**
@@ -32,15 +31,14 @@ public final class SaslResponseContext extends MapBasedExecutionContext {
     private final Certificate[] peerCertificateChain;
     private final String[] saslResponseFields;
     private final String remoteMechanism;
-    private final Span span;
 
     private SaslResponseContext(final ProtonConnection protonConnection, final String remoteMechanism,
             final String[] saslResponseFields, final Certificate[] peerCertificateChain, final Span span) {
+        super(span);
         this.protonConnection = Objects.requireNonNull(protonConnection);
         this.remoteMechanism = Objects.requireNonNull(remoteMechanism);
         this.saslResponseFields = saslResponseFields;
         this.peerCertificateChain = peerCertificateChain;
-        this.span = Objects.requireNonNull(span);
     }
 
     /**
@@ -76,17 +74,6 @@ public final class SaslResponseContext extends MapBasedExecutionContext {
         Objects.requireNonNull(span);
         return new SaslResponseContext(protonConnection, AuthenticationConstants.MECHANISM_EXTERNAL, null,
                 peerCertificateChain, span);
-    }
-
-    @Override
-    public SpanContext getTracingContext() {
-        return span.context();
-    }
-
-    @Override
-    public void setTracingContext(final SpanContext spanContext) {
-        // not supported
-        // TODO: this method shall get removed as part of adapting span handling in contexts
     }
 
     /**

@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.auth.Device;
@@ -31,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
@@ -42,6 +45,7 @@ import io.vertx.core.Vertx;
 public class CoapContextTest {
 
     private Vertx vertx;
+    private Span span;
 
     /**
      * Sets up the fixture.
@@ -49,6 +53,10 @@ public class CoapContextTest {
     @BeforeEach
     void setUp() {
         vertx = mock(Vertx.class);
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
     }
 
     /**
@@ -63,7 +71,7 @@ public class CoapContextTest {
         coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, -1L); // never send separate ACK
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
-        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, timeout);
         verify(vertx, never()).setTimer(anyLong(), any(Handler.class));
     }
@@ -80,7 +88,7 @@ public class CoapContextTest {
         coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, 200);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
-        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(200L), any(Handler.class));
     }
@@ -95,7 +103,7 @@ public class CoapContextTest {
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
-        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(500L), any(Handler.class));
     }
@@ -111,7 +119,7 @@ public class CoapContextTest {
         coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, "not-a-number");
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
-        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(500L), any(Handler.class));
     }

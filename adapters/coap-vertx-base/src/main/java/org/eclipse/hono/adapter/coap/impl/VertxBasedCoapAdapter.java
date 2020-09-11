@@ -36,6 +36,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 
+import io.opentracing.Span;
 import io.vertx.core.Future;
 
 /**
@@ -108,12 +109,13 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                         authenticatedDevice));
     }
 
-    private CoapContext newContext(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth) {
+    private CoapContext newContext(final CoapExchange exchange, final RequestDeviceAndAuth deviceAndAuth, final Span span) {
         return CoapContext.fromRequest(
                 exchange,
                 deviceAndAuth.getOriginDevice(),
                 deviceAndAuth.getAuthenticatedDevice(),
                 deviceAndAuth.getAuthId(),
+                span,
                 getMetrics().startTimer());
     }
 
@@ -127,13 +129,13 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
         result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
 
             @Override
-            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange) {
-                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
+                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth, span));
             }
 
             @Override
-            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange) {
-                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange, final Span span) {
+                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth, span));
             }
 
             @Override
@@ -150,13 +152,13 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
         result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
 
             @Override
-            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange) {
-                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
+                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth, span));
             }
 
             @Override
-            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange) {
-                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange, final Span span) {
+                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth, span));
             }
 
             @Override
@@ -172,13 +174,13 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
         result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
 
             @Override
-            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange) {
-                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
+                return getPostRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth, span));
             }
 
             @Override
-            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange) {
-                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange exchange, final Span span) {
+                return getPutRequestDeviceAndAuth(exchange).map(deviceAndAuth -> newContext(exchange, deviceAndAuth, span));
             }
 
             @Override

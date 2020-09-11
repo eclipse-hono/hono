@@ -14,8 +14,10 @@ package org.eclipse.hono.util;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 
 /**
@@ -25,7 +27,17 @@ import io.opentracing.SpanContext;
 public abstract class MapBasedExecutionContext implements ExecutionContext {
 
     private Map<String, Object> data;
-    private SpanContext spanContext;
+    private final Span span;
+
+    /**
+     * Creates a new MapBasedExecutionContext instance.
+     *
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
+     * @throws NullPointerException If span is {@code null}.
+     */
+    public MapBasedExecutionContext(final Span span) {
+        this.span = Objects.requireNonNull(span);
+    }
 
     @Override
     public final <T> T get(final String key) {
@@ -35,9 +47,9 @@ public abstract class MapBasedExecutionContext implements ExecutionContext {
     @Override
     @SuppressWarnings("unchecked")
     public final <T> T get(final String key, final T defaultValue) {
-        return Optional.ofNullable(getData().get(key)).map(value -> {
-            return (T) value;
-        }).orElse(defaultValue);
+        return Optional.ofNullable(getData().get(key))
+                .map(value -> (T) value)
+                .orElse(defaultValue);
     }
 
     @Override
@@ -45,15 +57,20 @@ public abstract class MapBasedExecutionContext implements ExecutionContext {
         getData().put(key, value);
     }
 
-
+    /**
+     * Gets the <em>OpenTracing</em> root span that is used to
+     * track the processing of this context.
+     *
+     * @return The span.
+     */
     @Override
-    public SpanContext getTracingContext() {
-        return spanContext;
+    public final Span getTracingSpan() {
+        return span;
     }
 
     @Override
-    public void setTracingContext(final SpanContext spanContext) {
-        this.spanContext = spanContext;
+    public final SpanContext getTracingContext() {
+        return span.context();
     }
 
     private Map<String, Object> getData() {

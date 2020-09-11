@@ -524,12 +524,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
             final Span currentSpan) {
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint, currentSpan);
         final Future<OptionalInt> traceSamplingPriority = applyTenantTraceSamplingPriority(context, currentSpan);
-        final Future<DeviceUser> authAttempt = traceSamplingPriority.compose(v -> {
-            context.setTracingContext(currentSpan.context());
-            return authenticate(context);
-        });
+        final Future<DeviceUser> authAttempt = traceSamplingPriority.compose(v -> authenticate(context));
         return authAttempt
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
@@ -844,25 +841,28 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    void handlePublishedMessage(final MqttContext context) {
+    void handlePublishedMessage(final MqttPublishMessage message, final MqttEndpoint endpoint, final Device authenticatedDevice) {
+
         // try to extract a SpanContext from the property bag of the message's topic (if set)
-        final SpanContext spanContext = Optional.ofNullable(context.propertyBag())
-                .map(propertyBag -> TracingHelper.extractSpanContext(tracer, propertyBag::getPropertiesIterator))
-                .orElse(null);
-        final MqttQoS qos = context.message().qosLevel();
+        final SpanContext spanContext = message.topicName() != null
+                ? Optional.ofNullable(PropertyBag.fromTopic(message.topicName()))
+                .map(propertyBag -> TracingHelper.extractSpanContext(tracer,
+                        propertyBag::getPropertiesIterator))
+                .orElse(null)
+                : null;
+        final MqttQoS qos = message.qosLevel();
         final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "PUBLISH", getTypeName())
-            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-            .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
-            .withTag(TracingHelper.TAG_QOS.getKey(), qos.toString())
-            .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
-            .start();
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.topicName())
+                .withTag(TracingHelper.TAG_QOS.getKey(), qos.toString())
+                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
+                .start();
+
+        final MqttContext context = MqttContext.fromPublishPacket(message, endpoint, span, authenticatedDevice);
         context.setTimer(getMetrics().startTimer());
 
         applyTenantTraceSamplingPriority(context, span)
-                .compose(v -> {
-                    context.setTracingContext(span.context());
-                    return checkTopic(context);
-                })
+                .compose(v -> checkTopic(context))
                 .compose(ok -> onPublishedMessage(context))
                 .onComplete(processing -> {
                     if (processing.succeeded()) {
@@ -1592,7 +1592,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final CommandSubscriptionsManager<T> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, getConfig());
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdSubscriptionsManager, traceSamplingPriority));
         endpoint.publishHandler(
-                message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
+                message -> handlePublishedMessage(message, endpoint, authenticatedDevice));
         endpoint.publishAcknowledgeHandler(cmdSubscriptionsManager::handlePubAck);
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdSubscriptionsManager,
                 traceSamplingPriority));

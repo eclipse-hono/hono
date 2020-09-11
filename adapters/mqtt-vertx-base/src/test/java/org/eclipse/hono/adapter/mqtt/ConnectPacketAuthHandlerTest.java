@@ -26,6 +26,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttAuth;
@@ -41,6 +43,7 @@ public class ConnectPacketAuthHandlerTest {
 
     private ConnectPacketAuthHandler authHandler;
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider;
+    private Span span;
 
     /**
      * Sets up the fixture.
@@ -50,6 +53,10 @@ public class ConnectPacketAuthHandlerTest {
     public void setUp() {
         authProvider = mock(DeviceCredentialsAuthProvider.class);
         authHandler = new ConnectPacketAuthHandler(authProvider);
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
     }
 
     /**
@@ -73,7 +80,7 @@ public class ConnectPacketAuthHandlerTest {
         when(endpoint.auth()).thenReturn(auth);
         when(endpoint.clientIdentifier()).thenReturn("mqtt-device");
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
             .onComplete(ctx.succeeding(info -> {

@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 
 /**
@@ -50,19 +51,19 @@ public interface ExecutionContext {
     void put(String key, Object value);
 
     /**
-     * Sets the <em>OpenTracing</em> context to use for
-     * tracking the processing of this context.
-     *
-     * @param context The context.
-     */
-    void setTracingContext(SpanContext context);
-
-    /**
      * Gets the <em>OpenTracing</em> context that is used to
      * track the processing of this context.
      *
      * @return The context or {@code null} if no tracing context is set.
      */
     SpanContext getTracingContext();
+
+    /**
+     * Gets the <em>OpenTracing</em> root span that is used to
+     * track the processing of this context.
+     *
+     * @return The span or {@code null} if no span is set.
+     */
+    Span getTracingSpan();
 
 }

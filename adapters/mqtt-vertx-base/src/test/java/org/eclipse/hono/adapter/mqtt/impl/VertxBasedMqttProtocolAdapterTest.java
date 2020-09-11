@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -46,6 +48,7 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 public class VertxBasedMqttProtocolAdapterTest {
     private MqttProtocolAdapterProperties config;
     private VertxBasedMqttProtocolAdapter adapter;
+    private Span span;
 
     private static void assertServiceInvocationException(final VertxTestContext ctx, final Throwable t, final int expectedStatusCode) {
         ctx.verify(() -> {
@@ -67,18 +70,18 @@ public class VertxBasedMqttProtocolAdapterTest {
         return message;
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic) {
-        return newContext(qosLevel, topic, null);
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Span span) {
+        return newContext(qosLevel, topic,  span, null);
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Device authenticatedDevice) {
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Span span, final Device authenticatedDevice) {
 
         final MqttPublishMessage message = newMessage(qosLevel, topic);
-        return newContext(message, authenticatedDevice);
+        return newContext(message, span, authenticatedDevice);
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
+    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
+        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
     }
 
     /**
@@ -94,7 +97,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message to a topic with an unknown endpoint
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, "unknown");
-        adapter.mapTopic(newContext(message, null)).onComplete(ctx.failing(t -> {
+        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
@@ -113,7 +116,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 2 to a "telemetry" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        adapter.mapTopic(newContext(message, null)).onComplete(ctx.failing(t -> {
+        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
@@ -132,7 +135,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 0 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(newContext(message, null)).onComplete(ctx.failing(t -> {
+        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
@@ -151,7 +154,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 2 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(newContext(message, null)).onComplete(ctx.failing(t -> {
+        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
@@ -169,7 +172,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         givenAnAdapter();
 
         // WHEN an anonymous device publishes a message to a topic that does not contain a tenant ID
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT, span);
         adapter.onPublishedMessage(context).onComplete(ctx.failing(t -> {
             // THEN the message cannot be published
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
@@ -188,7 +191,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         givenAnAdapter();
 
         // WHEN an anonymous device publishes a message to a topic that does not contain a device ID
-        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant");
+        final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant", span);
         adapter.onPublishedMessage(context).onComplete(ctx.failing(t -> {
             // THEN the message cannot be published
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
@@ -210,6 +213,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         final MqttContext context = newContext(
                 MqttQoS.AT_MOST_ONCE,
                 TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant",
+                span,
                 new Device("my-tenant", "device"));
         adapter.onPublishedMessage(context).onComplete(ctx.failing(t -> {
             // THEN the message cannot be published
@@ -233,6 +237,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         final MqttContext context = newContext(
                 MqttQoS.AT_MOST_ONCE,
                 TelemetryConstants.TELEMETRY_ENDPOINT + "/other-tenant/4711",
+                span,
                 new Device("my-tenant", "gateway"));
         adapter.onPublishedMessage(context).onComplete(ctx.failing(t -> {
             // THEN the message cannot be published
@@ -252,31 +257,31 @@ public class VertxBasedMqttProtocolAdapterTest {
         givenAnAdapter();
 
         MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
-        MqttContext context = newContext(message, null);
+        MqttContext context = newContext(message, span, null);
         adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.EVENT));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT_SHORT);
-        context = newContext(message, null);
+        context = newContext(message, span, null);
         adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.EVENT));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        context = newContext(message, null);
+        context = newContext(message, span, null);
         adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.TELEMETRY));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
-        context = newContext(message, null);
+        context = newContext(message, span, null);
         adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.TELEMETRY));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, "unknown");
-        context = newContext(message, null);
+        context = newContext(message, span, null);
         adapter.mapTopic(context).onComplete(ctx.failing());
         ctx.completeNow();
 
@@ -286,5 +291,9 @@ public class VertxBasedMqttProtocolAdapterTest {
         config = new MqttProtocolAdapterProperties();
         adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setConfig(config);
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
     }
 }

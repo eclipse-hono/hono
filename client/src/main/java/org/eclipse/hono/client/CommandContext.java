@@ -47,17 +47,14 @@ public class CommandContext extends MapBasedExecutionContext {
 
     private final Command command;
     private final ProtonDelivery delivery;
-    private final Span span;
 
     private CommandContext(
             final Command command,
             final ProtonDelivery delivery,
             final Span span) {
-
+        super(span);
         this.command = command;
         this.delivery = delivery;
-        this.span = span;
-        setTracingContext(span.context());
     }
 
     /**
@@ -99,21 +96,13 @@ public class CommandContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Gets the OpenTracing span to use for tracking the processing of the command.
-     *
-     * @return The span.
-     */
-    public Span getTracingSpan() {
-        return span;
-    }
-
-    /**
      * Settles the command message with the <em>accepted</em> outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
      * {@link #getTracingSpan()}.
      */
     public void accept() {
+        final Span span = getTracingSpan();
         LOG.trace("accepting command message [{}]", getCommand());
         ProtonHelper.accepted(delivery, true);
         span.log("accepted command for device");
@@ -127,6 +116,7 @@ public class CommandContext extends MapBasedExecutionContext {
      * {@link #getTracingSpan()}.
      */
     public void release() {
+        final Span span = getTracingSpan();
         ProtonHelper.released(delivery, true);
         TracingHelper.logError(span, "released command for device");
         span.finish();
@@ -142,6 +132,7 @@ public class CommandContext extends MapBasedExecutionContext {
      * @param undeliverableHere Whether the delivery is considered undeliverable.
      */
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
+        final Span span = getTracingSpan();
         ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
         TracingHelper.logError(span, "modified command for device"
                 + (deliveryFailed ? "; delivery failed" : "")
@@ -158,6 +149,7 @@ public class CommandContext extends MapBasedExecutionContext {
      * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
      */
     public void reject(final ErrorCondition errorCondition) {
+        final Span span = getTracingSpan();
         final Rejected rejected = new Rejected();
         if (errorCondition != null) {
             rejected.setError(errorCondition);
@@ -180,6 +172,7 @@ public class CommandContext extends MapBasedExecutionContext {
     public void disposition(final DeliveryState deliveryState) {
 
         Objects.requireNonNull(deliveryState);
+        final Span span = getTracingSpan();
         delivery.disposition(deliveryState, true);
         if (Accepted.class.isInstance(deliveryState)) {
             LOG.trace("accepted command message [{}]", getCommand());

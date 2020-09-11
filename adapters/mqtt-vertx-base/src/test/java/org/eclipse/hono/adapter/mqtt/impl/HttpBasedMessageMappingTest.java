@@ -41,6 +41,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -69,6 +71,7 @@ public class HttpBasedMessageMappingTest {
     private MqttProtocolAdapterProperties config;
     private WebClient mapperWebClient;
     private HttpBasedMessageMapping messageMapping;
+    private Span span;
 
     /**
      * Sets up the fixture.
@@ -78,6 +81,10 @@ public class HttpBasedMessageMappingTest {
         mapperWebClient = mock(WebClient.class);
         config = new MqttProtocolAdapterProperties();
         messageMapping = new HttpBasedMessageMapping(mapperWebClient, config);
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
     }
 
     /**
@@ -93,7 +100,7 @@ public class HttpBasedMessageMappingTest {
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject())
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -119,7 +126,7 @@ public class HttpBasedMessageMappingTest {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -162,7 +169,7 @@ public class HttpBasedMessageMappingTest {
         when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
 
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -180,8 +187,8 @@ public class HttpBasedMessageMappingTest {
         captor.getValue().handle(Future.succeededFuture(httpResponse));
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
+    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
+        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
     }
 
     private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {
