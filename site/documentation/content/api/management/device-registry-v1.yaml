@@ -746,7 +746,7 @@ components:
                type: string
                description: |
                   The subject DN of the trusted root certificate in
-                  the format defined by RFC 2253.
+                  the format defined by [RFC 2253](https://tools.ietf.org/html/rfc2253#section-2).
                   CAs of the *same* tenant may share the same subject DN, for example
                   allowing for the definition of overlapping validity periods.
                   However, CAs of *different* tenants must not share the same
@@ -1159,9 +1159,6 @@ components:
       CommonCredentials:
          type: object
          additionalProperties: false
-         required:
-            - auth-id
-            - type
          properties:
             "type":
                type: string
@@ -1179,6 +1176,8 @@ components:
             - $ref: '#/components/schemas/CommonCredentials'
             - type: object
               required:
+                 - type
+                 - auth-id
                  - secrets
               additionalProperties: false
               properties:
@@ -1203,6 +1202,8 @@ components:
             - $ref: '#/components/schemas/CommonCredentials'
             - type: object
               required:
+                 - type
+                 - auth-id
                  - secrets
               additionalProperties: false
               properties:
@@ -1224,7 +1225,7 @@ components:
             - $ref: '#/components/schemas/CommonCredentials'
             - type: object
               required:
-                 - secrets
+                 - type
               additionalProperties: false
               properties:
                  "type":
@@ -1232,12 +1233,30 @@ components:
                     pattern: "x509-cert"
                  "auth-id":
                     type: string
-                    description: The *subject DN* of the public key contained in the device's X.509 certificate.
+                    description: |
+                       The *subject DN* of the public key contained in the device's X.509 certificate.
+                       The value MUST be formatted according to the rules defined in
+                       [RFC 2253](https://tools.ietf.org/html/rfc2253#section-2).
                  "secrets":
                     type: array
                     items:
                        $ref: '#/components/schemas/X509CertificateSecret'
+                    description: |
+                       A secret containing the X.509 certificate's validity period.
                     minItems: 1
+                    maxItems: 1
+                 "cert":
+                    type: string
+                    format: byte
+                    writeOnly: true
+                    description: |
+                       The Base64 encoded binary DER encoding of the device's X.509 client certificate.
+                       This property can be used as a convenient alternative to specifying the certificate's
+                       meta data in the *auth-id* and *secrets* explicitly.
+                       When provided in a request body, implementors of this API MUST extract the subject DN
+                       from the certificate's public key and store its value properly formatted to the *auth-id*
+                       property. The certificate's validity period MUST be stored in a single secret.
+                       The certificate itself must then be discarded.
 
       CommonSecret:
          type: object

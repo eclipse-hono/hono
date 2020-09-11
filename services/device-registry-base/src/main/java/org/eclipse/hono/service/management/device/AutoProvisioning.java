@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -83,7 +83,7 @@ public final class AutoProvisioning {
 
                     // 2. set the certificate credential
                     final String authId = clientCertificate.getSubjectX500Principal().getName(X500Principal.RFC2253);
-                    final X509CertificateCredential certCredential = new X509CertificateCredential(authId, List.of(new X509CertificateSecret()));
+                    final var certCredential = X509CertificateCredential.fromSubjectDn(authId, List.of(new X509CertificateSecret()));
                     certCredential.setEnabled(true).setComment(comment);
 
                     final String deviceId = r.getPayload().getId();

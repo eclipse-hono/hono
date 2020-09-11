@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -267,7 +267,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 }).compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
                 .compose(ok -> {
                     final String authId = new X500Principal("CN=4711").getName(X500Principal.RFC2253);
-                    final X509CertificateCredential credential = new X509CertificateCredential(authId, List.of(new X509CertificateSecret()));
+                    final var credential = X509CertificateCredential.fromSubjectDn(authId, List.of(new X509CertificateSecret()));
                     return helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(credential));
                 })
                 // WHEN the device tries to connect using a client certificate with an unknown subject DN

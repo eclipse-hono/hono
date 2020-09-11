@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -131,7 +131,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
 
         final PskCredential pskCredential = IntegrationTestSupport.createPskCredentials("psk-id", "psk-key");
 
-        final X509CertificateCredential x509Credential = new X509CertificateCredential(
+        final var x509Credential = X509CertificateCredential.fromSubjectDn(
                 "emailAddress=foo@bar.com, CN=foo, O=bar",
                 List.of(new X509CertificateSecret()));
         x509Credential.setComment("non-standard attribute type");
@@ -525,7 +525,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
         final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(pskCredentials);
         credentialsListToAdd.add(hashedPasswordCredential);
-        credentialsListToAdd.add(new X509CertificateCredential("CN=Acme", List.of(new X509CertificateSecret())));
+        credentialsListToAdd.add(X509CertificateCredential.fromSubjectDn("CN=Acme", List.of(new X509CertificateSecret())));
         for (int i = 0; i < 3; i++) {
 
             final GenericSecret secret = new GenericSecret();

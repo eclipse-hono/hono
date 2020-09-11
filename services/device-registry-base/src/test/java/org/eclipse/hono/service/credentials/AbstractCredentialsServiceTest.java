@@ -48,6 +48,7 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -61,8 +62,10 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.junit5.VertxTestContext.ExecutionBlock;
@@ -404,10 +407,11 @@ public interface AbstractCredentialsServiceTest {
      * {@link CredentialsService#get(String, String, String)}.
      * Also checks that all secrets of the credentials have a unique identifier set.
      *
+     * @param vertx The vert.x instance.
      * @param ctx The vert.x test context.
      */
     @Test
-    default void testUpdateCredentialsSucceeds(final VertxTestContext ctx) {
+    default void testUpdateCredentialsSucceeds(final Vertx vertx, final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
@@ -417,19 +421,21 @@ public interface AbstractCredentialsServiceTest {
         final var otherPwdCredentials = Credentials.createPasswordCredential(otherAuthId, "bar");
         final var pskCredentials = Credentials.createPSKCredential("psk-id", "the-shared-key");
         final String subjectDn = new X500Principal("emailAddress=foo@bar.com, CN=foo, O=bar").getName(X500Principal.RFC2253);
-        final var x509Credentials = new X509CertificateCredential(subjectDn, List.of(new X509CertificateSecret()));
+        final var x509Credentials = X509CertificateCredential.fromSubjectDn(subjectDn, List.of(new X509CertificateSecret()));
+        final var clientCert = VertxTools.getCertificate(vertx, SelfSignedCertificate.create("the-device").certificatePath());
 
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                () -> getDeviceManagementService()
+                () -> clientCert.compose(cert -> getDeviceManagementService()
                         //create device
-                        .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+                        .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE))
                         .compose(response -> {
                             ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
                             // and set credentials
                             return getCredentialsManagementService().updateCredentials(
                                 tenantId,
                                 deviceId,
-                                List.of(pwdCredentials, otherPwdCredentials, pskCredentials, x509Credentials),
+                                List.of(pwdCredentials, otherPwdCredentials, pskCredentials, x509Credentials,
+                                        X509CertificateCredential.fromCertificate(clientCert.result())),
                                 Optional.empty(),
                                 NoopSpan.INSTANCE);
                         })
@@ -438,13 +444,16 @@ public interface AbstractCredentialsServiceTest {
                                 assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                                 assertResourceVersion(response);
                             });
+                            // WHEN retrieving the overall list of credentials via the Registry Management API
                             return getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE);
                         })
                         .compose(response -> {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
+                                // THEN the response has the expected etag
                                 assertResourceVersion(response);
-                                assertThat(response.getPayload()).hasSize(4);
+                                // and contains the expected number of credentials
+                                assertThat(response.getPayload()).hasSize(5);
                                 assertReadCredentialsResponseProperties(response.getPayload());
                             });
                             // WHEN looking up X.509 credentials via the Credentials API
@@ -461,7 +470,26 @@ public interface AbstractCredentialsServiceTest {
                                         deviceId,
                                         CredentialsConstants.SECRETS_TYPE_X509_CERT,
                                         subjectDn);
-                                assertThat(response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS)).isNotEmpty();
+                                assertThat(response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS)).hasSize(1);
+                            });
+                            // WHEN looking up the X.509 credentials for the client certificate via the Credentials API
+                            return getCredentialsService().get(
+                                    tenantId,
+                                    CredentialsConstants.SECRETS_TYPE_X509_CERT,
+                                    "CN=the-device");
+                        })
+                        .compose(response -> {
+                            ctx.verify(() -> {
+                                assertThat(response.isOk()).isTrue();
+                                // THEN the response contains a cache directive
+                                assertThat(response.getCacheDirective()).isNotNull();
+                                // and the expected properties
+                                assertGetCredentialsResponseProperties(
+                                        response.getPayload(),
+                                        deviceId,
+                                        CredentialsConstants.SECRETS_TYPE_X509_CERT,
+                                        "CN=the-device");
+                                assertThat(response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS)).hasSize(1);
                             });
                             // WHEN looking up hashed password credentials via the Credentials API
                             return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, otherAuthId);

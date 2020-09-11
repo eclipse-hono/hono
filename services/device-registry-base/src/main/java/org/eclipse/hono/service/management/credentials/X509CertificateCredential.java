@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.io.ByteArrayInputStream;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,6 +27,8 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonCreator.Mode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -52,11 +58,91 @@ public class X509CertificateCredential extends CommonCredential {
      * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name or if
      *                                  secrets is empty.
      */
-    public X509CertificateCredential(
-            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String distinguishedName,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<X509CertificateSecret> secrets) {
+    private X509CertificateCredential(final String distinguishedName, final List<X509CertificateSecret> secrets) {
         super(new X500Principal(distinguishedName).getName(X500Principal.RFC2253));
         setSecrets(secrets);
+    }
+
+    /**
+     * Creates a new credentials object.
+     * <p>
+     * This method tries to decode a non-null byte array into an X.509 certificate and delegate to
+     * {@link #fromCertificate(X509Certificate)}. Otherwise, the {@link #fromSubjectDn(String, List)}
+     * method is invoked with the given distinguished name and secrets parameter values.
+     *
+     * @param derEncodedX509Certificate The DER encoding of the client certificate.
+     * @param distinguishedName The DN to use as the authentication identifier.
+     * @param secrets The credential's secret(s).
+     * @throws NullPointerException if certificate bytes and any of distinguished name and secrets are {@code null}.
+     * @throws IllegalArgumentException if the given byte array cannot be decoded into an X.509 certificate or if
+     *                                  the given name is not a valid X.500 distinguished name or if
+     *                                  secrets is empty.
+     * @return The credentials.
+     */
+    @JsonCreator(mode = Mode.PROPERTIES)
+    public static X509CertificateCredential fromProperties(
+            @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_CERT) final byte[] derEncodedX509Certificate,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID) final String distinguishedName,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS) final List<X509CertificateSecret> secrets) {
+
+        if (derEncodedX509Certificate == null) {
+            Objects.requireNonNull(distinguishedName);
+            Objects.requireNonNull(secrets);
+            if (secrets.size() != 1) {
+                throw new IllegalArgumentException("list must contain exactly one secret");
+            }
+            return fromSubjectDn(distinguishedName, secrets);
+        } else {
+            return fromCertificate(deserialize(derEncodedX509Certificate));
+        }
+    }
+
+    /**
+     * Creates a new credentials object for an X.500 Distinguished Name.
+     * <p>
+     * The given distinguished name will be normalized to RFC 2253 format.
+     *
+     * @param distinguishedName The DN to use as the authentication identifier.
+     * @param secrets The credential's secret(s).
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name or if
+     *                                  secrets is empty.
+     * @return The credentials.
+     */
+    public static X509CertificateCredential fromSubjectDn(
+            final String distinguishedName,
+            final List<X509CertificateSecret> secrets) {
+
+        return new X509CertificateCredential(distinguishedName, secrets);
+    }
+
+    /**
+     * Creates a new credentials object.
+     *
+     * @param certificate The X.509 certificate.
+     * @return The credentials.
+     * @throws NullPointerException if certificate is {@code null}.
+     */
+    public static X509CertificateCredential fromCertificate(final X509Certificate certificate) {
+
+        Objects.requireNonNull(certificate);
+        final var secret = new X509CertificateSecret();
+        secret.setNotBefore(certificate.getNotBefore().toInstant());
+        secret.setNotAfter(certificate.getNotAfter().toInstant());
+        return new X509CertificateCredential(
+                certificate.getSubjectX500Principal().getName(X500Principal.RFC2253),
+                List.of(secret));
+    }
+
+    private static X509Certificate deserialize(final byte[] base64EncodedX509Certificate) {
+
+        try {
+            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) factory.generateCertificate(
+                    new ByteArrayInputStream(base64EncodedX509Certificate));
+        } catch (final CertificateException e) {
+            throw new IllegalArgumentException("cannot deserialize X.509 certificate", e);
+        }
     }
 
     /**
