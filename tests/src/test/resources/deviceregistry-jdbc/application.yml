@@ -35,7 +35,7 @@ hono:
         username: ${hono.jdbc.h2.registry.username}
         password: ${hono.jdbc.h2.registry.password}
     svc:
-      maxBcryptIterations: ${max.bcrypt.iterations}
+      maxBcryptCostFactor: ${max.bcrypt.costFactor}
 
   tenant:
     jdbc:

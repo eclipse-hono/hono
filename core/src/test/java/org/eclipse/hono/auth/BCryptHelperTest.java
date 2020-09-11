@@ -30,26 +30,25 @@ public class BCryptHelperTest {
      * Verifies that the helper detects invalid BCrypt.
      */
     @Test
-    public void testGetIterationsFailsForInvalidHash() {
-        assertThatThrownBy(() -> BCryptHelper.getIterations("invalid-hash")).isInstanceOf(IllegalArgumentException.class);
+    public void testGetCostFactorFailsForInvalidHash() {
+        assertThatThrownBy(() -> BCryptHelper.getCostFactor("invalid-hash")).isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Verifies that the helper detects unsupported BCrypt version.
      */
     @Test
-    public void testGetIterationsFailsForUnsupportedVersion() {
-        assertThatThrownBy(() -> BCryptHelper.getIterations("$2y$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
+    public void testGetCostFactorFailsForUnsupportedVersion() {
+        assertThatThrownBy(() -> BCryptHelper.getCostFactor("$2y$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
-     * Verifies that the helper successfully extracts the number of
-     * iterations from a valid BCrypt hash.
+     * Verifies that the helper successfully extracts the cost factor from a valid BCrypt hash.
      */
     @Test
-    public void testGetIterationsSucceedsForValidHash() {
-        assertThat(BCryptHelper.getIterations("$2a$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
+    public void testGetCostFactorSucceedsForValidHash() {
+        assertThat(BCryptHelper.getCostFactor("$2a$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
             .isEqualTo(10);
     }
 }

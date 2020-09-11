@@ -196,7 +196,7 @@ public class ApplicationConfig {
      */
     @Bean
     public HonoPasswordEncoder passwordEncoder() {
-        return new SpringBasedHonoPasswordEncoder(credentialsServiceProperties().getMaxBcryptIterations());
+        return new SpringBasedHonoPasswordEncoder(credentialsServiceProperties().getMaxBcryptCostFactor());
     }
 
     //

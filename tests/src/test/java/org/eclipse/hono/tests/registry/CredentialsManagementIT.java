@@ -69,7 +69,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     private DeviceRegistryHttpClient registry;
 
     static {
-        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS);
+        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR);
         ORIG_BCRYPT_PWD = encoder.encode("thePassword");
     }
 
@@ -214,7 +214,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     public void testAddCredentialsFailsForBCryptWithTooManyIterations(final VertxTestContext context)  {
 
         // GIVEN a hashed password using bcrypt with more than the configured max iterations
-        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS + 1);
+        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR + 1);
 
         final PasswordCredential credential = new PasswordCredential(authId);
 

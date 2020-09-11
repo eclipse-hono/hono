@@ -480,7 +480,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
 
             try {
                 DeviceRegistryUtils.checkCredential(credential, passwordEncoder, config.getHashAlgorithmsWhitelist(),
-                        config.getMaxBcryptIterations());
+                        config.getMaxBcryptCostFactor());
             } catch (final IllegalStateException e) {
                 TracingHelper.logError(span, e);
                 LOG.debug("Failed to validate credentials", e);

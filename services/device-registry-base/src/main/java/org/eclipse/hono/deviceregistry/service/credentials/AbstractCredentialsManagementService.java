@@ -48,7 +48,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
     private final Vertx vertx;
     private final HonoPasswordEncoder passwordEncoder;
-    private final int maxBcryptIteration;
+    private final int maxBcryptCostFactor;
     private final Set<String> hashAlgorithmsWhitelist;
 
     /**
@@ -56,19 +56,19 @@ public abstract class AbstractCredentialsManagementService implements Credential
      *
      * @param vertx The Vertx instance to use.
      * @param passwordEncoder The password encoder.
-     * @param maxBcryptIteration The maximum number of allowed bcrypt iterations.
+     * @param maxBcryptCostfactor The maximum cost factor allowed for bcrypt password hashes.
      * @param hashAlgorithmsWhitelist An optional collection of allowed password hashes.
      * @throws NullPointerException if any of the required parameters is {@code null};
      */
     public AbstractCredentialsManagementService(
             final Vertx vertx,
             final HonoPasswordEncoder passwordEncoder,
-            final int maxBcryptIteration,
+            final int maxBcryptCostfactor,
             final Set<String> hashAlgorithmsWhitelist) {
 
         this.vertx = Objects.requireNonNull(vertx);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
-        this.maxBcryptIteration = maxBcryptIteration;
+        this.maxBcryptCostFactor = maxBcryptCostfactor;
         this.hashAlgorithmsWhitelist = hashAlgorithmsWhitelist != null ? hashAlgorithmsWhitelist : Collections.emptySet();
 
     }
@@ -188,7 +188,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
                     credential,
                     passwordEncoder,
                     hashAlgorithmsWhitelist,
-                    maxBcryptIteration);
+                    maxBcryptCostFactor);
         }
 
         return credentials;

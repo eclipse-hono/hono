@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,14 +30,14 @@ public final class BCryptHelper {
     }
 
     /**
-     * Gets the number of iterations used in a BCrypt hash.
+     * Gets the cost factor used in a BCrypt hash.
      *
-     * @param bcryptedPassword The hash to extract the iterations from.
-     * @return The number of iterations.
+     * @param bcryptedPassword The hash to extract the cost factor from.
+     * @return The cost factor.
      * @throws IllegalArgumentException if the hash is not a valid BCrypt hash
      *                  or uses another version than 2a.
      */
-    public static int getIterations(final String bcryptedPassword) {
+    public static int getCostFactor(final String bcryptedPassword) {
 
         final Matcher matcher = BCRYPT_PATTERN.matcher(bcryptedPassword);
         if (matcher.matches()) {

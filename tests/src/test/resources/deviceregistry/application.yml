@@ -23,7 +23,7 @@ hono:
       saveToFile: false
   credentials:
     svc:
-      maxBcryptIterations: ${max.bcrypt.iterations}
+      maxBcryptCostFactor: ${max.bcrypt.costFactor}
       startEmpty: true
       saveToFile: false
   tenant:

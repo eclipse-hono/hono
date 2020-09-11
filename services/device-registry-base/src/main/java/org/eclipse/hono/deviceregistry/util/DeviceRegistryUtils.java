@@ -219,7 +219,7 @@ public final class DeviceRegistryUtils {
      * @param credential The secret to validate.
      * @param passwordEncoder The password encoder.
      * @param hashAlgorithmsWhitelist The list of supported hashing algorithms for pre-hashed passwords.
-     * @param maxBcryptIterations The maximum number of iterations to use for bcrypt password hashes.
+     * @param maxBcryptCostFactor The maximum cost factor to use for bcrypt password hashes.
      * @throws IllegalStateException if any of the checks fail.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -227,7 +227,7 @@ public final class DeviceRegistryUtils {
             final CommonCredential credential,
             final HonoPasswordEncoder passwordEncoder,
             final Set<String> hashAlgorithmsWhitelist,
-            final int maxBcryptIterations) {
+            final int maxBcryptCostFactor) {
 
         Objects.requireNonNull(credential);
         Objects.requireNonNull(passwordEncoder);
@@ -238,7 +238,7 @@ public final class DeviceRegistryUtils {
             for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
                 passwordSecret.encode(passwordEncoder);
                 passwordSecret.checkValidity();
-                passwordSecret.verifyHashAlgorithm(hashAlgorithmsWhitelist, maxBcryptIterations);
+                passwordSecret.verifyHashAlgorithm(hashAlgorithmsWhitelist, maxBcryptCostFactor);
             }
         }
     }
