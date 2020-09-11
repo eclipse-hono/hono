@@ -89,24 +89,25 @@ public class TracingSupportingHonoResourceTest {
         resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantObjectWithAuthIdProvider) {
 
             @Override
-            protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange) {
-                return Future.succeededFuture(createCoapContext(coapExchange));
+            protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange, final Span span) {
+                return Future.succeededFuture(createCoapContext(coapExchange, span));
             }
 
             @Override
-            protected Future<CoapContext> createCoapContextForPut(final CoapExchange coapExchange) {
-                return Future.succeededFuture(createCoapContext(coapExchange));
+            protected Future<CoapContext> createCoapContextForPut(final CoapExchange coapExchange, final Span span) {
+                return Future.succeededFuture(createCoapContext(coapExchange, span));
             }
 
-            @Override protected Future<ResponseCode> handlePost(final CoapContext coapContext) {
+            @Override
+            protected Future<ResponseCode> handlePost(final CoapContext coapContext) {
                 return Future.succeededFuture(ResponseCode.CHANGED);
             }
         };
     }
 
-    private CoapContext createCoapContext(final CoapExchange coapExchange) {
+    private CoapContext createCoapContext(final CoapExchange coapExchange, final Span span) {
         return CoapContext.fromRequest(coapExchange, new Device(TENANT_ID, DEVICE_ID),
-                new Device(TENANT_ID, AUTHENTICATED_DEVICE_ID), AUTH_ID);
+                new Device(TENANT_ID, AUTHENTICATED_DEVICE_ID), AUTH_ID, span);
     }
 
     /**

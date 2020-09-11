@@ -24,6 +24,7 @@ import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
@@ -41,8 +42,8 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
     private Sample timer;
     private OptionalInt traceSamplingPriority = OptionalInt.empty();
 
-    private AmqpContext(final Device authenticatedDevice) {
-        super(authenticatedDevice);
+    private AmqpContext(final Span span, final Device authenticatedDevice) {
+        super(span, authenticatedDevice);
     }
 
     /**
@@ -53,15 +54,22 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @param delivery The delivery of the message.
      * @param message The AMQP 1.0 message. The message must contain a valid address.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @param authenticatedDevice The device that authenticates to the adapter or {@code null} if the device is unauthenticated.
      * @return The context.
-     * @throws NullPointerException if the delivery, the message or the message's address are {@code null}.
-     * @throws IllegalArgumentException if the message's address is not a valid resource identifier.
+     * @throws NullPointerException if any of the parameters except authenticatedDevice is null {@code null}.
      */
-    static AmqpContext fromMessage(final ProtonDelivery delivery, final Message message, final Device authenticatedDevice) {
+    static AmqpContext fromMessage(
+            final ProtonDelivery delivery,
+            final Message message,
+            final Span span,
+            final Device authenticatedDevice) {
+
         Objects.requireNonNull(delivery);
         Objects.requireNonNull(message);
-        final AmqpContext ctx = new AmqpContext(authenticatedDevice);
+        Objects.requireNonNull(span);
+
+        final AmqpContext ctx = new AmqpContext(span, authenticatedDevice);
         ctx.delivery = delivery;
         ctx.message = message;
         ctx.payload = MessageHelper.getPayload(message);

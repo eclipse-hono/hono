@@ -14,6 +14,8 @@ package org.eclipse.hono.util;
 
 import org.eclipse.hono.auth.Device;
 
+import io.opentracing.Span;
+
 /**
  * An execution context that stores properties in a {@code Map}.
  *
@@ -25,10 +27,13 @@ public abstract class MapBasedTelemetryExecutionContext extends MapBasedExecutio
     /**
      * Creates a new context for a message received from a device.
      *
-     * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
-     *                            if the device has not been authenticated.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
+     * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null} if the device
+     *            has not been authenticated.
+     * @throws NullPointerException If span is {@code null}.
      */
-    public MapBasedTelemetryExecutionContext(final Device authenticatedDevice) {
+    public MapBasedTelemetryExecutionContext(final Span span, final Device authenticatedDevice) {
+        super(span);
         this.authenticatedDevice = authenticatedDevice;
     }
 

@@ -26,6 +26,7 @@ import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TelemetryExecutionContext;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -38,7 +39,6 @@ import io.vertx.ext.web.RoutingContext;
 public final class HttpContext implements TelemetryExecutionContext {
 
     private final RoutingContext routingContext;
-    private SpanContext spanContext;
 
     private HttpContext(final RoutingContext routingContext) {
         this.routingContext = Objects.requireNonNull(routingContext);
@@ -82,13 +82,14 @@ public final class HttpContext implements TelemetryExecutionContext {
     }
 
     @Override
-    public void setTracingContext(final SpanContext spanContext) {
-        this.spanContext = spanContext;
+    public SpanContext getTracingContext() {
+        return Optional.ofNullable(getTracingSpan()).map(Span::context).orElse(null);
     }
 
     @Override
-    public SpanContext getTracingContext() {
-        return spanContext;
+    public Span getTracingSpan() {
+        final Object spanObject = routingContext.get(TracingHandler.CURRENT_SPAN);
+        return spanObject instanceof Span ? (Span) spanObject : null;
     }
 
     @Override

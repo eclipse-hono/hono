@@ -587,14 +587,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
                 try {
-                    final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, authenticatedDevice);
+                    final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
+                    final Span msgSpan = newSpan("upload message", authenticatedDevice, traceSamplingPriority, spanContext);
+                    msgSpan.log(Collections.singletonMap(Tags.MESSAGE_BUS_DESTINATION.getKey(), message));
+
+                    final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, msgSpan, authenticatedDevice);
                     ctx.setTimer(metrics.startTimer());
                     if (authenticatedDevice == null) {
                         deriveAndSetTenantTraceSamplingPriority(ctx)
-                                .onComplete(ar -> onMessageReceived(ctx));
+                                .onComplete(ar -> onMessageReceived(ctx)
+                                        .onComplete(r -> msgSpan.finish()));
                     } else {
                         ctx.setTraceSamplingPriority(traceSamplingPriority);
-                        onMessageReceived(ctx);
+                        onMessageReceived(ctx)
+                                .onComplete(r -> msgSpan.finish());
                     }
                 } catch (final Exception ex) {
                     log.warn("error handling message", ex);
@@ -680,17 +686,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     protected Future<ProtonDelivery> onMessageReceived(final AmqpContext ctx) {
 
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, ctx.getMessage());
-        final Span msgSpan = newSpan("upload message", ctx.getAuthenticatedDevice(), ctx.getTraceSamplingPriority(),
-                spanContext);
-        msgSpan.log(Collections.singletonMap(Tags.MESSAGE_BUS_DESTINATION.getKey(), ctx.getAddress()));
-
+        final Span msgSpan = ctx.getTracingSpan();
         return validateEndpoint(ctx)
         .compose(validatedEndpoint -> validateAddress(validatedEndpoint.getAddress(), validatedEndpoint.getAuthenticatedDevice()))
         .compose(validatedAddress -> uploadMessage(ctx, validatedAddress, msgSpan))
         .map(d -> {
             ProtonHelper.accepted(ctx.delivery(), true);
-            msgSpan.finish();
             return d;
         }).recover(t -> {
             if (t instanceof ClientErrorException) {
@@ -700,7 +701,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 ProtonHelper.released(ctx.delivery(), true);
             }
             TracingHelper.logError(msgSpan, t);
-            msgSpan.finish();
             return Future.failedFuture(t);
         });
     }

@@ -78,6 +78,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -125,6 +126,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private CommandTargetMapper commandTargetMapper;
     private Context context;
     private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
+    private Span span;
 
     /**
      * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
@@ -139,6 +141,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
 
         config = new MqttProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
@@ -217,10 +223,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         vertx.close(ctx.completing());
     }
 
-    private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint) {
-        final MqttContext result = MqttContext.fromPublishPacket(message, endpoint);
-        result.setTracingContext(mock(SpanContext.class));
-        return result;
+    private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint, final Span span) {
+        return MqttContext.fromPublishPacket(message, endpoint, span);
     }
 
     @SuppressWarnings("unchecked")
@@ -512,7 +516,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(msg.topicName()).thenReturn(null);
         when(msg.payload()).thenReturn(payload);
-        adapter.handlePublishedMessage(newMqttContext(msg, device));
+        adapter.handlePublishedMessage(msg, device, null);
 
         // THEN the message is not processed
         verify(metrics, never()).reportTelemetry(
@@ -736,7 +740,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.payload()).thenReturn(null);
         final ResourceIdentifier address = ResourceIdentifier
                 .fromString("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
-        adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint), address)
+        adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint, span), address)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         verify(sender).sendCommandResponse(any(), any());
@@ -770,7 +774,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.payload()).thenReturn(payload);
         when(messageFromDevice.topicName()).thenReturn(String.format("%s/my-tenant/4712", type.getCanonicalName()));
-        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
         upload.accept(adapter, context);
 
         // THEN the device does not receive a PUBACK
@@ -821,7 +825,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.topicName()).thenReturn("e/tenant/device");
-        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
         adapter.uploadEventMessage(context, "my-tenant", "4712", payload).onComplete(ctx.failing());
 
@@ -871,7 +875,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.topicName()).thenReturn("t/my-tenant/4712");
         when(messageFromDevice.isRetain()).thenReturn(Boolean.TRUE);
         when(messageFromDevice.payload()).thenReturn(payload);
-        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
         adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload).onComplete(ctx.succeeding(ok -> {
 
@@ -1048,35 +1052,35 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint),
+                newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
                 messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("event", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint),
+                newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
                 messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("t", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint),
+                newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
                 messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("e", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint),
+                newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
                 messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint),
+                newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
                 messageFromDevice).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
@@ -1226,7 +1230,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.topicName()).thenReturn("t/tenant/device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         adapter.uploadTelemetryMessage(
-                newMqttContext(msg, client),
+                newMqttContext(msg, client, span),
                 "my-tenant",
                 "the-device",
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
@@ -1277,7 +1281,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.topicName()).thenReturn("e/tenant/device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         adapter.uploadEventMessage(
-                newMqttContext(msg, client),
+                newMqttContext(msg, client, span),
                 "my-tenant",
                 "the-device",
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
@@ -1325,7 +1329,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
         when(msg.payload()).thenReturn(Buffer.buffer("test"));
 
-        adapter.uploadMessage(newMqttContext(msg, mockEndpoint()),
+        adapter.uploadMessage(newMqttContext(msg, mockEndpoint(), span),
                 ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
                         Command.getRequestId("cmd123", "to", "deviceId"))),
                 msg)
@@ -1371,7 +1375,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.topicName()).thenReturn("e/tenant/device/?hono-ttl=30&param2=value2");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         adapter.uploadEventMessage(
-                newMqttContext(msg, mockEndpoint()),
+                newMqttContext(msg, mockEndpoint(), span),
                 "tenant",
                 "device",
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
@@ -1411,7 +1415,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.topicName()).thenReturn("e/tenant/device/?hono-ttl=30&param2=value2");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         adapter.uploadEventMessage(
-                newMqttContext(msg, mockEndpoint()),
+                newMqttContext(msg, mockEndpoint(), span),
                 "tenant",
                 "device",
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {

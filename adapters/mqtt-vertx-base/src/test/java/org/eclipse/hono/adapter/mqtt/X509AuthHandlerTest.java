@@ -37,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -55,6 +56,7 @@ public class X509AuthHandlerTest {
     private X509AuthHandler authHandler;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider;
     private X509Authentication clientAuth;
+    private Span span;
 
     /**
      * Sets up the fixture.
@@ -65,6 +67,10 @@ public class X509AuthHandlerTest {
         clientAuth = mock(X509Authentication.class);
         authProvider = mock(DeviceCredentialsAuthProvider.class);
         authHandler = new X509AuthHandler(clientAuth, authProvider);
+
+        span = mock(Span.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        when(span.context()).thenReturn(spanContext);
     }
 
     /**
@@ -94,7 +100,7 @@ public class X509AuthHandlerTest {
         when(endpoint.sslSession()).thenReturn(sslSession);
         when(endpoint.clientIdentifier()).thenReturn("mqtt-device");
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
             .onComplete(ctx.succeeding(info -> {
@@ -131,7 +137,7 @@ public class X509AuthHandlerTest {
         when(endpoint.isSsl()).thenReturn(true);
         when(endpoint.sslSession()).thenReturn(sslSession);
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint, span);
         authHandler.authenticateDevice(context)
             // THEN the request context is failed with the 503 error code
             .onComplete(ctx.failing(t -> {

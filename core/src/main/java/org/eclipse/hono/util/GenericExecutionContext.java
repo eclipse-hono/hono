@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
+import org.eclipse.hono.tracing.SpanContextHolder;
+
 import io.opentracing.SpanContext;
 
 /**
@@ -24,7 +26,7 @@ public class GenericExecutionContext extends MapBasedExecutionContext {
      * Creates a new execution context.
      */
     public GenericExecutionContext() {
-        //
+        super(new SpanContextHolder(null));
     }
 
     /**
@@ -33,6 +35,6 @@ public class GenericExecutionContext extends MapBasedExecutionContext {
      * @param spanContext The <em>OpenTracing</em> context to use for tracking the processing of this context.
      */
     public GenericExecutionContext(final SpanContext spanContext) {
-        setTracingContext(spanContext);
+        super(new SpanContextHolder(spanContext));
     }
 }
