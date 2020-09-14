@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.Strings;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -59,6 +60,9 @@ public class X509CertificateCredential extends CommonCredential {
     @Override
     protected Predicate<String> getAuthIdValidator() {
         return authId -> {
+            if (Strings.isNullOrEmpty(authId)) {
+                return false;
+            }
             final X500Principal distinguishedName = new X500Principal(authId);
             return distinguishedName.getName(X500Principal.RFC2253).equals(authId);
         };
