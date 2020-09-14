@@ -69,7 +69,7 @@ public class CredentialsManagementIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(CredentialsManagementIT.class);
 
-    private static final String PREFIX_AUTH_ID = "sensor20";
+    private static final String PREFIX_AUTH_ID = "my_sensor.20=ext";
     private static final Vertx VERTX = Vertx.vertx();
     private static final String ORIG_BCRYPT_PWD;
 

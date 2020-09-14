@@ -120,7 +120,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     /**
      * The regular expression to validate that the auth-id field supplied in credentials is legal.
      */
-    public static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile("^[a-zA-Z0-9-=.]+$");
+    public static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile("^[a-zA-Z0-9-_=.]+$");
     /**
      * The regular expression to validate that the type field supplied in credentials is legal.
      */
