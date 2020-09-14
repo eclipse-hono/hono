@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.4.1
+   version: 1.4.2
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -1073,10 +1073,10 @@ components:
          properties:
             "type":
                type: string
-               pattern: "[a-z0-9-]"
+               pattern: "^[a-z0-9-]+$"
             "auth-id":
                type: string
-               pattern: "[a-zA-Z0-9-_=.]"
+               pattern: "^[a-zA-Z0-9-_=.]+$"
             "enabled":
                type: boolean
                default: true
@@ -1090,6 +1090,9 @@ components:
             - type: object
               additionalProperties: false
               properties:
+                 "type":
+                    type: string
+                    pattern: "hashed-password"
                  "secrets":
                     type: array
                     items:
@@ -1102,6 +1105,9 @@ components:
             - type: object
               additionalProperties: false
               properties:
+                 "type":
+                    type: string
+                    pattern: "psk"
                  "secrets":
                     type: array
                     items:
@@ -1114,6 +1120,9 @@ components:
             - type: object
               additionalProperties: false
               properties:
+                 "type":
+                    type: string
+                    pattern: "x509-cert"
                  "secrets":
                     type: array
                     items:
@@ -1241,7 +1250,7 @@ components:
          required: true
          schema:
             type: string
-            pattern: "[a-zA-Z0-9-_\\.]"
+            pattern: "^[a-zA-Z0-9-_\\.]+$"
          example: DEFAULT_TENANT
 
       deviceId:
@@ -1251,18 +1260,8 @@ components:
          required: true
          schema:
             type: string
-            pattern: "[a-zA-Z0-9-_\\.]"
+            pattern: "^[a-zA-Z0-9-_\\.]+$"
          example: 4711
-
-      authId:
-         name: authId
-         in: path
-         description: The authentication ID of the device
-         required: true
-         schema:
-            type: string
-            pattern: "[a-zA-Z0-9-_=.]"
-         example: sensor1
 
       type:
          name: type
@@ -1271,7 +1270,7 @@ components:
          required: true
          schema:
             type: string
-            pattern: "[a-z0-9-]"
+            pattern: "^[a-z0-9-]+$"
          example: sha-256
 
       pageSize:
