@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,7 +48,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
@@ -102,7 +101,6 @@ public class TenantTraceSamplingHandlerTest {
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         config = new ProtocolAdapterProperties();
-        config.setSingleTenant(false);
 
         span = mock(Span.class);
         final SpanContext spanContext = mock(SpanContext.class);
@@ -161,32 +159,6 @@ public class TenantTraceSamplingHandlerTest {
 
         // WHEN handling a request with basic auth for that tenant
         setupBasicAuthHttpServerRequest(tenantId, authId);
-        tenantTraceSamplingHandler.handle(ctx);
-
-        // THEN the 'sampling.priority' priority was set on the span
-        verify(span).setTag(eq(Tags.SAMPLING_PRIORITY.getKey()), eq(1));
-        verify(ctx).next();
-    }
-
-    /**
-     * Verifies that the handler sets the appropriate span tag for a request with a device auth id for which the trace
-     * sampling mode is set to 'all', the server being configured for single tenant use.
-     */
-    @Test
-    public void testHandleSetsSamplingPriorityForMatchingAuthIdInSingleTenantMode() {
-        // GIVEN a tenant and auth-id for which 'trace-sampling-mode-per-device' is set to 'all'
-        // and a configuration where singleTenant is true.
-        final String tenantId = Constants.DEFAULT_TENANT;
-        final String authId = "testAuthId";
-
-        final TenantObject testTenant = TenantObject.from(tenantId, true)
-                .setTracingConfig(new TenantTracingConfig()
-                        .setSamplingModePerAuthId(Map.of(authId, TracingSamplingMode.ALL)));
-        when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
-        config.setSingleTenant(true);
-
-        // WHEN handling a request with basic auth for that tenant
-        setupBasicAuthHttpServerRequest(authId);
         tenantTraceSamplingHandler.handle(ctx);
 
         // THEN the 'sampling.priority' priority was set on the span

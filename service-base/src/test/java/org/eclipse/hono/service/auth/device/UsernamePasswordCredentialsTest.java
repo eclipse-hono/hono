@@ -15,7 +15,6 @@ package org.eclipse.hono.service.auth.device;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +34,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserMultiTenant() {
 
-        final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
+        final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD);
 
         assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, mqttUsernamePassword.getType());
         assertEquals(TEST_OTHER_TENANT, mqttUsernamePassword.getTenantId());
@@ -49,7 +48,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserMultiTenantWrongUsername() {
 
-        final UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, false);
+        final UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD);
         assertNull(mqttUserNamePassword);
     }
 
@@ -59,21 +58,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserMultiTenantWrongUsernameStructure() {
 
-        final UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create("user/tenant", TEST_PASSWORD, false);
+        final UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create("user/tenant", TEST_PASSWORD);
         assertNull(mqttUserNamePassword);
-    }
-
-    /**
-     * Verifies that for single tenant mode, the tenant is automatically set to {@link Constants#DEFAULT_TENANT}.
-     */
-    @Test
-    public void testTenantFromUserSingleTenant() {
-
-        final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, true);
-
-        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, mqttUsernamePassword.getType());
-        assertEquals(Constants.DEFAULT_TENANT, mqttUsernamePassword.getTenantId());
-        assertEquals(TEST_USER, mqttUsernamePassword.getAuthId());
-        assertEquals(TEST_PASSWORD, mqttUsernamePassword.getPassword());
     }
 }

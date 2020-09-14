@@ -30,7 +30,6 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -62,7 +61,7 @@ public class UsernamePasswordAuthProviderTest {
     private static final String PWD = "the-secret";
     private static Vertx vertx;
 
-    private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret", false);
+    private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret");
     private UsernamePasswordAuthProvider provider;
     private CredentialsClientFactory credentialsClientFactory;
     private CredentialsClient credentialsClient;
@@ -88,7 +87,7 @@ public class UsernamePasswordAuthProviderTest {
         pwdEncoder = mock(HonoPasswordEncoder.class);
         when(pwdEncoder.matches(eq("the-secret"), any(JsonObject.class))).thenReturn(true);
 
-        provider = new UsernamePasswordAuthProvider(credentialsClientFactory, pwdEncoder, new ServiceConfigProperties(), NoopTracerFactory.create());
+        provider = new UsernamePasswordAuthProvider(credentialsClientFactory, pwdEncoder, NoopTracerFactory.create());
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", "the-secret", null, null));
 
     }
@@ -141,7 +140,7 @@ public class UsernamePasswordAuthProviderTest {
         when(pwdEncoder.matches(eq("wrong_pwd"), any(JsonObject.class))).thenReturn(false);
         final Promise<DeviceUser> result = Promise.promise();
 
-        deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd", false);
+        deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd");
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, new GenericExecutionContext(), result);
         });

@@ -48,7 +48,6 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
 
-    private boolean singleTenant = false;
     private boolean networkDebugLoggingEnabled = false;
     private boolean waitForDownstreamConnectionEnabled = false;
     private int maxPayloadSize = DEFAULT_MAX_PAYLOAD_SIZE;
@@ -82,40 +81,6 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     public final int getMaxPayloadSize() {
         return maxPayloadSize;
-    }
-
-    /**
-     * Checks whether the server is configured to run in single-tenant mode.
-     * <p>
-     * In this mode clients do not need to specify a <em>tenant</em>
-     * component in resource addresses. The server will use the
-     * {@link org.eclipse.hono.util.Constants#DEFAULT_TENANT} instead.
-     *
-     * @return {@code true} if the server is configured to run in single-tenant mode.
-     * @deprecated The single-tenant mode will be removed in Hono 1.5.
-     */
-    @Deprecated
-    public final boolean isSingleTenant() {
-        return singleTenant;
-    }
-
-    /**
-     * Sets whether the server should support a single tenant only.
-     * <p>
-     * In this mode clients do not need to specify a <em>tenant</em>
-     * component in resource addresses. The server will use the
-     * {@link org.eclipse.hono.util.Constants#DEFAULT_TENANT} instead.
-     * <p>
-     * The default value of this property is {@code false}.
-     *
-     * @param singleTenant {@code true} if the server should support a single tenant only.
-     * @return This instance for setter chaining.
-     * @deprecated The single-tenant mode will be removed in Hono 1.5.
-     */
-    @Deprecated
-    public final ServiceConfigProperties setSingleTenant(final boolean singleTenant) {
-        this.singleTenant = singleTenant;
-        return this;
     }
 
     /**

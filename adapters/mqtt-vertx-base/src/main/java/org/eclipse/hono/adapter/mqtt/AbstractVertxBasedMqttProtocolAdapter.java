@@ -193,11 +193,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return new ChainAuthHandler<MqttContext>()
                 .append(new X509AuthHandler(
                         new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
-                        new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer)))
+                        new X509AuthProvider(getCredentialsClientFactory(), tracer)))
                 .append(new ConnectPacketAuthHandler(
                         new UsernamePasswordAuthProvider(
                                 getCredentialsClientFactory(),
-                                getConfig(),
                                 tracer)));
     }
 
@@ -1332,7 +1331,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
-                .create(endpoint.auth().getUsername(), endpoint.auth().getPassword(), getConfig().isSingleTenant());
+                .create(endpoint.auth().getUsername(), endpoint.auth().getPassword());
 
         if (credentials == null) {
             return Future.failedFuture(new ClientErrorException(

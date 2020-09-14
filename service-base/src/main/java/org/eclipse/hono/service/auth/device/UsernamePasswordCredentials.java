@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,23 +14,19 @@ package org.eclipse.hono.service.auth.device;
 
 import java.util.Objects;
 
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Helper class to parse username/password credentials provided by devices during authentication into
- * properties to be used with Hono's <em>Credentials</em> API.
+ * Helper class to parse username/password credentials provided by devices during authentication into properties to be
+ * used with Hono's <em>Credentials</em> API.
  * <p>
  * The properties are determined as follows:
  * <ul>
  * <li><em>password</em> is always set to the given password.</li>
- * <li>If Hono is configured for single tenant mode, <em>tenantId</em> is set to {@link Constants#DEFAULT_TENANT} and
- * <em>authId</em> is set to the given username.</li>
- * <li>If Hono is configured for multi tenant mode, the given username is split in two around the first occurrence of
- * the <code>&#64;</code> sign. <em>authId</em> is then set to the first part and <em>tenantId</em> is set to the
- * second part.</li>
+ * <li>the given username is split in two around the first occurrence of the <code>&#64;</code> sign. <em>authId</em> is
+ * then set to the first part and <em>tenantId</em> is set to the second part.</li>
  * </ul>
  */
 public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
@@ -48,31 +44,21 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
      *
      * @param username The username provided by the device.
      * @param password The password provided by the device.
-     * @param singleTenant If {@code true}, the <em>tenantId</em> is set to {@link Constants#DEFAULT_TENANT},
-     *                     otherwise it is parsed from the username.
-     * @return The credentials or {@code null} if single tenant is {@code false} and
-     *         the username does not contain a tenant ID.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @return The credentials or {@code null} if the username does not contain a tenant ID.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static final UsernamePasswordCredentials create(final String username, final String password,
-            final boolean singleTenant) {
+    public static final UsernamePasswordCredentials create(final String username, final String password) {
 
         Objects.requireNonNull(username);
         Objects.requireNonNull(password);
 
-        final UsernamePasswordCredentials credentials;
-        if (singleTenant) {
-            credentials = new UsernamePasswordCredentials(Constants.DEFAULT_TENANT, username);
-        } else {
-            // multi tenantId -> <userId>@<tenantId>
-            final String[] userComponents = username.split("@", 2);
-            if (userComponents.length != 2) {
-                LOG.trace("username [{}] does not comply with expected pattern [<authId>@<tenantId>]", username);
-                return null;
-            } else {
-                credentials = new UsernamePasswordCredentials(userComponents[1], userComponents[0]);
-            }
+        // username consists of <userId>@<tenantId>
+        final String[] userComponents = username.split("@", 2);
+        if (userComponents.length != 2) {
+            LOG.trace("username [{}] does not comply with expected pattern [<authId>@<tenantId>]", username);
+            return null;
         }
+        final UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(userComponents[1], userComponents[0]);
         credentials.password = password;
         return credentials;
     }

@@ -184,11 +184,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
                                 .start(),
-                        new SaslPlainAuthHandler(new UsernamePasswordAuthProvider(getCredentialsClientFactory(),
-                                getConfig(), tracer)),
+                        new SaslPlainAuthHandler(new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer)),
                         new SaslExternalAuthHandler(
                                 new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
-                                new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
+                                new X509AuthProvider(getCredentialsClientFactory(), tracer)),
                         (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
             }
             return Future.succeededFuture();

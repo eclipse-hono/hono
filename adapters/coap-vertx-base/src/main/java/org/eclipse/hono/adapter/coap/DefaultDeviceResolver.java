@@ -273,8 +273,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * @return tenant aware identity.
      */
     private PreSharedKeyDeviceIdentity getHandshakeIdentity(final String identity, final Span span) {
-        final String splitRegex = config.isSingleTenant() ? null : config.getIdSplitRegex();
-        return PreSharedKeyDeviceIdentity.create(identity, splitRegex, span);
+        return PreSharedKeyDeviceIdentity.create(identity, config.getIdSplitRegex(), span);
     }
 
     @Override

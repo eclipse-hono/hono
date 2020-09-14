@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -119,7 +119,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         final Source remoteSource = sender.getRemoteSource();
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
                 con.getRemoteContainer(), remoteSource);
-        final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
+        final ResourceIdentifier targetResource = ResourceIdentifier.fromString(remoteSource.getAddress());
         final AmqpEndpoint endpoint = getEndpoint(targetResource);
 
         if (endpoint == null) {
