@@ -46,7 +46,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
-    private final Vertx vertx;
+    protected final Vertx vertx;
+
     private final HonoPasswordEncoder passwordEncoder;
     private final int maxBcryptCostFactor;
     private final Set<String> hashAlgorithmsWhitelist;
@@ -107,7 +108,13 @@ public abstract class AbstractCredentialsManagementService implements Credential
     protected abstract Future<OperationResult<List<CommonCredential>>> processReadCredentials(DeviceKey key, Span span);
 
     @Override
-    public Future<OperationResult<Void>> updateCredentials(final String tenantId, final String deviceId, final List<CommonCredential> credentials, final Optional<String> resourceVersion, final Span span) {
+    public Future<OperationResult<Void>> updateCredentials(
+            final String tenantId,
+            final String deviceId,
+            final List<CommonCredential> credentials,
+            final Optional<String> resourceVersion,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resourceVersion);
@@ -121,7 +128,11 @@ public abstract class AbstractCredentialsManagementService implements Credential
                     }
 
                     return verifyAndEncodePasswords(credentials)
-                            .compose(encodedCredentials -> processUpdateCredentials(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, encodedCredentials, span));
+                            .compose(encodedCredentials -> processUpdateCredentials(
+                                    DeviceKey.from(result.getPayload(), deviceId),
+                                    resourceVersion,
+                                    encodedCredentials,
+                                    span));
                 })
                 .recover(t -> Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST)));
     }
@@ -148,14 +159,18 @@ public abstract class AbstractCredentialsManagementService implements Credential
     }
 
     private Future<List<CommonCredential>> verifyAndEncodePasswords(final List<CommonCredential> credentials) {
-        // Check if we need to encode passwords
-        if (needToEncode(credentials)) {
-            // ... yes, encode passwords asynchronously
-            return Futures.executeBlocking(this.vertx, () -> checkCredentials(credentials));
-        } else {
-            // ... no, so don't fork off a worker task, but inline work
-            return Future.succeededFuture(checkCredentials(credentials));
-        }
+
+        return DeviceRegistryUtils.assertTypeAndAuthIdUniqueness(credentials)
+                .compose(ok -> {
+                    // Check if we need to encode passwords
+                    if (needToEncode(credentials)) {
+                        // ... yes, encode passwords asynchronously
+                        return Futures.executeBlocking(this.vertx, () -> checkCredentials(credentials));
+                    } else {
+                        // ... no, so don't fork off a worker task, but inline work
+                        return Future.succeededFuture(checkCredentials(credentials));
+                    }
+                });
     }
 
     /**

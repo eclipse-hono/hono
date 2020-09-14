@@ -139,9 +139,10 @@ public class FileBasedServiceConfig {
         final FileBasedRegistrationService registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationProperties());
 
-        final FileBasedCredentialsService credentialsService = new FileBasedCredentialsService(vertx);
-        credentialsService.setConfig(credentialsProperties());
-        credentialsService.setPasswordEncoder(passwordEncoder());
+        final FileBasedCredentialsService credentialsService = new FileBasedCredentialsService(
+                vertx,
+                credentialsProperties(),
+                passwordEncoder());
 
         return new FileBasedDeviceBackend(registrationService, credentialsService);
     }
