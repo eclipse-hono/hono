@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -54,12 +54,9 @@ public final class ResourceIdentifier {
     private String resource;
     private String basePath;
 
-    private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
+    private ResourceIdentifier(final String resource) {
         final String[] path = resource.split("\\/");
         final List<String> pathSegments = new ArrayList<>(Arrays.asList(path));
-        if (assumeDefaultTenant) {
-            pathSegments.add(1, Constants.DEFAULT_TENANT);
-        }
         setResourcePath(pathSegments.toArray(new String[pathSegments.size()]));
     }
 
@@ -171,26 +168,7 @@ public final class ResourceIdentifier {
      */
     public static ResourceIdentifier fromString(final String resource) {
         Objects.requireNonNull(resource);
-        return new ResourceIdentifier(resource, false);
-    }
-
-    /**
-     * Creates a resource identifier from its string representation assuming the default tenant.
-     * <p>
-     * The given string is split up into segments using a forward slash as the separator. The first segment is used as
-     * the endpoint and the second segment (if present) is used as the device ID. The tenant ID is always set to
-     * {@link Constants#DEFAULT_TENANT}.
-     * </p>
-     *
-     * @param resource the resource string to parse.
-     * @return the resource identifier.
-     * @throws NullPointerException if the given string is {@code null}.
-     * @deprecated This method will be removed in Hono 1.5.
-     */
-    @Deprecated
-    public static ResourceIdentifier fromStringAssumingDefaultTenant(final String resource) {
-        Objects.requireNonNull(resource);
-        return new ResourceIdentifier(resource, true);
+        return new ResourceIdentifier(resource);
     }
 
     /**

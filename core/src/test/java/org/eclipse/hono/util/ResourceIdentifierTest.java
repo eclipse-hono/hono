@@ -56,22 +56,6 @@ public class ResourceIdentifierTest {
     }
 
     /**
-     * Verifies that a resource identifier created from a string containing
-     * a single segment only contains the segment as endpoint and the default tenant.
-     */
-    @Test
-    public void testFromStringAssumingDefaultTenantAllowsMissingDeviceId() {
-        final ResourceIdentifier resourceId = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
-        assertThat(resourceId).isNotNull();
-        assertThat(resourceId.getEndpoint()).isEqualTo("telemetry");
-        assertThat(resourceId.getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
-        assertThat(resourceId.getResourceId()).isNull();
-        assertThat(resourceId.getBasePath()).isEqualTo("telemetry/" + Constants.DEFAULT_TENANT);
-        assertThat(resourceId.getPathWithoutBase()).isEqualTo("");
-        assertThat(resourceId.toString()).isEqualTo("telemetry/" + Constants.DEFAULT_TENANT);
-    }
-
-    /**
      * Verifies that a resource identifier created from a string that contains
      * more than three segments correctly parses the individual path segments.
      */

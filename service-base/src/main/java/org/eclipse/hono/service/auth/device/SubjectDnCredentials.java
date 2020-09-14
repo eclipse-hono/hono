@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
      * @param subjectDn The subject DN of the device's client certificate.
      * @return The credentials.
      * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if the subjectDn is improperly specified.
      */
     public static SubjectDnCredentials create(final String tenantId, final String subjectDn) {
 
@@ -59,6 +60,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
      * @param clientContext The client context that can be used to get credentials from the Credentials API.
      * @return The credentials.
      * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if the subjectDn is improperly specified.
      */
     public static SubjectDnCredentials create(final String tenantId, final String subjectDn,
             final JsonObject clientContext) {

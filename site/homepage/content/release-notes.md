@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 1.5.0 (not yet released)
+
+### API Changes
+
+* The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.
+
 ## 1.4.0
 
 ### New Features

@@ -22,7 +22,6 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -39,20 +38,18 @@ import io.vertx.core.json.JsonObject;
  */
 public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvider<UsernamePasswordCredentials> {
 
-    private final ServiceConfigProperties config;
     private final HonoPasswordEncoder pwdEncoder;
 
     /**
      * Creates a new provider for a given configuration.
      *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
-     * @param config The configuration.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public UsernamePasswordAuthProvider(final CredentialsClientFactory credentialsClientFactory, final ServiceConfigProperties config, final Tracer tracer) {
-        this(credentialsClientFactory, new SpringBasedHonoPasswordEncoder(), config, tracer);
+    public UsernamePasswordAuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
+        this(credentialsClientFactory, new SpringBasedHonoPasswordEncoder(), tracer);
     }
 
     /**
@@ -60,7 +57,6 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param pwdEncoder The object to use for validating hashed passwords.
-     * @param config The configuration.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
@@ -68,11 +64,9 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     public UsernamePasswordAuthProvider(
             final CredentialsClientFactory credentialsClientFactory,
             final HonoPasswordEncoder pwdEncoder,
-            final ServiceConfigProperties config,
             final Tracer tracer) {
 
         super(credentialsClientFactory, tracer);
-        this.config = Objects.requireNonNull(config);
         this.pwdEncoder = Objects.requireNonNull(pwdEncoder);
     }
 
@@ -99,7 +93,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
             } else if (password.isEmpty()) {
                 return tryGetCredentialsEncodedInUsername(username);
             } else {
-                return UsernamePasswordCredentials.create(username, password, config.isSingleTenant());
+                return UsernamePasswordCredentials.create(username, password);
             }
         } catch (final ClassCastException e) {
             return null;
@@ -114,7 +108,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
             if (colonIdx > -1) {
                 final String user = decoded.substring(0, colonIdx);
                 final String pass = decoded.substring(colonIdx + 1);
-                return UsernamePasswordCredentials.create(user, pass, config.isSingleTenant());
+                return UsernamePasswordCredentials.create(user, pass);
             } else {
                 return null;
             }

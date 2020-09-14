@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -474,23 +474,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     /**
-     * Creates a resource identifier for a given address.
-     *
-     * @param address The address. If this service is configured for
-     *         a single tenant only then the address is assumed to <em>not</em> contain a tenant
-     *         component.
-     * @return The identifier representing the address.
-     * @throws NullPointerException if the given address is {@code null}.
-     */
-    protected final ResourceIdentifier getResourceIdentifier(final String address) {
-        if (getConfig().isSingleTenant()) {
-            return ResourceIdentifier.fromStringAssumingDefaultTenant(address);
-        } else {
-            return ResourceIdentifier.fromString(address);
-        }
-    }
-
-    /**
      * Handles a request from a client to establish a link for sending messages to this server.
      * The already established connection must have an authenticated user as principal for doing the authorization check.
      *
@@ -506,7 +489,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         } else {
             log.debug("client [container: {}] wants to open a link [address: {}] for sending messages",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
-            final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
+            final ResourceIdentifier targetResource = ResourceIdentifier
+                    .fromString(receiver.getRemoteTarget().getAddress());
             final AmqpEndpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
                 handleUnknownEndpoint(con, receiver, targetResource);
@@ -538,7 +522,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final Source remoteSource = sender.getRemoteSource();
         log.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
                 con.getRemoteContainer(), remoteSource);
-        final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
+        final ResourceIdentifier targetResource = ResourceIdentifier.fromString(remoteSource.getAddress());
         final AmqpEndpoint endpoint = getEndpoint(targetResource);
         if (endpoint == null) {
             handleUnknownEndpoint(con, sender, targetResource);

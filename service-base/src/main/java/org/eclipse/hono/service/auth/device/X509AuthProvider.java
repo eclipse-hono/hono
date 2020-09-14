@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,12 +14,9 @@
 package org.eclipse.hono.service.auth.device;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,32 +33,26 @@ import io.vertx.core.json.JsonObject;
  */
 public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCredentials> {
 
-    private final ServiceConfigProperties config;
-
     /**
      * Creates a new provider for a given configuration.
      *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
-     * @param config The configuration.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public X509AuthProvider(final CredentialsClientFactory credentialsClientFactory, final ServiceConfigProperties config, final Tracer tracer) {
+    public X509AuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
         super(credentialsClientFactory, tracer);
-        this.config = Objects.requireNonNull(config);
     }
 
     /**
      * Creates a {@link SubjectDnCredentials} instance from information provided by a
      * device in its client (X.509) certificate.
      * <p>
-     * The JSON object passed in is required to contain a <em>subject-dn</em> property.
-     * If the <em>singleTenant</em> service config property is {@code false}, then the
-     * object is also required to contain a <em>tenant-id</em> property, otherwise
-     * the default tenant is used.
+     * The JSON object passed in is required to contain a <em>subject-dn</em> and a
+     * <em>tenant-id</em> property.
      * <p>
-     * Any additional properties that might be present in the JSON object 
+     * Any additional properties that might be present in the JSON object
      * are copied into the client context of the returned credentials.
      *
      * @param authInfo The authentication information provided by the device.
@@ -74,14 +65,7 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
 
         Objects.requireNonNull(authInfo);
         try {
-            final String tenantId = Optional.ofNullable(authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID))
-                    .orElseGet(() -> {
-                        if (config.isSingleTenant()) {
-                            return Constants.DEFAULT_TENANT;
-                        } else {
-                            return null;
-                        }
-                    });
+            final String tenantId = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
             final String subjectDn = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN);
             if (tenantId == null || subjectDn == null) {
                 return null;

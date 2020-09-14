@@ -127,10 +127,10 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             authHandler.append(new X509AuthHandler(
                     new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                     Optional.ofNullable(clientCertAuthProvider).orElse(
-                            new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer)), tracer));
+                            new X509AuthProvider(getCredentialsClientFactory(), tracer)), tracer));
             authHandler.append(new HonoBasicAuthHandler(
                     Optional.ofNullable(usernamePasswordAuthProvider).orElse(
-                            new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
+                            new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer)),
                     getConfig().getRealm(), tracer));
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);

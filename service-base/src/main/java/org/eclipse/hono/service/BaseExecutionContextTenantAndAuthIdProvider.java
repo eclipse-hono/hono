@@ -23,7 +23,6 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.TenantObjectWithAuthId;
@@ -113,12 +112,8 @@ public abstract class BaseExecutionContextTenantAndAuthIdProvider<T extends Exec
     /**
      * Gets a {@link TenantObjectWithAuthId} from the given username.
      * <p>
-     * If Hono is configured for single tenant mode, the returned tenant is {@link Constants#DEFAULT_TENANT} and
-     * <em>authId</em> is set to the given username.
-     * <p>
-     * If Hono is configured for multi tenant mode, the given username is split in two around the first occurrence of
-     * the <code>&#64;</code> sign. <em>authId</em> is then set to the first part and the tenant id is derived from the
-     * second part.
+     * The given username is split in two around the first occurrence of the <code>&#64;</code> sign. <em>authId</em> is
+     * then set to the first part and the tenant id is derived from the second part.
      *
      * @param userName The user name in the format <em>authId@tenantId</em>.
      * @param spanContext The OpenTracing context to use for tracking the operation.
@@ -128,25 +123,13 @@ public abstract class BaseExecutionContextTenantAndAuthIdProvider<T extends Exec
         if (userName == null) {
             return Future.failedFuture("user name not set");
         }
-        final String tenantId;
-        final String authId;
-        if (config.isSingleTenant()) {
-            tenantId = Constants.DEFAULT_TENANT;
-            authId = userName;
-        } else {
-            // userName is <authId>@<tenantId>
-            final String[] userComponents = userName.split("@", 2);
-            if (userComponents.length == 2) {
-                tenantId = userComponents[1];
-                authId = userComponents[0];
-            } else {
-                tenantId = null;
-                authId = null;
-            }
-        }
-        if (tenantId == null) {
+        // userName is <authId>@<tenantId>
+        final String[] userComponents = userName.split("@", 2);
+        if (userComponents.length != 2) {
             return Future.failedFuture("unsupported user name format");
         }
+        final String authId = userComponents[0];
+        final String tenantId = userComponents[1];
         return get(tenantId, authId, spanContext);
     }
 
