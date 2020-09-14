@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,13 +18,8 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
@@ -37,27 +32,20 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class TenantAmqpIT extends TenantApiTests {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TenantAmqpIT.class);
-    private static final Vertx vertx = Vertx.vertx();
-
     private static TenantClientFactory allTenantClientFactory;
     private static TenantClientFactory defaultTenantClientFactory;
     private static TenantClient allTenantClient;
     private static TenantClient defaultTenantClient;
-    private static IntegrationTestSupport helper;
 
     /**
-     * Creates an HTTP client for managing the fixture of test cases
-     * and creates a {@link TenantClient} for invoking operations of the
+     * Creates {@link TenantClient}s for invoking operations of the
      * Tenant API.
      *
+     * @param vertx The vert.x instance to run the clients on.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void prepareDeviceRegistry(final VertxTestContext ctx) {
-
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
+    public static void createTenantClientFactories(final Vertx vertx, final VertxTestContext ctx) {
 
         final Checkpoint connections = ctx.checkpoint(2);
 
@@ -93,26 +81,6 @@ public class TenantAmqpIT extends TenantApiTests {
     }
 
     /**
-     * Prints the test name.
-     *
-     * @param testInfo The test info.
-     */
-    @BeforeEach
-    public void init(final TestInfo testInfo) {
-        LOG.info("running test: {}", testInfo.getDisplayName());
-    }
-
-    /**
-     * Removes all temporary objects from the registry.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void cleanUp(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
-    }
-
-    /**
      * Shuts down the device registry and closes the tenantClientFactory.
      *
      * @param ctx The vert.x test context.
@@ -123,14 +91,6 @@ public class TenantAmqpIT extends TenantApiTests {
         final Checkpoint connections = ctx.checkpoint(2);
         disconnect(ctx, connections, allTenantClientFactory);
         disconnect(ctx, connections, defaultTenantClientFactory);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected IntegrationTestSupport getHelper() {
-        return helper;
     }
 
     /**

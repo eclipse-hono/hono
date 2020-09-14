@@ -22,14 +22,11 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedDeviceConnectionClient;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -49,29 +46,19 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
     private static ClientConfigProperties props;
 
     /**
-     * Starts the device registry and connects a client.
+     * Creates a JMS connection to the Device Connection service.
      *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void init(final VertxTestContext ctx) {
+    public static void createJmsConnection(final VertxTestContext ctx) {
 
         props = IntegrationTestSupport.getDeviceConnectionServiceProperties(
-                IntegrationTestSupport.HONO_USER,
-                IntegrationTestSupport.HONO_PWD);
+                IntegrationTestSupport.TENANT_ADMIN_USER,
+                IntegrationTestSupport.TENANT_ADMIN_PWD);
 
         connection = JmsBasedHonoConnection.newConnection(props);
         connection.connect().onComplete(ctx.completing());
-    }
-
-    /**
-     * Logs the name of the current test.
-     *
-     * @param info The test meta data.
-     */
-    @BeforeEach
-    public void info(final TestInfo info) {
-        log.info("running test: {}", info.getDisplayName());
     }
 
     /**
@@ -112,10 +99,10 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
     @Test
     public void testGetCommandHandlingAdapterInstancesFailsForMalformedPayload(final VertxTestContext ctx) {
 
-        getJmsBasedClient(Constants.DEFAULT_TENANT)
+        getJmsBasedClient(randomId())
             .compose(client -> client.sendRequest(
                     DeviceConnectionAction.GET_CMD_HANDLING_ADAPTER_INSTANCES.getSubject(),
-                    Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, "deviceId"),
+                    Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, randomId()),
                     Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 }))) // no JSON
             .onComplete(ctx.failing(t -> {
                 assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
@@ -133,10 +120,10 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
     @Test
     public void testRequestFailsForMissingSubject(final VertxTestContext ctx) {
 
-        getJmsBasedClient(Constants.DEFAULT_TENANT)
+        getJmsBasedClient(randomId())
         .compose(client -> client.sendRequest(
                 null,
-                Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, "deviceId"),
+                Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, randomId()),
                 null))
         .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
@@ -154,10 +141,10 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
     @Test
     public void testRequestFailsForUnsupportedOperation(final VertxTestContext ctx) {
 
-        getJmsBasedClient(Constants.DEFAULT_TENANT)
+        getJmsBasedClient(randomId())
         .compose(client -> client.sendRequest(
                 "unsupported-operation",
-                Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, "deviceId"),
+                Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, randomId()),
                 null))
         .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);

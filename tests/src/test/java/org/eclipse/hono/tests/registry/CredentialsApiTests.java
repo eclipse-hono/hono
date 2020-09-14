@@ -39,13 +39,14 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
@@ -56,6 +57,26 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 abstract class CredentialsApiTests extends DeviceRegistryTestBase {
+
+    protected static final Vertx VERTX = Vertx.vertx();
+
+    /**
+     * The (random) tenant ID to use for the tests.
+     */
+    protected String tenantId;
+
+    /**
+     * Registers a random tenant to be used in the test case.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @BeforeEach
+    public void registerTemporaryTenant(final VertxTestContext ctx) {
+        tenantId = getHelper().getRandomTenantId();
+        getHelper().registry
+                .addTenant(tenantId)
+                .onComplete(ctx.completing());
+    }
 
     /**
      * Gets a client for interacting with the Credentials service.
@@ -74,7 +95,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsFailsForNonExistingAuthId(final VertxTestContext ctx) {
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(tenantId)
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "nonExisting"))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -92,16 +113,16 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsByTypeAndAuthId(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
         final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, deviceId)
+                .registerDevice(tenantId, deviceId)
                 .compose(ok -> {
                     return getHelper().registry
-                            .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
-                            .compose(ok2 -> getClient(Constants.DEFAULT_TENANT))
+                            .addCredentials(tenantId, deviceId, credentials)
+                            .compose(ok2 -> getClient(tenantId))
                             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId));
                 })
                 .onComplete(ctx.succeeding(result -> {
@@ -134,7 +155,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
         final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(tenantId)
                 // WHEN getting credentials
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx))
                 .onComplete(ctx.succeeding(result -> {
@@ -149,7 +170,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                         assertThat(result.getSecrets()).hasSize(1);
                     });
 
-                    getHelper().registry.getRegistrationInfo(Constants.DEFAULT_TENANT, result.getDeviceId())
+                    getHelper().registry.getRegistrationInfo(tenantId, result.getDeviceId())
                             .onComplete(ctx.succeeding(httpResponse -> {
                                 // AND the device has been registered as well
                                 ctx.verify(() -> assertThat(httpResponse.bodyAsJson(Device.class).isEnabled()));
@@ -173,18 +194,18 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsFailsForDisabledCredentials(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
 
         final CommonCredential credential = getRandomHashedPasswordCredential(authId);
         credential.setEnabled(false);
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, deviceId)
+                .registerDevice(tenantId, deviceId)
                 .compose(ok -> {
                     return getHelper().registry
-                            .addCredentials(Constants.DEFAULT_TENANT, deviceId, Collections.singleton(credential))
-                            .compose(ok2 -> getClient(Constants.DEFAULT_TENANT))
+                            .addCredentials(tenantId, deviceId, Collections.singleton(credential))
+                            .compose(ok2 -> getClient(tenantId))
                             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId));
                 })
                 .onComplete(ctx.failing(t -> {
@@ -202,7 +223,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsByClientContext(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
         final CommonCredential credentials = getRandomHashedPasswordCredential(authId)
                 .putExtension("client-id", "gateway-one");
@@ -210,9 +231,9 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
-        getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
-            .compose(httpResponse -> getHelper().registry.addCredentials(Constants.DEFAULT_TENANT, deviceId, List.of(credentials)))
-            .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+        getHelper().registry.registerDevice(tenantId, deviceId)
+            .compose(httpResponse -> getHelper().registry.addCredentials(tenantId, deviceId, List.of(credentials)))
+            .compose(ok -> getClient(tenantId))
             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
@@ -238,7 +259,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsFailsForNonMatchingClientContext(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
         final CommonCredential credentials = getRandomHashedPasswordCredential(authId)
                 .putExtension("client-id", UUID.randomUUID().toString());
@@ -246,9 +267,9 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "non-matching");
 
-        getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
-            .compose(httpResponse -> getHelper().registry.addCredentials(Constants.DEFAULT_TENANT, deviceId, List.of(credentials)))
-            .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+        getHelper().registry.registerDevice(tenantId, deviceId)
+            .compose(httpResponse -> getHelper().registry.addCredentials(tenantId, deviceId, List.of(credentials)))
+            .compose(ok -> getClient(tenantId))
             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -266,7 +287,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsSucceedsForNonExistingClientContext(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
         final CommonCredential credentials = getRandomHashedPasswordCredential(authId)
                 .putExtension("other", "property");
@@ -275,9 +296,9 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                 .put("client-id", "gateway-one");
 
         getHelper().registry
-            .registerDevice(Constants.DEFAULT_TENANT, deviceId)
-            .compose(httpResponse -> getHelper().registry.addCredentials(Constants.DEFAULT_TENANT, deviceId, List.of(credentials)))
-            .compose(httpResponse -> getClient(Constants.DEFAULT_TENANT))
+            .registerDevice(tenantId, deviceId)
+            .compose(httpResponse -> getHelper().registry.addCredentials(tenantId, deviceId, List.of(credentials)))
+            .compose(httpResponse -> getClient(tenantId))
             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
             .onComplete(ctx.succeeding(credentialsObject -> {
                 ctx.verify(() -> {

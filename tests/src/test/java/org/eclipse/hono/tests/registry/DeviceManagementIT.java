@@ -29,23 +29,17 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
-import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.MultiMap;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -58,26 +52,11 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public class DeviceManagementIT {
+public class DeviceManagementIT extends DeviceRegistryTestBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceManagementIT.class);
-
-    private static DeviceRegistryHttpClient registry;
-    private static IntegrationTestSupport helper;
+    private DeviceRegistryHttpClient registry;
     private String tenantId;
     private String deviceId;
-
-    /**
-     * Creates the HTTP client for accessing the registry.
-     *
-     * @param vertx The vert.x instance.
-     */
-    @BeforeAll
-    public static void setUpClient(final Vertx vertx) {
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
-        registry = helper.registry;
-    }
 
     /**
      * Sets up the fixture.
@@ -87,25 +66,15 @@ public class DeviceManagementIT {
      */
     @BeforeEach
     public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
-        LOG.info("running {}", testInfo.getDisplayName());
 
-        tenantId = helper.getRandomTenantId();
-        deviceId = helper.getRandomDeviceId(tenantId);
+        registry = getHelper().registry;
+        tenantId = getHelper().getRandomTenantId();
+        deviceId = getHelper().getRandomDeviceId(tenantId);
 
-        helper.registry
+        registry
                 .addTenant(tenantId)
                 .onComplete(ctx.completing());
 
-    }
-
-    /**
-     * Removes the device that has been added by the test.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void removeDevice(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
     }
 
     /**
@@ -139,7 +108,7 @@ public class DeviceManagementIT {
                     ctx.verify(() -> {
                         assertThat(httpResponse.getHeader(HttpHeaders.ETAG.toString())).isNotNull();
                         final String createdDeviceId = assertLocationHeader(httpResponse.headers(), tenantId);
-                        helper.addDeviceIdForRemoval(tenantId, createdDeviceId);
+                        getHelper().addDeviceIdForRemoval(tenantId, createdDeviceId);
                     });
                     ctx.completeNow();
                 }));
@@ -516,8 +485,8 @@ public class DeviceManagementIT {
          */
         @Test
         public void testSearchDevicesWithValidPageOffsetSucceeds(final VertxTestContext ctx) {
-            final String deviceId1 = helper.getRandomDeviceId(tenantId);
-            final String deviceId2 = helper.getRandomDeviceId(tenantId);
+            final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
+            final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
             final Device device1 = new Device().setExtensions(Map.of("id", "aaa"));
             final Device device2 = new Device().setExtensions(Map.of("id", "bbb"));
             final int pageSize = 1;
@@ -561,8 +530,8 @@ public class DeviceManagementIT {
          */
         @Test
         public void testSearchDevicesWithValidMultipleFiltersSucceeds(final VertxTestContext ctx) {
-            final String deviceId1 = helper.getRandomDeviceId(tenantId);
-            final String deviceId2 = helper.getRandomDeviceId(tenantId);
+            final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
+            final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
             final Device device1 = new Device().setEnabled(false).setExtensions(Map.of("id", "1"));
             final Device device2 = new Device().setEnabled(true).setExtensions(Map.of("id", "2"));
             final String filterJson1 = getFilterJson("/ext/id", "1", "eq");
@@ -610,8 +579,8 @@ public class DeviceManagementIT {
          */
         @Test
         public void testSearchDevicesWithValidSortOptionSucceeds(final VertxTestContext ctx) {
-            final String deviceId1 = helper.getRandomDeviceId(tenantId);
-            final String deviceId2 = helper.getRandomDeviceId(tenantId);
+            final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
+            final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
             final Device device1 = new Device().setExtensions(Map.of("id", "aaa"));
             final Device device2 = new Device().setExtensions(Map.of("id", "bbb"));
             final String sortJson = getSortJson("/ext/id", "desc");

@@ -16,16 +16,11 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -36,64 +31,25 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class CredentialsAmqpIT extends CredentialsApiTests {
 
-    private static final Vertx vertx = Vertx.vertx();
-
-    private static CredentialsClientFactory client;
-    private static IntegrationTestSupport helper;
+    private static CredentialsClientFactory clientFactory;
 
     /**
-     * Starts the device registry and connects a client.
+     * Creates an AMQP 1.0 based client for the Credentials API.
      *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void prepareDeviceRegistry(final VertxTestContext ctx) {
+    public static void createCredentialsClientFactory(final VertxTestContext ctx) {
 
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
-
-        client = CredentialsClientFactory.create(
+        clientFactory = CredentialsClientFactory.create(
                 HonoConnection.newConnection(
-                        vertx,
+                        VERTX,
                         IntegrationTestSupport.getDeviceRegistryProperties(
-                                IntegrationTestSupport.HONO_USER,
-                                IntegrationTestSupport.HONO_PWD)));
+                                IntegrationTestSupport.TENANT_ADMIN_USER,
+                                IntegrationTestSupport.TENANT_ADMIN_PWD)));
 
-        client.connect().onComplete(ctx.completing());
+        clientFactory.connect().onComplete(ctx.completing());
 
-    }
-
-    /**
-     * Setup device registry.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @BeforeEach
-    public void setupDeviceRegistry(final VertxTestContext ctx) {
-        helper.addTenantIdForRemoval(Constants.DEFAULT_TENANT);
-        helper.registry
-                .addTenant(Constants.DEFAULT_TENANT)
-                .onComplete(ctx.completing());
-    }
-
-    /**
-     * Logs the current test case's display name.
-     *
-     * @param testInfo The test case meta data.
-     */
-    @BeforeEach
-    public void logTestName(final TestInfo testInfo) {
-        log.info("running test {}", testInfo.getDisplayName());
-    }
-
-    /**
-     * Remove the fixture from the device registry if the test had set up any.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
     }
 
     /**
@@ -104,15 +60,7 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint connections = ctx.checkpoint();
-        disconnect(ctx, connections, client);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected IntegrationTestSupport getHelper() {
-        return helper;
+        disconnect(ctx, connections, clientFactory);
     }
 
     /**
@@ -120,6 +68,6 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
      */
     @Override
     protected Future<CredentialsClient> getClient(final String tenant) {
-        return client.getOrCreateCredentialsClient(tenant);
+        return clientFactory.getOrCreateCredentialsClient(tenant);
     }
 }

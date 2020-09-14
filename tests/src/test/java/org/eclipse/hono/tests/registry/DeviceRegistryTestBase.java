@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,10 +18,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 
@@ -38,11 +42,9 @@ abstract class DeviceRegistryTestBase {
     protected Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * Gets the helper to use for running tests.
-     *
-     * @return The helper.
+     * The integration test helper to use for managing registry content.
      */
-    protected abstract IntegrationTestSupport getHelper();
+    private IntegrationTestSupport helper;
 
     /**
      * Asserts that a given error is a {@link ServiceInvocationException}
@@ -82,4 +84,45 @@ abstract class DeviceRegistryTestBase {
         clientTracker.future().otherwiseEmpty().onComplete(ctx.succeeding(ok -> checkpoint.flag()));
     }
 
+    /**
+     * Logs the current test case's display name.
+     *
+     * @param testInfo The test case meta data.
+     */
+    @BeforeEach
+    public void logTestName(final TestInfo testInfo) {
+        log.info("running test {}", testInfo.getDisplayName());
+    }
+
+    /**
+     * Creates a new integration test helper.
+     *
+     * @param vertx The vert.x instance to use for the helper.
+     * @param ctx The vert.x test context.
+     */
+    @BeforeEach
+    public void createHelper(final Vertx vertx) {
+
+        helper = new IntegrationTestSupport(vertx);
+        helper.initRegistryClient();
+    }
+
+    /**
+     * Remove the fixture from the device registry if the test had set up any.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
+        helper.deleteObjects(ctx);
+    }
+
+    /**
+     * Gets the integration test helper.
+     *
+     * @return The helper.
+     */
+    protected final IntegrationTestSupport getHelper() {
+        return helper;
+    }
 }

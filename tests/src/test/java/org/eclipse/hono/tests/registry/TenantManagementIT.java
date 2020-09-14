@@ -31,9 +31,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -42,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.MultiMap;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -55,23 +51,11 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public class TenantManagementIT {
+public class TenantManagementIT extends DeviceRegistryTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantManagementIT.class);
-    private static final Vertx vertx = Vertx.vertx();
 
-    private static IntegrationTestSupport helper;
-    private static String tenantId;
-
-    /**
-     * Creates the HTTP client for accessing the registry.
-     */
-    @BeforeAll
-    public static void setUpClient() {
-
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
-    }
+    private String tenantId;
 
     /**
      * Sets up the fixture.
@@ -80,28 +64,7 @@ public class TenantManagementIT {
      */
     @BeforeEach
     public void setUp(final TestInfo testInfo) {
-        LOG.info("running test: {}", testInfo.getDisplayName());
-        tenantId = helper.getRandomTenantId();
-    }
-
-    /**
-     * Removes the credentials that have been added by the test.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void removeTenant(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
-    }
-
-    /**
-     * Shuts down the client.
-     *
-     * @param context The vert.x test context.
-     */
-    @AfterAll
-    public static void tearDown(final VertxTestContext context) {
-        vertx.close(context.completing());
+        tenantId = getHelper().getRandomTenantId();
     }
 
     /**
@@ -114,7 +77,7 @@ public class TenantManagementIT {
     public void testAddTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenant = buildTenantPayload();
-        helper.registry.addTenant(tenantId, tenant).onComplete(context.completing());
+        getHelper().registry.addTenant(tenantId, tenant).onComplete(context.completing());
     }
 
     /**
@@ -125,13 +88,13 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantSucceedsWithAGeneratedId(final VertxTestContext context) {
 
-        helper.registry.addTenant()
+        getHelper().registry.addTenant()
             .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
                     assertThat(httpResponse.getHeader(HttpHeaders.ETAG.toString())).isNotNull();
                     final String generatedId = assertLocationHeader(httpResponse.headers());
                     // update the global tenantId value for cleanup
-                    helper.addTenantIdForRemoval(generatedId);
+                    getHelper().addTenantIdForRemoval(generatedId);
                 });
                 context.completeNow();
             }));
@@ -148,10 +111,10 @@ public class TenantManagementIT {
 
         final Tenant payload = buildTenantPayload();
 
-        helper.registry.addTenant(tenantId, payload)
+        getHelper().registry.addTenant(tenantId, payload)
             .compose(ar -> {
                 // now try to add the tenant again
-                return helper.registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
+                return getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
             }).onComplete(context.completing());
     }
 
@@ -164,7 +127,7 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantFailsForWrongContentType(final VertxTestContext context)  {
 
-        helper.registry.addTenant(
+        getHelper().registry.addTenant(
                 tenantId,
                 buildTenantPayload(),
                 "application/x-www-form-urlencoded",
@@ -180,7 +143,7 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
-        helper.registry.addTenant(tenantId)
+        getHelper().registry.addTenant(tenantId)
             .onComplete(context.completing());
     }
 
@@ -192,7 +155,7 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantFailsForInvalidTenantId(final VertxTestContext context) {
 
-        helper.registry.addTenant("invalid tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
+        getHelper().registry.addTenant("invalid tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
             .onComplete(context.completing());
     }
 
@@ -207,7 +170,7 @@ public class TenantManagementIT {
 
         final Tenant requestBody = Tenants.createTenantForTrustAnchor("CN=test-dn", "NotBased64Encoded".getBytes(), "RSA");
 
-        helper.registry.addTenant(
+        getHelper().registry.addTenant(
                 tenantId,
                 requestBody,
                 "application/json",
@@ -229,7 +192,7 @@ public class TenantManagementIT {
         requestBody.getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS)
             .add(JsonObject.mapFrom(httpAdapter));
 
-        helper.registry.addTenant(
+        getHelper().registry.addTenant(
                 tenantId,
                 requestBody,
                 "application/json",
@@ -249,7 +212,7 @@ public class TenantManagementIT {
         final JsonObject requestBody = JsonObject.mapFrom(new Tenant());
         requestBody.put("unexpected", "property");
 
-        helper.registry.addTenant(
+        getHelper().registry.addTenant(
                 tenantId,
                 requestBody,
                 "application/json",
@@ -272,17 +235,17 @@ public class TenantManagementIT {
         altered.setEnabled(Boolean.FALSE);
         final AtomicReference<String> latestVersion = new AtomicReference<>();
 
-        helper.registry.addTenant(tenantId, orig)
+        getHelper().registry.addTenant(tenantId, orig)
             .compose(httpResponse -> {
                 latestVersion.set(httpResponse.getHeader(HttpHeaders.ETAG.toString()));
                 assertThat(latestVersion.get()).isNotNull();
-                return helper.registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT);
+                return getHelper().registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT);
             })
             .compose(httpResponse -> {
                 final String updatedVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
                 assertThat(updatedVersion).isNotNull();
                 assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
-                return helper.registry.getTenant(tenantId);
+                return getHelper().registry.getTenant(tenantId);
             })
             .onComplete(context.succeeding(httpResponse -> {
                 // compare the changed field only
@@ -303,7 +266,7 @@ public class TenantManagementIT {
 
         final Tenant altered = buildTenantPayload();
 
-        helper.registry.updateTenant("non-existing-tenant", altered, HttpURLConnection.HTTP_NOT_FOUND)
+        getHelper().registry.updateTenant("non-existing-tenant", altered, HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(context.completing());
     }
 
@@ -317,8 +280,8 @@ public class TenantManagementIT {
     public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenantPayload = buildTenantPayload();
-        helper.registry.addTenant(tenantId, tenantPayload)
-            .compose(ar -> helper.registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
+        getHelper().registry.addTenant(tenantId, tenantPayload)
+            .compose(ar -> getHelper().registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
             .onComplete(context.completing());
     }
 
@@ -330,7 +293,7 @@ public class TenantManagementIT {
     @Test
     public void testRemoveTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
-        helper.registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
+        getHelper().registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(context.completing());
     }
 
@@ -349,8 +312,8 @@ public class TenantManagementIT {
         requestBody.setResourceLimits(resourceLimits);
 
         LOG.debug("registering tenant using Management API: {}", JsonObject.mapFrom(requestBody).encodePrettily());
-        helper.registry.addTenant(tenantId, requestBody)
-            .compose(ar -> helper.registry.getTenant(tenantId))
+        getHelper().registry.addTenant(tenantId, requestBody)
+            .compose(ar -> getHelper().registry.getTenant(tenantId))
             .onComplete(context.succeeding(httpResponse -> {
                 final JsonObject json = httpResponse.bodyAsJsonObject();
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
@@ -369,7 +332,7 @@ public class TenantManagementIT {
     @Test
     public void testGetTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
-        helper.registry.getTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
+        getHelper().registry.getTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(context.completing());
     }
 

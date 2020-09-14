@@ -14,11 +14,7 @@
         "activities": [ "READ", "WRITE" ]
       },
       {
-        "operation": "registration/*:assert",
-        "activities": [ "EXECUTE" ]
-      },
-      {
-        "operation": "registration/*:get",
+        "operation": "registration/*:*",
         "activities": [ "EXECUTE" ]
       },
       {
@@ -26,7 +22,7 @@
         "activities": [ "READ", "WRITE" ]
       },
       {
-        "operation": "credentials/*:get",
+        "operation": "credentials/*:*",
         "activities": [ "EXECUTE" ]
       },
       {

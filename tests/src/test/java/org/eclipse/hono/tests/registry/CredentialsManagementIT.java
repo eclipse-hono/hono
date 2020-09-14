@@ -36,8 +36,6 @@ import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -47,7 +45,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.vertx.core.MultiMap;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -62,15 +59,14 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public class CredentialsManagementIT {
+public class CredentialsManagementIT extends DeviceRegistryTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(CredentialsManagementIT.class);
 
     private static final String PREFIX_AUTH_ID = "sensor20";
     private static final String ORIG_BCRYPT_PWD;
 
-    private static IntegrationTestSupport helper;
-    private static DeviceRegistryHttpClient registry;
+    private DeviceRegistryHttpClient registry;
 
     static {
         final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS);
@@ -85,18 +81,6 @@ public class CredentialsManagementIT {
     private PskCredential pskCredentials;
 
     /**
-     * Creates the HTTP client for accessing the registry.
-     *
-     * @param vertx The vert.x context.
-     */
-    @BeforeAll
-    public static void setUpClient(final Vertx vertx) {
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
-        registry = helper.registry;
-    }
-
-    /**
      * Sets up the fixture.
      * <p>
      * In particular, registered a new device for a random tenant using a random device ID.
@@ -107,9 +91,9 @@ public class CredentialsManagementIT {
     @BeforeEach
     public void setUp(final VertxTestContext ctx, final TestInfo testInfo) {
 
-        LOG.info("running test: {}", testInfo.getDisplayName());
-        tenantId = helper.getRandomTenantId();
-        deviceId = helper.getRandomDeviceId(tenantId);
+        registry = getHelper().registry;
+        tenantId = getHelper().getRandomTenantId();
+        deviceId = getHelper().getRandomDeviceId(tenantId);
         authId = getRandomAuthId(PREFIX_AUTH_ID);
         resourceVersion = new AtomicReference<>();
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
@@ -119,16 +103,6 @@ public class CredentialsManagementIT {
                 .flatMap(x -> registry.registerDevice(tenantId, deviceId))
                 .onComplete(ctx.completing());
 
-    }
-
-    /**
-     * Removes the device that have been added by the test.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void removeCredentials(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
     }
 
     private static void assertResourceVersionHasChanged(final AtomicReference<String> originalVersion, final MultiMap responseHeaders) {

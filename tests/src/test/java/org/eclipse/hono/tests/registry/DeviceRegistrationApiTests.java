@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
@@ -41,6 +41,24 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
     private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
     private static final String NON_EXISTING_GATEWAY_ID = "non-existing-gateway";
+
+    /**
+     * A random tenant ID.
+     */
+    protected String tenantId;
+
+    /**
+     * Registers a random tenant to be used in the test case.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @BeforeEach
+    public void registerTemporaryTenant(final VertxTestContext ctx) {
+        tenantId = getHelper().getRandomTenantId();
+        getHelper().registry
+                .addTenant(tenantId)
+                .onComplete(ctx.completing());
+    }
 
     /**
      * Gets a client for interacting with the Device Registration service.
@@ -67,11 +85,11 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/vnd.acme+json");
         final Device device = new Device();
         device.setDefaults(defaults.getMap());
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, deviceId, device)
-                .compose(r -> getClient(Constants.DEFAULT_TENANT))
+                .registerDevice(tenantId, deviceId, device)
+                .compose(r -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
@@ -93,19 +111,19 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationSucceedsForDeviceViaGateway(final VertxTestContext ctx) {
 
-        final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String gatewayId = getHelper().getRandomDeviceId(tenantId);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         final List<String> via = List.of(gatewayId, "another-gateway");
         final Device device = new Device();
         device.setVia(via);
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, gatewayId)
+                .registerDevice(tenantId, gatewayId)
                 .compose(ok -> getHelper().registry.registerDevice(
-                        Constants.DEFAULT_TENANT,
+                        tenantId,
                         deviceId, device))
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .compose(ok -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
@@ -126,8 +144,8 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationSucceedsForDeviceViaGatewayGroup(final VertxTestContext ctx) {
 
-        final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String gatewayId = getHelper().getRandomDeviceId(tenantId);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         final Device device = new Device();
         device.setViaGroups(List.of("group"));
@@ -137,10 +155,10 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         Future.succeededFuture()
                 .compose(ok -> getHelper().registry.registerDevice(
-                        Constants.DEFAULT_TENANT, gatewayId, gateway))
+                        tenantId, gatewayId, gateway))
                 .compose(ok -> getHelper().registry.registerDevice(
-                        Constants.DEFAULT_TENANT, deviceId, device))
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                        tenantId, deviceId, device))
+                .compose(ok -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
@@ -163,7 +181,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationFailsForUnknownDevice(final VertxTestContext ctx) {
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(tenantId)
         .compose(client -> client.assertRegistration(NON_EXISTING_DEVICE_ID))
         .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -181,11 +199,11 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationFailsForNonExistingGateway(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, deviceId)
-                .compose(r -> getClient(Constants.DEFAULT_TENANT))
+                .registerDevice(tenantId, deviceId)
+                .compose(r -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATEWAY_ID))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN));
@@ -205,8 +223,8 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         assumeTrue(isGatewayModeSupported());
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
-        final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
+        final String gatewayId = getHelper().getRandomDeviceId(tenantId);
 
         final Device gateway = new Device();
         gateway.setEnabled(false);
@@ -214,10 +232,10 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         device.setVia(Collections.singletonList(gatewayId));
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, gatewayId, gateway)
+                .registerDevice(tenantId, gatewayId, gateway)
                 .compose(ok -> getHelper().registry.registerDevice(
-                        Constants.DEFAULT_TENANT, deviceId, device))
-                .compose(r -> getClient(Constants.DEFAULT_TENANT))
+                        tenantId, deviceId, device))
+                .compose(r -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
                 .onComplete(ctx.failing(t -> {
                     assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
@@ -238,18 +256,18 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         assumeTrue(isGatewayModeSupported());
 
         // Prepare the identities to insert
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
-        final String authorizedGateway = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
-        final String unauthorizedGateway = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
+        final String authorizedGateway = getHelper().getRandomDeviceId(tenantId);
+        final String unauthorizedGateway = getHelper().getRandomDeviceId(tenantId);
 
         final Device device = new Device();
         device.setVia(Collections.singletonList(authorizedGateway));
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, authorizedGateway)
-                .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, unauthorizedGateway))
-                .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId, device))
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .registerDevice(tenantId, authorizedGateway)
+                .compose(ok -> getHelper().registry.registerDevice(tenantId, unauthorizedGateway))
+                .compose(ok -> getHelper().registry.registerDevice(tenantId, deviceId, device))
+                .compose(ok -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, unauthorizedGateway))
                 .onComplete(ctx.failing(t -> {
                     assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
@@ -266,14 +284,14 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationFailsForDisabledDevice(final VertxTestContext ctx) {
 
-        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         final Device device = new Device();
         device.setEnabled(false);
 
         getHelper().registry
-                .registerDevice(Constants.DEFAULT_TENANT, deviceId, device)
-                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .registerDevice(tenantId, deviceId, device)
+                .compose(ok -> getClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));

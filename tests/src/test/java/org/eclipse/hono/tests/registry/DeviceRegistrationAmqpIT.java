@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,11 +17,8 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -36,51 +33,24 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
 
-    private static IntegrationTestSupport helper;
     private static RegistrationClientFactory registrationClientFactory;
 
     /**
-     * Starts the device registry and connects a client.
+     * Creates a new client factory for accessing the Device Registration API.
      *
      * @param vertx The vert.x instance.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void init(final Vertx vertx, final VertxTestContext ctx) {
-
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
+    public static void createRegistrationClientFactory(final Vertx vertx, final VertxTestContext ctx) {
 
         registrationClientFactory = RegistrationClientFactory.create(
                 HonoConnection.newConnection(
                         vertx,
                         IntegrationTestSupport.getDeviceRegistryProperties(
-                                IntegrationTestSupport.HONO_USER,
-                                IntegrationTestSupport.HONO_PWD)));
+                                IntegrationTestSupport.TENANT_ADMIN_USER,
+                                IntegrationTestSupport.TENANT_ADMIN_PWD)));
         registrationClientFactory.connect().onComplete(ctx.completing());
-    }
-
-    /**
-     * Setup device registry.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @BeforeEach
-    public void setupDeviceRegistry(final VertxTestContext ctx) {
-        helper.addTenantIdForRemoval(Constants.DEFAULT_TENANT);
-        helper.registry
-                .addTenant(Constants.DEFAULT_TENANT)
-                .onComplete(ctx.completing());
-    }
-
-    /**
-     * Removes all temporary objects from the registry.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void cleanUp(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
     }
 
     /**
@@ -92,14 +62,6 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
         disconnect(ctx, cons, registrationClientFactory);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected IntegrationTestSupport getHelper() {
-        return helper;
     }
 
     /**

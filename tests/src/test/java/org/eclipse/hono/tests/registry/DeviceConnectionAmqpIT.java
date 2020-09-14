@@ -19,8 +19,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -35,7 +33,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
 
-    private static DeviceConnectionClientFactory client;
+    private static DeviceConnectionClientFactory clientFactory;
 
     /**
      * Connects the factory.
@@ -44,27 +42,17 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void prepareDeviceRegistry(final Vertx vertx, final VertxTestContext ctx) {
+    public static void createDeviceConnectionClientFactory(final Vertx vertx, final VertxTestContext ctx) {
 
-        client = DeviceConnectionClientFactory.create(
+        clientFactory = DeviceConnectionClientFactory.create(
                 HonoConnection.newConnection(
                         vertx,
                         IntegrationTestSupport.getDeviceConnectionServiceProperties(
-                                IntegrationTestSupport.HONO_USER,
-                                IntegrationTestSupport.HONO_PWD)),
+                                IntegrationTestSupport.TENANT_ADMIN_USER,
+                                IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop());
 
-        client.connect().onComplete(ctx.completing());
-    }
-
-    /**
-     * Logs the name of the current test.
-     *
-     * @param info The test meta data.
-     */
-    @BeforeEach
-    public void info(final TestInfo info) {
-        log.info("running test: {}", info.getDisplayName());
+        clientFactory.connect().onComplete(ctx.completing());
     }
 
     /**
@@ -75,7 +63,7 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint connections = ctx.checkpoint();
-        disconnect(ctx, connections, client);
+        disconnect(ctx, connections, clientFactory);
     }
 
     /**
@@ -83,7 +71,7 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
      */
     @Override
     protected Future<DeviceConnectionClient> getClient(final String tenant) {
-        return client.getOrCreateDeviceConnectionClient(tenant);
+        return clientFactory.getOrCreateDeviceConnectionClient(tenant);
     }
 
 }

@@ -637,7 +637,7 @@ public final class IntegrationTestSupport {
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
      * <p>
-     * <strong>Note:</strong> This wil consume the test context.
+     * <strong>Note:</strong> This method either fails or completes the given test context.
      *
      * @param ctx The vert.x context.
      */

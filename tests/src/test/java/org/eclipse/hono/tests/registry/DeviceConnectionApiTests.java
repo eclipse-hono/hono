@@ -23,8 +23,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.DeviceConnectionClient;
-import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.Test;
 
@@ -51,14 +49,11 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     protected abstract Future<DeviceConnectionClient> getClient(String tenant);
 
     /**
-     * {@inheritDoc}
+     * Creates a random identifier.
+     *
+     * @return The identifier.
      */
-    @Override
-    protected final IntegrationTestSupport getHelper() {
-        throw new UnsupportedOperationException();
-    }
-
-    private String randomId() {
+    protected String randomId() {
         return UUID.randomUUID().toString();
     }
 
@@ -74,7 +69,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String deviceId = randomId();
         final String gwId = randomId();
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
             .compose(client -> client.setLastKnownGatewayForDevice(deviceId, gwId, null).map(client))
             .compose(client -> client.getLastKnownGatewayForDevice(deviceId, null))
             .onComplete(ctx.succeeding(r -> {
@@ -97,7 +92,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
             .compose(client -> client.getLastKnownGatewayForDevice(deviceId, null))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -117,7 +112,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String deviceId = randomId();
         final String adapterInstance = randomId();
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
             .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null).map(client))
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
             .onComplete(ctx.succeeding(r -> {
@@ -147,7 +142,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String adapterInstance = randomId();
         final Duration lifespan = Duration.ofSeconds(1);
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
                 .compose(client -> client
                         .setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespan, null)
                         .map(client))
@@ -178,7 +173,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -199,7 +194,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String deviceId = randomId();
         final String adapterInstance = randomId();
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
                 // add the entry
                 .compose(client -> client
                         .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null)
@@ -222,7 +217,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     @Test
     public void testRemoveCommandHandlingAdapterInstanceFailsForNonExistingEntry(final VertxTestContext ctx) {
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
             .compose(client -> client.removeCommandHandlingAdapterInstance("non-existing-device", "adapterOne", null))
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> assertThat(result).isFalse());
@@ -242,7 +237,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
 
-        getClient(Constants.DEFAULT_TENANT)
+        getClient(randomId())
             .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, "adapterOne", Duration.ofMinutes(5), null).map(client))
             .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "notAdapterOne", null))
             .onComplete(ctx.succeeding(result -> {
