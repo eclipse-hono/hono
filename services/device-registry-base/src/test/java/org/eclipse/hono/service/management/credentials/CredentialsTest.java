@@ -31,9 +31,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
@@ -44,6 +48,12 @@ import io.vertx.core.json.JsonObject;
  * Verifies {@link CommonCredential} and others.
  */
 public class CredentialsTest {
+
+    private static final String[] CREDENTIAL_TYPES = { CredentialsConstants.SECRETS_TYPE_X509_CERT, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "custom" };
+
+    static Stream<String> illegalAuthIds() {
+        return Stream.of("$", "#", "%", "!", "(", ")", "?", ",", ";", ":", "");
+    }
 
     /**
      * Test encoding of a simple password credential.
@@ -189,7 +199,7 @@ public class CredentialsTest {
 
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo")
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo_ID-ext.4563=F")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true)
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
@@ -207,7 +217,7 @@ public class CredentialsTest {
         final PasswordCredential credential = jsonCredential.mapTo(PasswordCredential.class);
 
         assertNotNull(credential);
-        assertEquals("foo", credential.getAuthId());
+        assertEquals("foo_ID-ext.4563=F", credential.getAuthId());
         assertTrue(credential.isEnabled());
         assertEquals(1, credential.getSecrets().size());
 
@@ -319,68 +329,40 @@ public class CredentialsTest {
 
     /**
      * Verifies that a credentials object requires the authentication identifier to match
-     * the auth id regex.
+     * the {@linkplain org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE auth id regex}.
+     *
+     * @param illegalAuthId An auth-id that does not comply with the pattern.
      */
-    @Test
-    public void testSetAuthIdFailsForIllegalIdentifier() {
-        assertThatThrownBy(() -> new PskCredential("_illegal"))
-        .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PskCredential("#illegal"))
+    @MethodSource("illegalAuthIds")
+    @ParameterizedTest
+    public void testInstantiationFailsForIllegalAuthId(final String illegalAuthId) {
+        assertThatThrownBy(() -> new GenericCredential("custom", illegalAuthId))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PskCredential(""))
+        assertThatThrownBy(() -> new PasswordCredential(illegalAuthId))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PskCredential(illegalAuthId))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new X509CertificateCredential(illegalAuthId))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Verifies that decoding of a JSON object to a PSK credential
      * fails if the authentication identifier does not match the auth ID regex.
+     *
+     * @param illegalAuthId An auth-id that does not comply with the pattern.
      */
-    @Test
-    public void testDecodePskCredentialFailsForIllegalAuthId() {
-        final JsonObject jsonCredential = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY)
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "#illegal");
-        assertThatThrownBy(() -> jsonCredential.mapTo(PskCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
-    }
+    @MethodSource("illegalAuthIds")
+    @ParameterizedTest
+    public void testDecodeFailsForIllegalAuthId(final String illegalAuthId) {
 
-    /**
-     * Verifies that decoding of a JSON object to a PSK credential
-     * fails if the JSON object does not contain an auth-id property.
-     */
-    @Test
-    public void testDecodePskCredentialFailsForMissingAuthId() {
-        final JsonObject jsonCredential = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY);
-        assertThatThrownBy(() -> jsonCredential.mapTo(PskCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    /**
-     * Verifies that a generic credentials object requires the type to match
-     * the type name regex.
-     */
-    @Test
-    public void testSetTypeFailsForIllegalName() {
-        assertThatThrownBy(() -> new GenericCredential("_illegal", "device"))
-            .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new GenericCredential("#illegal", "device"))
-            .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new GenericCredential("", "device"))
-            .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    /**
-     * Verifies that decoding of a JSON object to a generic credentials object
-     * fails if the type does not match the type name regex.
-     */
-    @Test
-    public void testDecodeGenericCredentialFailsForIllegalType() {
-        final JsonObject jsonCredential = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_TYPE, "#illegal")
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "device1");
-        assertThatThrownBy(() -> jsonCredential.mapTo(GenericCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        Arrays.stream(CREDENTIAL_TYPES).forEach(type -> {
+            final JsonObject jsonCredential = new JsonObject()
+                    .put(RegistryManagementConstants.FIELD_TYPE, type)
+                    .put(RegistryManagementConstants.FIELD_AUTH_ID, illegalAuthId);
+            assertThatThrownBy(() -> jsonCredential.mapTo(CommonCredential.class))
+                .isInstanceOf(IllegalArgumentException.class);
+        });
     }
 
     /**
