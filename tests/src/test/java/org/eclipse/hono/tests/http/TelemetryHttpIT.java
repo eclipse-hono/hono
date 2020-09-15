@@ -32,7 +32,9 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -124,5 +126,95 @@ public class TelemetryHttpIT extends HttpTestBase {
             })
             // THEN the message gets rejected by the HTTP adapter with a 413
             .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that the upload of a telemetry message fails with a 503 status code
+     * when there is no consumer.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testUploadMessageFailsForNoConsumer(final VertxTestContext ctx) {
+
+        // GIVEN a device
+        final Tenant tenant = new Tenant();
+
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> {
+
+                    // WHEN the device tries to upload a telemetry message while there is no consumer for it
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, authorization);
+
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            // THEN the message gets rejected by the HTTP adapter with a 503
+                            ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE));
+
+                })
+                .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that the upload of a QoS 1 telemetry message fails with a 503 status code
+     * when the consumer doesn't update the message delivery state and the
+     * <em>sendMessageTimeout</em> has elapsed.
+     *
+     * @param ctx The test context
+     * @throws InterruptedException if test is interrupted while running.
+     */
+    @Test
+    public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(final VertxTestContext ctx)
+            throws InterruptedException {
+
+        // GIVEN a device and a northbound message consumer that doesn't update the message delivery state
+        final Tenant tenant = new Tenant();
+        final Checkpoint messageReceived = ctx.checkpoint();
+        final Checkpoint httpResponseReceived = ctx.checkpoint();
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint setupDone = setup.checkpoint();
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> helper.applicationClientFactory.createTelemetryConsumer(
+                        tenantId, 
+                        (delivery, msg) -> {
+                            logger.debug("received {}", msg);
+                            messageReceived.flag();
+                            // don't update the delivery state here
+                        },
+                        false, 
+                        remoteClose -> {}))
+                .onComplete(setup.succeeding(v -> setupDone.flag()));
+
+        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        // WHEN the device tries to upload a telemetry message
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_QOS_LEVEL, "1");
+
+        final Future<HttpResponse<Buffer>> httpResponseFuture = httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello"),
+                requestHeaders,
+                // THEN the message gets rejected by the HTTP adapter with a 503
+                ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE));
+
+        httpResponseFuture
+                .onComplete(ctx.succeeding(response -> {
+                    httpResponseReceived.flag();
+                }));
     }
 }

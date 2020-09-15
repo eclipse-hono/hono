@@ -56,6 +56,31 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
+     * @param autoAccept {@code true} if received deliveries should be automatically accepted (and settled)
+     *                   after the message handler runs for them, if no other disposition has been applied
+     *                   during handling. NOTE: When using {@code false} here, make sure that deliveries are
+     *                   quickly updated and settled, so that the messages don't remain <em>in flight</em>
+     *                   for long.
+     * @param closeHandler The handler invoked when the peer detaches the link.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this factory
+     *         is not connected.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<MessageConsumer> createTelemetryConsumer(
+            String tenantId,
+            BiConsumer<ProtonDelivery, Message> telemetryConsumer,
+            boolean autoAccept,
+            Handler<Void> closeHandler);
+
+    /**
+     * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
+     * <p>
+     * The messages passed in to the consumer will be accepted and settled automatically if the consumer
+     * does not throw an exception.
+     *
+     * @param tenantId The tenant to consume data for.
+     * @param telemetryConsumer The handler to invoke with every message received.
      * @param closeHandler The handler invoked when the peer detaches the link.
      * @return A future that will complete with the consumer once the link has been established.
      *         The future will fail if the link cannot be established, e.g. because this factory
@@ -69,9 +94,32 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
 
     /**
      * Creates a client for consuming events from Hono's north bound <em>Event API</em>.
+     *
+     * @param tenantId The tenant to consume events for.
+     * @param eventConsumer The handler to invoke with every event received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
+     * @param autoAccept {@code true} if received deliveries should be automatically accepted (and settled)
+     *                   after the message handler runs for them, if no other disposition has been applied
+     *                   during handling. NOTE: When using {@code false} here, make sure that deliveries are
+     *                   quickly updated and settled, so that the messages don't remain <em>in flight</em>
+     *                   for long.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this factory
+     *         is not connected.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<MessageConsumer> createEventConsumer(
+            String tenantId,
+            BiConsumer<ProtonDelivery, Message> eventConsumer,
+            boolean autoAccept,
+            Handler<Void> closeHandler);
+
+    /**
+     * Creates a client for consuming events from Hono's north bound <em>Event API</em>.
      * <p>
-     * The events passed in to the event consumer will be settled automatically if the consumer does not throw an
-     * exception and does not manually handle the message disposition using the passed in delivery.
+     * The events passed in to the event consumer will be accepted and settled automatically if
+     * the consumer does not throw an exception and does not manually handle the message disposition
+     * using the passed in delivery.
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
@@ -89,8 +137,8 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
     /**
      * Creates a client for consuming events from Hono's north bound <em>Event API</em>.
      * <p>
-     * The events passed in to the event consumer will be settled automatically if the consumer does not throw an
-     * exception.
+     * The events passed in to the event consumer will be accepted and settled automatically if
+     * the consumer does not throw an exception.
      *
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
@@ -109,8 +157,8 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      * Creates a client for consuming responses to commands that have been sent asynchronously
      * using Hono's north bound <em>Command &amp; Control API</em>.
      * <p>
-     * The command responses passed in to the consumer will be settled automatically if the consumer does not
-     * throw an exception.
+     * The command responses passed in to the consumer will be accepted and settled automatically
+     * if the consumer does not throw an exception.
      *
      * @param tenantId The tenant to consume command responses for.
      * @param replyId The replyId of commands to consume command responses for.
@@ -128,8 +176,9 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
     /**
      * Creates a client for consuming async command responses from Hono's north bound <em>Command API</em>.
      * <p>
-     * The command responses passed in to the responses consumer will be settled automatically if the consumer does not
-     * throw an exception and does not manually handle the message disposition using the passed in delivery.
+     * The command responses passed in to the responses consumer will be accepted and settled automatically
+     * if the consumer does not throw an exception and does not manually handle the message disposition using
+     * the passed in delivery.
      *
      * @param tenantId The tenant to consume command responses for.
      * @param replyId The replyId of commands to consume command responses for.

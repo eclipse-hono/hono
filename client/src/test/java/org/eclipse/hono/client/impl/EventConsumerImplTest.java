@@ -14,6 +14,8 @@
 package org.eclipse.hono.client.impl;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -88,6 +90,8 @@ public class EventConsumerImplTest {
                 anyString(),
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
+                anyInt(),
+                anyBoolean(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(receiver));
 
         EventConsumerImpl.create(
@@ -103,6 +107,8 @@ public class EventConsumerImplTest {
                         eq("event/tenant"),
                         eq(ProtonQoS.AT_LEAST_ONCE),
                         messageHandler.capture(),
+                        anyInt(),
+                        eq(true),
                         VertxMockSupport.anyHandler()));
 
                 // WHEN an event is received
