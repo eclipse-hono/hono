@@ -18,6 +18,7 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.Closeable;
 import io.vertx.core.Future;
 
 /**
@@ -27,7 +28,7 @@ import io.vertx.core.Future;
  * Tenant API</a> for a description of the status codes returned.
  * </p>
  */
-public interface TenantClient {
+public interface TenantClient extends Closeable {
 
     /**
      * Gets configuration information for a tenant.

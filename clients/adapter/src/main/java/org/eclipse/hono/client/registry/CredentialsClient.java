@@ -16,6 +16,7 @@ package org.eclipse.hono.client.registry;
 import org.eclipse.hono.util.CredentialsObject;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.Closeable;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -26,7 +27,7 @@ import io.vertx.core.json.JsonObject;
  * Credentials API</a> for a description of the status codes returned.
  * </p>
  */
-public interface CredentialsClient {
+public interface CredentialsClient extends Closeable {
 
     /**
      * Gets credentials for a device by type and authentication identifier.

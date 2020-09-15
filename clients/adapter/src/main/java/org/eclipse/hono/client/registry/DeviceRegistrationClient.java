@@ -15,6 +15,7 @@
 package org.eclipse.hono.client.registry;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.Closeable;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -24,7 +25,7 @@ import io.vertx.core.json.JsonObject;
  * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">
  * Device Registration API</a> for a description of the status codes returned.
  */
-public interface DeviceRegistrationClient {
+public interface DeviceRegistrationClient extends Closeable {
 
     /**
      * Asserts that a device is registered and <em>enabled</em>.
