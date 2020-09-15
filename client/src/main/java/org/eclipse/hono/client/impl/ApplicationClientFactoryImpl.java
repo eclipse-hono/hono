@@ -56,13 +56,10 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
         asyncCommandClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public final Future<MessageConsumer> createTelemetryConsumer(
-            final String tenantId,
-            final Consumer<Message> messageConsumer,
+    public Future<MessageConsumer> createTelemetryConsumer(final String tenantId,
+            final BiConsumer<ProtonDelivery, Message> telemetryConsumer,
+            final boolean autoAccept,
             final Handler<Void> closeHandler) {
 
         return connection.executeOnContext(result -> {
@@ -70,10 +67,57 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
                     () -> TelemetryConsumerImpl.create(
                             connection,
                             tenantId,
-                            messageConsumer,
+                            telemetryConsumer,
+                            autoAccept,
                             closeHook -> closeHandler.handle(null)),
                     result);
         });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<MessageConsumer> createTelemetryConsumer(
+            final String tenantId,
+            final Consumer<Message> telemetryConsumer,
+            final Handler<Void> closeHandler) {
+
+        return createTelemetryConsumer(
+                tenantId,
+                (delivery, message) -> telemetryConsumer.accept(message),
+                true,
+                closeHandler);
+    }
+
+    @Override
+    public Future<MessageConsumer> createEventConsumer(final String tenantId,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
+            final boolean autoAccept,
+            final Handler<Void> closeHandler) {
+
+        return connection.executeOnContext(result -> {
+            consumerFactory.createClient(
+                    () -> EventConsumerImpl.create(
+                            connection,
+                            tenantId,
+                            eventConsumer,
+                            autoAccept,
+                            closeHook -> closeHandler.handle(null)),
+                    result);
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<MessageConsumer> createEventConsumer(
+            final String tenantId,
+            final BiConsumer<ProtonDelivery, Message> eventConsumer,
+            final Handler<Void> closeHandler) {
+
+        return createEventConsumer(tenantId, eventConsumer, true, closeHandler);
     }
 
     /**
@@ -85,27 +129,10 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
             final Consumer<Message> eventConsumer,
             final Handler<Void> closeHandler) {
 
-        return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), closeHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createEventConsumer(
-            final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return connection.executeOnContext(result -> {
-            consumerFactory.createClient(
-                    () -> EventConsumerImpl.create(
-                            connection,
-                            tenantId,
-                            messageConsumer,
-                            closeHook -> closeHandler.handle(null)),
-                    result);
-        });
+        return createEventConsumer(
+                tenantId,
+                (delivery, message) -> eventConsumer.accept(message),
+                closeHandler);
     }
 
     /**
