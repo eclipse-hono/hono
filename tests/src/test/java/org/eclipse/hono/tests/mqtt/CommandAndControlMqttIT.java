@@ -299,6 +299,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             return;
         }
 
+        final Checkpoint sendCommandsSucceeded = ctx.checkpoint();
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong(0);
@@ -340,7 +341,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         LOGGER.info("commands sent: {}, commands succeeded: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
         if (commandsCompleted == commandsSent.get()) {
-            ctx.completeNow();
+            sendCommandsSucceeded.flag();
         } else {
             ctx.failNow(new IllegalStateException("did not complete all commands sent"));
         }

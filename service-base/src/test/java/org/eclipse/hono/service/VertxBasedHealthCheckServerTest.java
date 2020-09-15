@@ -69,7 +69,6 @@ class VertxBasedHealthCheckServerTest {
         final ServerConfig config = new ServerConfig();
 
         server = new VertxBasedHealthCheckServer(vertx, config);
-        registerHealthChecks(ctx, server, 1);
 
         server.start().onComplete(ctx.failing(error -> ctx.completeNow()));
     }
@@ -87,9 +86,10 @@ class VertxBasedHealthCheckServerTest {
         config.setInsecurePort(0);
         config.setInsecurePortBindAddress(HOST);
 
+        final Checkpoint testsDone = ctx.checkpoint();
         server = new VertxBasedHealthCheckServer(vertx, config);
         server.setBindToLoopbackDeviceAllowed(false, true);
-        registerHealthChecks(ctx, server, 1);
+        registerHealthCheckCheckpoints(ctx, server, 1);
 
         server.start()
             .map(ok -> {
@@ -99,7 +99,7 @@ class VertxBasedHealthCheckServerTest {
             .map(ok -> getWebClient(vertx, server, false))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(v -> testsDone.flag()));
     }
 
     /**
@@ -116,9 +116,10 @@ class VertxBasedHealthCheckServerTest {
         config.setKeyStorePath(KEY_STORE_PATH);
         config.setKeyStorePassword(STORE_PASSWORD);
 
+        final Checkpoint testsDone = ctx.checkpoint();
         server = new VertxBasedHealthCheckServer(vertx, config);
         server.setBindToLoopbackDeviceAllowed(true, false);
-        registerHealthChecks(ctx, server, 1);
+        registerHealthCheckCheckpoints(ctx, server, 1);
 
         server.start()
             .map(ok -> {
@@ -128,7 +129,7 @@ class VertxBasedHealthCheckServerTest {
             .map(ok -> getWebClient(vertx, server, true))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(v -> testsDone.flag()));
     }
 
     /**
@@ -147,9 +148,10 @@ class VertxBasedHealthCheckServerTest {
         config.setKeyStorePath(KEY_STORE_PATH);
         config.setKeyStorePassword(STORE_PASSWORD);
 
+        final Checkpoint testsDone = ctx.checkpoint();
         server = new VertxBasedHealthCheckServer(vertx, config);
         server.setBindToLoopbackDeviceAllowed(true, true);
-        registerHealthChecks(ctx, server, 2);
+        registerHealthCheckCheckpoints(ctx, server, 2);
 
         server.start()
             .map(ok -> getWebClient(vertx, server, true))
@@ -158,14 +160,14 @@ class VertxBasedHealthCheckServerTest {
             .compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(v -> testsDone.flag()));
     }
 
-    private void registerHealthChecks(final VertxTestContext ctx, final VertxBasedHealthCheckServer server,
-            final int checkpoints) {
+    private void registerHealthCheckCheckpoints(final VertxTestContext ctx, final VertxBasedHealthCheckServer server,
+            final int checkpointPasses) {
 
-        final Checkpoint callLivenessCheckpoint = ctx.checkpoint(checkpoints);
-        final Checkpoint callReadinessCheckpoint = ctx.checkpoint(checkpoints);
+        final Checkpoint callLivenessCheckpoint = ctx.checkpoint(checkpointPasses);
+        final Checkpoint callReadinessCheckpoint = ctx.checkpoint(checkpointPasses);
 
         server.registerHealthCheckResources(new HealthCheckProvider() {
 

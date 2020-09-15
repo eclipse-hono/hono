@@ -215,6 +215,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a client provided http server
         final HttpServer server = getHttpServer(false);
+        final Checkpoint startupDone = ctx.checkpoint();
         final Checkpoint onStartupSuccess = ctx.checkpoint();
 
         // WHEN starting the adapter
@@ -224,8 +225,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 s -> onStartupSuccess.flag());
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.completing());
         adapter.start(startupTracker);
+
+        startupTracker.future().onComplete(ctx.succeeding(v -> startupDone.flag()));
     }
 
     /**

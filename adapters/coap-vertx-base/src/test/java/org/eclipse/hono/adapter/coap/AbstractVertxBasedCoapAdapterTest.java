@@ -196,17 +196,19 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter
         final CoapServer server = getCoapServer(false);
+        final Checkpoint startupDone = ctx.checkpoint();
         final Checkpoint onStartupSuccess = ctx.checkpoint();
 
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true,
-                s -> onStartupSuccess.flag());
-
         // WHEN starting the adapter
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(
+                server,
+                true,
+                // THEN the onStartupSuccess method has been invoked
+                s -> onStartupSuccess.flag());
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.completing());
         adapter.start(startupTracker);
 
-        // THEN the onStartupSuccess method has been invoked
+        startupTracker.future().onComplete(ctx.succeeding(v -> startupDone.flag()));
     }
 
     /**

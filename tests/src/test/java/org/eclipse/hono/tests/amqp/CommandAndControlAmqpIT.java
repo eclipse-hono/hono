@@ -149,6 +149,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final BiFunction<ProtonReceiver, ProtonSender, ProtonMessageHandler> commandConsumerFactory) throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint setupDone = setup.checkpoint();
         final Checkpoint notificationReceived = setup.checkpoint();
 
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
@@ -169,7 +170,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 recv.flow(50);
                 return null;
             }))
-        .onComplete(setup.completing());
+        .onComplete(setup.succeeding(v -> setupDone.flag()));
 
         assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -443,6 +444,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             return;
         }
 
+        final Checkpoint sendCommandsSucceeded = ctx.checkpoint();
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
@@ -482,7 +484,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         log.info("commands sent: {}, commands succeeded: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
         if (commandsCompleted == commandsSent.get()) {
-            ctx.completeNow();
+            sendCommandsSucceeded.flag();
         } else {
             ctx.failNow(new IllegalStateException("did not complete all commands sent"));
         }
@@ -510,6 +512,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final String targetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint setupDone = setup.checkpoint();
         final Checkpoint preconditions = setup.checkpoint(2);
 
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
@@ -535,7 +538,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             preconditions.flag();
             return s;
         })
-        .onComplete(setup.completing());
+        .onComplete(setup.succeeding(v -> setupDone.flag()));
 
         assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -586,6 +589,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 : deviceId;
 
         final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint setupDone = setup.checkpoint();
         final Checkpoint preconditions = setup.checkpoint(1);
 
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
@@ -609,7 +613,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 recv.flow(1); // just give 1 initial credit
                 return null;
             }))
-        .onComplete(setup.completing());
+        .onComplete(setup.succeeding(v -> setupDone.flag()));
 
         assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
