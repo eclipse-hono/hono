@@ -77,7 +77,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonHelper;
@@ -356,23 +355,17 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter connected to a registration service
         final JsonObject assertionResult = newRegistrationAssertionResult();
-        when(registrationClient.assertRegistration(eq("device"), any())).thenReturn(Future.succeededFuture(assertionResult));
         when(registrationClient.assertRegistration(eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
 
-        final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for the device is retrieved
         adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
-                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the result contains the registration assertion
-            assertEquals(assertionResult, result);
-            assertion.flag();
-        })));
-        adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
-                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the result contains the registration assertion
-            assertEquals(assertionResult, result);
-            assertion.flag();
-        })));
+                .onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        // THEN the result contains the registration assertion
+                        assertEquals(assertionResult, result);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -385,25 +378,18 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetRegistrationAssertionFailsWith404ForNonExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        when(registrationClient.assertRegistration(eq("non-existent"), any())).thenReturn(
-                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         when(registrationClient.assertRegistration(eq("non-existent"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
-        final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for a non-existing device is retrieved
         adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class))
-                .onComplete(ctx.failing(t -> ctx.verify(() -> {
-            // THEN the request fails with a 404
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
-            assertion.flag();
-        })));
-        adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class))
-                .onComplete(ctx.failing(t -> ctx.verify(() -> {
-            // THEN the request fails with a 404
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
-            assertion.flag();
-        })));
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the request fails with a 404
+                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
