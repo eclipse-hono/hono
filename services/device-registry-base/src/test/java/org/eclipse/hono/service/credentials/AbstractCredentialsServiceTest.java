@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.credentials;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,10 +43,13 @@ import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
@@ -58,6 +62,7 @@ import io.vertx.junit5.VertxTestContext.ExecutionBlock;
  */
 public interface AbstractCredentialsServiceTest {
 
+    Logger log = LoggerFactory.getLogger(AbstractCredentialsServiceTest.class);
     JsonObject CLIENT_CONTEXT = new JsonObject()
             .put("client-id", "some-client-identifier");
 
@@ -171,13 +176,24 @@ public interface AbstractCredentialsServiceTest {
      * @param type The credentials type to check for.
      * @param whenComplete Call when this assertion was successful.
      */
-    default void assertGetMissing(final VertxTestContext ctx,
-            final String tenantId, final String deviceId, final String authId, final String type,
+    default void assertGetMissing(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final String deviceId,
+            final String authId,
+            final String type,
             final ExecutionBlock whenComplete) {
 
         assertGet(ctx, tenantId, deviceId, authId, type,
-                r -> {
-                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
+                getCredentialsResult -> {
+                    // the result of the get credentials operation does not need
+                    // to be empty but it must not contain credentials of the given
+                    // type and auth-id
+                    final boolean containsMatchingCreds = Optional.ofNullable(getCredentialsResult.getPayload())
+                            .map(list -> list.stream()
+                                    .anyMatch(cred -> cred.getType().equals(type) && cred.getAuthId().equals(authId)))
+                            .orElse(false);
+                    assertFalse(containsMatchingCreds, String.format("device has credentials [type: %s, auth-id: %s]", type, authId));
                 },
                 r -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
@@ -229,28 +245,50 @@ public interface AbstractCredentialsServiceTest {
             final ExecutionBlock whenComplete) {
 
         getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s3 -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(s3 -> {
+                    if (log.isTraceEnabled()) {
+                        final String readResult = Optional.ofNullable(s3.getPayload())
+                                .map(list -> list.stream()
+                                            .map(c -> JsonObject.mapFrom(c))
+                                            .collect(JsonArray::new, JsonArray::add, JsonArray::addAll))
+                                .map(JsonArray::encodePrettily)
+                                .orElse(null);
+                            log.trace("read credentials [tenant: {}, device-id: {}] result: {}{}",
+                                    tenantId, deviceId, System.lineSeparator(), readResult);
+                    }
 
-                    // assert a few basics, optionals may be empty
-                    // but must not be null
-                    assertNotNull(s3.getCacheDirective());
-                    assertResourceVersion(s3);
+                    ctx.verify(() -> {
 
-                    mangementValidation.accept(s3);
+                        // assert a few basics, optionals may be empty
+                        // but must not be null
+                        assertNotNull(s3.getCacheDirective());
+                        assertResourceVersion(s3);
 
-                    getCredentialsService().get(
-                            tenantId,
-                            type,
-                            authId,
-                            CLIENT_CONTEXT)
-                            .onComplete(ctx.succeeding(s4 -> ctx.verify(() -> {
+                        mangementValidation.accept(s3);
 
-                                adapterValidation.accept(s4);
+                        getCredentialsService().get(
+                                tenantId,
+                                type,
+                                authId,
+                                NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s4 -> {
+                                    if (log.isTraceEnabled()) {
+                                        final String getResult = Optional.ofNullable(s4.getPayload())
+                                                .map(JsonObject::encodePrettily)
+                                                .orElse(null);
+                                            log.trace("get credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}] result: {}{}",
+                                                    tenantId, deviceId, authId, type, System.lineSeparator(), getResult);
+                                    }
+                                    ctx.verify(() -> {
 
-                                whenComplete.apply();
-                            })));
+                                        adapterValidation.accept(s4);
 
-                })));
+                                        whenComplete.apply();
+                                    });
+                                }));
+
+                    });
+                }));
 
     }
 
