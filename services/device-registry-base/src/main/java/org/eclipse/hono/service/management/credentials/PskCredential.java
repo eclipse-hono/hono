@@ -77,4 +77,15 @@ public class PskCredential extends CommonCredential {
         this.secrets = secrets;
         return this;
     }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Removes the shared key from all secrets.
+     */
+    @Override
+    public final PskCredential stripPrivateInfo() {
+        getSecrets().forEach(PskSecret::stripPrivateInfo);
+        return this;
+    }
 }

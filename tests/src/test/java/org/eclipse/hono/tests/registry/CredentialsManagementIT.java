@@ -15,7 +15,6 @@ package org.eclipse.hono.tests.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +29,6 @@ import org.eclipse.hono.service.management.credentials.GenericSecret;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -113,9 +111,12 @@ public class CredentialsManagementIT {
         deviceId = helper.getRandomDeviceId(tenantId);
         authId = getRandomAuthId(PREFIX_AUTH_ID);
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
-        pskCredentials = newPskCredentials(authId);
-        registry.registerDevice(tenantId, deviceId)
-            .onComplete(ctx.completing());
+        pskCredentials = IntegrationTestSupport.createPskCredentials(authId, "secret");
+        registry
+                .addTenant(tenantId)
+                .flatMap(x -> registry.registerDevice(tenantId, deviceId))
+                .onComplete(ctx.completing());
+
     }
 
     /**
@@ -273,9 +274,8 @@ public class CredentialsManagementIT {
     @Test
     public void testAddCredentialsFailsForUnknownProperties(final VertxTestContext ctx) {
 
-        final PskCredential credentials = newPskCredentials("device1");
         final JsonArray requestBody = new JsonArray()
-                .add(JsonObject.mapFrom(credentials).put("unexpected", "property"));
+                .add(JsonObject.mapFrom(pskCredentials).put("unexpected", "property"));
 
         registry.updateCredentialsRaw(
                 tenantId,
@@ -560,8 +560,9 @@ public class CredentialsManagementIT {
     public void testGetAllCredentialsForDeviceSucceeds(final VertxTestContext context) throws InterruptedException {
 
         final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
-        credentialsListToAdd.add(newPskCredentials("auth"));
-        credentialsListToAdd.add(newPskCredentials("other-auth"));
+        credentialsListToAdd.add(pskCredentials);
+        credentialsListToAdd.add(hashedPasswordCredential);
+        credentialsListToAdd.add(IntegrationTestSupport.createPskCredentials("other-auth", "other-key"));
 
         registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
             .compose(ar -> registry.getCredentials(tenantId, deviceId))
@@ -659,7 +660,7 @@ public class CredentialsManagementIT {
         final JsonArray expectedArray = new JsonArray();
         expected.stream().forEach(credential -> {
             final JsonObject jsonCredential = JsonObject.mapFrom(credential);
-            expectedArray.add(stripHashAndSaltFromPasswordSecret(jsonCredential));
+            expectedArray.add(stripPrivateInfoFromSecrets(jsonCredential));
         });
 
         // now compare
@@ -670,35 +671,26 @@ public class CredentialsManagementIT {
         return authIdPrefix + "-" + UUID.randomUUID();
     }
 
-    private static PskCredential newPskCredentials(final String authId) {
-
-        final PskCredential credential = new PskCredential(authId);
-
-        final PskSecret secret = new PskSecret();
-        secret.setKey("secret".getBytes(StandardCharsets.UTF_8));
-        credential.setSecrets(List.of(secret));
-
-        return credential;
-
-    }
-
     private JsonObject extractFirstCredential(final JsonObject json) {
         return json.getJsonArray(CredentialsConstants.CREDENTIALS_ENDPOINT).getJsonObject(0);
     }
 
-    private static JsonObject stripHashAndSaltFromPasswordSecret(final JsonObject credential) {
-        if (credential.getString(CredentialsConstants.FIELD_TYPE).equals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) {
+    private static JsonObject stripPrivateInfoFromSecrets(final JsonObject credentials) {
 
-            credential.getJsonArray(CredentialsConstants.FIELD_SECRETS)
+        Optional.ofNullable(credentials.getJsonArray(CredentialsConstants.FIELD_SECRETS))
+            .map(JsonArray.class::cast)
+            .ifPresent(array -> array.stream()
+                    .map(JsonObject.class::cast)
                     .forEach(secret -> {
-                        // password details should not be expected from the registry as well
-                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
-                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_SALT);
-                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
-                    });
-        }
+                        // password hash
+                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION);
+                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH);
+                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_SALT);
+                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN);
+                        // pre-shared key
+                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_KEY);
+                    }));
 
-        return credential;
+        return credentials;
     }
 }

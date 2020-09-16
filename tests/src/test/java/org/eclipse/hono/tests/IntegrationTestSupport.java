@@ -47,6 +47,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.credentials.PskCredential;
+import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
@@ -1144,4 +1146,21 @@ public final class IntegrationTestSupport {
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
     }
 
+    /**
+     * Create a new PSK credential, suitable for use in the integration test environment.
+     *
+     * @param authId The auth ID to use.
+     * @param key The shared key to use.
+     * @return The new instance.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static PskCredential createPskCredentials(final String authId, final String key) {
+
+        Objects.requireNonNull(authId);
+        Objects.requireNonNull(key);
+
+        final PskCredential creds = new PskCredential(authId);
+        creds.setSecrets(List.of(new PskSecret().setKey(key.getBytes(StandardCharsets.UTF_8))));
+        return creds;
+    }
 }

@@ -2,6 +2,13 @@
 title = "Release Notes"
 +++
 
+## 1.3.1 (not yet released)
+
+### Fixes & Enhancements
+
+* The file based as well as the Mongo DB based registry implementations now remove the shared-key from
+  PSK credentials returned in the response of the Management API's *get credentials* operation.
+
 ## 1.3.0
 
 ### New Features

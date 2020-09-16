@@ -570,7 +570,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
                                     || secret.containsKey(CredentialsConstants.FIELD_SECRETS_PWD_HASH)
                                     || secret.containsKey(CredentialsConstants.FIELD_SECRETS_SALT)) {
 
-                                removePasswordDetailsFromSecret(newSecret);
+                                removeConfidentialDataFromSecret(newSecret);
                             }
                             // then copy the new details.
                             for (String field : secret.fieldNames()) {
@@ -671,8 +671,8 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         for (final Object credential : matchingCredentials) {
             final JsonObject credentialsObject = (JsonObject) credential;
             credentialsObject.remove(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
-            removePasswordDetailsFromCredential(credentialsObject);
             final CommonCredential cred = credentialsObject.mapTo(CommonCredential.class);
+            cred.stripPrivateInfo();
             credentials.add(cred);
         }
 
@@ -809,24 +809,13 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getFilename());
     }
 
-    /**
-     * Strips the hashed-password details from the jsonObject if needed.
-     */
-    private static void removePasswordDetailsFromCredential(final JsonObject credential) {
-        if (credential.getString(CredentialsConstants.FIELD_TYPE).equals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) {
+    private static void removeConfidentialDataFromSecret(final JsonObject secret) {
 
-            credential.getJsonArray(CredentialsConstants.FIELD_SECRETS).forEach(secret ->
-                    removePasswordDetailsFromSecret((JsonObject) secret));
-        }
-    }
-
-    private static void removePasswordDetailsFromSecret(final JsonObject secret) {
-
-        secret.remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_SALT);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_KEY);
+        secret.remove(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION);
+        secret.remove(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH);
+        secret.remove(RegistryManagementConstants.FIELD_SECRETS_SALT);
+        secret.remove(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN);
+        secret.remove(RegistryManagementConstants.FIELD_SECRETS_KEY);
     }
 
     private static void copySecretFields(final JsonObject in, final JsonObject out) {
