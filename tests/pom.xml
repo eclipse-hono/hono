@@ -1121,15 +1121,15 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.credentials.supportsClientContext>${deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
                 <deviceregistry.supportsSearchDevices>${deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
                 <vertx-proton.issue57.fixed>${vertx-proton.issue57.fixed}</vertx-proton.issue57.fixed>
-                <coap.host>${coap.ip}</coap.host>
-                <coap.port>${coap.port}</coap.port>
-                <coaps.port>${coaps.port}</coaps.port>
-                <http.host>${http.ip}</http.host>
-                <http.port>${http.port}</http.port>
-                <https.port>${https.port}</https.port>
-                <mqtt.host>${mqtt.ip}</mqtt.host>
-                <mqtt.port>${mqtt.port}</mqtt.port>
-                <mqtts.port>${mqtts.port}</mqtts.port>
+                <adapter.coap.host>${coap.ip}</adapter.coap.host>
+                <adapter.coap.port>${coap.port}</adapter.coap.port>
+                <adapter.coaps.port>${coaps.port}</adapter.coaps.port>
+                <adapter.http.host>${http.ip}</adapter.http.host>
+                <adapter.http.port>${http.port}</adapter.http.port>
+                <adapter.https.port>${https.port}</adapter.https.port>
+                <adapter.mqtt.host>${mqtt.ip}</adapter.mqtt.host>
+                <adapter.mqtt.port>${mqtt.port}</adapter.mqtt.port>
+                <adapter.mqtts.port>${mqtts.port}</adapter.mqtts.port>
                 <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
                 <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>

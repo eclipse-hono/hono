@@ -73,6 +73,10 @@ import io.vertx.junit5.VertxTestContext;
 public final class IntegrationTestSupport {
 
     /**
+     * The default number of milliseconds to wait for a response to an AMQP 1.0 performative.
+     */
+    public static final int DEFAULT_AMQP_TIMEOUT = 400;
+    /**
      * The default port exposed by the AMQP adapter.
      */
     public static final int DEFAULT_AMQP_PORT = 5672;
@@ -128,7 +132,16 @@ public final class IntegrationTestSupport {
      * The default TLS secured port exposed by the MQTT adapter.
      */
     public static final int DEFAULT_MQTTS_PORT = 8883;
+    /**
+     * The default number of seconds to wait for the fixture of a test being established.
+     */
+    public static final long DEFAULT_TEST_SETUP_TIMEOUT_SECONDS = 5;
 
+    /**
+     * The name of the system property to use for setting the time to wait for a response
+     * to an AMQP 1.0 performative.
+     */
+    public static final String PROPERTY_AMQP_TIMEOUT = "amqp.timeout";
     /**
      * The name of the system property to use for setting the IP address of the Auth service.
      */
@@ -208,45 +221,45 @@ public final class IntegrationTestSupport {
     /**
      * The name of the system property to use for setting the IP address of the CoAP protocol adapter.
      */
-    public static final String PROPERTY_COAP_HOST = "coap.host";
+    public static final String PROPERTY_COAP_HOST = "adapter.coap.host";
     /**
      * The name of the system property to use for setting the port number that the CoAP adapter
      * should listen on for requests.
      */
-    public static final String PROPERTY_COAP_PORT = "coap.port";
+    public static final String PROPERTY_COAP_PORT = "adapter.coap.port";
     /**
      * The name of the system property to use for setting the port number that the CoAP adapter
      * should listen on for secure requests.
      */
-    public static final String PROPERTY_COAPS_PORT = "coaps.port";
+    public static final String PROPERTY_COAPS_PORT = "adapter.coaps.port";
     /**
      * The name of the system property to use for setting the IP address of the HTTP protocol adapter.
      */
-    public static final String PROPERTY_HTTP_HOST = "http.host";
+    public static final String PROPERTY_HTTP_HOST = "adapter.http.host";
     /**
      * The name of the system property to use for setting the port number that the HTTP adapter
      * should listen on for requests.
      */
-    public static final String PROPERTY_HTTP_PORT = "http.port";
+    public static final String PROPERTY_HTTP_PORT = "adapter.http.port";
     /**
      * The name of the system property to use for setting the port number that the HTTP adapter
      * should listen on for secure requests.
      */
-    public static final String PROPERTY_HTTPS_PORT = "https.port";
+    public static final String PROPERTY_HTTPS_PORT = "adapter.https.port";
     /**
      * The name of the system property to use for setting the IP address of the MQTT protocol adapter.
      */
-    public static final String PROPERTY_MQTT_HOST = "mqtt.host";
+    public static final String PROPERTY_MQTT_HOST = "adapter.mqtt.host";
     /**
      * The name of the system property to use for setting the port number that the MQTT adapter
      * should listen on for connections.
      */
-    public static final String PROPERTY_MQTT_PORT = "mqtt.port";
+    public static final String PROPERTY_MQTT_PORT = "adapter.mqtt.port";
     /**
      * The name of the system property to use for setting the port number that the MQTT adapter
      * should listen on for secure connections.
      */
-    public static final String PROPERTY_MQTTS_PORT = "mqtts.port";
+    public static final String PROPERTY_MQTTS_PORT = "adapter.mqtts.port";
     /**
      * The name of the system property to use for setting the IP address of the AMQP protocol adapter.
      */
@@ -394,6 +407,11 @@ public final class IntegrationTestSupport {
     public static final int MAX_BCRYPT_COST_FACTOR = Integer.getInteger(PROPERTY_MAX_BCRYPT_COST_FACTOR, DEFAULT_MAX_BCRYPT_COST_FACTOR);
 
     /**
+     * The time to wait for the response to an AMQP 1.0 performative.
+     */
+    public static final int AMQP_TIMEOUT = Integer.getInteger(PROPERTY_AMQP_TIMEOUT, DEFAULT_AMQP_TIMEOUT);
+
+    /**
      * The absolute path to the trust store to use for establishing secure connections with Hono.
      */
     public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
@@ -405,9 +423,23 @@ public final class IntegrationTestSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
-    private static final long DEFAULT_TEST_SETUP_TIMEOUT_SECONDS = 5;
-    private static final long DEFAULT_SEND_COMMAND_TIMEOUT_MILLIS = 200;
     private static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
+
+    private static final boolean testEnv = Optional.ofNullable(System.getenv("CI"))
+            .map(s -> {
+                final boolean runningOnCiEnvironment = Boolean.parseBoolean(s);
+                if (runningOnCiEnvironment) {
+                    LOGGER.info("running on CI environment");
+                }
+                return runningOnCiEnvironment;
+            })
+            .orElseGet(() -> {
+                final boolean runningOnTestEnvironment = Boolean.getBoolean("test.env");
+                if (runningOnTestEnvironment) {
+                    LOGGER.info("running on test environment");
+                }
+                return runningOnTestEnvironment;
+            });
 
     /**
      * A client for managing tenants/devices/credentials.
@@ -423,7 +455,6 @@ public final class IntegrationTestSupport {
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
     private final boolean gatewayModeSupported;
-    private final boolean testEnv;
 
     /**
      * Creates a new helper instance.
@@ -435,21 +466,6 @@ public final class IntegrationTestSupport {
         this.vertx = Objects.requireNonNull(vertx);
         final String gatewayModeFlag = System.getProperty(PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE, "true");
         gatewayModeSupported = Boolean.parseBoolean(gatewayModeFlag);
-        testEnv = Optional.ofNullable(System.getenv("CI"))
-                .map(s -> {
-                    final boolean runningOnCiEnvironment = Boolean.parseBoolean(s);
-                    if (runningOnCiEnvironment) {
-                        LOGGER.info("running on CI environment");
-                    }
-                    return runningOnCiEnvironment;
-                })
-                .orElseGet(() -> {
-                    final boolean runningOnTestEnvironment = Boolean.getBoolean("test.env");
-                    if (runningOnTestEnvironment) {
-                        LOGGER.info("running on test environment");
-                    }
-                    return runningOnTestEnvironment;
-                });
     }
 
     private static ClientConfigProperties getClientConfigProperties(
@@ -458,11 +474,15 @@ public final class IntegrationTestSupport {
             final String username,
             final String password) {
 
+        final long timeout = AMQP_TIMEOUT * getTimeoutMultiplicator();
         final ClientConfigProperties props = new ClientConfigProperties();
         props.setHost(host);
         props.setPort(port);
         props.setUsername(username);
         props.setPassword(password);
+        props.setLinkEstablishmentTimeout(timeout);
+        props.setRequestTimeout(timeout);
+        props.setFlowLatency(timeout);
         return props;
     }
 
@@ -478,7 +498,6 @@ public final class IntegrationTestSupport {
                 IntegrationTestSupport.DOWNSTREAM_PORT,
                 IntegrationTestSupport.DOWNSTREAM_USER,
                 IntegrationTestSupport.DOWNSTREAM_PWD);
-        props.setFlowLatency(200);
         return props;
     }
 
@@ -496,7 +515,6 @@ public final class IntegrationTestSupport {
                 IntegrationTestSupport.AMQP_PORT,
                 username,
                 password);
-        props.setFlowLatency(200);
         return props;
     }
 
@@ -530,6 +548,51 @@ public final class IntegrationTestSupport {
                 IntegrationTestSupport.HONO_DEVICECONNECTION_AMQP_PORT,
                 username,
                 password);
+    }
+
+    /**
+     * Checks if this method is executed on a test environment.
+     * <p>
+     * Evaluates system property <em>test.env</em> and environment variable <em>CI</em>.
+     *
+     * @return {@code true} if this is a test environment.
+     */
+    public static boolean isTestEnvironment() {
+        return testEnv;
+    }
+
+    /**
+     * Gets the factor to apply to timeout values based on the
+     * environment that the code is running on.
+     *
+     * @return {@value IntegrationTestSupport#TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR} when running
+     *         on a test environment, 1 otherwise.
+     */
+    public static int getTimeoutMultiplicator() {
+        return isTestEnvironment() ? TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR : 1;
+    }
+
+    /**
+     * Determines the time to wait before timing out the setup phase of a test case.
+     *
+     * @return The time out in seconds. The value will be
+     *         {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS}
+     *         multiplied by the value returned by {@link #getTimeoutMultiplicator()}.
+     */
+    public static long getTestSetupTimeout() {
+        return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * getTimeoutMultiplicator();
+    }
+
+    /**
+     * Determines the time to wait before timing out a request to send
+     * a command to a device.
+     *
+     * @return The time out in milliseconds. The value will be
+     *         {@value #AMQP_TIMEOUT} multiplied by twice the value returned by
+     *         {@link #getTimeoutMultiplicator()}.
+     */
+    public static long getSendCommandTimeout() {
+        return AMQP_TIMEOUT * getTimeoutMultiplicator() * 2;
     }
 
     /**
@@ -585,43 +648,6 @@ public final class IntegrationTestSupport {
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
-    }
-
-    /**
-     * Checks if this method is executed on a test environment.
-     * <p>
-     * Evaluates system property <em>test.env</em> and environment variable <em>CI</em>.
-     *
-     * @return {@code true} if this is a test environment.
-     */
-    public boolean isTestEnvironment() {
-        return testEnv;
-    }
-
-    /**
-     * Determines the time to wait before timing out a request to send
-     * a command to a device.
-     *
-     * @return The time out in milli seconds. The value will be 1000 if
-     *         {@link #isTestEnvironment()} returns {@code true}, 200
-     *         otherwise.
-     */
-    public long getSendCommandTimeout() {
-        return isTestEnvironment() ? 1000 : DEFAULT_SEND_COMMAND_TIMEOUT_MILLIS;
-    }
-
-    /**
-     * Determines the time to wait before timing out the setup phase of a test case.
-     *
-     * @return The time out in seconds. The value will be {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS}
-     *         if {@link #isTestEnvironment()} returns {@code false} and
-     *         {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS} *
-     *         {@value IntegrationTestSupport#TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR}
-     *         otherwise.
-     */
-    public long getTestSetupTimeout() {
-        final int factor = isTestEnvironment() ? TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR : 1;
-        return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * factor;
     }
 
     /**
