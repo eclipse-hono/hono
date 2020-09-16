@@ -8,6 +8,11 @@ title = "Release Notes"
 
 * The CoAP adapter has been promoted from *experimental* to *fully supported*.
 
+### Fixes & Enhancements
+
+* The file based as well as the Mongo DB based registry implementations now remove the shared-key from
+  PSK credentials returned in the response of the Management API's *get credentials* operation.
+
 ### API Changes
 
 * The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.

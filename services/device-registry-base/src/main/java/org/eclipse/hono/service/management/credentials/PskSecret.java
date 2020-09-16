@@ -73,4 +73,8 @@ public class PskSecret extends CommonSecret {
             this.key = otherPskSecret.key;
         }
     }
+
+    void stripPrivateInfo() {
+        this.key = null;
+    }
 }
