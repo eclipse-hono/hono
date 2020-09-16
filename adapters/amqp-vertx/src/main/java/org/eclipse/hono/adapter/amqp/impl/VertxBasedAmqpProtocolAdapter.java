@@ -1249,21 +1249,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private static Future<ResourceIdentifier> getResourceIdentifier(final Source source) {
 
-        if (source == null) {
+        if (source == null || Strings.isNullOrEmpty(source.getAddress())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
         } else {
-            final Promise<ResourceIdentifier> result = Promise.promise();
-            try {
-                if (Strings.isNullOrEmpty(source.getAddress())) {
-                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                            "no such node"));
-                } else {
-                    result.complete(ResourceIdentifier.fromString(source.getAddress()));
-                }
-            } catch (Throwable e) {
-                result.fail(e);
-            }
-            return result.future();
+            return Future.succeededFuture(ResourceIdentifier.fromString(source.getAddress()));
         }
     }
 

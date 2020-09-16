@@ -35,6 +35,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -463,7 +464,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param link The link.
      * @param address The unknown target address.
      */
-    protected final void handleUnknownEndpoint(final ProtonConnection con, final ProtonLink<?> link, final ResourceIdentifier address) {
+    protected final void handleUnknownEndpoint(final ProtonConnection con, final ProtonLink<?> link, final String address) {
         log.info("client [container: {}] wants to establish link for unknown endpoint [address: {}]",
                 con.getRemoteContainer(), address);
         link.setCondition(
@@ -481,7 +482,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param receiver the receiver created for the link.
      */
     protected void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
-        if (receiver.getRemoteTarget().getAddress() == null) {
+        if (Strings.isNullOrEmpty(receiver.getRemoteTarget().getAddress())) {
             log.debug("client [container: {}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link ...",
                     con.getRemoteContainer());
             receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported"));
@@ -493,7 +494,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     .fromString(receiver.getRemoteTarget().getAddress());
             final AmqpEndpoint endpoint = getEndpoint(targetResource);
             if (endpoint == null) {
-                handleUnknownEndpoint(con, receiver, targetResource);
+                handleUnknownEndpoint(con, receiver, targetResource.toString());
             } else {
                 final HonoUser user = Constants.getClientPrincipal(con);
                 getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).onComplete(authAttempt -> {
@@ -522,10 +523,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final Source remoteSource = sender.getRemoteSource();
         log.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
                 con.getRemoteContainer(), remoteSource);
+        if (Strings.isNullOrEmpty(remoteSource.getAddress())) {
+            handleUnknownEndpoint(con, sender, remoteSource.getAddress());
+            return;
+        }
         final ResourceIdentifier targetResource = ResourceIdentifier.fromString(remoteSource.getAddress());
         final AmqpEndpoint endpoint = getEndpoint(targetResource);
         if (endpoint == null) {
-            handleUnknownEndpoint(con, sender, targetResource);
+            handleUnknownEndpoint(con, sender, targetResource.toString());
         } else {
             final HonoUser user = Constants.getClientPrincipal(con);
             getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).onComplete(authAttempt -> {

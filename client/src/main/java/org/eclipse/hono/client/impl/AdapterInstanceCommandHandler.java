@@ -28,6 +28,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +73,8 @@ public final class AdapterInstanceCommandHandler {
         Objects.requireNonNull(msg);
         Objects.requireNonNull(delivery);
         // command could have been mapped to a gateway, but the original address stays the same in the message address in that case
-        final ResourceIdentifier resourceIdentifier = msg.getAddress() != null ? ResourceIdentifier.fromString(msg.getAddress()) : null;
+        final ResourceIdentifier resourceIdentifier = Strings.isNullOrEmpty(msg.getAddress()) ? null
+                : ResourceIdentifier.fromString(msg.getAddress());
         if (resourceIdentifier == null || resourceIdentifier.getResourceId() == null) {
             LOG.debug("address of command message is invalid: {}", msg.getAddress());
             final Rejected rejected = new Rejected();

@@ -932,8 +932,7 @@ public final class MessageHelper {
      *
      * @param qos          The QoS level with which the device sent the message to the protocol adapter or {@code null}
      *                     if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target       The target address of the message or {@code null} if the message's
-     *                     <em>to</em> property contains the target address.
+     * @param target       The target address of the message.
      * @param contentType  The content type describing the message's payload or {@code null} if no content type
      *                     should be set.
      * @param payload      The message payload or {@code null} if the message has no payload.
@@ -941,9 +940,9 @@ public final class MessageHelper {
      *                     if no information about the tenant is available.
      * @param timeToLive   The message's <em>time-to-live</em> as provided by the device or {@code null} if the
      *                     device did not provide any TTL.
-     * @param adapterName  The type name of the protocol adapter that the message has been published to.
-     *
-     * @return  The AMQP 1.0 message.
+     * @param adapterTypeName  The type name of the protocol adapter that the message has been published to.
+     * @return The AMQP 1.0 message.
+     * @throws NullPointerException if target or adapterTypeName is {@code null}.
      */
     public static Message newMessage(
             final QoS qos,
@@ -952,10 +951,10 @@ public final class MessageHelper {
             final Buffer payload,
             final TenantObject tenant,
             final Duration timeToLive,
-            final String adapterName) {
+            final String adapterTypeName) {
 
-        return MessageHelper.newMessage(qos, target, null, contentType, payload, tenant, null, null, timeToLive, adapterName, false,
-                false);
+        return MessageHelper.newMessage(qos, target, null, contentType, payload, tenant, null, null, timeToLive,
+                adapterTypeName, false, false);
     }
     /**
      * Creates a new AMQP 1.0 message.
@@ -971,12 +970,8 @@ public final class MessageHelper {
      *
      * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
      *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message or {@code null} if the message's
-     *               <em>to</em> property contains the target address. The target
-     *               address is used to determine if the message represents an event or not.
-     *               Determining this information from the <em>to</em> property
-     *               requires additional parsing which can be prevented by passing in the
-     *               target address as a {@code ResourceIdentifier} instead.
+     * @param target The target address of the message. The target address is used to determine if the message
+     *               represents an event or not.
      * @param publishAddress The address that the message has been published to originally by the device or
      *            {@code null} if unknown.
      *            <p>
@@ -1002,7 +997,7 @@ public final class MessageHelper {
      *                          JMS Vendor Properties</a> should be added to the message.
 
      * @return The newly created message.
-     * @throws NullPointerException if adapterTypeName is {@code null}.
+     * @throws NullPointerException if target or adapterTypeName is {@code null}.
      */
     public static Message newMessage(
             final QoS qos,
@@ -1018,6 +1013,7 @@ public final class MessageHelper {
             final boolean addDefaults,
             final boolean addJmsVendorProps) {
 
+        Objects.requireNonNull(target);
         Objects.requireNonNull(adapterTypeName);
 
         final Message msg = ProtonHelper.message();
@@ -1218,8 +1214,8 @@ public final class MessageHelper {
      *                 if no default properties are defined for the device that the message originates from.
      * @param maxTtl The maximum time-to-live (in seconds) that should be used for limiting a default TTL.
      * @return The message with the default properties set.
-     * @throws NullPointerException if message is {@code null} or if target is {@code null}
-     *                              and the message does not contain an address.
+     * @throws NullPointerException if message is {@code null}.
+     * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
      */
     public static Message addDefaults(
             final Message message,
@@ -1232,7 +1228,9 @@ public final class MessageHelper {
         if (defaults == null) {
             return message;
         }
-
+        if (target == null && Strings.isNullOrEmpty(message.getAddress())) {
+            throw new IllegalArgumentException("message must have an address set");
+        }
         final ResourceIdentifier ri = Optional.ofNullable(target)
                 .orElseGet(() -> ResourceIdentifier.fromString(message.getAddress()));
 

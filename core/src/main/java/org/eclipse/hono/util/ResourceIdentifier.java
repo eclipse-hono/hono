@@ -165,9 +165,13 @@ public final class ResourceIdentifier {
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
+     * @throws IllegalArgumentException if the given string is empty.
      */
     public static ResourceIdentifier fromString(final String resource) {
         Objects.requireNonNull(resource);
+        if (resource.isEmpty()) {
+            throw new IllegalArgumentException("resource must not be empty");
+        }
         return new ResourceIdentifier(resource);
     }
 

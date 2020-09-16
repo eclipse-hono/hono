@@ -34,6 +34,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,7 +128,7 @@ public class MappingAndDelegatingCommandHandler {
         Objects.requireNonNull(message);
 
         // this is the place where a command message on the "command/${tenant}" address arrives *first*
-        if (message.getAddress() == null) {
+        if (Strings.isNullOrEmpty(message.getAddress())) {
             LOG.debug("command message has no address");
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing command target address"));

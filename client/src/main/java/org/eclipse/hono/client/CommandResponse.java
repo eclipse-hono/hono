@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,8 +115,8 @@ public final class CommandResponse {
      *
      * @param message The command response message.
      *
-     * @return The command response or {@code null} if message or any of correlationId, address and status is null or if
-     *         the status code is &lt; 200 or &gt;= 600.
+     * @return The command response or {@code null} if message or any of correlationId, address and status is
+     *         {@code null} or if the status code is &lt; 200 or &gt;= 600.
      * @throws NullPointerException if message is {@code null}.
      */
     public static CommandResponse from(final Message message) {
@@ -124,34 +125,39 @@ public final class CommandResponse {
         final String correlationId = message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null;
         final Integer status = MessageHelper.getStatus(message);
 
-        if (correlationId == null || message.getAddress() == null || status == null) {
+        if (correlationId == null || Strings.isNullOrEmpty(message.getAddress()) || status == null) {
             LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
                     correlationId, message.getAddress(), status);
             return null;
         } else if (INVALID_STATUS_CODE.test(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
-        } else {
-            try {
-                final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
-                MessageHelper.addTenantId(message, resource.getTenantId());
-                MessageHelper.addDeviceId(message, resource.getResourceId());
+        }
 
-                final String deviceId = resource.getResourceId();
-                final String pathWithoutBase = resource.getPathWithoutBase();
-                if (pathWithoutBase.length() < deviceId.length() + 3) {
-                    throw new IllegalArgumentException("invalid resource length");
-                }
-                // pathWithoutBase starts with deviceId/[bit flag]
-                final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
-                final boolean replyToContainedDeviceId = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
-                final String replyToId = pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
-                        replyToContainedDeviceId ? deviceId + "/" : "");
-                return new CommandResponse(message, replyToId);
-            } catch (NullPointerException | IllegalArgumentException e) {
-                LOG.debug("error creating CommandResponse", e);
-                return null;
-            }
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
+        final String tenantId = resource.getTenantId();
+        final String deviceId = resource.getResourceId();
+        if (tenantId == null || deviceId == null) {
+            LOG.debug("cannot create CommandResponse: invalid address, missing tenant and/or device identifier");
+            return null;
+        }
+        final String pathWithoutBase = resource.getPathWithoutBase();
+        if (pathWithoutBase.length() < deviceId.length() + 3) {
+            LOG.debug("cannot create CommandResponse: invalid address resource length");
+            return null;
+        }
+        MessageHelper.addTenantId(message, tenantId);
+        MessageHelper.addDeviceId(message, deviceId);
+        try {
+            // pathWithoutBase starts with deviceId/[bit flag]
+            final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
+            final boolean replyToContainedDeviceId = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
+            final String replyToId = pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
+                    replyToContainedDeviceId ? deviceId + "/" : "");
+            return new CommandResponse(message, replyToId);
+        } catch (final NumberFormatException e) {
+            LOG.debug("error creating CommandResponse, invalid bit flag value", e);
+            return null;
         }
     }
 

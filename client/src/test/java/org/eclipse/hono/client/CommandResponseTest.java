@@ -14,8 +14,6 @@
 package org.eclipse.hono.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.net.HttpURLConnection;
 
@@ -52,8 +50,8 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        assertNotNull(resp);
-        assertNotNull(resp.toMessage());
+        assertThat(resp).isNotNull();
+        assertThat(resp.toMessage()).isNotNull();
         assertThat(resp.toMessage().getCorrelationId()).isEqualTo(CORRELATION_ID);
         assertThat(resp.getReplyToId()).isEqualTo(REPLY_TO_ID);
     }
@@ -73,11 +71,13 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        assertNotNull(resp.toMessage());
+        assertThat(resp).isNotNull();
+        assertThat(resp.toMessage()).isNotNull();
         assertThat(resp.toMessage().getCorrelationId()).isEqualTo("any");
         assertThat(resp.getReplyToId()).isEqualTo("String");
 
-        assertNull(CommandResponse.from("0ZZanyString", TENANT_ID, DEVICE_ID, null, null, HttpURLConnection.HTTP_OK));
+        assertThat(CommandResponse.from("0ZZanyString", TENANT_ID, DEVICE_ID, null, null, HttpURLConnection.HTTP_OK))
+                .isNull();
     }
 
     /**
@@ -95,11 +95,13 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        assertNotNull(resp.toMessage());
+        assertThat(resp).isNotNull();
+        assertThat(resp.toMessage()).isNotNull();
         assertThat(resp.toMessage().getCorrelationId()).isEqualTo("any");
         assertThat(resp.getReplyToId()).isEqualTo("String");
 
-        assertNull(CommandResponse.from("Z03anyString", TENANT_ID, DEVICE_ID, null, null, HttpURLConnection.HTTP_OK));
+        assertThat(CommandResponse.from("Z03anyString", TENANT_ID, DEVICE_ID, null, null, HttpURLConnection.HTTP_OK))
+                .isNull();
     }
 
     /**
@@ -111,18 +113,19 @@ public class CommandResponseTest {
         // make sure we succeed with a valid status code
         final CommandResponse resp = CommandResponse.from(
                 "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 200);
-        assertNotNull(resp.toMessage());
+        assertThat(resp).isNotNull();
+        assertThat(resp.toMessage()).isNotNull();
         assertThat(resp.toMessage().getCorrelationId()).isEqualTo("one");
         assertThat(resp.getReplyToId()).isEqualTo(DEVICE_ID + "/Two");
 
-        assertNull(CommandResponse.from(
-                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 100));
-        assertNull(CommandResponse.from(
-                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 310));
-        assertNull(CommandResponse.from(
-                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 600));
-        assertNull(CommandResponse.from(
-                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, null));
+        assertThat(CommandResponse.from(
+                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 100)).isNull();
+        assertThat(CommandResponse.from(
+                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 310)).isNull();
+        assertThat(CommandResponse.from(
+                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 600)).isNull();
+        assertThat(CommandResponse.from(
+                "103oneTwo", TENANT_ID, DEVICE_ID, null, null, null)).isNull();
     }
 
     /**
@@ -136,17 +139,18 @@ public class CommandResponseTest {
         // make sure we succeed with valid length
         final CommandResponse resp = CommandResponse.from(
                 String.format("0%02x%s", 4, id), TENANT_ID, DEVICE_ID, null, null, 200);
-        assertNotNull(resp.toMessage());
+        assertThat(resp).isNotNull();
+        assertThat(resp.toMessage()).isNotNull();
         assertThat(resp.toMessage().getCorrelationId()).isEqualTo("this");
         assertThat(resp.getReplyToId()).isEqualTo("IsLessThan255Characters");
 
-        assertNull(CommandResponse.from(
+        assertThat(CommandResponse.from(
                 "1FFthisIsLessThan255Characters",
                 TENANT_ID,
                 DEVICE_ID,
                 null,
                 null,
-                HttpURLConnection.HTTP_OK));
+                HttpURLConnection.HTTP_OK)).isNull();
     }
 
     /**
@@ -162,6 +166,7 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
+        assertThat(resp).isNotNull();
         assertThat(resp.getReplyToId()).isEqualTo(REPLY_TO_ID_WITH_DEVICE);
     }
 
@@ -178,6 +183,7 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
+        assertThat(resp).isNotNull();
         assertThat(resp.getReplyToId()).isEqualTo(REPLY_TO_ID);
     }
 
@@ -349,7 +355,8 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        assertNotNull(response.toMessage());
+        assertThat(response).isNotNull();
+        assertThat(response.toMessage()).isNotNull();
         assertThat(MessageHelper.getTenantId(response.toMessage())).isEqualTo(TENANT_ID);
         assertThat(MessageHelper.getDeviceId(response.toMessage())).isEqualTo(DEVICE_ID);
     }

@@ -22,6 +22,7 @@ import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,12 +120,15 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         final Source remoteSource = sender.getRemoteSource();
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
                 con.getRemoteContainer(), remoteSource);
+        if (Strings.isNullOrEmpty(remoteSource.getAddress())) {
+            handleUnknownEndpoint(con, sender, remoteSource.getAddress());
+            return;
+        }
         final ResourceIdentifier targetResource = ResourceIdentifier.fromString(remoteSource.getAddress());
         final AmqpEndpoint endpoint = getEndpoint(targetResource);
 
         if (endpoint == null) {
-            LOG.debug("no endpoint registered for node [{}]", targetResource);
-            con.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such node")).close();
+            handleUnknownEndpoint(con, sender, targetResource.toString());
         } else {
             final HonoUser user = Constants.getClientPrincipal(con);
             if (Constants.SUBJECT_ANONYMOUS.equals(user.getName())) {

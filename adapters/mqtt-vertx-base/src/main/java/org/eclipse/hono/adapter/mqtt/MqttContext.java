@@ -21,6 +21,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -104,7 +105,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         result.message = publishedMessage;
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
-        if (publishedMessage.topicName() != null) {
+        if (!Strings.isNullOrEmpty(publishedMessage.topicName())) {
             Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
                     .ifPresentOrElse(propertyBag -> {
                         result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());

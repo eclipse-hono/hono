@@ -211,4 +211,14 @@ public class ResourceIdentifierTest {
         assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[]{null, "second", "last"}))
             .isInstanceOf(IllegalArgumentException.class);
     }
+
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * an empty string.
+     */
+    @Test
+    public void testFromStringFailsForEmptyString() {
+        assertThatThrownBy(() -> ResourceIdentifier.fromString(""))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
