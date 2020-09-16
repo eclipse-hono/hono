@@ -22,6 +22,7 @@ import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -73,7 +74,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
         ctx.delivery = delivery;
         ctx.message = message;
         ctx.payload = MessageHelper.getPayload(message);
-        if (message.getAddress() != null) {
+        if (!Strings.isNullOrEmpty(message.getAddress())) {
             ctx.address = ResourceIdentifier.fromString(message.getAddress());
             ctx.endpoint = EndpointType.fromString(ctx.address.getEndpoint());
         }

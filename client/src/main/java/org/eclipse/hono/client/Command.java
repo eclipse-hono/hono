@@ -22,6 +22,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.buffer.Buffer;
 
@@ -104,7 +105,7 @@ public final class Command {
 
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
         String originalDeviceId = deviceId;
-        if (message.getAddress() == null) {
+        if (Strings.isNullOrEmpty(message.getAddress())) {
             validationErrorJoiner.add("address is not set");
         } else {
             final ResourceIdentifier addressIdentifier = ResourceIdentifier.fromString(message.getAddress());

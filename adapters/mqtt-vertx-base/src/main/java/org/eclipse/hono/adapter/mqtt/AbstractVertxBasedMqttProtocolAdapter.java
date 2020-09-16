@@ -641,6 +641,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
                 } else if (MqttQoS.EXACTLY_ONCE.equals(subscription.qualityOfService())) {
                     // we do not support subscribing to commands using QoS 2
+                    span.log("ignoring command subscription with unsupported QoS 2");
                     result = Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
                 } else {
                     result = createCommandConsumer(endpoint, cmdSub, cmdSubscriptionsManager, span).map(consumer -> {

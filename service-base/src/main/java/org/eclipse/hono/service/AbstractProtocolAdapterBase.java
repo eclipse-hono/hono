@@ -1197,12 +1197,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
      *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message or {@code null} if the message's
-     *               <em>to</em> property contains the target address. The target
-     *               address is used to determine if the message represents an event or not.
-     *               Determining this information from the <em>to</em> property
-     *               requires additional parsing which can be prevented by passing in the
-     *               target address as a {@code ResourceIdentifier} instead.
+     * @param target The target address of the message. The target address is used to determine if the message
+     *               represents an event or not.
      * @param publishAddress The address that the message has been published to originally by the device or
      *            {@code null} if unknown.
      *            <p>
@@ -1218,7 +1214,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
      *            from the protocol adapter or {@code null} if unknown.
      * @return The newly created message.
-     * @throws NullPointerException if target or registration info are {@code null}.
+     * @throws NullPointerException if target or registration info is {@code null}.
      */
     protected final Message newMessage(
             final QoS qos,
@@ -1245,12 +1241,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
      *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message or {@code null} if the message's
-     *               <em>to</em> property contains the target address. The target
-     *               address is used to determine if the message represents an event or not.
-     *               Determining this information from the <em>to</em> property
-     *               requires additional parsing which can be prevented by passing in the
-     *               target address as a {@code ResourceIdentifier} instead.
+     * @param target The target address of the message. The target address is used to determine if the message
+     *               represents an event or not.
      * @param publishAddress The address that the message has been published to originally by the device or
      *            {@code null} if unknown.
      *            <p>
@@ -1268,7 +1260,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param timeToLive The message's <em>time-to-live</em> as provided by the device or {@code null} if the
      *                   device did not provide any TTL.
      * @return The newly created message.
-     * @throws NullPointerException if registration info is {@code null}.
+     * @throws NullPointerException if target or registration info is {@code null}.
      */
     protected final Message newMessage(
             final QoS qos,
@@ -1368,6 +1360,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *                   device did not provide any TTL.
      * @return The message with its properties set.
      * @throws NullPointerException if message or registration info are {@code null}.
+     * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
      */
     protected final Message addProperties(
             final Message msg,
@@ -1380,7 +1373,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final Duration timeToLive) {
 
         Objects.requireNonNull(msg);
-        Objects.requireNonNull(target);
         Objects.requireNonNull(registrationInfo);
 
         return MessageHelper.addProperties(

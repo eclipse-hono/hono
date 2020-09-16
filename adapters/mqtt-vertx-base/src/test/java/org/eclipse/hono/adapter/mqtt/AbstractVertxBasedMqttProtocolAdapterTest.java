@@ -552,6 +552,49 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
         verify(endpoint).publishHandler(messageHandler.capture());
 
+        // WHEN a device publishes a message that has an empty topic
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn("");
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
+
+        messageHandler.getValue().handle(msg);
+
+        // THEN the device gets disconnected
+        verify(endpoint).close();
+        // and the message is not forwarded downstream
+        verify(sender, never()).send(any(Message.class), any());
+        // and the message has not been reported as processed
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any());
+    }
+
+    /**
+     * Verifies that the adapter does not forward a message published by a device if the topic is not set and closes the
+     * connection to the device.
+     */
+    @Test
+    public void testUploadTelemetryMessageFailsForMissingTopic() {
+
+        // GIVEN an adapter
+        config.setAuthenticationRequired(false);
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+        final DownstreamSender sender = givenAQoS0TelemetrySender();
+
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        adapter.handleEndpointConnection(endpoint);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).publishHandler(messageHandler.capture());
+
         // WHEN a device publishes a message that has no topic
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn(null);

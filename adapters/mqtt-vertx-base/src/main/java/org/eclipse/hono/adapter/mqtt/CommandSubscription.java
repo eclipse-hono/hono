@@ -54,6 +54,9 @@ public final class CommandSubscription {
 
     private CommandSubscription(final String topic, final Device authenticatedDevice) {
         this.topic = Objects.requireNonNull(topic);
+        if (topic.isEmpty()) {
+            throw new IllegalArgumentException("topic filter must not be empty");
+        }
         final ResourceIdentifier resource = ResourceIdentifier.fromString(topic);
 
         if (resource.length() != 5 || !"#".equals(resource.elementAt(4))) {
