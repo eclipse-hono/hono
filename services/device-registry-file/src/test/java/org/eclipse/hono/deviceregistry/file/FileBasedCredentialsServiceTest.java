@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -67,6 +68,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -75,6 +77,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class FileBasedCredentialsServiceTest implements AbstractCredentialsServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedCredentialsServiceTest.class);
