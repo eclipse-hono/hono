@@ -186,12 +186,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * exceeds the configured max payload size.
      *
      * @param ctx The Vert.x test context.
-     * @throws InterruptedException if test is interrupted while running.
      */
     @EnabledIfSystemProperty(named = "vertx-proton.issue57.fixed", matches = "true")
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    public void testAdapterClosesLinkOnMessageExceedingMaxPayloadSize(final VertxTestContext ctx) throws InterruptedException {
+    public void testAdapterClosesLinkOnMessageExceedingMaxPayloadSize(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -397,7 +396,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 }
             });
             return sendingComplete.future();
-        }, senderQoS);
+        });
     }
 
     /**
@@ -407,14 +406,12 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param receiverFactory The factory to use for creating the receiver for consuming
      *                        messages from the messaging network.
      * @param sender The sender for sending messaging to the Hono server.
-     * @param senderQoS The QoS used by the sender.
      * @throws InterruptedException if test execution is interrupted.
      */
     protected void doUploadMessages(
             final VertxTestContext messageSending,
             final Function<Handler<Void>, Future<Void>> receiverFactory,
-            final Function<Buffer, Future<?>> sender,
-            final ProtonQoS senderQoS) throws InterruptedException {
+            final Function<Buffer, Future<?>> sender) throws InterruptedException {
 
         final AtomicInteger messagesReceived = new AtomicInteger(0);
 
@@ -468,7 +465,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             }
             messageSending.completeNow();
         }, "message sender")
-        .run();
+        .start();
 
 
         final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));

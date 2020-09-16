@@ -575,6 +575,7 @@ public abstract class CoapTestBase {
             // WHEN a device that belongs to the tenant uploads a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
             final Promise<OptionSet> result = Promise.promise();
+            // THEN a FORBIDDEN response code is returned
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
@@ -601,6 +602,7 @@ public abstract class CoapTestBase {
             // WHEN the device tries to upload a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
             final Promise<OptionSet> result = Promise.promise();
+            // THEN a NOT_FOUND response code is returned
             client.advanced(getHandler(result, ResponseCode.NOT_FOUND), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
@@ -632,6 +634,7 @@ public abstract class CoapTestBase {
             // WHEN the gateway tries to upload a message for the device
             final Promise<OptionSet> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
+            // THEN a FORBIDDEN response code is returned
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
         })
@@ -661,6 +664,7 @@ public abstract class CoapTestBase {
             // WHEN another gateway tries to upload a message for the device
             final Promise<OptionSet> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
+            // THEN a FORBIDDEN response code is returned
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN),
                     createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
@@ -849,7 +853,7 @@ public abstract class CoapTestBase {
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.debug("north-bound-cmd received {}, ttd: {}", msg, ttd);
+                    logger.debug("north-bound message received {}, ttd: {}", msg, ttd);
                     TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
                         ctx.verify(() -> {
                             assertThat(notification.getTenantId()).isEqualTo(tenantId);
@@ -948,7 +952,7 @@ public abstract class CoapTestBase {
     /**
      * Gets a handler for CoAP responses.
      *
-     * @param responseHandler The handler to invoke with the outcome of the request. the handler will be invoked with a
+     * @param responseHandler The handler to invoke with the outcome of the request. The handler will be invoked with a
      *            succeeded result if the response contains a 2.04 (Changed) code. Otherwise it will be invoked with a
      *            result that is failed with a {@link CoapResultException}.
      * @return The handler.
@@ -960,7 +964,7 @@ public abstract class CoapTestBase {
     /**
      * Gets a handler for CoAP responses.
      *
-     * @param responseHandler The handler to invoke with the outcome of the request. the handler will be invoked with a
+     * @param responseHandler The handler to invoke with the outcome of the request. The handler will be invoked with a
      *            succeeded result if the response contains the expected code. Otherwise it will be invoked with a
      *            result that is failed with a {@link CoapResultException}.
      * @param expectedStatusCode The status code that is expected in the response.
@@ -987,17 +991,6 @@ public abstract class CoapTestBase {
                         .handle(Future.failedFuture(new CoapResultException(HttpURLConnection.HTTP_UNAVAILABLE)));
             }
         };
-    }
-
-    /**
-     * Sends some (optional) messages before uploading the batch of
-     * real test messages.
-     *
-     * @param client The CoAP client to use for sending the messages.
-     * @return A succeeded future upon completion.
-     */
-    protected Future<Void> sendWarmUpMessages(final CoapClient client) {
-        return Future.succeededFuture();
     }
 
     private static int toHttpStatusCode(final ResponseCode responseCode) {
