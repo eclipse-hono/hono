@@ -428,7 +428,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         return addCredentialsPromise.future()
                 .map(added -> {
                     span.log("successfully added credentials");
-                    LOG.debug("successfully added credentials for the device [[{}]]", deviceId);
+                    LOG.debug("successfully added credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
                     return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
                 });
     }
@@ -449,7 +449,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .compose(result -> Optional.ofNullable(result)
                         .map(removed -> {
                             span.log("successfully removed credentials");
-                            LOG.debug("successfully removed credentials for the device [[{}]]", deviceId);
+                            LOG.debug("successfully removed credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
                             return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
                         })
                         .orElse(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
@@ -466,6 +466,12 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .withDeviceId(deviceKey.getDeviceId())
                 .document();
         final Promise<JsonObject> replaceCredentialsPromise = Promise.promise();
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("updating credentials of device [tenant: {}, device-id: {}]: {}{}",
+                    deviceKey.getTenantId(), deviceKey.getDeviceId(), System.lineSeparator(),
+                    credentialsDtoJson.encodePrettily());
+        }
 
         mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(),
                 replaceCredentialsQuery,
@@ -484,6 +490,9 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                     } else {
                         LOG.debug("successfully updated credentials for device [tenant: {}, device-id: {}}]",
                                 deviceKey.getTenantId(), deviceKey.getDeviceId());
+                        if (LOG.isTraceEnabled()) {
+                            LOG.trace("new document in DB: {}{}", System.lineSeparator(), result.encodePrettily());
+                        }
                         span.log("successfully updated credentials");
                         return Future.succeededFuture(
                                 OperationResult.ok(
