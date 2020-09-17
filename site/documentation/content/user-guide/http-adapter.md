@@ -71,7 +71,11 @@ if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has b
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
+        * There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits).
+        * If the QoS level header is set to `1` (*at least once* semantics), the reason may be:
+            * The consumer has indicated that it didn't process the telemetry data.
+            * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
@@ -155,7 +159,11 @@ content-length: 0
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
+        * There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits).
+        * If the QoS level header is set to `1` (*at least once* semantics), the reason may be:
+            * The consumer has indicated that it didn't process the telemetry data.
+            * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
@@ -232,7 +240,11 @@ content-length: 23
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
+        * There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits).
+        * If the QoS level header is set to `1` (*at least once* semantics), the reason may be:
+            * The consumer has indicated that it didn't process the telemetry data.
+            * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 
@@ -306,7 +318,7 @@ content-length: 23
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono, or the consumer didn't process the event.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
@@ -350,7 +362,7 @@ content-length: 0
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono, or the consumer didn't process the event.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
@@ -399,7 +411,7 @@ content-length: 0
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono, or the consumer didn't process the event.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 

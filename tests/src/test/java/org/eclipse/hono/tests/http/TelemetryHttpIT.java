@@ -21,6 +21,9 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.NoConsumerException;
+import org.eclipse.hono.client.SendMessageTimeoutException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
@@ -157,7 +160,13 @@ public class TelemetryHttpIT extends HttpTestBase {
                             ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE));
 
                 })
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.bodyAsString()).isEqualTo(ServiceInvocationException
+                                .getLocalizedMessage(NoConsumerException.CLIENT_FACING_MESSAGE_KEY));
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -214,6 +223,10 @@ public class TelemetryHttpIT extends HttpTestBase {
 
         httpResponseFuture
                 .onComplete(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.bodyAsString()).isEqualTo(ServiceInvocationException
+                                .getLocalizedMessage(SendMessageTimeoutException.CLIENT_FACING_MESSAGE_KEY));
+                    });
                     httpResponseReceived.flag();
                 }));
     }

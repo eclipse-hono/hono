@@ -32,6 +32,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
@@ -51,6 +52,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -789,7 +791,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 ctx.fail(t);
             } else {
                 outcome = ProcessingOutcome.UNDELIVERABLE;
-                HttpUtils.serviceUnavailable(ctx.getRoutingContext(), 2, "temporarily unavailable");
+                final String errorMessage = t instanceof ServerErrorException ? ((ServerErrorException) t).getClientFacingMessage() : null;
+                HttpUtils.serviceUnavailable(ctx.getRoutingContext(), 2,
+                        Strings.isNullOrEmpty(errorMessage) ? "temporarily unavailable" : errorMessage);
             }
             if (responseClosedPrematurely) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",

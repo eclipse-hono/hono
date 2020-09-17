@@ -21,6 +21,8 @@ public class ServerErrorException extends ServiceInvocationException {
 
     private static final long serialVersionUID = 1L;
 
+    private String clientFacingMessage;
+
     /**
      * Creates a new exception for a server error code.
      *
@@ -114,5 +116,23 @@ public class ServerErrorException extends ServiceInvocationException {
         if (errorCode < 500 || errorCode >= 600) {
             throw new IllegalArgumentException("client error code must be >= 500 and < 600");
         }
+    }
+
+    /**
+     * Gets the error message suitable to be propagated to an external client.
+     *
+     * @return The message or {@code null}.
+     */
+    public final String getClientFacingMessage() {
+        return clientFacingMessage;
+    }
+
+    /**
+     * Sets the error message suitable to be propagated to an external client.
+     *
+     * @param clientFacingMessageKey The key to get the localized message for.
+     */
+    public final void setClientFacingMessageWithKey(final String clientFacingMessageKey) {
+        this.clientFacingMessage = getLocalizedMessage(clientFacingMessageKey);
     }
 }
