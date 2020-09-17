@@ -777,6 +777,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         The future will be succeeded if the device is registered and enabled.
      *         Otherwise, the future will be failed with a {@link RegistrationAssertionException}
      *         containing the root cause of the failure to assert the registration.
+     * @throws NullPointerException if device is {@code null}.
      */
     protected final Future<Void> checkDeviceRegistration(final Device device, final SpanContext context) {
 
