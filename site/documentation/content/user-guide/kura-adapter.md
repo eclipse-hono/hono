@@ -57,6 +57,7 @@ The adapter performs additional checks regarding resource limits when a client t
 ### Connection Limits
 
 The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if
+
 * the maximum number of connections per protocol adapter instance is reached, or
 * if the maximum number of simultaneously connected devices for the tenant is reached.
 

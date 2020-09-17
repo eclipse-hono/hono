@@ -45,6 +45,7 @@ automatically replay the Tutorial given here (at least the telemetry part for no
 {{% note title="Python Quickstart" %}}
 You can find the Python tutorial in the [Examples](https://github.com/eclipse/hono/tree/master/examples/quickstart-python).
 The python script does
+
 * Set up a Tenant
 * Set up a Device in the tenant
 * Add credentials to the device
