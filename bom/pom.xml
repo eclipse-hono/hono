@@ -31,12 +31,12 @@
     <artemis.image.name>quay.io/enmasse/artemis-base:2.10.1</artemis.image.name>
     <assertj-core.version>3.15.0</assertj-core.version>
     <c3p0.version>0.9.5.4</c3p0.version>
+    <caffeine.version>2.8.4</caffeine.version>
     <californium.version>2.3.1</californium.version>
     <commons-cli.version>1.2</commons-cli.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.12.0</dispatch-router.image.name>
     <flapdoodle.version>2.2.0</flapdoodle.version>
     <guava.version>28.0-jre</guava.version>
-    <caffeine.version>2.8.4</caffeine.version>
     <gson.version>2.8.5</gson.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
     <infinispan.version>10.1.8.Final</infinispan.version>
@@ -57,7 +57,7 @@
     <mchange-commons.version>0.2.15</mchange-commons.version>
     <micrometer.version>1.1.11</micrometer.version>
     <mockito.version>3.3.3</mockito.version>
-    <mongodb.version>4.0.18</mongodb.version>
+    <mongodb.version>4.0.20</mongodb.version>
     <mongo-java-driver.version>3.10.1</mongo-java-driver.version>
     <netty.version>4.1.49.Final</netty.version>
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
@@ -68,18 +68,17 @@
     <protostream.version>4.3.2.Final</protostream.version>
     <proton.version>0.33.5</proton.version>
     <qpid-jms.version>0.52.0</qpid-jms.version>
+    <quarkus.platform.version>1.6.1.Final</quarkus.platform.version>
     <rxjava.version>2.2.12</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.26</snakeyaml.version>
     <spring.version>5.2.6.RELEASE</spring.version>
     <spring-boot.version>2.2.7.RELEASE</spring-boot.version>
     <spring-security-crypto.version>5.2.4.RELEASE</spring-security-crypto.version>
-    <truth.version>0.28</truth.version>
     <vertx.version>3.9.2</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
     <wildfly-elytron.version>1.10.4.Final</wildfly-elytron.version>
     <wiremock.version>2.24.1</wiremock.version>
-    <quarkus.platform.version>1.6.1.Final</quarkus.platform.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
