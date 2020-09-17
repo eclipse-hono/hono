@@ -15,6 +15,7 @@ package org.eclipse.hono.service.registration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -689,6 +691,52 @@ public interface RegistrationServiceTests {
                 }));
     }
 
+    /**
+     * Verifies that updating a device preserves present status properties which should not be overwritten by the update.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateDevicePreservesStatusProperties(final VertxTestContext ctx) {
+        final String deviceId = randomDeviceId();
+        final Checkpoint register = ctx.checkpoint(3);
+        final AtomicReference<String> resourceVersion = new AtomicReference<>();
+        final AtomicReference<Instant> creationTime = new AtomicReference<>();
+
+        getDeviceManagementService()
+                .createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+                .map(createResponse -> {
+                    ctx.verify(() -> assertThat(createResponse.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                    resourceVersion.set(createResponse.getResourceVersion().get());
+                    register.flag();
+                    return createResponse;
+                })
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .map(readResponse -> {
+                    final DeviceWithStatus device = (DeviceWithStatus) readResponse.getPayload();
+                    creationTime.set(device.getStatus().getCreationTime());
+                    register.flag();
+                    return readResponse;
+                })
+                .compose(rr -> getDeviceManagementService().updateDevice(
+                    TENANT,
+                    deviceId,
+                    new Device(),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE)
+                )
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(readResponse -> {
+                    ctx.verify(() -> {
+                        final DeviceWithStatus actualDevice = (DeviceWithStatus) readResponse.getPayload();
+                        assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
+                        assertThat(actualDevice.getStatus().getLastUpdate()).isNotNull();
+                        assertThat(actualDevice.getStatus().getCreationTime()).isNotEqualTo(actualDevice.getStatus().getLastUpdate());
+                    });
+                    register.flag();
+                }));
+    }
+
     // helpers
 
     /**
@@ -722,12 +770,12 @@ public interface RegistrationServiceTests {
      *         Otherwise the future must fail.
      */
     default Future<?> assertDevice(final String tenant, final String deviceId, final Optional<String> gatewayId,
-            final Handler<OperationResult<Device>> managementAssertions,
+            final Handler<OperationResult<DeviceWithStatus>> managementAssertions,
             final Handler<RegistrationResult> adapterAssertions) {
 
         // read management data
 
-        final Future<OperationResult<Device>> f1 = getDeviceManagementService()
+        final Future<OperationResult<DeviceWithStatus>> f1 = getDeviceManagementService()
                 .readDevice(tenant, deviceId, NoopSpan.INSTANCE);
 
         // read adapter data

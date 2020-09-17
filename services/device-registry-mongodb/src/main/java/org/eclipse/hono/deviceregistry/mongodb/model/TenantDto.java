@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.mongodb.model;
 import java.time.Instant;
 import java.util.Objects;
 
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -24,12 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A versioned and dated wrapper class for {@link Tenant}.
  */
-public final class TenantDto extends BaseDto {
+public final class TenantDto extends BaseDto<Tenant> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
-    @JsonProperty(RegistryManagementConstants.FIELD_TENANT)
-    private Tenant tenant;
 
     /**
      * Default constructor for serialisation/deserialization.
@@ -39,17 +38,53 @@ public final class TenantDto extends BaseDto {
     }
 
     /**
-     * Creates a tenant DTO from tenant id, a version, an updated timestamp and a {@link Tenant}.
+     * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
-     * @param tenantId The tenant id.
-     * @param tenant The tenant.
-     * @param version The version of tenant to be sent as request header.
+     * @param tenantId The id of the tenant.
+     * @param tenant The data of the DTO.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for creating a new entry.
      */
-    public TenantDto(final String tenantId, final Tenant tenant, final String version) {
-        setTenantId(tenantId);
-        setVersion(version);
-        setTenant(tenant);
-        setUpdatedOn(Instant.now());
+    public static TenantDto forCreation(final String tenantId, final Tenant tenant, final String version) {
+        final TenantDto tenantDto = BaseDto.forCreation(TenantDto::new, tenant, version);
+        tenantDto.setTenantId(tenantId);
+
+        return tenantDto;
+    }
+
+    /**
+     * Constructs a new DTO to be returned by a read operation.
+     *
+     * @param tenantId The id of the tenant.
+     * @param tenant The data of the DTO.
+     * @param created The instant when the object was created.
+     * @param updated The instant of the most recent update.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for reading an entry.
+     */
+    public static TenantDto forRead(final String tenantId, final Tenant tenant, final Instant created, final Instant updated, final String version) {
+        final TenantDto tenantDto = BaseDto.forRead(TenantDto::new, tenant, created, updated, version);
+        tenantDto.setTenantId(tenantId);
+
+        return tenantDto;
+    }
+
+    /**
+     * Constructs a new DTO for <b>updating</b> a persistent entry.
+     *
+     * @param tenantId The id of the tenant.
+     * @param tenant The data of the DTO.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for updating an entry.
+     */
+    public static TenantDto forUpdate(final String tenantId, final Tenant tenant, final String version) {
+        final TenantDto tenantDto = BaseDto.forUpdate(TenantDto::new, tenant, version);
+        tenantDto.setTenantId(tenantId);
+
+        return tenantDto;
     }
 
     /**
@@ -67,26 +102,13 @@ public final class TenantDto extends BaseDto {
      * @param tenantId the tenant id.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    public void setTenantId(final String tenantId) {
+    private void setTenantId(final String tenantId) {
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
-    /**
-     * Gets the {@link Tenant}.
-     *
-     * @return the tenant or {@code null} if none has been set.
-     */
-    public Tenant getTenant() {
-        return tenant;
+    @Override
+    @JsonProperty(RegistryManagementConstants.FIELD_TENANT)
+    public Tenant getData() {
+        return super.getData();
     }
-
-    /**
-     * Sets the {@link Tenant}.
-     *
-     * @param tenant the tenant.
-     */
-    public void setTenant(final Tenant tenant) {
-        this.tenant = tenant;
-    }
-
 }

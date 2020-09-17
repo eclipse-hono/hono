@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.util.AuthenticationConstants;
@@ -54,6 +55,36 @@ public final class MongoDbDocumentBuilder {
      */
     public static MongoDbDocumentBuilder builder() {
         return new MongoDbDocumentBuilder();
+    }
+
+    /**
+     * Creates a MongoDb update document for the update of the given DTO.
+     *
+     * @param baseDto The DTO for which an update should be generated.
+     *
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder forUpdateOf(final BaseDto<?> baseDto) {
+        final JsonObject updates = new JsonObject();
+
+        if (baseDto.getData() != null) {
+            updates.put(MongoDbDeviceRegistryUtils.FIELD_DEVICE, JsonObject.mapFrom(baseDto.getData()));
+        }
+
+        if (baseDto.getCreationTime() != null) {
+            updates.put(MongoDbDeviceRegistryUtils.FIELD_CREATED, baseDto.getCreationTime());
+        }
+
+        if (baseDto.getUpdatedOn() != null) {
+            updates.put(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON, baseDto.getUpdatedOn());
+        }
+
+        if (baseDto.getVersion() != null) {
+            updates.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, baseDto.getVersion());
+        }
+
+        document.put("$set", updates);
+        return this;
     }
 
     /**

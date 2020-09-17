@@ -25,6 +25,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,6 +34,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Device Information.
  */
 @JsonInclude(value = Include.NON_NULL)
+@JsonIgnoreProperties({ "status" })
 public class Device {
 
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
@@ -60,10 +62,6 @@ public class Device {
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> memberOf = new LinkedList<>();
-
-    @JsonProperty(RegistryManagementConstants.FIELD_STATUS)
-    @JsonInclude(value = Include.NON_EMPTY)
-    private Status status = new Status();
 
     @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
@@ -279,5 +277,4 @@ public class Device {
     public String getMapper() {
         return mapper;
     }
-
 }

@@ -16,24 +16,25 @@ import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceWithStatus;
+import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A DTO (Data Transfer Object) class to store device information in mongodb.
  */
-public final class DeviceDto extends BaseDto {
+public final class DeviceDto extends BaseDto<Device> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
     private String deviceId;
-
-    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
-    private Device device;
 
     /**
      * Default constructor for serialisation/deserialization.
@@ -43,20 +44,66 @@ public final class DeviceDto extends BaseDto {
     }
 
     /**
-     * Creates a new data transfer object to store device information in mongodb.
+     * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
-     * @param tenantId The tenant identifier.
-     * @param deviceId The device identifier.
-     * @param device The device information.
-     * @param version The version of tenant to be sent as request header.
-     * @throws NullPointerException if any of the parameters except the device are {@code null}
+     * @param tenantId The id of the tenant.
+     * @param deviceId The id of the device.
+     * @param device The data of the DTO.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for creating a new entry.
      */
-    public DeviceDto(final String tenantId, final String deviceId, final Device device, final String version) {
-        setTenantId(tenantId);
-        setDeviceId(deviceId);
-        setDevice(device);
-        setVersion(version);
-        setUpdatedOn(Instant.now());
+    public static DeviceDto forCreation(final String tenantId, final String deviceId, final Device device, final String version) {
+        final DeviceDto deviceDto = BaseDto.forCreation(DeviceDto::new, device, version);
+        deviceDto.setTenantId(tenantId);
+        deviceDto.setDeviceId(deviceId);
+
+        return deviceDto;
+    }
+
+    /**
+     * Constructs a new DTO to be returned by a read operation.
+     *
+     * @param tenantId The id of the tenant.
+     * @param deviceId The id of the device.
+     * @param device The data of the DTO.
+     * @param created The instant when the object was created.
+     * @param updated The instant of the most recent update.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for reading an entry.
+     */
+    public static DeviceDto forRead(final String tenantId, final String deviceId, final Device device,
+                                    final Instant created, final Instant updated, final String version) {
+        final DeviceDto deviceDto = BaseDto.forRead(DeviceDto::new, device, created, updated, version);
+        deviceDto.setTenantId(tenantId);
+        deviceDto.setDeviceId(deviceId);
+
+        return deviceDto;
+    }
+
+    /**
+     * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
+     *
+     * @param tenantId The id of the tenant.
+     * @param deviceId The id of the device.
+     * @param device The data of the DTO.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for updating an entry.
+     */
+    public static DeviceDto forUpdate(final String tenantId, final String deviceId, final Device device, final String version) {
+        final DeviceDto deviceDto = BaseDto.forUpdate(DeviceDto::new, device, version);
+        deviceDto.setTenantId(tenantId);
+        deviceDto.setDeviceId(deviceId);
+
+        return deviceDto;
+    }
+
+    @Override
+    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
+    public Device getData() {
+        return super.getData();
     }
 
     /**
@@ -74,7 +121,7 @@ public final class DeviceDto extends BaseDto {
      * @param tenantId The tenant's identifier.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    public void setTenantId(final String tenantId) {
+    private void setTenantId(final String tenantId) {
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
@@ -93,25 +140,22 @@ public final class DeviceDto extends BaseDto {
      * @param deviceId The identifier of the device.
      * @throws NullPointerException if the deviceId is {@code null}.
      */
-    public void setDeviceId(final String deviceId) {
+    private void setDeviceId(final String deviceId) {
         this.deviceId = Objects.requireNonNull(deviceId);
     }
 
     /**
-     * Gets the device information.
+     * Gets the device information including internal status.
      *
-     * @return The device information or {@code null} if not set.
+     * @return The device information including internal status or {@code null} if not set.
      */
-    public Device getDevice() {
-        return device;
-    }
-
-    /**
-     * Sets the device information.
-     *
-     * @param device The device information.
-     */
-    public void setDevice(final Device device) {
-        this.device = device;
+    @JsonIgnore
+    public DeviceWithStatus getDeviceWithStatus() {
+        final DeviceWithStatus deviceWithStatus = new DeviceWithStatus(getData());
+        deviceWithStatus.setStatus(new Status()
+                .setCreationTime(getCreationTime())
+                .setLastUpdate(getUpdatedOn())
+        );
+        return deviceWithStatus;
     }
 }

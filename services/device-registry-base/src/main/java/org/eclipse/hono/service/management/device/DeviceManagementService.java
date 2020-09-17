@@ -55,6 +55,7 @@ public interface DeviceManagementService {
     /**
      * Gets device registration data by device ID.
      *
+     * @param <D> The type of the device result.
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get registration data for.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
@@ -68,7 +69,7 @@ public interface DeviceManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration">
      *      Device Registry Management API - Get Device Registration</a>
      */
-    Future<OperationResult<Device>> readDevice(String tenantId, String deviceId, Span span);
+    <D extends Device> Future<OperationResult<D>> readDevice(String tenantId, String deviceId, Span span);
 
     /**
      * Finds devices belonging to the given tenant with optional filters, paging and sorting options.
