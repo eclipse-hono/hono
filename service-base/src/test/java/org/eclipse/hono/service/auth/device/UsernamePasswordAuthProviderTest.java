@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,16 +31,21 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.GenericExecutionContext;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -64,7 +70,9 @@ public class UsernamePasswordAuthProviderTest {
     private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret");
     private UsernamePasswordAuthProvider provider;
     private CredentialsClientFactory credentialsClientFactory;
+    private TenantClientFactory tenantClientFactory;
     private CredentialsClient credentialsClient;
+    private TenantClient tenantClient;
     private HonoPasswordEncoder pwdEncoder;
 
     /**
@@ -84,10 +92,19 @@ public class UsernamePasswordAuthProviderTest {
         credentialsClient = mock(CredentialsClient.class);
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.getOrCreateCredentialsClient("DEFAULT_TENANT")).thenReturn(Future.succeededFuture(credentialsClient));
+
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+
         pwdEncoder = mock(HonoPasswordEncoder.class);
         when(pwdEncoder.matches(eq("the-secret"), any(JsonObject.class))).thenReturn(true);
 
-        provider = new UsernamePasswordAuthProvider(credentialsClientFactory, pwdEncoder, NoopTracerFactory.create());
+        provider = new UsernamePasswordAuthProvider(credentialsClientFactory, tenantClientFactory, pwdEncoder, NoopTracerFactory.create());
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", "the-secret", null, null));
 
     }

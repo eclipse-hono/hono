@@ -28,13 +28,18 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.GenericExecutionContext;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
@@ -54,7 +59,9 @@ public class CredentialsApiAuthProviderTest {
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
     private CredentialsClientFactory credentialsClientFactory;
+    private TenantClientFactory tenantClientFactory;
     private CredentialsClient credentialsClient;
+    private TenantClient tenantClient;
 
     /**
      * Sets up the fixture.
@@ -66,6 +73,15 @@ public class CredentialsApiAuthProviderTest {
         when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
+
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+
         provider = getProvider(getDeviceCredentials("type", "TENANT", "user"), NoopTracerFactory.create());
     }
 
@@ -148,7 +164,7 @@ public class CredentialsApiAuthProviderTest {
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials, final Tracer tracer) {
 
-        return new CredentialsApiAuthProvider<>(credentialsClientFactory, tracer) {
+        return new CredentialsApiAuthProvider<>(credentialsClientFactory, tenantClientFactory, tracer) {
 
             @Override
             protected AbstractDeviceCredentials getCredentials(final JsonObject authInfo) {

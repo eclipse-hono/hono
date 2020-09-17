@@ -22,6 +22,8 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsObject;
@@ -56,17 +58,23 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     private final CredentialsClientFactory credentialsClientFactory;
+    private final TenantClientFactory tenantClientFactory;
     private final Tracer tracer;
 
     /**
-     * Creates a new authentication provider for a credentials client factory.
+     * Creates a new authentication provider for a credentials and tenant client factory.
      *
-     * @param credentialsClientFactory The factory.
+     * @param credentialsClientFactory The credentials client factory.
+     * @param tenantClientFactory The tenant client factory.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if the factory or the tracer are {@code null}
+     * @throws NullPointerException if any of the parameters is null {@code null}
      */
-    public CredentialsApiAuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
+    public CredentialsApiAuthProvider(
+            final CredentialsClientFactory credentialsClientFactory,
+            final TenantClientFactory tenantClientFactory,
+            final Tracer tracer) {
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
+        this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory);
         this.tracer = Objects.requireNonNull(tracer);
     }
 
@@ -78,6 +86,15 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      */
     protected final Future<CredentialsClient> getCredentialsClient(final String tenantId) {
         return credentialsClientFactory.getOrCreateCredentialsClient(tenantId);
+    }
+
+    /**
+     * Gets a client for the Tenant service.
+     *
+     * @return A future containing the client.
+     */
+    protected final Future<TenantClient> getTenantClient() {
+        return tenantClientFactory.getOrCreateTenantClient();
     }
 
     /**

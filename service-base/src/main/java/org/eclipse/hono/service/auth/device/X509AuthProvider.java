@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,12 +38,16 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * Creates a new provider for a given configuration.
      *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
+     * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public X509AuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
-        super(credentialsClientFactory, tracer);
+    public X509AuthProvider(
+            final CredentialsClientFactory credentialsClientFactory,
+            final TenantClientFactory tenantClientFactory,
+            final Tracer tracer) {
+        super(credentialsClientFactory, tenantClientFactory, tracer);
     }
 
     /**
