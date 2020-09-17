@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -213,18 +212,11 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         Objects.requireNonNull(span);
 
         return getCredentialsDto(deviceKey)
-                .map(credentialsDto -> {
-                    final List<CommonCredential> credentials = credentialsDto.getCredentials()
-                            .stream()
-                            .map(CommonCredential::stripPrivateInfo)
-                            .collect(Collectors.toList());
-
-                    return OperationResult.ok(
-                            HttpURLConnection.HTTP_OK,
-                            credentials,
-                            Optional.empty(),
-                            Optional.of(credentialsDto.getVersion()));
-                })
+                .map(credentialsDto -> OperationResult.ok(
+                        HttpURLConnection.HTTP_OK,
+                        credentialsDto.getCredentials(),
+                        Optional.empty(),
+                        Optional.of(credentialsDto.getVersion())))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -317,6 +309,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                         .put(credentialsTypeKey, new JsonObject().put("$exists", true))),
                         INDEX_CREATION_MAX_RETRIES));
     }
+
     private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey) {
 
         return getCredentialsDto(deviceKey, Optional.empty());
