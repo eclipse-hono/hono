@@ -46,11 +46,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <deviceregistry.credentials.supportsClientContext>true</deviceregistry.credentials.supportsClientContext>
     <!-- should be set to true if testing against a registry that supports search devices operation -->
     <deviceregistry.supportsSearchDevices>false</deviceregistry.supportsSearchDevices>
-    <!--
-      should be set to true if testing against an AMQP adapter built using a vertx-proton version
-      in which https://github.com/vert-x3/vertx-proton/issues/57 has been fixed
-    -->
-    <vertx-proton.issue57.fixed>false</vertx-proton.issue57.fixed>
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
     <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
@@ -1120,7 +1115,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.supportsGatewayMode>${deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
                 <deviceregistry.credentials.supportsClientContext>${deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
                 <deviceregistry.supportsSearchDevices>${deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
-                <vertx-proton.issue57.fixed>${vertx-proton.issue57.fixed}</vertx-proton.issue57.fixed>
                 <adapter.coap.host>${coap.ip}</adapter.coap.host>
                 <adapter.coap.port>${coap.port}</adapter.coap.port>
                 <adapter.coaps.port>${coaps.port}</adapter.coaps.port>
