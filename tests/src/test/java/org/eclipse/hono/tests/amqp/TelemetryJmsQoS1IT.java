@@ -136,7 +136,7 @@ public class TelemetryJmsQoS1IT {
                 amqpAdapter = connection;
                 setup.completeNow();
             }));
-        assertTrue(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS));
+        assertTrue(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS));
         if (setup.failed()) {
             fail(setup.causeOfFailure());
         }

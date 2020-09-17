@@ -172,7 +172,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
         }
@@ -285,7 +285,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
-                            helper.isTestEnvironment() ? 1000 : 200);
+                            IntegrationTestSupport.getSendCommandTimeout());
                 }, commandsToSend);
     }
 
@@ -336,7 +336,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -419,7 +419,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
-                            helper.getSendCommandTimeout())
+                            IntegrationTestSupport.getSendCommandTimeout())
                         .map(response -> {
                             ctx.verify(() -> {
                                 assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
@@ -540,7 +540,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         })
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -615,7 +615,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -625,7 +625,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         // send first command
         helper.sendOneWayCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
-                Buffer.buffer("cmd"), null, helper.getSendCommandTimeout())
+                Buffer.buffer("cmd"), null, IntegrationTestSupport.getSendCommandTimeout())
         // first command shall succeed because there's one initial credit
         .onComplete(ctx.succeeding(v -> {
             expectedSteps.flag();
@@ -637,7 +637,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     "text/plain",
                     Buffer.buffer("cmd"),
                     null,
-                    helper.getSendCommandTimeout())
+                    IntegrationTestSupport.getSendCommandTimeout())
                 // second command shall fail because there's no credit left
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -688,7 +688,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .onSuccess(c -> c.setRequestTimeout(300))
                 .onComplete(commandClientCreation.completing());
 
-        assertThat(commandClientCreation.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(commandClientCreation.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
             ctx.failNow(commandClientCreation.causeOfFailure());
             return;
@@ -781,7 +781,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .onSuccess(c -> c.setRequestTimeout(1300)) // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
                 .onComplete(commandClientCreation.completing());
 
-        assertThat(commandClientCreation.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(commandClientCreation.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
             ctx.failNow(commandClientCreation.causeOfFailure());
             return;

@@ -79,7 +79,7 @@ public class TelemetryHttpIT extends HttpTestBase {
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
                 .onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -192,7 +192,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                         remoteClose -> {}))
                 .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;

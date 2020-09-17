@@ -179,7 +179,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                    helper.isTestEnvironment() ? 1000 : 200);
+                    IntegrationTestSupport.getSendCommandTimeout());
         }, endpointConfig, COMMANDS_TO_SEND, MqttQoS.AT_MOST_ONCE);
     }
 
@@ -254,7 +254,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                    helper.getSendCommandTimeout())
+                    IntegrationTestSupport.getSendCommandTimeout())
                     .map(response -> {
                         ctx.verify(() -> {
                             assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
@@ -293,7 +293,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
         .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -393,7 +393,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             ready.flag();
         }));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -464,7 +464,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             return helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                    helper.getSendCommandTimeout());
+                    IntegrationTestSupport.getSendCommandTimeout());
         };
 
         helper.registry
@@ -485,7 +485,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
                 .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;

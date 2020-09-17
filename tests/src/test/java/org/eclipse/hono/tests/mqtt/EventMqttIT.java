@@ -111,7 +111,7 @@ public class EventMqttIT extends MqttPublishTestBase {
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret").onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(helper.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
