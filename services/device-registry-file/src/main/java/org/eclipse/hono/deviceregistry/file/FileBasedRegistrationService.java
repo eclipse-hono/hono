@@ -33,15 +33,18 @@ import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.Lifecycle;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
+import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -50,6 +53,8 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -71,7 +76,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedRegistrationService.class);
 
     // <tenantId, <deviceId, registrationData>>
-    private final ConcurrentMap<String, ConcurrentMap<String, Versioned<Device>>> identities = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ConcurrentMap<String, FileBasedDeviceDto>> identities = new ConcurrentHashMap<>();
     private final Vertx vertx;
 
     private AtomicBoolean running = new AtomicBoolean(false);
@@ -200,7 +205,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
         int count = 0;
         LOG.debug("loading devices for tenant [{}]", tenantId);
-        final ConcurrentMap<String, Versioned<Device>> deviceMap = new ConcurrentHashMap<>();
+        final ConcurrentMap<String, FileBasedDeviceDto> deviceMap = new ConcurrentHashMap<>();
         for (final Object deviceObj : tenant.getJsonArray(RegistryManagementConstants.FIELD_DEVICES)) {
             if (deviceObj instanceof JsonObject) {
                 final JsonObject entry = (JsonObject) deviceObj;
@@ -208,7 +213,12 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                 if (deviceId != null) {
                     LOG.trace("loading device [{}]", deviceId);
                     final Device device = mapFromStoredJson(entry.getJsonObject(RegistrationConstants.FIELD_DATA));
-                    deviceMap.put(deviceId, new Versioned<>(device));
+                    final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forRead(FileBasedDeviceDto::new,
+                            new Versioned<>(device),
+                            entry.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE),
+                            entry.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE),
+                            null);
+                    deviceMap.put(deviceId, deviceDto);
                     count++;
                 }
             }
@@ -260,13 +270,16 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         return checkFileExists(true).compose(s -> {
             final AtomicInteger idCount = new AtomicInteger();
             final JsonArray tenants = new JsonArray();
-            for (final Entry<String, ConcurrentMap<String, Versioned<Device>>> entry : identities.entrySet()) {
+            for (final Entry<String, ConcurrentMap<String, FileBasedDeviceDto>> entry : identities.entrySet()) {
                 final JsonArray devices = new JsonArray();
-                for (final Entry<String, Versioned<Device>> deviceEntry : entry.getValue().entrySet()) {
+                for (final Entry<String, FileBasedDeviceDto> deviceEntry : entry.getValue().entrySet()) {
                     devices.add(
                             new JsonObject()
-                                    .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
-                                    .put(RegistrationConstants.FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getValue())));
+                                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
+                                .put(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE, deviceEntry.getValue().getCreationTime())
+                                .put(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE, deviceEntry.getValue().getUpdatedOn())
+                                .put(RegistryManagementConstants.FIELD_STATUS_LAST_USER, deviceEntry.getValue().getLastUser())
+                                .put(RegistrationConstants.FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getData().getValue())));
                     idCount.incrementAndGet();
                 }
                 tenants.add(
@@ -310,17 +323,17 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(span);
 
-        final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+        final Map<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         final Set<String> gatewaySet = devices.entrySet().stream()
-                .filter(entry -> entry.getValue().getValue().getMemberOf().stream()
-                        .anyMatch(viaGroups::contains))
+                .filter(entry -> entry.getValue().getData().getValue().getMemberOf().stream()
+                        .anyMatch(group -> viaGroups.contains(group)))
                 .map(Entry::getKey)
                 .collect(Collectors.toSet());
 
         return Future.succeededFuture(gatewaySet);
     }
 
-    private RegistrationResult convertResult(final String deviceId, final OperationResult<Device> result) {
+    private RegistrationResult convertResult(final String deviceId, final OperationResult<DeviceWithStatus> result) {
         return RegistrationResult.from(
                 result.getStatus(),
                 convertDevice(deviceId, result.getPayload()),
@@ -341,7 +354,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     }
 
     @Override
-    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
+    public Future<OperationResult<DeviceWithStatus>> readDevice(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -349,11 +362,11 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         return Future.succeededFuture(processReadDevice(tenantId, deviceId, span));
     }
 
-    OperationResult<Device> processReadDevice(final String tenantId, final String deviceId, final Span span) {
+    OperationResult<DeviceWithStatus> processReadDevice(final String tenantId, final String deviceId, final Span span) {
 
         LOG.debug("reading registration data [device-id: {}, tenant-id: {}]", deviceId, tenantId);
 
-        final Versioned<Device> device = getRegistrationData(tenantId, deviceId);
+        final Versioned<DeviceWithStatus> device = getRegistrationData(tenantId, deviceId);
 
         if (device == null) {
             TracingHelper.logError(span, "Device not found");
@@ -361,21 +374,20 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         }
 
         return OperationResult.ok(HttpURLConnection.HTTP_OK,
-                new Device(device.getValue()),
+                new DeviceWithStatus(device.getValue()),
                 Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                 Optional.ofNullable(device.getVersion()));
     }
 
-    private Versioned<Device> getRegistrationData(final String tenantId, final String deviceId) {
+    private Versioned<DeviceWithStatus> getRegistrationData(final String tenantId, final String deviceId) {
 
-        final ConcurrentMap<String, Versioned<Device>> devices = this.identities.get(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = this.identities.get(tenantId);
 
-        if (devices == null) {
+        if (devices == null || !devices.containsKey(deviceId)) {
             return null;
         }
 
-        return devices.get(deviceId);
-
+        return devices.get(deviceId).getDeviceWithStatus();
     }
 
     @Override
@@ -401,18 +413,19 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
 
-        final ConcurrentMap<String, Versioned<Device>> devices = identities.get(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
-        final Versioned<Device> device = devices.get(deviceId);
-        if (device == null) {
+
+       final FileBasedDeviceDto deviceDto = devices.get(deviceId);
+        if (deviceDto == null) {
             TracingHelper.logError(span, "Device not found");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
 
-        if (resourceVersion.isPresent() && !resourceVersion.get().equals(device.getVersion())) {
+        if (resourceVersion.isPresent() && !resourceVersion.get().equals(deviceDto.getData().getVersion())) {
             TracingHelper.logError(span, "Resource Version mismatch");
             return Result.from(HttpURLConnection.HTTP_PRECON_FAILED);
         }
@@ -455,17 +468,17 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(tenantId);
         final String deviceIdValue = deviceId.orElseGet(() -> generateDeviceId(tenantId));
 
-        final ConcurrentMap<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         if (devices.size() >= getConfig().getMaxDevicesPerTenant()) {
             TracingHelper.logError(span, "Maximum devices number limit reached for tenant");
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
         }
 
-        final Versioned<Device> newDevice = new Versioned<>(device);
-        if (devices.putIfAbsent(deviceIdValue, newDevice) == null) {
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(FileBasedDeviceDto::new, new Versioned<>(device), null);
+        if (devices.putIfAbsent(deviceIdValue, deviceDto) == null) {
             dirty.set(true);
             return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
-                    Id.of(deviceIdValue), Optional.empty(), Optional.of(newDevice.getVersion()));
+                    Id.of(deviceIdValue), Optional.empty(), Optional.of(deviceDto.getData().getVersion()));
         } else {
             TracingHelper.logError(span, "Device already exists for tenant");
             return Result.from(HttpURLConnection.HTTP_CONFLICT, OperationResult::empty);
@@ -501,32 +514,34 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     private OperationResult<Id> doUpdateDevice(final String tenantId, final String deviceId, final Device device,
             final Optional<String> resourceVersion, final Span span) {
 
-        final ConcurrentMap<String, Versioned<Device>> devices = identities.get(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
         }
 
-        final Versioned<Device> currentDevice = devices.get(deviceId);
+        final FileBasedDeviceDto currentDevice = devices.get(deviceId);
         if (currentDevice == null) {
             TracingHelper.logError(span, "Device not found");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
         }
 
-        final Versioned<Device> newDevice = currentDevice.update(resourceVersion, () -> device);
+        final Versioned<Device> newDevice = currentDevice.getData().update(resourceVersion, () -> device);
         if (newDevice == null) {
             TracingHelper.logError(span, "Resource Version mismatch");
             return Result.from(HttpURLConnection.HTTP_PRECON_FAILED, OperationResult::empty);
         }
 
-        devices.put(deviceId, newDevice);
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(FileBasedDeviceDto::new, newDevice, null)
+                .merge(currentDevice);
+        devices.put(deviceId, deviceDto);
         dirty.set(true);
 
         return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, Id.of(deviceId), Optional.empty(),
                 Optional.ofNullable(newDevice.getVersion()));
     }
 
-    private ConcurrentMap<String, Versioned<Device>> getDevicesForTenant(final String tenantId) {
+    private ConcurrentMap<String, FileBasedDeviceDto> getDevicesForTenant(final String tenantId) {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
@@ -556,7 +571,8 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         final List<JsonObject> matchingDevices = getDevicesForTenant(tenantId).entrySet()
                 .stream()
                 .map(entry -> {
-                    return JsonObject.mapFrom(entry.getValue().getValue()).put(RegistryManagementConstants.FIELD_ID, entry.getKey());
+                    return JsonObject.mapFrom(entry.getValue().getData().getValue())
+                            .put(RegistryManagementConstants.FIELD_ID, entry.getKey());
                 })
                 .filter(filterPredicate)
                 .collect(Collectors.toList());
@@ -692,12 +708,47 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
      */
     private String generateDeviceId(final String tenantId) {
 
-        final ConcurrentMap<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         String tempDeviceId;
         do {
             tempDeviceId = UUID.randomUUID().toString();
         } while (devices.containsKey(tempDeviceId));
         return tempDeviceId;
+    }
+
+    private static final class FileBasedDeviceDto extends BaseDto<Versioned<Device>> {
+
+        FileBasedDeviceDto() {
+        }
+
+        /**
+         * Merges this DTO with the given DTO.
+         *
+         * @param other The DTO with which this DTO shall be merged.
+         *
+         * @return The merged DTO.
+         */
+        public FileBasedDeviceDto merge(final FileBasedDeviceDto other) {
+            if (other != null) {
+                setCreationTime(other.getCreationTime());
+            }
+            return this;
+        }
+
+        /**
+         * Gets the device information including internal status.
+         *
+         * @return The device information including internal status or {@code null} if not set.
+         */
+        @JsonIgnore
+        public Versioned<DeviceWithStatus> getDeviceWithStatus() {
+            final DeviceWithStatus deviceWithStatus = new DeviceWithStatus(getData().getValue());
+            deviceWithStatus.setStatus(new Status()
+                    .setCreationTime(getCreationTime())
+                    .setLastUpdate(getUpdatedOn())
+                );
+            return new Versioned<>(getData().getVersion(), deviceWithStatus);
+        }
     }
 
 }

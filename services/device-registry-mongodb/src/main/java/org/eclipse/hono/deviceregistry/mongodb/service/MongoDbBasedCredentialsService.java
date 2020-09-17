@@ -177,11 +177,9 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(ok -> {
-                    final CredentialsDto updatedCredentialsDto = new CredentialsDto(
-                            deviceKey.getTenantId(),
+                    final CredentialsDto updatedCredentialsDto = CredentialsDto.forUpdate(deviceKey.getTenantId(),
                             deviceKey.getDeviceId(),
-                            updatedCredentials,
-                            DeviceRegistryUtils.getUniqueIdentifier());
+                            updatedCredentials, DeviceRegistryUtils.getUniqueIdentifier());
 
                     if (updatedCredentialsDto.requiresMerging()) {
                         return getCredentialsDto(deviceKey, resourceVersion)
@@ -411,13 +409,14 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
             final Optional<String> resourceVersion, final Span span) {
         final Promise<String> addCredentialsPromise = Promise.promise();
 
+        final CredentialsDto credentialsDto = CredentialsDto.forCreation(tenantId,
+                deviceId,
+                credentials,
+                resourceVersion.orElseGet(DeviceRegistryUtils::getUniqueIdentifier));
+
         mongoClient.insert(
                 config.getCollectionName(),
-                JsonObject.mapFrom(new CredentialsDto(
-                        tenantId,
-                        deviceId,
-                        credentials,
-                        resourceVersion.orElseGet(DeviceRegistryUtils::getUniqueIdentifier))),
+                JsonObject.mapFrom(credentialsDto),
                 addCredentialsPromise);
 
         return addCredentialsPromise.future()

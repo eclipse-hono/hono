@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -32,7 +33,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A DTO (Data Transfer Object) class to store credentials information in mongodb.
  */
-public final class CredentialsDto extends BaseDto {
+public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
@@ -40,8 +41,6 @@ public final class CredentialsDto extends BaseDto {
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
     private String deviceId;
 
-    @JsonProperty(value = MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, required = true)
-    private List<CommonCredential> credentials;
     private boolean requiresMerging;
 
     /**
@@ -51,38 +50,47 @@ public final class CredentialsDto extends BaseDto {
     }
 
     /**
-     * Creates a new instance for a list of credentials.
+     * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      * <p>
      * This constructor also makes sure that the identifiers of the credentials'
      * secrets are unique within their credentials object.
      * <p>
-     * These properties are supposed to be asserted before persisting this DTO.
+     * These properties are supposed to be asserted before persisting
      *
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
      * @param credentials The list of credentials.
      * @param version The version of the credentials to be sent as request header.
+     *
+     * @return A DTO instance for creating a new entry.
+     *
      * @throws NullPointerException if any of the parameters except credentials is {@code null}
      * @throws org.eclipse.hono.client.ClientErrorException if any of the checks fail.
      */
-    public CredentialsDto(
-            final String tenantId,
-            final String deviceId,
-            final List<CommonCredential> credentials,
-            final String version) {
+    public static CredentialsDto forCreation(final String tenantId, final String deviceId, final List<CommonCredential> credentials, final String version) {
+        final CredentialsDto credentialsDto = BaseDto.forCreation(CredentialsDto::new, credentials, version);
+        credentialsDto.setTenantId(tenantId);
+        credentialsDto.setDeviceId(deviceId);
 
-        setTenantId(tenantId);
-        setDeviceId(deviceId);
+        return credentialsDto;
+    }
 
-        //Validate the given credentials, secrets and generate secret ids if not available.
-        Optional.ofNullable(credentials)
-                .ifPresent(creds -> {
-                    assertSecretIdUniqueness(creds);
-                });
-        setCredentials(credentials);
+    /**
+     * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
+     *
+     * @param tenantId The id of the tenant.
+     * @param deviceId The id of the device.
+     * @param credentials The data of the DTO.
+     * @param version The version of the DTO
+     *
+     * @return A DTO instance for updating an entry.
+     */
+    public static CredentialsDto forUpdate(final String tenantId, final String deviceId, final List<CommonCredential> credentials, final String version) {
+        final CredentialsDto credentialsDto = BaseDto.forUpdate(CredentialsDto::new, credentials, version);
+        credentialsDto.setTenantId(tenantId);
+        credentialsDto.setDeviceId(deviceId);
 
-        setVersion(version);
-        setUpdatedOn(Instant.now());
+        return credentialsDto;
     }
 
     @JsonIgnore
@@ -123,7 +131,7 @@ public final class CredentialsDto extends BaseDto {
      * @param tenantId The tenant's identifier.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    public void setTenantId(final String tenantId) {
+    private void setTenantId(final String tenantId) {
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
@@ -142,7 +150,7 @@ public final class CredentialsDto extends BaseDto {
      * @param deviceId The identifier of the device.
      * @throws NullPointerException if the deviceId is {@code null}.
      */
-    public void setDeviceId(final String deviceId) {
+    private void setDeviceId(final String deviceId) {
         this.deviceId = Objects.requireNonNull(deviceId);
     }
 
@@ -152,16 +160,18 @@ public final class CredentialsDto extends BaseDto {
      * @return The list of credentials.
      */
     public List<CommonCredential> getCredentials() {
-        return credentials;
+        return getData();
     }
 
-    /**
-     * Sets the list of credentials.
-     *
-     * @param credentials A list of credentials.
-     */
-    public void setCredentials(final List<CommonCredential> credentials) {
-        this.credentials = credentials;
+    @Override
+    protected void setData(final List<CommonCredential> data) {
+        //Validate the given credentials, secrets and generate secret ids if not available.
+        Optional.ofNullable(data)
+                .ifPresent(creds -> {
+                    assertSecretIdUniqueness(creds);
+                });
+
+        super.setData(data);
     }
 
     /**
@@ -183,7 +193,7 @@ public final class CredentialsDto extends BaseDto {
      * Assigns a unique ID to each of the credentials' secrets that do not have one already.
      */
     public void createMissingSecretIds() {
-        Optional.ofNullable(credentials)
+        Optional.ofNullable(getData())
             .ifPresent(creds -> creds.stream().forEach(CommonCredential::createMissingSecretIds));
     }
 
@@ -199,10 +209,12 @@ public final class CredentialsDto extends BaseDto {
         Objects.requireNonNull(otherCredentialsDto);
 
         Optional.ofNullable(otherCredentialsDto.getCredentials())
-                .ifPresent(credentialsToMerge -> this.credentials
+                .ifPresent(credentialsToMerge -> this.getData()
                         .forEach(credential -> findCredentialByIdAndType(credential.getAuthId(), credential.getType(),
                                 credentialsToMerge)
                                         .ifPresent(credential::merge)));
+
+        setUpdatedOn(Instant.now());
 
         return this;
     }
@@ -216,5 +228,11 @@ public final class CredentialsDto extends BaseDto {
         return credentials.stream()
                 .filter(credential -> authId.equals(credential.getAuthId()) && authType.equals(credential.getType()))
                 .findFirst();
+    }
+
+    @Override
+    @JsonProperty(value = MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, required = true)
+    public List<CommonCredential> getData() {
+        return super.getData();
     }
 }

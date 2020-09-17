@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -55,7 +56,7 @@ class CredentialsDtoTest {
 
         existingCred.setSecrets(List.of(existingSecret, dup));
 
-        assertThatThrownBy(() -> new CredentialsDto("tenant", "device", List.of(existingCred), "1"))
+        assertThatThrownBy(() -> CredentialsDto.forCreation(CredentialsDto::new, List.of(existingCred), "1"))
             .isInstanceOf(ClientErrorException.class);
     }
 
@@ -64,7 +65,7 @@ class CredentialsDtoTest {
 
         final PskCredential updatedCred = Credentials.createPSKCredential("psk-id", "other-key");
 
-        final CredentialsDto updatedDto = new CredentialsDto("tenant", "device", List.of(updatedCred), "1");
+        final CredentialsDto updatedDto = CredentialsDto.forUpdate(CredentialsDto::new, List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging()).isFalse();
     }
 
@@ -72,14 +73,14 @@ class CredentialsDtoTest {
     void testMergeRejectsUnknownSecretId() {
 
 
-        final CredentialsDto existingDto = new CredentialsDto("tenant", "device", List.of(existingCred), "1");
+        final CredentialsDto existingDto = CredentialsDto.forRead(CredentialsDto::new, List.of(existingCred), Instant.now(), Instant.now(), "1");
 
         final PskSecret updatedSecret = new PskSecret();
         updatedSecret.setId("def");
         updatedSecret.setKey("irrelevant".getBytes(StandardCharsets.UTF_8));
         final PskCredential updatedCred = new PskCredential("psk-id", List.of(existingSecret, updatedSecret));
 
-        final CredentialsDto updatedDto = new CredentialsDto("tenant", "device", List.of(updatedCred), "1");
+        final CredentialsDto updatedDto = CredentialsDto.forUpdate(CredentialsDto::new, List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging());
         assertThatThrownBy(() -> updatedDto.merge(existingDto)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -92,7 +93,7 @@ class CredentialsDtoTest {
     @Test
     void testMergeSucceedsForAdditionalSecretWithNoId() {
 
-        final CredentialsDto existingDto = new CredentialsDto("tenant", "device", List.of(existingCred), "1");
+        final CredentialsDto existingDto = CredentialsDto.forRead(CredentialsDto::new, List.of(existingCred), Instant.now(), Instant.now(), "1");
 
         final PskSecret unchangedSecret = new PskSecret();
         unchangedSecret.setId(existingSecret.getId());
@@ -102,7 +103,7 @@ class CredentialsDtoTest {
 
         final PskCredential updatedCred = new PskCredential("psk-id", List.of(unchangedSecret, newSecret));
 
-        final CredentialsDto updatedDto = new CredentialsDto("tenant", "device", List.of(updatedCred), "1");
+        final CredentialsDto updatedDto = CredentialsDto.forUpdate(CredentialsDto::new, List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging());
         updatedDto.merge(existingDto);
         final PskSecret secret = updatedDto.getCredentials().get(0).getSecrets()
