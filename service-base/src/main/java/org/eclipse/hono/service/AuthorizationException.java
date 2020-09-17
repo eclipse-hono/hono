@@ -33,7 +33,6 @@ public class AuthorizationException extends ClientErrorException {
      * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
      * @param msg The detail message (may be {@code null}).
      * @param cause The root cause of the failure to establish the connection  (may be {@code null}).
-     * @throws NullPointerException if outcome is {@code null}.
      */
     public AuthorizationException(final String tenant, final String msg, final Throwable cause) {
         super(tenant, HttpURLConnection.HTTP_UNAUTHORIZED, msg, cause);
