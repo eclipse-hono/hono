@@ -43,7 +43,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -188,7 +187,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param ctx The Vert.x test context.
      * @throws InterruptedException if test is interrupted while running.
      */
-    @EnabledIfSystemProperty(named = "vertx-proton.issue57.fixed", matches = "true")
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testAdapterClosesLinkOnMessageExceedingMaxPayloadSize(final VertxTestContext ctx) throws InterruptedException {
