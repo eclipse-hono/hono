@@ -29,7 +29,7 @@ public final class Status {
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     @HonoTimestamp
-    private final Instant creationTime;
+    private Instant creationTime;
 
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
@@ -44,13 +44,34 @@ public final class Status {
      * Create a new Status initialised at the creation time.
      */
     public Status() {
+    }
 
-        this.creationTime = Instant.now();
-        this.lastUpdate = creationTime;
+    /**
+     * Sets the creation time to the given value.
+     *
+     * @param creationTime The creation time.
+     *
+     * @return A reference to this, enabling fluent use.
+     */
+    public Status setCreationTime(final Instant creationTime) {
+        this.creationTime = creationTime;
+        return this;
     }
 
     public Instant getCreationTime() {
         return creationTime;
+    }
+
+    /**
+     * Sets the time of the last update to the given value.
+     *
+     * @param lastUpdate The time of the last update.
+     *
+     * @return A reference to this, enabling fluent use.
+     */
+    public Status setLastUpdate(final Instant lastUpdate) {
+        this.lastUpdate = lastUpdate;
+        return this;
     }
 
     public Instant getLastUpdate() {

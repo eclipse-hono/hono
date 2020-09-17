@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -436,10 +437,10 @@ public interface RegistrationServiceTests {
     default void testReadDeviceReturnsCopyOfOriginalData(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
-        final Promise<OperationResult<Device>> getResult = Promise.promise();
+        final Promise<OperationResult<DeviceWithStatus>> getResult = Promise.promise();
 
         createDevice(deviceId, new Device())
-                .compose(r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .compose(r -> getDeviceManagementService().<DeviceWithStatus>readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
                 .map(result -> {
                     getResult.complete(result);
                     return result;
@@ -722,12 +723,12 @@ public interface RegistrationServiceTests {
      *         Otherwise the future must fail.
      */
     default Future<?> assertDevice(final String tenant, final String deviceId, final Optional<String> gatewayId,
-            final Handler<OperationResult<Device>> managementAssertions,
+            final Handler<OperationResult<DeviceWithStatus>> managementAssertions,
             final Handler<RegistrationResult> adapterAssertions) {
 
         // read management data
 
-        final Future<OperationResult<Device>> f1 = getDeviceManagementService()
+        final Future<OperationResult<DeviceWithStatus>> f1 = getDeviceManagementService()
                 .readDevice(tenant, deviceId, NoopSpan.INSTANCE);
 
         // read adapter data

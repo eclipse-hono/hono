@@ -21,6 +21,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CommonSecret;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -31,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A DTO (Data Transfer Object) class to store credentials information in mongodb.
  */
-public final class CredentialsDto extends BaseDto {
+public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
@@ -72,6 +73,8 @@ public final class CredentialsDto extends BaseDto {
             final String deviceId,
             final List<CommonCredential> credentials,
             final String version) {
+
+        super(credentials);
 
         setTenantId(tenantId);
         setDeviceId(deviceId);
@@ -132,7 +135,7 @@ public final class CredentialsDto extends BaseDto {
      * @return The list of credentials.
      */
     public List<CommonCredential> getCredentials() {
-        return credentials;
+        return getData();
     }
 
     /**
@@ -141,7 +144,7 @@ public final class CredentialsDto extends BaseDto {
      * @param credentials A list of credentials.
      */
     public void setCredentials(final List<CommonCredential> credentials) {
-        this.credentials = credentials;
+        setData(credentials);
     }
 
     /**
@@ -170,10 +173,12 @@ public final class CredentialsDto extends BaseDto {
         Objects.requireNonNull(otherCredentialsDto);
 
         Optional.ofNullable(otherCredentialsDto.getCredentials())
-                .ifPresent(credentialsToMerge -> this.credentials
+                .ifPresent(credentialsToMerge -> this.getData()
                         .forEach(credential -> findCredentialByIdAndType(credential.getAuthId(), credential.getType(),
                                 credentialsToMerge)
                                         .ifPresent(credential::merge)));
+
+        setLastUpdate(Instant.now());
 
         return this;
     }
@@ -226,5 +231,11 @@ public final class CredentialsDto extends BaseDto {
                             "secret IDs must be unique within each credentials object");
                 }
             });
+    }
+
+    @Override
+    @JsonProperty(value = MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, required = true)
+    public List<CommonCredential> getData() {
+        return super.getData();
     }
 }

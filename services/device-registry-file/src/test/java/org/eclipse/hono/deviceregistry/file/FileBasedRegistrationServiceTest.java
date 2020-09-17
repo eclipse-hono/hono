@@ -14,6 +14,7 @@ package org.eclipse.hono.deviceregistry.file;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +40,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
 import org.junit.jupiter.api.Assertions;
@@ -254,6 +257,9 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
+                            final Status status = r.getPayload().getStatus();
+                            assertEquals(status.getCreationTime(), Instant.parse("2020-09-16T12:33:43.000000Z"));
+                            assertEquals(status.getLastUpdate(), Instant.parse("2020-09-16T12:33:53.000000Z"));
                         },
                         r -> {
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
@@ -263,6 +269,10 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
+                            final Status status = r.getPayload().getStatus();
+                            assertNull(status.getCreationTime());
+                            assertNull(status.getLastUpdate());
+                            assertNull(status.getLastUser());
                         },
                         r -> {
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());

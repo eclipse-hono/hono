@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +41,7 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
@@ -155,7 +157,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
+    public Future<OperationResult<DeviceWithStatus>> readDevice(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -266,6 +268,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         final Promise<String> addDevicePromise = Promise.promise();
 
+        device.setCreationTime(Instant.now());
         mongoClient.insert(config.getCollectionName(), JsonObject.mapFrom(device), addDevicePromise);
 
         return addDevicePromise.future()
@@ -321,13 +324,13 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                 findDevice(tenantId, deviceId))));
     }
 
-    private Future<OperationResult<Device>> processReadDevice(final String tenantId, final String deviceId) {
+    private Future<OperationResult<DeviceWithStatus>> processReadDevice(final String tenantId, final String deviceId) {
 
         return findDevice(tenantId, deviceId)
                 .compose(deviceDto -> Future.succeededFuture(
                         OperationResult.ok(
                                 HttpURLConnection.HTTP_OK,
-                                deviceDto.getDevice(),
+                                deviceDto.getDeviceWithStatus(),
                                 Optional.ofNullable(
                                         DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                                 Optional.ofNullable(deviceDto.getVersion()))));
@@ -408,7 +411,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                         .filter(JsonObject.class::isInstance)
                         .map(JsonObject.class::cast)
                         .map(json -> json.mapTo(DeviceDto.class))
-                        .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getDevice()))
+                        .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getData()))
                         .collect(Collectors.toList()))
                 .orElse(new ArrayList<>());
     }
@@ -470,8 +473,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
+        final DeviceDto deviceDto = new DeviceDto(tenantId, deviceId, device, new Versioned<>(device).getVersion());
+        deviceDto.setLastUpdate(Instant.now());
+
         mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(), updateDeviceQuery,
-                JsonObject.mapFrom(new DeviceDto(tenantId, deviceId, device, new Versioned<>(device).getVersion())),
+                JsonObject.mapFrom(deviceDto),
                 new FindOptions(), new UpdateOptions().setReturningNewDocument(true), updateDevicePromise);
 
         return updateDevicePromise.future()

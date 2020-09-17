@@ -16,7 +16,10 @@ import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceWithStatus;
+import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,16 +27,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A DTO (Data Transfer Object) class to store device information in mongodb.
  */
-public final class DeviceDto extends BaseDto {
+public final class DeviceDto extends BaseDto<Device> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
     private String deviceId;
-
-    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
-    private Device device;
 
     /**
      * Default constructor for serialisation/deserialization.
@@ -54,9 +54,16 @@ public final class DeviceDto extends BaseDto {
     public DeviceDto(final String tenantId, final String deviceId, final Device device, final String version) {
         setTenantId(tenantId);
         setDeviceId(deviceId);
-        setDevice(device);
+        setData(device);
         setVersion(version);
         setUpdatedOn(Instant.now());
+        setCreationTime(Instant.now());
+    }
+
+    @Override
+    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
+    public Device getData() {
+        return super.getData();
     }
 
     /**
@@ -98,20 +105,16 @@ public final class DeviceDto extends BaseDto {
     }
 
     /**
-     * Gets the device information.
+     * Gets the device information including internal status.
      *
-     * @return The device information or {@code null} if not set.
+     * @return The device information including internal status or {@code null} if not set.
      */
-    public Device getDevice() {
-        return device;
-    }
-
-    /**
-     * Sets the device information.
-     *
-     * @param device The device information.
-     */
-    public void setDevice(final Device device) {
-        this.device = device;
+    public DeviceWithStatus getDeviceWithStatus() {
+        final DeviceWithStatus deviceWithStatus = new DeviceWithStatus(getData());
+        deviceWithStatus.setStatus(new Status()
+                .setCreationTime(getCreationTime())
+                .setLastUpdate(getLastUpdate())
+        );
+        return deviceWithStatus;
     }
 }

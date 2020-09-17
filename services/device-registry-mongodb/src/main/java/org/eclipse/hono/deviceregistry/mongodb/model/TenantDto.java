@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.mongodb.model;
 import java.time.Instant;
 import java.util.Objects;
 
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -24,12 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A versioned and dated wrapper class for {@link Tenant}.
  */
-public final class TenantDto extends BaseDto {
+public final class TenantDto extends BaseDto<Tenant> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
-    @JsonProperty(RegistryManagementConstants.FIELD_TENANT)
-    private Tenant tenant;
 
     /**
      * Default constructor for serialisation/deserialization.
@@ -46,11 +45,14 @@ public final class TenantDto extends BaseDto {
      * @param version The version of tenant to be sent as request header.
      */
     public TenantDto(final String tenantId, final Tenant tenant, final String version) {
+        super(tenant);
+
         setTenantId(tenantId);
         setVersion(version);
         setTenant(tenant);
         setUpdatedOn(Instant.now());
     }
+
 
     /**
      * Gets the tenant id.
@@ -77,7 +79,7 @@ public final class TenantDto extends BaseDto {
      * @return the tenant or {@code null} if none has been set.
      */
     public Tenant getTenant() {
-        return tenant;
+        return getData();
     }
 
     /**
@@ -86,7 +88,7 @@ public final class TenantDto extends BaseDto {
      * @param tenant the tenant.
      */
     public void setTenant(final Tenant tenant) {
-        this.tenant = tenant;
+        setData(tenant);
     }
 
 }
