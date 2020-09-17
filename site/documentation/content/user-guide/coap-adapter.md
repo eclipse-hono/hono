@@ -45,7 +45,7 @@ if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has b
 
 ## CoAP Content Format Codes
 
-CoAP doesn't use a textual identifier for content types. Instead numbers are used, which are maintained by the [IANA](https://www.iana.org/).
+CoAP doesn't use a textual identifier for content types. Instead, numbers are used, which are maintained by the [IANA](https://www.iana.org/).
 The [IANA - CoAP Content Formats](https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#content-formats) page lists all
 (currently) registered codes and the corresponding media types.
 
@@ -86,15 +86,18 @@ The device is authenticated using PSK.
     delivered to any potential consumer (yet). However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
+         * the request body is empty, and the *URI-query* option doesn't contain the `empty` parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
-    connected to Hono.
+  * 5.03 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
+        * There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits).
+        * If the message type is `CON` (*at least once* semantics), the reason may be:
+            * The consumer has indicated that it didn't process the telemetry data.
+            * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require
 devices to authenticate (which is the default).
@@ -171,7 +174,7 @@ send any commands to the device.
     delivered to any potential consumer (yet). However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
+         * the request body is empty, and the *URI-query* option doesn't contain the `empty` parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
@@ -179,8 +182,11 @@ send any commands to the device.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
-    connected to Hono.
+  * 5.03 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
+        * There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits).
+        * If the message type is `CON` (*at least once* semantics), the reason may be:
+            * The consumer has indicated that it didn't process the telemetry data.
+            * The consumer failed to indicate in time whether it has processed the telemetry data.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
 `HONO_COAP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -245,7 +251,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?
     delivered to any potential consumer (yet). However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
+         * the request body is empty, and the *URI-query* option doesn't contain the `empty` parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
@@ -255,8 +261,11 @@ coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
-    connected to Hono.
+  * 5.03 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
+        * There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits).
+        * If the message type is `CON` (*at least once* semantics), the reason may be:
+            * The consumer has indicated that it didn't process the telemetry data.
+            * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter
 directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com)
@@ -329,15 +338,14 @@ The device is authenticated using PSK.
     delivered to any potential consumer (yet). However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
+         * the request body is empty, and the *URI-query* option doesn't contain the `empty` parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
-    connected to Hono.
+  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono, or the consumer didn't process the event.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require
 devices to authenticate (which is the default).
@@ -406,7 +414,7 @@ send any commands to the device.
     delivered to any potential consumer (yet). However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
+         * the request body is empty, and the *URI-query* option doesn't contain the `empty` parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
@@ -414,8 +422,7 @@ send any commands to the device.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
-    connected to Hono.
+  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono, or the consumer didn't process the event.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
 `HONO_COAP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -472,7 +479,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono
     delivered to any potential consumer (yet). However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
+         * the request body is empty, and the *URI-query* option doesn't contain the `empty` parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
@@ -482,8 +489,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
-    connected to Hono.
+  * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono, or the consumer didn't process the event.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter
 directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com)

@@ -30,8 +30,12 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.MessageNotProcessedException;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.MessageUndeliverableException;
+import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -166,7 +170,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
-                final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
+                final ServerErrorException e = new NoConsumerException("no credit available");
                 logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
                         rawMessage.getMessageId(), getMessageAddress(rawMessage));
                 logError(span, e);
@@ -271,9 +275,9 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
                     if (!result.future().isComplete()) {
-                        final ServerErrorException exception = new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE,
-                                "waiting for delivery update timed out after " + connection.getConfig().getSendMessageTimeout() + "ms");
+                        final ServerErrorException exception = new SendMessageTimeoutException(
+                                "waiting for delivery update timed out after "
+                                        + connection.getConfig().getSendMessageTimeout() + "ms");
                         logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
                                 messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
@@ -303,11 +307,14 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                                 ? new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)
                                 : new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription());
                     } else if (Released.class.isInstance(remoteState)) {
-                        e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                        e = new MessageNotProcessedException();
                     } else if (Modified.class.isInstance(remoteState)) {
                         final Modified modified = (Modified) deliveryUpdated.getRemoteState();
-                        e = modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
-                                : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                        if (modified.getUndeliverableHere()) {
+                            e = new MessageUndeliverableException();
+                        } else {
+                            e = new MessageNotProcessedException();
+                        }
                     }
                     result.fail(e);
                 }

@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.client;
 
-import org.assertj.core.api.Assertions;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,11 +30,8 @@ public class ServerErrorExceptionTest {
     public void testCodeAndMessage() {
         final ServerErrorException t = new ServerErrorException(500, "Foo Bar");
 
-        Assertions.assertThat(t)
-                .hasMessage("Foo Bar");
-
-        Assertions.assertThat(t.getErrorCode())
-                .isEqualTo(500);
+        assertThat(t).hasMessage("Foo Bar");
+        assertThat(t.getErrorCode()).isEqualTo(500);
     }
 
     /**
@@ -44,11 +42,8 @@ public class ServerErrorExceptionTest {
     public void testCodeAndNoMessage() {
         final ServerErrorException t = new ServerErrorException(500);
 
-        Assertions.assertThat(t)
-                .hasMessage("Error Code: 500");
-
-        Assertions.assertThat(t.getErrorCode())
-                .isEqualTo(500);
+        assertThat(t).hasMessage("Error Code: 500");
+        assertThat(t.getErrorCode()).isEqualTo(500);
     }
 
     /**
@@ -59,27 +54,38 @@ public class ServerErrorExceptionTest {
     public void testCodeCauseAndNoMessage() {
         final ServerErrorException t = new ServerErrorException(500, new RuntimeException("Bar Foo"));
 
-        Assertions.assertThat(t)
-                .hasMessage("Error Code: 500")
-                .hasCauseInstanceOf(RuntimeException.class);
+        assertThat(t).hasMessage("Error Code: 500");
+        assertThat(t).hasCauseInstanceOf(RuntimeException.class);
 
-        Assertions.assertThat(t.getErrorCode())
-                .isEqualTo(500);
+        assertThat(t.getErrorCode()).isEqualTo(500);
     }
 
     /**
      * Verifies that an exception created for a status code, a message and a
-     * cause contains all given values..
+     * cause contains all given values.
      */
     @Test
     public void testCodeCauseAndMessage() {
         final ServerErrorException t = new ServerErrorException(500, "Foo Bar", new RuntimeException("Bar Foo"));
 
-        Assertions.assertThat(t)
-                .hasMessage("Foo Bar")
-                .hasCauseInstanceOf(RuntimeException.class);
+        assertThat(t).hasMessage("Foo Bar");
+        assertThat(t).hasCauseInstanceOf(RuntimeException.class);
 
-        Assertions.assertThat(t.getErrorCode())
-                .isEqualTo(500);
+        assertThat(t.getErrorCode()).isEqualTo(500);
+    }
+
+    /**
+     * Verifies that an exception created with a client facing error message
+     * contains the localized message string.
+     */
+    @Test
+    public void testClientFacingMessage() {
+        final ServerErrorException t = new ServerErrorException(500, "Foo Bar", new RuntimeException("Bar Foo"));
+        final String messageKey = SendMessageTimeoutException.CLIENT_FACING_MESSAGE_KEY;
+        t.setClientFacingMessageWithKey(messageKey);
+
+        assertThat(t.getClientFacingMessage())
+                .isEqualTo(ServiceInvocationException.getLocalizedMessage(messageKey));
+        assertThat(t.getClientFacingMessage()).isNotEqualTo(messageKey);
     }
 }

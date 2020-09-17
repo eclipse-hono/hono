@@ -21,7 +21,9 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -124,7 +126,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
 
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
-                final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
+                final ServerErrorException e = new NoConsumerException("no credit available");
                 logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
                         rawMessage.getMessageId(), getMessageAddress(rawMessage));
                 logError(span, e);
@@ -171,8 +173,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         final Long timerId = config.getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(config.getSendMessageTimeout(), id -> {
                     if (timeoutReached.compareAndSet(false, true)) {
-                        final ServerErrorException exception = new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE,
+                        final ServerErrorException exception = new SendMessageTimeoutException(
                                 "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
                         logMessageSendingError(
                                 "waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",

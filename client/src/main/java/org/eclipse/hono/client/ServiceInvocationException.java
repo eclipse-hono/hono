@@ -14,7 +14,13 @@
 package org.eclipse.hono.client;
 
 import java.net.HttpURLConnection;
+import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.Optional;
+import java.util.ResourceBundle;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Indicates an unexpected outcome of a (remote) service invocation.
@@ -23,6 +29,14 @@ import java.util.Optional;
 public class ServiceInvocationException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger LOG = LoggerFactory.getLogger(ServiceInvocationException.class);
+
+    private static final ResourceBundle resourceBundle;
+    private static final String BUNDLE_NAME = ServiceInvocationException.class.getName() + "_messages";
+    static {
+        resourceBundle = ResourceBundle.getBundle(BUNDLE_NAME, Locale.getDefault());
+    }
+
     private final int errorCode;
     private final String tenant;
 
@@ -161,5 +175,20 @@ public class ServiceInvocationException extends RuntimeException {
                 return HttpURLConnection.HTTP_INTERNAL_ERROR;
             }
         }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+    }
+
+    /**
+     * Gets the localized error message with the given key.
+     *
+     * @param key The error message key.
+     * @return The error message or the given key if no message was found.
+     */
+    public static String getLocalizedMessage(final String key) {
+        try {
+            return resourceBundle.getString(key);
+        } catch (final MissingResourceException e) {
+            LOG.debug("resource not found: {}", key);
+            return key;
+        }
     }
 }
