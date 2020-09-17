@@ -116,8 +116,8 @@ echo ""
 echo "extracting trust anchor information from tenant CA cert"
 CA_SUBJECT=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -subject -nameopt RFC2253 | sed s/^subject=//)
 PK=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -pubkey | sed /^---/d | sed -z 's/\n//g')
-NOT_BEFORE=$(date --date="$(openssl x509 -in ./default_tenant-cert.pem -noout -startdate -nameopt RFC2253 | sed s/^notBefore=//)" --iso-8601=seconds)
-NOT_AFTER=$(date --date="$(openssl x509 -in ./default_tenant-cert.pem -noout -enddate -nameopt RFC2253 | sed s/^notAfter=//)" --iso-8601=seconds)
+NOT_BEFORE=$(date --date="$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -startdate -nameopt RFC2253 | sed s/^notBefore=//)" --iso-8601=seconds)
+NOT_AFTER=$(date --date="$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -enddate -nameopt RFC2253 | sed s/^notAfter=//)" --iso-8601=seconds)
 echo "trusted-ca.subject-dn=$CA_SUBJECT" > $DIR/trust-anchor.properties
 echo "trusted-ca.public-key=$PK" >> $DIR/trust-anchor.properties
 echo "trusted-ca.algorithm=$KEY_ALG" >> $DIR/trust-anchor.properties
