@@ -28,6 +28,7 @@ public abstract class MapBasedExecutionContext implements ExecutionContext {
 
     private Map<String, Object> data;
     private final Span span;
+    private TenantObject tenantObject;
 
     /**
      * Creates a new MapBasedExecutionContext instance.
@@ -55,6 +56,16 @@ public abstract class MapBasedExecutionContext implements ExecutionContext {
     @Override
     public final void put(final String key, final Object value) {
         getData().put(key, value);
+    }
+
+    @Override
+    public final TenantObject getTenantObject() {
+        return tenantObject;
+    }
+
+    @Override
+    public final void setTenantObject(final TenantObject tenantObject) {
+        this.tenantObject = tenantObject;
     }
 
     /**

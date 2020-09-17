@@ -51,6 +51,20 @@ public interface ExecutionContext {
     void put(String key, Object value);
 
     /**
+     * Gets the tenant associated with the device that sent the message.
+     *
+     * @return The tenant object or {@code null} if not set.
+     */
+    TenantObject getTenantObject();
+
+    /**
+     * Sets the tenant associated with the device that sent the message.
+     *
+     * @param tenantObject The tenant object.
+     */
+    void setTenantObject(TenantObject tenantObject);
+
+    /**
      * Gets the <em>OpenTracing</em> context that is used to
      * track the processing of this context.
      *

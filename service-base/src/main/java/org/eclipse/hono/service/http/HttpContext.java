@@ -25,6 +25,7 @@ import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TelemetryExecutionContext;
+import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -39,6 +40,7 @@ import io.vertx.ext.web.RoutingContext;
 public final class HttpContext implements TelemetryExecutionContext {
 
     private final RoutingContext routingContext;
+    private TenantObject tenantObject;
 
     private HttpContext(final RoutingContext routingContext) {
         this.routingContext = Objects.requireNonNull(routingContext);
@@ -79,6 +81,16 @@ public final class HttpContext implements TelemetryExecutionContext {
     @Override
     public void put(final String key, final Object value) {
         routingContext.put(key, value);
+    }
+
+    @Override
+    public TenantObject getTenantObject() {
+        return tenantObject;
+    }
+
+    @Override
+    public void setTenantObject(final TenantObject tenantObject) {
+        this.tenantObject = tenantObject;
     }
 
     @Override

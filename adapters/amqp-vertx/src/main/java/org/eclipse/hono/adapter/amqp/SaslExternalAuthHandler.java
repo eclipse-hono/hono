@@ -21,6 +21,7 @@ import java.util.Objects;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
+import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
 
@@ -49,7 +50,26 @@ public class SaslExternalAuthHandler extends ExecutionContextAuthHandler<SaslRes
     public SaslExternalAuthHandler(
             final X509Authentication clientAuth,
             final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider) {
-        super(authProvider);
+        this(clientAuth, authProvider, null);
+    }
+
+    /**
+     * Creates a new handler.
+     *
+     * @param clientAuth The service to use for validating the client's certificate path.
+     * @param authProvider The authentication provider to use for verifying
+     *              the device identity.
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
+     * @throws NullPointerException if client auth is {@code null}.
+     */
+    public SaslExternalAuthHandler(
+            final X509Authentication clientAuth,
+            final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider,
+            final PreCredentialsValidationHandler<SaslResponseContext> preCredentialsValidationHandler) {
+        super(authProvider, preCredentialsValidationHandler);
         this.auth = Objects.requireNonNull(clientAuth);
     }
 

@@ -67,7 +67,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * @param credentialsClientFactory The credentials client factory.
      * @param tenantClientFactory The tenant client factory.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if any of the parameters is null {@code null}
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public CredentialsApiAuthProvider(
             final CredentialsClientFactory credentialsClientFactory,
@@ -235,10 +235,11 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
     }
 
     @Override
-    public final void authenticate(
+    public final <S extends ExecutionContext> void authenticate(
             final JsonObject authInfo,
-            final ExecutionContext executionContext,
-            final Handler<AsyncResult<DeviceUser>> resultHandler) {
+            final S executionContext,
+            final Handler<AsyncResult<DeviceUser>> resultHandler,
+            final PreCredentialsValidationHandler<S> preCredentialsValidationHandler) {
 
         Objects.requireNonNull(authInfo);
         Objects.requireNonNull(executionContext);
@@ -248,7 +249,24 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         if (credentials == null) {
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {
-            authenticate(credentials, executionContext, resultHandler);
+            final Future<Void> preValidationResult;
+            if (preCredentialsValidationHandler != null) {
+                preValidationResult = getTenantClient()
+                        .compose(client -> client.get(credentials.getTenantId(), executionContext.getTracingContext()))
+                        .compose(tenantObject -> {
+                            executionContext.setTenantObject(tenantObject);
+                            return preCredentialsValidationHandler.handle(credentials, executionContext);
+                        });
+            } else {
+                preValidationResult = Future.succeededFuture();
+            }
+            preValidationResult.onComplete(ar -> {
+                if (ar.failed()) {
+                    resultHandler.handle(Future.failedFuture(ar.cause()));
+                } else {
+                    authenticate(credentials, executionContext, resultHandler);
+                }
+            });
         }
     }
 

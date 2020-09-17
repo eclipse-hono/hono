@@ -44,6 +44,7 @@ import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -139,6 +140,38 @@ public class CredentialsApiAuthProviderTest {
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that the auth provider fails an authentication request if the given
+     * {@link PreCredentialsValidationHandler} returns a failed future.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAuthenticateFailsIfPreCredentialsValidationHandlerFails(final VertxTestContext ctx) {
+
+        final Checkpoint validationHandlerInvoked = ctx.checkpoint();
+        final Checkpoint testSucceeded = ctx.checkpoint();
+
+        final RuntimeException testException = new RuntimeException("test exception");
+
+        // WHEN trying to authenticate with a preCredentialsValidationHandler that fails with a given exception
+        final PreCredentialsValidationHandler<GenericExecutionContext> preCredentialsValidationHandler = (credentials, executionContext) -> {
+            validationHandlerInvoked.flag();
+            ctx.verify(() -> {
+                assertThat(executionContext.getTenantObject()).isNotNull();
+            });
+            return Future.failedFuture(testException);
+        };
+
+        provider.authenticate(new JsonObject(), new GenericExecutionContext(), ctx.failing(t -> {
+            // THEN authentication fails with the same exception
+            ctx.verify(() -> {
+                assertThat(t).isEqualTo(testException);
+            });
+            testSucceeded.flag();
+        }), preCredentialsValidationHandler);
     }
 
     /**

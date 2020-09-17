@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
+import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 
 import io.vertx.core.Future;
@@ -36,7 +37,23 @@ public class SaslPlainAuthHandler extends ExecutionContextAuthHandler<SaslRespon
      *            ({@code auth-id@TENANT}).
      */
     public SaslPlainAuthHandler(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider) {
-        super(authProvider);
+        this(authProvider, null);
+    }
+
+    /**
+     * Creates a new handler for a given auth provider.
+     *
+     * @param authProvider The authentication provider to use for validating device credentials. The given provider
+     *            should support validation of credentials with a username containing the device's tenant
+     *            ({@code auth-id@TENANT}).
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
+     */
+    public SaslPlainAuthHandler(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider,
+            final PreCredentialsValidationHandler<SaslResponseContext> preCredentialsValidationHandler) {
+        super(authProvider, preCredentialsValidationHandler);
     }
 
     /**

@@ -66,5 +66,44 @@ public interface DeviceCredentialsAuthProvider<T extends AbstractDeviceCredentia
      * @param resultHandler The result handler.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void authenticate(JsonObject authInfo, ExecutionContext executionContext, Handler<AsyncResult<DeviceUser>> resultHandler);
+    default void authenticate(
+            final JsonObject authInfo,
+            final ExecutionContext executionContext,
+            final Handler<AsyncResult<DeviceUser>> resultHandler) {
+        authenticate(authInfo, executionContext, resultHandler, null);
+    }
+
+    /**
+     * Authenticates a device.
+     * <p>
+     * The first argument is a JSON object containing information for authenticating the device. What this actually
+     * contains depends on the specific implementation. In the case of a simple username/password based authentication
+     * it is likely to contain a JSON object with the following structure:
+     * <pre>
+     *   {
+     *     "username": "tim",
+     *     "password": "mypassword"
+     *   }
+     * </pre>
+     * For other types of authentication it contain different information - for example a JWT token or OAuth bearer
+     * token.
+     * <p>
+     * If the device is successfully authenticated a {@link DeviceUser} object is passed to the handler in an
+     * {@link io.vertx.core.AsyncResult}.
+     *
+     * @param <S> The ExecutionContext type.
+     * @param authInfo The auth information.
+     * @param executionContext The execution context concerning the request of the device.
+     * @param resultHandler The result handler.
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the given resultHandler.
+     * @throws NullPointerException if any of the parameters except preCredentialsValidationHandler is {@code null}.
+     */
+    <S extends ExecutionContext> void authenticate(
+            JsonObject authInfo,
+            S executionContext,
+            Handler<AsyncResult<DeviceUser>> resultHandler,
+            PreCredentialsValidationHandler<S> preCredentialsValidationHandler);
 }
