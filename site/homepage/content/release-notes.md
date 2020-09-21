@@ -12,6 +12,9 @@ title = "Release Notes"
 
 * The file based as well as the Mongo DB based registry implementations now remove the shared-key from
   PSK credentials returned in the response of the Management API's *get credentials* operation.
+* The Device Registry Management API erroneously declared the *plaintext password* conveyed in the
+  *update credentials* operation's request payload as a Base64 encoded byte array instead of a
+  plain string. This has been fixed.
 
 ### API Changes
 
