@@ -224,6 +224,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     // TENANTS
 
     /**
+     * The default value of the property indicating if a MQTT connection to be closed or not in case of errors.
+     */
+    public static final boolean DEFAULT_CLOSE_MQTT_CONNECTION_ON_ERROR = true;
+    /**
      * The default message size is set to 0, which implies no minimum size is defined.
      */
     public static final int DEFAULT_MINIMUM_MESSAGE_SIZE = 0;
@@ -241,6 +245,11 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * all devices to authenticate.
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
+    /**
+     * The name of the property that contains a boolean indicating if a MQTT connection 
+     * to be closed or not in case of errors.
+     */
+    public static final String FIELD_CLOSE_MQTT_CONNECTION_ON_ERROR = "close-mqtt-connection-on-error";
     /**
      * The name of the property that contains the configuration options to limit 
      * the device connection duration of tenants.

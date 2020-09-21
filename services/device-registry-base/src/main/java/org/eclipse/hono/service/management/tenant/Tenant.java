@@ -59,6 +59,9 @@ public class Tenant {
     @JsonInclude(Include.NON_EMPTY)
     private List<Adapter> adapters = new LinkedList<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_CLOSE_MQTT_CONNECTION_ON_ERROR)
+    private Boolean closeMqttConnectionOnError;
+
     @JsonProperty(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE)
     @JsonInclude(Include.NON_DEFAULT)
     private int minimumMessageSize = RegistryManagementConstants.DEFAULT_MINIMUM_MESSAGE_SIZE;
@@ -242,6 +245,33 @@ public class Tenant {
                     String.format("Already an adapter of the type [%s] exists", configuration.getType()));
         }
         adapters.add(configuration);
+        return this;
+    }
+
+    /**
+     * Checks whether the MQTT connection of a device belonging to this tenant should be closed in case of errors.
+     * <p>
+     * The default value of this property is {@code true}.
+     *
+     * @return if MQTT connection to be closed or not in case of errors.
+     */
+    @JsonIgnore
+    public boolean isCloseMqttConnectionOnError() {
+        return Optional.ofNullable(closeMqttConnectionOnError)
+                .orElse(RegistryManagementConstants.DEFAULT_CLOSE_MQTT_CONNECTION_ON_ERROR);
+    }
+
+    /**
+     * Sets whether the MQTT connection of a device belonging to this tenant should be closed in case of errors.
+     * <p>
+     * The default value of this property is {@code true}.
+     *
+     * @param closeMqttConnectionOnError if MQTT connection to be closed or not in case of errors.
+     * @return This instance, to allow chained invocations.
+     */
+    @JsonIgnore
+    public Tenant setCloseMqttConnectionOnError(final boolean closeMqttConnectionOnError) {
+        this.closeMqttConnectionOnError = closeMqttConnectionOnError;
         return this;
     }
 

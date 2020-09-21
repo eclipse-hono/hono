@@ -67,6 +67,12 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
 
     /**
+     * The name of the property that contains a boolean indicating if a MQTT connection 
+     * to be closed or not in case of errors.
+     */
+    public static final String FIELD_CLOSE_MQTT_CONNECTION_ON_ERROR = "close-mqtt-connection-on-error";
+
+    /**
      * The name of the property that contains the configuration options to limit 
      * the device connection duration of tenants.
      */

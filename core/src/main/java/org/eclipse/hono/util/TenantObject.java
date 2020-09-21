@@ -362,6 +362,17 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
+     * Checks whether the MQTT connection of a device belonging to this tenant should be closed in case of errors.
+     * <p>
+     * The default value of this property is {@code true}.
+     *
+     * @return if MQTT connection to be closed or not in case of errors.
+     */
+    public boolean isCloseMqttConnectionOnError() {
+        return getProperty(TenantConstants.FIELD_CLOSE_MQTT_CONNECTION_ON_ERROR, Boolean.class, true);
+    }
+
+    /**
      * Gets the maximum number of seconds that a protocol adapter should wait for a command targeted at a device.
      * <p>
      * The returned value is determined as follows:

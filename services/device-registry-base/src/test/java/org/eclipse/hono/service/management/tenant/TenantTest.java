@@ -249,6 +249,31 @@ public class TenantTest {
     }
 
     /**
+     * Decode tenant with "close-mqtt-connection-on-error=false".
+     */
+    @Test
+    public void testDecodeWithCloseMqttConnectionOnError() {
+        final var tenant = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_CLOSE_MQTT_CONNECTION_ON_ERROR, false)
+                .mapTo(Tenant.class);
+
+        assertNotNull(tenant);
+        assertEquals(false, tenant.isCloseMqttConnectionOnError());
+    }
+
+    /**
+     * Decode Tenant without setting "close-mqtt-connection-on-error".
+     */
+    @Test
+    public void testDecodeWithoutCloseMqttConnectionOnError() {
+        final var tenant = new JsonObject().mapTo(Tenant.class);
+
+        assertNotNull(tenant);
+        assertEquals(RegistryManagementConstants.DEFAULT_CLOSE_MQTT_CONNECTION_ON_ERROR,
+                tenant.isCloseMqttConnectionOnError());
+    }
+
+    /**
      * Decode tenant with "minimum-message-size=4096".
      */
     @Test
@@ -405,6 +430,19 @@ public class TenantTest {
         assertNotNull(json);
         assertFalse(json.getBoolean(RegistryManagementConstants.FIELD_ENABLED));
         assertNull(json.getJsonObject(RegistryManagementConstants.FIELD_EXT));
+    }
+
+    /**
+     * Encode tenant with "close-mqtt-connection-on-error=false".
+     */
+    @Test
+    public void testEncodeCloseMqttConnectionOnError() {
+        final var tenant = new Tenant();
+        tenant.setCloseMqttConnectionOnError(false);
+        final JsonObject json = JsonObject.mapFrom(tenant);
+
+        assertNotNull(json);
+        assertEquals(false, json.getBoolean(RegistryManagementConstants.FIELD_CLOSE_MQTT_CONNECTION_ON_ERROR));
     }
 
     /**

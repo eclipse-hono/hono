@@ -882,13 +882,30 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             onMessageUndeliverable(context);
                         }
                         TracingHelper.logError(span, processing.cause());
-                        if (context.deviceEndpoint().isConnected()) {
-                            span.log("closing connection to device");
-                            context.deviceEndpoint().close();
-                        }
+                        handleMqttConnectionOnError(context, span);
                     }
                     span.finish();
                 });
+    }
+
+    private void handleMqttConnectionOnError(final MqttContext context, final Span span) {
+        final String tenantId = context.tenant();
+        final MqttEndpoint endpoint = context.deviceEndpoint();
+
+        if (endpoint.isConnected()) {
+            if (Objects.isNull(tenantId)) {
+                span.log("closing connection to device");
+                endpoint.close();
+            } else {
+                getTenantConfiguration(tenantId, span.context())
+                        .onComplete(outcome -> {
+                            if (outcome.failed() || outcome.result().isCloseMqttConnectionOnError()) {
+                                span.log("closing connection to device");
+                                endpoint.close();
+                            }
+                        });
+            }
+        }
     }
 
     private Future<Void> checkTopic(final MqttContext context) {
