@@ -35,6 +35,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
@@ -121,6 +122,8 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                 headers.add(property.getKey(), Json.encode(value));
             }
         });
+        headers.add(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, ctx.message().topicName());
+        headers.add(HttpHeaders.CONTENT_TYPE.toString(), ctx.contentType());
 
         final Promise<MappedMessage> result = Promise.promise();
 

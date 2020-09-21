@@ -48,6 +48,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
@@ -100,7 +101,7 @@ public class HttpBasedMessageMappingTest {
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject())
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -126,7 +127,7 @@ public class HttpBasedMessageMappingTest {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -169,7 +170,7 @@ public class HttpBasedMessageMappingTest {
         when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
 
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
 
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -182,13 +183,21 @@ public class HttpBasedMessageMappingTest {
                 ctx.completeNow();
             }));
 
-        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> captor = ArgumentCaptor.forClass(Handler.class);
-        verify(httpRequest).sendBuffer(any(Buffer.class), captor.capture());
-        captor.getValue().handle(Future.succeededFuture(httpResponse));
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(httpRequest).sendBuffer(any(Buffer.class), handleCaptor.capture());
+        handleCaptor.getValue().handle(Future.succeededFuture(httpResponse));
+
+        final ArgumentCaptor<MultiMap> headersCaptor = ArgumentCaptor.forClass(MultiMap.class);
+        verify(httpRequest).putHeaders(headersCaptor.capture());
+        final MultiMap addedHeaders = headersCaptor.getValue();
+        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals("telemetry"));
+        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text"));
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
+    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice, final String contentType) {
+        final MqttContext mqttContext = MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
+        mqttContext.setContentType(contentType);
+        return mqttContext;
     }
 
     private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {
