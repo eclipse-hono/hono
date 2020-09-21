@@ -6,11 +6,6 @@ weight = 225
 The CoAP protocol adapter exposes [CoAP](https://tools.ietf.org/html/rfc7252) based endpoints for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
-{{% note title="Experimental" %}}
-The CoAP adapter has not yet reached the level of maturity of the other standard adapters. In particular, the resources implemented by the adapter might
-still be subject to change.
-{{% /note %}}
-
 ## Device Authentication
 
 The CoAP adapter by default requires clients (devices or gateway components) to authenticate during connection establishment.

@@ -4,6 +4,10 @@ title = "Release Notes"
 
 ## 1.5.0 (not yet released)
 
+### New Features
+
+* The CoAP adapter has been promoted from *experimental* to *fully supported*.
+
 ### API Changes
 
 * The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.
