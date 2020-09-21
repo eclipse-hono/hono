@@ -789,9 +789,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 device.getDeviceId(),
                 null,
                 context)
-                .recover(t -> Future.failedFuture(new RegistrationAssertionException(
-                        device.getTenantId(),
-                        "failed to assert registration status of " + device, t)))
                 .mapEmpty();
     }
 
@@ -1072,7 +1069,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *            acting on behalf of the device.
      * @param context The currently active OpenTracing span that is used to
      *                trace the retrieval of the assertion.
-     * @return The assertion.
+     * @return A future indicating the outcome of the assertion.
+     *         The future will be succeeded if the device is registered and enabled. 
+     *         If the device is not registered or disabled then the future will be 
+     *         failed with a {@link RegistrationAssertionException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
     protected final Future<JsonObject> getRegistrationAssertion(
@@ -1094,10 +1094,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     // so don't wait for the outcome here
                     updateLastGateway(registrationAssertion, tenantId, deviceId, authenticatedDevice, context)
                             .otherwise(t -> {
-                                log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
+                                log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId,
+                                        deviceId, t);
                                 return null;
                             });
                     return Future.succeededFuture(registrationAssertion);
+                })
+                .recover(error -> {
+                    if (error instanceof ServiceInvocationException) {
+                        final int errorCode = ((ServiceInvocationException) error).getErrorCode();
+                        if (errorCode == HttpURLConnection.HTTP_NOT_FOUND
+                                || errorCode == HttpURLConnection.HTTP_FORBIDDEN) {
+                            return Future.failedFuture(new RegistrationAssertionException(tenantId, errorCode, error));
+                        }
+                    }
+                    return Future.failedFuture(error);
                 });
     }
 
@@ -1671,7 +1682,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public static ConnectionAttemptOutcome getOutcome(final Throwable e) {
 
-        if (e instanceof AdapterDisabledException) {
+        if (e instanceof RegistrationAssertionException) {
+            return ConnectionAttemptOutcome.REGISTRATION_ASSERTION_FAILURE;
+        } else if (e instanceof AdapterDisabledException) {
             return ConnectionAttemptOutcome.ADAPTER_DISABLED;
         } else if (e instanceof AuthorizationException) {
             if (e instanceof AdapterConnectionsExceededException) {
@@ -1682,9 +1695,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             }
             if (e instanceof DataVolumeExceededException) {
                 return ConnectionAttemptOutcome.DATA_VOLUME_EXCEEDED;
-            }
-            if (e instanceof RegistrationAssertionException) {
-                return ConnectionAttemptOutcome.REGISTRATION_ASSERTION_FAILURE;
             }
             if (e instanceof TenantConnectionsExceededException) {
                 return ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED;

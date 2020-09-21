@@ -14,33 +14,24 @@
 
 package org.eclipse.hono.service;
 
+import org.eclipse.hono.client.ClientErrorException;
+
 /**
- * An exception indicating that a device's attempt to establish a connection
- * with a protocol adapter has failed because the device is either unknown
+ * An exception indicating that the device is either unknown
  * or disabled.
  */
-public class RegistrationAssertionException extends AuthorizationException {
+public class RegistrationAssertionException extends ClientErrorException {
 
     private static final long serialVersionUID = 1L;
 
     /**
-     * Creates a new exception for tenant and a detail message.
+     * Creates a new exception for a tenant, an error code and a root cause.
      *
      * @param tenant The tenant that the device belongs to or {@code null} if unknown.
-     * @param msg The detail message.
-     */
-    public RegistrationAssertionException(final String tenant, final String msg) {
-        this(tenant, msg, null);
-    }
-
-    /**
-     * Creates a new exception for a tenant, a detail message and a root cause.
-     *
-     * @param tenant The tenant that the device belongs to or {@code null} if unknown.
-     * @param msg The detail message.
+     * @param errorCode The code representing the erroneous outcome.
      * @param cause The root cause.
      */
-    public RegistrationAssertionException(final String tenant, final String msg, final Throwable cause) {
-        super(tenant, msg, cause);
+    public RegistrationAssertionException(final String tenant, final int errorCode, final Throwable cause) {
+        super(tenant, errorCode, cause);
     }
 }

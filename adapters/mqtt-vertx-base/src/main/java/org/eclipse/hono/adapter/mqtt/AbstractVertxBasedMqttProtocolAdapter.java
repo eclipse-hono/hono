@@ -40,6 +40,7 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
 import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.AuthorizationException;
+import org.eclipse.hono.service.RegistrationAssertionException;
 import org.eclipse.hono.service.TenantNotRegisteredException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
@@ -905,8 +906,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             // are due to the following reasons:
                             // - The tenant is not registered.
                             // - The tenant or adapter is disabled
+                            // - The device is disabled or not registered.
                             if (tenantObject.isCloseMqttConnectionOnError()
                                     || cause instanceof AdapterDisabledException
+                                    || cause instanceof RegistrationAssertionException
                                     || cause instanceof TenantNotRegisteredException) {
                                 span.log("closing connection to device");
                                 endpoint.close();
@@ -1642,7 +1645,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         if (e instanceof MqttConnectionException) {
             return ((MqttConnectionException) e).code();
-        } else if (e instanceof AdapterDisabledException) {
+        } else if (e instanceof AdapterDisabledException || e instanceof RegistrationAssertionException) {
             return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
         } else if (e instanceof AuthorizationException) {
             if (e instanceof AdapterConnectionsExceededException) {
