@@ -1099,7 +1099,7 @@ components:
                  "pwd-hash":
                     type: string
                     format: byte
-                    description: The password hash created using the `hash-function` and optional `salt` values.
+                    description: The Base64 encoding of the password hash created using the `hash-function` and (optional) `salt`.
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
@@ -1112,7 +1112,6 @@ components:
                                  In this case the id field must be set instead.
                  "pwd-plain":
                     type: string
-                    format: byte
                     description: The clear text value of the password to be hashed by the device registry.
                                  If this property is specified, the device registry will ignore user-provided hash properties (`hash-function`, `pwd-hash` and `salt`).
                                  This property must never be stored by the device registry.
