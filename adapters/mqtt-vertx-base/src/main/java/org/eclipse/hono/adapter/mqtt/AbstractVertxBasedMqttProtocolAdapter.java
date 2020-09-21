@@ -532,11 +532,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
                             .compose(tenantObj -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObj).recover(t -> Future.failedFuture(
-                                            new AdapterDisabledException(
-                                                    authenticatedDevice.getTenantId(),
-                                                    "adapter is disabled for tenant",
-                                                    t))),
+                                    isAdapterEnabled(tenantObj),
                                     checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(authenticatedDevice))
@@ -908,7 +904,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             // Also close the connection, even though the above flag is set to false provided the errors
                             // are due to the following reasons:
                             // - The tenant is not registered.
+                            // - The tenant or adapter is disabled
                             if (tenantObject.isCloseMqttConnectionOnError()
+                                    || cause instanceof AdapterDisabledException
                                     || cause instanceof TenantNotRegisteredException) {
                                 span.log("closing connection to device");
                                 endpoint.close();
@@ -1644,6 +1642,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         if (e instanceof MqttConnectionException) {
             return ((MqttConnectionException) e).code();
+        } else if (e instanceof AdapterDisabledException) {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
         } else if (e instanceof AuthorizationException) {
             if (e instanceof AdapterConnectionsExceededException) {
                 return MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;

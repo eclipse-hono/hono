@@ -53,7 +53,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
-import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
@@ -435,11 +434,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         checkDeviceRegistration(authenticatedDevice, span.context()),
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
                                 .compose(tenantConfig -> CompositeFuture.all(
-                                        isAdapterEnabled(tenantConfig).recover(t -> Future.failedFuture(
-                                                new AdapterDisabledException(
-                                                        authenticatedDevice.getTenantId(),
-                                                        "adapter is disabled for tenant",
-                                                        t))),
+                                        isAdapterEnabled(tenantConfig),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                     .map(ok -> {
                         log.debug("{} is registered and enabled", authenticatedDevice);

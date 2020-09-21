@@ -577,7 +577,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param tenantConfig The tenant to check for.
      * @return A succeeded future if this adapter is enabled for the tenant.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}
+     *         Otherwise the future will be failed with a {@link AdapterDisabledException}
      *         containing the 403 Forbidden status code.
      * @throws NullPointerException if tenant config is {@code null}.
      */
@@ -592,8 +592,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else {
             log.debug("protocol adapter [{}] is disabled for tenant [{}]",
                     getTypeName(), tenantConfig.getTenantId());
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                    "adapter disabled for tenant"));
+            return Future.failedFuture(
+                    new AdapterDisabledException(tenantConfig.getTenantId(), HttpURLConnection.HTTP_FORBIDDEN,
+                            "adapter disabled for tenant"));
         }
     }
 
@@ -1670,10 +1671,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public static ConnectionAttemptOutcome getOutcome(final Throwable e) {
 
-        if (e instanceof AuthorizationException) {
-            if (e instanceof AdapterDisabledException) {
-                return ConnectionAttemptOutcome.ADAPTER_DISABLED;
-            }
+        if (e instanceof AdapterDisabledException) {
+            return ConnectionAttemptOutcome.ADAPTER_DISABLED;
+        } else if (e instanceof AuthorizationException) {
             if (e instanceof AdapterConnectionsExceededException) {
                 return ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED;
             }
