@@ -40,6 +40,7 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
 import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.AuthorizationException;
+import org.eclipse.hono.service.TenantNotRegisteredException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.auth.device.ChainAuthHandler;
@@ -882,13 +883,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             onMessageUndeliverable(context);
                         }
                         TracingHelper.logError(span, processing.cause());
-                        handleMqttConnectionOnError(context, span);
+                        handleMqttConnectionOnError(context, processing.cause(), span);
                     }
                     span.finish();
                 });
     }
 
-    private void handleMqttConnectionOnError(final MqttContext context, final Span span) {
+    private void handleMqttConnectionOnError(
+            final MqttContext context,
+            final Throwable cause,
+            final Span span) {
         final String tenantId = context.tenant();
         final MqttEndpoint endpoint = context.deviceEndpoint();
 
@@ -898,8 +902,20 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 endpoint.close();
             } else {
                 getTenantConfiguration(tenantId, span.context())
-                        .onComplete(outcome -> {
-                            if (outcome.failed() || outcome.result().isCloseMqttConnectionOnError()) {
+                        .onSuccess(tenantObject -> {
+                            // Close the MQTT connection, if the flag indicating that the connection should be closed
+                            // on occurrence of error is set to true.
+                            // Also close the connection, even though the above flag is set to false provided the errors
+                            // are due to the following reasons:
+                            // - The tenant is not registered.
+                            if (tenantObject.isCloseMqttConnectionOnError()
+                                    || cause instanceof TenantNotRegisteredException) {
+                                span.log("closing connection to device");
+                                endpoint.close();
+                            }
+                        })
+                        .onFailure(error -> {
+                            if (error instanceof TenantNotRegisteredException) {
                                 span.log("closing connection to device");
                                 endpoint.close();
                             }

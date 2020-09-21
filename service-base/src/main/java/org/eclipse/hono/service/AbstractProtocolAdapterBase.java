@@ -1184,7 +1184,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<TenantObject> getTenantConfiguration(final String tenantId, final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
-        return getTenantClient().compose(client -> client.get(tenantId, context));
+        return getTenantClient().compose(client -> client.get(tenantId, context))
+                .recover(error -> {
+                    if (error instanceof ServiceInvocationException) {
+                        final int errorCode = ((ServiceInvocationException) error).getErrorCode();
+                        if (errorCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                            return Future.failedFuture(new TenantNotRegisteredException(tenantId, errorCode, error));
+                        }
+                    }
+                    return Future.failedFuture(error);
+                });
     }
 
     /**
