@@ -12,6 +12,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+#    strategy:
+#      matrix:
+#        registry: [file,mongo-db,jdbc]
+
     steps:
     - uses: actions/checkout@v2
     - name: Cache local Maven repository
@@ -25,5 +29,7 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: '11'
-    - name: Build all components incl. running integration tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
+    - name: Build all components incl. running unit tests
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image
+    - name: Run integration tests
+      run: mvn verify -B -e -DCI=$CI -pl :hono-tests -Prun-tests
