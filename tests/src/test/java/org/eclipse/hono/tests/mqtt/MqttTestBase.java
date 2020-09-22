@@ -31,11 +31,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
-import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
@@ -92,16 +90,26 @@ public abstract class MqttTestBase {
     }
 
     /**
-     * Closes the AMQP 1.0 Messaging Network client.
+     * Closes the connection to the AMQP 1.0 Messaging Network.
      *
      * @param ctx The vert.x context.
      */
     @AfterEach
-    public void postTest(final VertxTestContext ctx) {
+    public void closeConnectionToAmqpMessagingNetwork(final VertxTestContext ctx) {
 
-        final Checkpoint done = ctx.checkpoint(2);
+        helper.disconnect().onComplete(r -> ctx.completeNow());
+    }
+
+    /**
+     * Closes the connection to the MQTT adapter.
+     *
+     * @param ctx The vert.x context.
+     */
+    @AfterEach
+    public void closeConnectionToMqttAdapter(final VertxTestContext ctx) {
+
         final Promise<Void> disconnectHandler = Promise.promise();
-        if (context == null) {
+        if (context == null || mqttClient == null || !mqttClient.isConnected()) {
             disconnectHandler.complete();
         } else {
             context.runOnContext(go -> {
@@ -111,9 +119,9 @@ public abstract class MqttTestBase {
         disconnectHandler.future().onComplete(closeAttempt -> {
             LOGGER.info("connection to MQTT adapter closed");
             context = null;
-            done.flag();
+            mqttClient = null;
+            ctx.completeNow();
         });
-        helper.disconnect().onComplete(r -> done.flag());
     }
 
     /**
