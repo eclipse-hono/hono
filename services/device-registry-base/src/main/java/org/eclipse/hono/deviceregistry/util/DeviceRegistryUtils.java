@@ -18,10 +18,13 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
@@ -283,5 +286,37 @@ public final class DeviceRegistryUtils {
                         })
                         .orElse(true));
 
+    }
+
+    /**
+     * Returns a regex expression based on the given filter value which can be used by the device registry 
+     * implementations to support wildcard matching during search operations.
+     * <p>
+     * The below wildcard characters are supported.
+     * <ol>
+     * <li>`*` will match zero or any number of characters.</li>
+     * <li>`?` will match exactly one character.</li>
+     * </ol>
+     * @param filterValue The value corresponding to the field to use for filtering.
+     * @return The regex expression to use for filtering.
+     * @throws NullPointerException if the filterValue is {@code null}
+     */
+    public static String getRegexExpressionForSearchOperation(final String filterValue) {
+        Objects.requireNonNull(filterValue);
+
+        return Collections.list(new StringTokenizer(filterValue, "*?", true))
+                .stream()
+                .map(token -> (String) token)
+                .map(token -> {
+                    if (token.equals("*")) {
+                        return "(.*)";
+                    }
+                    if (token.equals("?")) {
+                        return "(.)";
+                    } else {
+                        return Pattern.quote(token);
+                    }
+                })
+                .collect(Collectors.joining("", "^", "$"));
     }
 }

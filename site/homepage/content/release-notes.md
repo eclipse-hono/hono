@@ -20,6 +20,11 @@ title = "Release Notes"
 
 * The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.
 
+### Fixes & Enhancements
+* The wildcards ( `?` and `*`) are now supported by the search devices operation in the MongoDB based device registry. 
+  Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
+  for details.
+
 ## 1.4.0
 
 ### New Features

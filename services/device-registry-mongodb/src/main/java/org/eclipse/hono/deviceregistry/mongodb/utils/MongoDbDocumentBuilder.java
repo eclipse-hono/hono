@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.util.AuthenticationConstants;
@@ -142,10 +143,18 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withDeviceFilters(final List<Filter> filters) {
 
         filters.forEach(filter -> {
-            // TODO: To implement when filter values contain patterns such as * or %
-            document.put(mapDeviceField(filter.getField()), filter.getValue());
+            if (filter.getValue() instanceof String) {
+                final String value = (String) filter.getValue();
+                if (value.contains("*") || value.contains("?")) {
+                    // if the value contains * and ? then use regex matching
+                    document.put(mapDeviceField(filter.getField()),
+                            new JsonObject().put("$regex",
+                                    DeviceRegistryUtils.getRegexExpressionForSearchOperation(value)));
+                }
+            } else {
+                document.put(mapDeviceField(filter.getField()), filter.getValue());
+            }
         });
-
         return this;
     }
 
