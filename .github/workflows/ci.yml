@@ -19,4 +19,4 @@ jobs:
       with:
         java-version: '11'
     - name: Build all components incl. running unit tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image
