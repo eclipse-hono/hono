@@ -213,6 +213,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     </profile>
     <profile>
       <id>device-registry-mongodb</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>mongodb</value>
+        </property>
+      </activation>
       <properties>
         <deviceregistry.image>hono-service-device-registry-mongodb</deviceregistry.image>
         <hono.mongodb.disabled>false</hono.mongodb.disabled>
@@ -328,20 +334,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <image>
                   <name>${docker.repository}/hono-jaeger-all-in-one-test</name>
                   <alias>jaeger</alias>
-                  <build>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${jaeger.image.name}</from>
-                    <ports>
-                      <port>8088</port><!-- admin-http -->
-                      <port>16686</port><!-- query-http -->
-                      <port>6831/udp</port><!-- agent (compact thrift protocol) -->
-                    </ports>
-                  </build>
                   <run>
                     <skip>${jaeger.disabled}</skip>
                     <ports>
-                      <port>+jaeger.ip:jaeger.health.port:8088</port>
-                      <port>+jaeger.ip:jaeger.query.port:16686</port>
+                      <port>+jaeger.ip:jaeger.health.port:8088</port><!-- admin-http -->
+                      <port>+jaeger.ip:jaeger.query.port:16686</port><!-- query-http -->
+                      <port>+jaeger.ip:jaeger.agent.port:6831/udp</port><!-- agent (compact thrift protocol) -->
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/jaeger.port.properties</portPropertyFile>
                     <network>
