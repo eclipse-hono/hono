@@ -558,6 +558,106 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         }
 
         /**
+         * Verifies that a request to search devices with filters containing the wildcard character '*' 
+         * succeeds and matching devices are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchDevicesWithWildCardToMatchMultipleCharactersSucceeds(final VertxTestContext ctx) {
+            final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
+            final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
+            final Device device1 = new Device().setEnabled(false).setExtensions(Map.of("id", "$id:1"));
+            final Device device2 = new Device().setExtensions(Map.of("id", "$id:2"));
+            final String filterJson1 = getFilterJson("/enabled", true, "eq");
+            final String filterJson2 = getFilterJson("/ext/id", "$id*", "eq");
+
+            CompositeFuture
+                    .all(registry.registerDevice(tenantId, deviceId1, device1),
+                            registry.registerDevice(tenantId, deviceId2, device2))
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchDevicesResult searchDevicesResult = httpResponse
+                                    .bodyAsJson(SearchDevicesResult.class);
+                            assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
+                            assertThat(searchDevicesResult.getResult()).hasSize(1);
+                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search devices with a filter containing the wildcard character '*' fails with a
+         * {@value HttpURLConnection#HTTP_NOT_FOUND} as no matching devices are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchDevicesWithWildCardToMatchMultipleCharactersFails(final VertxTestContext ctx) {
+            final String deviceId = getHelper().getRandomDeviceId(tenantId);
+            final Device device = new Device().setExtensions(Map.of("id", "$id:1"));
+            final String filterJson = getFilterJson("/ext/id", "*id*2", "eq");
+
+            registry.registerDevice(tenantId, deviceId, device)
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search devices with filters containing the wildcard character '?' 
+         * succeeds and matching devices are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchDevicesWithWildCardToMatchExactlyOneCharacterSucceeds(final VertxTestContext ctx) {
+            final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
+            final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
+            final Device device1 = new Device().setEnabled(false).setExtensions(Map.of("id", "$id:1"));
+            final Device device2 = new Device().setExtensions(Map.of("id", "$id:2"));
+            final String filterJson1 = getFilterJson("/enabled", true, "eq");
+            final String filterJson2 = getFilterJson("/ext/id", "$id?2", "eq");
+
+            CompositeFuture
+                    .all(registry.registerDevice(tenantId, deviceId1, device1),
+                            registry.registerDevice(tenantId, deviceId2, device2))
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchDevicesResult searchDevicesResult = httpResponse
+                                    .bodyAsJson(SearchDevicesResult.class);
+                            assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
+                            assertThat(searchDevicesResult.getResult()).hasSize(1);
+                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search devices with a filter containing the wildcard character '?' fails with a
+         * {@value HttpURLConnection#HTTP_NOT_FOUND} as no matching devices are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchDevicesWithWildCardToMatchExactlyOneCharacterFails(final VertxTestContext ctx) {
+            final String deviceId = getHelper().getRandomDeviceId(tenantId);
+            final Device device = new Device().setExtensions(Map.of("id", "$id:2"));
+            final String filterJson = getFilterJson("/ext/id", "$id:?2", "eq");
+
+            registry.registerDevice(tenantId, deviceId, device)
+                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
          * Verifies that a request to search devices fails when sortJson is invalid.
          *
          * @param ctx The vert.x test context.

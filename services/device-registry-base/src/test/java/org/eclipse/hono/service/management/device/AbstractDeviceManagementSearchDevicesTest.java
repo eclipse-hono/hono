@@ -232,6 +232,77 @@ public interface AbstractDeviceManagementSearchDevicesTest {
     }
 
     /**
+     * Verifies that a request to search devices with filters containing the wildcard character '*' 
+     * succeeds and matching devices are found.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testSearchDevicesWithWildCardToMatchMultipleCharacters(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 10;
+        final int pageOffset = 0;
+        final Filter filter1 = new Filter("/id", "test*-*");
+        final Filter filter2 = new Filter("/ext/value", "test$1*e");
+        final Sort sortOption = new Sort("/id");
+
+        createDevices(tenantId, Map.of(
+                "testDevice", new Device(),
+                "testDevice-1", new Device().setExtensions(Map.of("value", "test$1Value")),
+                "testDevice-2", new Device().setExtensions(Map.of("value", "test$2Value"))))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
+                                        List.of(sortOption), NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        assertThat(searchResult.getTotal()).isEqualTo(1);
+                                        assertThat(searchResult.getResult()).hasSize(1);
+                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
+     * Verifies that a request to search devices with filters containing the wildcard character '?' 
+     * and matching devices are found.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testSearchDevicesWithCardToMatchSingleCharacter(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 10;
+        final int pageOffset = 0;
+        final Filter filter1 = new Filter("/id", "testDevice-?");
+        final Filter filter2 = new Filter("/ext/value", "test$?Value");
+        final Sort sortOption = new Sort("/id");
+
+        createDevices(tenantId, Map.of(
+                "testDevice-x", new Device().setExtensions(Map.of("value", "test$Value")),
+                "testDevice-1", new Device().setExtensions(Map.of("value", "test$1Value")),
+                "testDevice-2", new Device().setExtensions(Map.of("value", "test$2Value"))))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
+                                        List.of(sortOption), NoopSpan.INSTANCE)
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        assertThat(searchResult.getTotal()).isEqualTo(2);
+                                        assertThat(searchResult.getResult()).hasSize(2);
+                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
+                                        assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice-2");
+                                    });
+                                    ctx.completeNow();
+                                })));
+    }
+
+    /**
      * Creates a set of devices.
      *
      * @param tenantId The tenant identifier.
