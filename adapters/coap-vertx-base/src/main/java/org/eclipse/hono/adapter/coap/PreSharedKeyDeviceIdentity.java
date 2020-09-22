@@ -60,8 +60,8 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
      * @param identity The identity provided by the device using the pre shared key handshake.
      * @param separateRegex The regular expression to split identity for multi tenant.
      * @param span The current open tracing span or {@code null}.
-     * @return The instance of the created object. Will be null if the identity is null, or the identity does not comply
-     *         to the structure defined by the separateRegex.
+     * @return The instance of the created object. Will be {@code null} if the identity is {@code null} or if the
+     *         identity does not comply with the structure defined by the separateRegex.
      */
     public static final PreSharedKeyDeviceIdentity create(final String identity, final String separateRegex,
             final Span span) {
@@ -94,8 +94,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
     /**
      * Gets the identity that the device wants to authenticate as.
      * <p>
-     * This is either the value of the identity provided by the device (single tenant), or the <em>auth ID</em> part
-     * parsed from the identity (multi tenant).
+     * This is the <em>auth ID</em> part parsed from the identity.
      *
      * @return The identity.
      */
@@ -107,8 +106,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
     /**
      * Gets the tenant that the device claims to belong to.
      * <p>
-     * This is either the {@link Constants#DEFAULT_TENANT} (single tenant) or the <em>tenant ID</em> part parsed from
-     * the identity (multi tenant).
+     * This is the <em>tenant ID</em> part parsed from the identity.
      *
      * @return The tenant.
      */
