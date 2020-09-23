@@ -23,6 +23,7 @@ import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Tracer;
@@ -83,20 +84,16 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * @throws NullPointerException if the auth info is {@code null}.
      */
     @Override
-    protected UsernamePasswordCredentials getCredentials(final JsonObject authInfo) {
+    public UsernamePasswordCredentials getCredentials(final JsonObject authInfo) {
 
-        try {
-            final String username = authInfo.getString("username");
-            final String password = authInfo.getString("password");
-            if (username == null || password == null) {
-                return null;
-            } else if (password.isEmpty()) {
-                return tryGetCredentialsEncodedInUsername(username);
-            } else {
-                return UsernamePasswordCredentials.create(username, password);
-            }
-        } catch (final ClassCastException e) {
+        final String username = JsonHelper.getValue(authInfo, "username", String.class, null);
+        final String password = JsonHelper.getValue(authInfo, "password", String.class, null);
+        if (username == null || password == null) {
             return null;
+        } else if (password.isEmpty()) {
+            return tryGetCredentialsEncodedInUsername(username);
+        } else {
+            return UsernamePasswordCredentials.create(username, password);
         }
     }
 

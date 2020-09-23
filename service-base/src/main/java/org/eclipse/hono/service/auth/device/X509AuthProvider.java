@@ -61,7 +61,7 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * @throws NullPointerException if the authentication info is {@code null}.
      */
     @Override
-    protected SubjectDnCredentials getCredentials(final JsonObject authInfo) {
+    public SubjectDnCredentials getCredentials(final JsonObject authInfo) {
 
         Objects.requireNonNull(authInfo);
         try {

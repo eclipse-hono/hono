@@ -14,8 +14,10 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.ExecutionContext;
 import org.slf4j.Logger;
@@ -23,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 
 
 /**
@@ -47,12 +50,21 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
 
     private final DeviceCredentialsAuthProvider<?> authProvider;
 
+    private final PreCredentialsValidationHandler<T> preCredentialsValidationHandler;
+
     /**
      * Creates a new handler for authenticating MQTT clients.
      *
      * @param authProvider The auth provider to use for verifying a client's credentials.
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
      */
-    protected ExecutionContextAuthHandler(final DeviceCredentialsAuthProvider<?> authProvider) {
+    protected ExecutionContextAuthHandler(
+            final DeviceCredentialsAuthProvider<?> authProvider,
+            final PreCredentialsValidationHandler<T> preCredentialsValidationHandler) {
+        this.preCredentialsValidationHandler = preCredentialsValidationHandler;
         this.authProvider = authProvider;
     }
 
@@ -68,21 +80,54 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
 
         return parseCredentials(context)
                 .compose(authInfo -> {
-                    final Promise<DeviceUser> authResult = Promise.promise();
-                    getAuthProvider(context).authenticate(authInfo, context, authResult);
-                    return authResult.future();
+                    final DeviceCredentialsAuthProvider<?> authProvider = getAuthProvider(context);
+                    if (authProvider == null) {
+                        return Future.failedFuture(new IllegalStateException("no auth provider found"));
+                    }
+                    return authenticateDevice(context, authInfo, authProvider);
                 });
+    }
+
+    private  <C extends AbstractDeviceCredentials> Future<DeviceUser> authenticateDevice(
+            final T context,
+            final JsonObject authInfo,
+            final DeviceCredentialsAuthProvider<C> authProvider) {
+
+        // instead of calling "authProvider.authenticate(authInfo, handler)" directly,
+        // we invoke its two main parts here (getCredentials, authenticate(credentials))
+        // in order to invoke the preCredentialsValidationHandler in between and in order to pass on the tracing context
+        final C credentials = authProvider.getCredentials(authInfo);
+        if (credentials == null) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials"));
+        }
+        final Future<Void> preValidationResult = preCredentialsValidationHandler != null
+                ? preCredentialsValidationHandler.handle(credentials, context)
+                : Future.succeededFuture();
+        final Promise<DeviceUser> authResult = Promise.promise();
+        preValidationResult.onComplete(ar -> {
+            if (ar.failed()) {
+                authResult.fail(ar.cause());
+            } else {
+                authProvider.authenticate(credentials, context.getTracingContext(), authResult);
+            }
+        });
+        return authResult.future();
     }
 
     private DeviceCredentialsAuthProvider<?> getAuthProvider(final T ctx) {
 
+        // check whether a compatible provider was put in the context;
+        // the ChainAuthHandler does this so that the AuthProvider of one of its contained AuthHandlers is used
         final Object obj = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
         if (obj instanceof DeviceCredentialsAuthProvider<?>) {
-            log.debug("using auth provider found in context [type: {}]", obj.getClass().getName());
+            log.debug("using auth provider found in context");
             // we're overruling the configured one for this request
             return (DeviceCredentialsAuthProvider<?>) obj;
         } else {
-            // bad type, ignore and return default
+            // no provider in context or bad type
+            if (obj != null) {
+                log.warn("unsupported auth provider found in context [type: {}]", obj.getClass().getName());
+            }
             return authProvider;
         }
     }
