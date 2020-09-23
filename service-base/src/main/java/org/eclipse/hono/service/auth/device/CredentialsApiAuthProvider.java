@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,8 +25,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsObject;
-import org.eclipse.hono.util.ExecutionContext;
-import org.eclipse.hono.util.GenericExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,14 +99,13 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
     @Override
     public final void authenticate(
             final T deviceCredentials,
-            final ExecutionContext executionContext,
+            final SpanContext spanContext,
             final Handler<AsyncResult<DeviceUser>> resultHandler) {
 
         Objects.requireNonNull(deviceCredentials);
-        Objects.requireNonNull(executionContext);
         Objects.requireNonNull(resultHandler);
 
-        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, executionContext.getTracingContext(), "authenticate device", getClass().getSimpleName())
+        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, spanContext, "authenticate device", getClass().getSimpleName())
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceCredentials.getTenantId())
                 .withTag(TracingHelper.TAG_AUTH_ID.getKey(), deviceCredentials.getAuthId())
                 .start();
@@ -206,47 +203,19 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
 
     @Override
     public final void authenticate(final JsonObject authInfo, final Handler<AsyncResult<User>> resultHandler) {
-        final ExecutionContext executionContext = new GenericExecutionContext(
-                TracingHelper.extractSpanContext(tracer, authInfo));
-        authenticate(authInfo, executionContext, s -> {
-            if (s.succeeded()) {
-                resultHandler.handle(Future.succeededFuture(s.result()));
-            } else {
-                resultHandler.handle(Future.failedFuture(s.cause()));
-            }
-        });
-    }
 
-    @Override
-    public final void authenticate(
-            final JsonObject authInfo,
-            final ExecutionContext executionContext,
-            final Handler<AsyncResult<DeviceUser>> resultHandler) {
-
-        Objects.requireNonNull(authInfo);
-        Objects.requireNonNull(executionContext);
-        Objects.requireNonNull(resultHandler);
-
-        final T credentials = getCredentials(authInfo);
+        final T credentials = getCredentials(Objects.requireNonNull(authInfo));
         if (credentials == null) {
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {
-            authenticate(credentials, executionContext, resultHandler);
+            authenticate(credentials, TracingHelper.extractSpanContext(tracer, authInfo), s -> {
+                if (s.succeeded()) {
+                    resultHandler.handle(Future.succeededFuture(s.result()));
+                } else {
+                    resultHandler.handle(Future.failedFuture(s.cause()));
+                }
+            });
         }
     }
-
-    /**
-     * Creates device credentials from authentication information provided by a
-     * device.
-     * <p>
-     * Subclasses need to create a concrete {@code DeviceCredentials} instance based on
-     * the information contained in the JSON object.
-     *
-     * @param authInfo The credentials provided by the device.
-     * @return The device credentials or {@code null} if the auth info does not contain
-     *         the required information.
-     * @throws NullPointerException if auth info is {@code null}.
-     */
-    protected abstract T getCredentials(JsonObject authInfo);
 
 }

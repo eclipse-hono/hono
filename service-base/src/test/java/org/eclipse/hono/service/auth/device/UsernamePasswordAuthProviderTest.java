@@ -34,7 +34,6 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.eclipse.hono.util.GenericExecutionContext;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -101,7 +100,7 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateRequiresVertxContext(final VertxTestContext ctx) {
 
-        provider.authenticate(deviceCredentials, new GenericExecutionContext(), ctx.failing(e -> {
+        provider.authenticate(deviceCredentials, null, ctx.failing(e -> {
             ctx.verify(() -> assertThat(e).isInstanceOf(IllegalStateException.class));
             ctx.completeNow();
         }));
@@ -118,7 +117,7 @@ public class UsernamePasswordAuthProviderTest {
 
         final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, new GenericExecutionContext(), result);
+            provider.authenticate(deviceCredentials, null, result);
         });
         result.future().onComplete(ctx.succeeding(device -> {
             ctx.verify(() -> {
@@ -142,7 +141,7 @@ public class UsernamePasswordAuthProviderTest {
 
         deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd");
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, new GenericExecutionContext(), result);
+            provider.authenticate(deviceCredentials, null, result);
         });
         result.future().onComplete(ctx.failing(e -> {
             ctx.verify(() -> assertThat(((ClientErrorException) e).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
@@ -162,7 +161,7 @@ public class UsernamePasswordAuthProviderTest {
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, null, Instant.now().minusSeconds(120)));
         final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, new GenericExecutionContext(), result);
+            provider.authenticate(deviceCredentials, null, result);
         });
         result.future().onComplete(ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
@@ -183,7 +182,7 @@ public class UsernamePasswordAuthProviderTest {
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, Instant.now().plusSeconds(120), null));
         final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, new GenericExecutionContext(), result);
+            provider.authenticate(deviceCredentials, null, result);
         });
         result.future().onComplete(ctx.failing(t -> {
             // THEN authentication fails with a 401 client error

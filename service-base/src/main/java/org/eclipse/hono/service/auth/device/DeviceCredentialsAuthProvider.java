@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,8 @@
 package org.eclipse.hono.service.auth.device;
 
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.util.ExecutionContext;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
@@ -36,35 +36,24 @@ public interface DeviceCredentialsAuthProvider<T extends AbstractDeviceCredentia
      *  <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
      *
      * @param credentials The credentials provided by the device.
-     * @param executionContext The execution context concerning the request of the device.
+     * @param spanContext The SpanContext (may be null).
      * @param resultHandler The handler to notify about the outcome of the validation. If validation succeeds,
      *                      the result contains an object representing the authenticated device.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void authenticate(T credentials, ExecutionContext executionContext, Handler<AsyncResult<DeviceUser>> resultHandler);
+    void authenticate(T credentials, SpanContext spanContext, Handler<AsyncResult<DeviceUser>> resultHandler);
 
     /**
-     * Authenticates a device.
+     * Creates device credentials from authentication information provided by a
+     * device.
      * <p>
-     * The first argument is a JSON object containing information for authenticating the device. What this actually
-     * contains depends on the specific implementation. In the case of a simple username/password based authentication
-     * it is likely to contain a JSON object with the following structure:
-     * <pre>
-     *   {
-     *     "username": "tim",
-     *     "password": "mypassword"
-     *   }
-     * </pre>
-     * For other types of authentication it contain different information - for example a JWT token or OAuth bearer
-     * token.
-     * <p>
-     * If the device is successfully authenticated a {@link DeviceUser} object is passed to the handler in an
-     * {@link io.vertx.core.AsyncResult}.
+     * Subclasses need to create a concrete {@code DeviceCredentials} instance based on
+     * the information contained in the JSON object.
      *
-     * @param authInfo The auth information.
-     * @param executionContext The execution context concerning the request of the device.
-     * @param resultHandler The result handler.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param authInfo The credentials provided by the device.
+     * @return The device credentials or {@code null} if the auth info does not contain
+     *         the required information.
+     * @throws NullPointerException if auth info is {@code null}.
      */
-    void authenticate(JsonObject authInfo, ExecutionContext executionContext, Handler<AsyncResult<DeviceUser>> resultHandler);
+    T getCredentials(JsonObject authInfo);
 }

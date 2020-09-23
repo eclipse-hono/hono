@@ -40,11 +40,27 @@ public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionConte
      * Creates a new handler with an empty list of chained handlers.
      */
     public ChainAuthHandler() {
-        super(null);
+        this(null);
+    }
+
+    /**
+     * Creates a new handler with an empty list of chained handlers.
+     *
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
+     */
+    public ChainAuthHandler(final PreCredentialsValidationHandler<T> preCredentialsValidationHandler) {
+        super(null, preCredentialsValidationHandler);
     }
 
     /**
      * Appends a handler implementing a specific authentication mechanism.
+     * <p>
+     * The {@link #parseCredentials(ExecutionContext)} method and the auth provider of the given handler
+     * will be used in this ChainAuthHandler. Note that the {@link #authenticateDevice(ExecutionContext)} method of
+     * the given handler won't be invoked.
      *
      * @param handler The handler to append.
      * @return This handler for command chaining.

@@ -20,13 +20,13 @@ import java.util.Objects;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
+import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
-
 
 /**
  * An auth handler for extracting a username and password from an MQTT CONNECT packet.
@@ -40,7 +40,22 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
      * @param authProvider The provider to use for verifying a device's credentials.
      */
     public ConnectPacketAuthHandler(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider) {
-        super(authProvider);
+        this(authProvider, null);
+    }
+
+    /**
+     * Creates a new handler for a Hono client based auth provider.
+     *
+     * @param authProvider The provider to use for verifying a device's credentials.
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
+     */
+    public ConnectPacketAuthHandler(
+            final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> authProvider,
+            final PreCredentialsValidationHandler<MqttContext> preCredentialsValidationHandler) {
+        super(authProvider, preCredentialsValidationHandler);
     }
 
     /**
