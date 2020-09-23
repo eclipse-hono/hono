@@ -8,7 +8,7 @@ on:
     branches: [ github_actions ]
 
 env:
-  registry-name: docker.pkg.github.com
+  registry-name: ghcr.io
 
 jobs:
   build:
@@ -40,9 +40,9 @@ jobs:
       with:
         registry: ${{ env.registry-name }}
         username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ secrets.CR_PAT }}
     - name: Build all components incl. running unit tests
-      run: mvn install -B -e -DcreateJavadoc=true -Ddocker.image.org-name=$GITHUB_REPOSITORY -Ddocker.registry-name=${{ env.registry-name }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,docker-push-image
+      run: mvn install -B -e -DcreateJavadoc=true -Ddocker.registry-name=${{ env.registry-name }} -Ddocker.image.org-name=${{ github.repository_owner }} -Pbuild-docker-image,docker-push-image
 
   integration-test:
     needs: build
@@ -68,6 +68,6 @@ jobs:
       with:
         registry: ${{ env.registry-name }}
         username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ secrets.CR_PAT }}
     - name: Run integration tests
-      run: mvn verify -B -e -DCI=$CI -Ddocker.image.org-name=$GITHUB_REPOSITORY -Ddocker.registry-name=${{ env.registry-name }} -Dhono.deviceregistry.type=${{ matrix.device-registry }} -pl :hono-tests -Prun-tests
+      run: mvn verify -B -e -DCI=$CI -Ddocker.registry-name=${{ env.registry-name }} -Ddocker.image.org-name=${{ github.repository_owner }} -Dhono.deviceregistry.type=${{ matrix.device-registry }} -pl :hono-tests -Prun-tests
