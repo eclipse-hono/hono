@@ -130,12 +130,27 @@ public final class TracingHelper {
      * @param deviceId The device identifier or {@code null} if unknown.
      */
     public static void setDeviceTags(final Span span, final String tenantId, final String deviceId) {
+        setDeviceTags(span, tenantId, deviceId, null);
+    }
+
+    /**
+     * Sets the tags identifying a device.
+     *
+     * @param span The span to set the tags on.
+     * @param tenantId The tenant that the device belongs to or {@code null} if unknown.
+     * @param deviceId The device identifier or {@code null} if unknown.
+     * @param authId The authentication identifier or {@code null} if unknown.
+     */
+    public static void setDeviceTags(final Span span, final String tenantId, final String deviceId, final String authId) {
         if (span != null) {
             if (tenantId != null) {
                 TAG_TENANT_ID.set(span, tenantId);
             }
             if (deviceId != null) {
                 TAG_DEVICE_ID.set(span, deviceId);
+            }
+            if (authId != null) {
+                TAG_AUTH_ID.set(span, authId);
             }
         }
     }

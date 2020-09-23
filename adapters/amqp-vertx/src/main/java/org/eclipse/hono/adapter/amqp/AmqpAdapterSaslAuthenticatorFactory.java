@@ -17,7 +17,6 @@ import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -63,7 +62,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     private final Supplier<Span> spanFactory;
     private final SaslPlainAuthHandler saslPlainAuthHandler;
     private final SaslExternalAuthHandler saslExternalAuthHandler;
-    private final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler;
 
     /**
      * Creates a new SASL authenticator factory for authentication providers.
@@ -74,22 +72,18 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * @param saslPlainAuthHandler The authentication handler to use for authenticating connections that use SASL PLAIN.
      * @param saslExternalAuthHandler The authentication handler to use for authenticating connections that use SASL
      *            EXTERNAL.
-     * @param preAuthenticationHandler An optional handler that will be invoked after the SASL response has been
-     *            received and before credentials get verified. May be {@code null}.
      * @throws NullPointerException if any of the parameters other than the authentication handlers is {@code null}.
      */
     public AmqpAdapterSaslAuthenticatorFactory(
             final AmqpAdapterMetrics metrics,
             final Supplier<Span> spanFactory,
             final SaslPlainAuthHandler saslPlainAuthHandler,
-            final SaslExternalAuthHandler saslExternalAuthHandler,
-            final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler) {
+            final SaslExternalAuthHandler saslExternalAuthHandler) {
 
         this.metrics = Objects.requireNonNull(metrics);
         this.spanFactory = Objects.requireNonNull(spanFactory);
         this.saslPlainAuthHandler = saslPlainAuthHandler;
         this.saslExternalAuthHandler = saslExternalAuthHandler;
-        this.preAuthenticationHandler = preAuthenticationHandler;
     }
     @Override
     public ProtonSaslAuthenticator create() {
@@ -159,7 +153,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             sasl.recv(saslResponse, 0, saslResponse.length);
 
             buildSaslResponseContext(remoteMechanism, saslResponse)
-                .compose(saslResponseContext -> invokePreAuthenticationHandler(saslResponseContext, currentSpan))
                 .compose(saslResponseContext -> verify(saslResponseContext))
                 .onSuccess(deviceUser -> {
                     currentSpan.log("credentials verified successfully");
@@ -179,7 +172,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 .onFailure(t -> {
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();
-                    LOG.debug("SASL handshake failed", t);
+                    LOG.debug("SASL handshake or early stage checks failed", t);
                     final String tenantId = t instanceof ClientErrorException
                             ? ((ClientErrorException) t).getTenant()
                             : null;
@@ -228,13 +221,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 TracingHelper.logError(currentSpan, e);
                 return Future.failedFuture(e);
             }
-        }
-
-        private Future<SaslResponseContext> invokePreAuthenticationHandler(final SaslResponseContext context, final Span currentSpan) {
-            if (preAuthenticationHandler == null) {
-                return Future.succeededFuture(context);
-            }
-            return preAuthenticationHandler.apply(context, currentSpan).map(v -> context);
         }
 
         @Override

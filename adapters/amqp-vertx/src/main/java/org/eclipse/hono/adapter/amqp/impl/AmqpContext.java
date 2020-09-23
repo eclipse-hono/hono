@@ -173,29 +173,6 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
         return timer;
     }
 
-    /**
-     * Gets the value for the <em>sampling.priority</em> span tag to be used for OpenTracing spans created in connection
-     * with this AmqpContext.
-     *
-     * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
-     *         <em>OptionalInt</em> if no priority should be set.
-     */
-    final OptionalInt getTraceSamplingPriority() {
-        return traceSamplingPriority;
-    }
-
-    /**
-     * Sets the value for the <em>sampling.priority</em> span tag to be used for OpenTracing spans created in connection
-     * with this AmqpContext.
-     *
-     * @param traceSamplingPriority The <em>OptionalInt</em> containing the <em>sampling.priority</em> span tag value or
-     *            an empty <em>OptionalInt</em> if no priority should be set.
-     * @throws NullPointerException if traceSamplingPriority is {@code null}.
-     */
-    final void setTraceSamplingPriority(final OptionalInt traceSamplingPriority) {
-        this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
-    }
-
     @Override
     public QoS getRequestedQos() {
         return isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE;
