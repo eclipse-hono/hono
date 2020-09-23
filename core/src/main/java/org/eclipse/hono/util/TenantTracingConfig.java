@@ -95,6 +95,9 @@ public class TenantTracingConfig {
      */
     @JsonIgnore
     public final TracingSamplingMode getSamplingMode(final String authId) {
+        if (authId == null) {
+            return samplingMode;
+        }
         return Optional.ofNullable(samplingModePerAuthId.get(authId))
                 .orElse(samplingMode);
     }

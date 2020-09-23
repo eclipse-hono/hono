@@ -54,6 +54,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
 import org.eclipse.hono.service.AdapterDisabledException;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
@@ -131,7 +132,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     private ProtonSaslAuthenticatorFactory authenticatorFactory;
     private AmqpAdapterMetrics metrics = AmqpAdapterMetrics.NOOP;
-    private AmqpContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider;
 
     // -----------------------------------------< AbstractProtocolAdapterBase >---
     /**
@@ -173,9 +173,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         checkPortConfiguration()
         .compose(success -> {
-            if (tenantObjectWithAuthIdProvider == null) {
-                tenantObjectWithAuthIdProvider = new AmqpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
-            }
             if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
                 authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
                         getMetrics(),
@@ -184,17 +181,50 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
                                 .start(),
-                        new SaslPlainAuthHandler(new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer)),
+                        new SaslPlainAuthHandler(
+                                new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer),
+                                this::handleBeforeCredentialsValidation),
                         new SaslExternalAuthHandler(
                                 new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
-                                new X509AuthProvider(getCredentialsClientFactory(), tracer)),
-                        (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
+                                new X509AuthProvider(getCredentialsClientFactory(), tracer),
+                                this::handleBeforeCredentialsValidation));
             }
             return Future.succeededFuture();
         })
         .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
         .map(ok -> (Void) null)
         .onComplete(startPromise);
+    }
+
+    /**
+     * Handles any operations that should be invoked as part of the authentication process after the credentials got
+     * determined and before they get validated. Can be used to perform checks using the credentials and tenant
+     * information before the potentially expensive credentials validation is done
+     * <p>
+     * The default implementation updates the trace sampling priority in the execution context tracing span.
+     * <p>
+     * Subclasses should override this method in order to perform additional operations after calling this super method.
+     *
+     * @param credentials The credentials.
+     * @param executionContext The execution context, including the TenantObject.
+     * @return A future indicating the outcome of the operation. A failed future will fail the authentication attempt.
+     */
+    protected Future<Void> handleBeforeCredentialsValidation(final DeviceCredentials credentials,
+            final SaslResponseContext executionContext) {
+
+        final String tenantId = credentials.getTenantId();
+        final Span span = executionContext.getTracingSpan();
+        final String authId = credentials.getAuthId();
+
+        return getTenantConfiguration(tenantId, span.context())
+                .compose(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantId, null, authId);
+                    final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper.applyTraceSamplingPriority(
+                            tenantObject, authId, span);
+                    executionContext.getProtonConnection().attachments().set(
+                            AmqpAdapterConstants.KEY_TRACE_SAMPLING_PRIORITY, OptionalInt.class, traceSamplingPriority);
+                    return Future.succeededFuture();
+                });
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -487,17 +517,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * Sets the provider that determines the tenant and auth-id associated with a request.
-     *
-     * @param tenantObjectWithAuthIdProvider the provider.
-     * @throws NullPointerException if tenantObjectWithAuthIdProvider is {@code null}.
-     */
-    public void setTenantObjectWithAuthIdProvider(
-            final AmqpContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider) {
-        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(tenantObjectWithAuthIdProvider);
-    }
-
-    /**
      * This method is called when an AMQP BEGIN frame is received from a remote client. This method sets the incoming
      * capacity in its BEGIN Frame to be communicated to the remote peer
      *
@@ -592,15 +611,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                     final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, msgSpan, authenticatedDevice);
                     ctx.setTimer(metrics.startTimer());
-                    if (authenticatedDevice == null) {
-                        deriveAndSetTenantTraceSamplingPriority(ctx)
-                                .onComplete(ar -> onMessageReceived(ctx)
-                                        .onComplete(r -> msgSpan.finish()));
-                    } else {
-                        ctx.setTraceSamplingPriority(traceSamplingPriority);
-                        onMessageReceived(ctx)
-                                .onComplete(r -> msgSpan.finish());
-                    }
+
+                    final Future<Void> spanPreparationFuture = authenticatedDevice == null
+                            ? applyTraceSamplingPriorityForAddressTenant(ctx.getAddress(), msgSpan)
+                            : Future.succeededFuture();
+
+                    spanPreparationFuture
+                            .compose(ar -> onMessageReceived(ctx)
+                            .onComplete(r -> msgSpan.finish()));
+
                 } catch (final Exception ex) {
                     log.warn("error handling message", ex);
                     ProtonHelper.released(delivery, true);
@@ -620,49 +639,26 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * Derives the tenant from the given context and sets the trace sampling priority configured for that tenant on
-     * the given context.
+     * Applies the trace sampling priority configured for the tenant derived from the given address on the given span.
      * <p>
-     * This is for unauthenticated AMQP connections where the tenant id and the device/auth id get taken from the
-     * message address.
+     * This is for unauthenticated AMQP connections where the tenant id gets taken from the message address.
      *
-     * @param context The execution context.
-     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
-     *         with the identified sampling priority or an empty <em>OptionalInt</em> if no priority was identified.
-     * @throws NullPointerException if context is {@code null}.
+     * @param address The message address (may be {@code null}).
+     * @param span The <em>OpenTracing</em> span to apply the configuration to.
+     * @return A succeeded future indicating the outcome of the operation. A failure to determine the tenant is ignored
+     *         here.
+     * @throws NullPointerException if span is {@code null}.
      */
-    protected Future<OptionalInt> deriveAndSetTenantTraceSamplingPriority(final AmqpContext context) {
-        Objects.requireNonNull(context);
-        return tenantObjectWithAuthIdProvider.get(context, null)
-                .map(tenantObjectWithAuthId -> {
-                    final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
-                            .getTraceSamplingPriority(tenantObjectWithAuthId);
-                    context.setTraceSamplingPriority(traceSamplingPriority);
-                    return traceSamplingPriority;
-                })
-                .recover(t -> Future.succeededFuture(OptionalInt.empty()));
-    }
-
-    /**
-     * Derives the tenant from the given SASL handshake information and applies the trace sampling priority configured
-     * for that tenant to the given span.
-     * <p>
-     * Also stores the identified trace sampling priority in the attachments of the AMQP connection.
-     *
-     * @param context The context with information about the SASL handshake.
-     * @param currentSpan The span to apply the configuration to.
-     * @return A succeeded future indicating that the operation is finished.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected Future<Void> applyTenantTraceSamplingPriority(final SaslResponseContext context, final Span currentSpan) {
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(currentSpan);
-        return tenantObjectWithAuthIdProvider.get(context, currentSpan.context())
-                .map(tenantObjectWithAuthId -> {
-                    final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
-                            .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan);
-                    context.getProtonConnection().attachments().set(AmqpAdapterConstants.KEY_TRACE_SAMPLING_PRIORITY,
-                            OptionalInt.class, traceSamplingPriority);
+    protected Future<Void> applyTraceSamplingPriorityForAddressTenant(final ResourceIdentifier address, final Span span) {
+        Objects.requireNonNull(span);
+        if (address == null || address.getTenantId() == null) {
+            // an invalid address is ignored here
+            return Future.succeededFuture();
+        }
+        return getTenantConfiguration(address.getTenantId(), span.context())
+                .map(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null);
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, null, span);
                     return (Void) null;
                 })
                 .recover(t -> Future.succeededFuture());
@@ -784,9 +780,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (authenticatedDevice != null) {
             TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
         }
-        traceSamplingPriority.ifPresent(prio -> {
-            TracingHelper.setTraceSamplingPriority(span, prio);
-        });
+        traceSamplingPriority.ifPresent(prio -> TracingHelper.setTraceSamplingPriority(span, prio));
         return span;
     }
 
