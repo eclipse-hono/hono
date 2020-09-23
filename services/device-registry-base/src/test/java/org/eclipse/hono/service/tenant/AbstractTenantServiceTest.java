@@ -534,18 +534,15 @@ public interface AbstractTenantServiceTest {
         trustedCa.setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
 
         // GIVEN two tenants, one with a CA configured, the other with no CA
-        final Tenant tenantOne = new Tenant().setEnabled(true);
-        tenantOne.setTrustedCertificateAuthorities(List.of(trustedCa));
-        final Tenant tenantTwo = new Tenant().setEnabled(true);
-
-        addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
-        .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
+        addTenant("tenantOne", new Tenant().setEnabled(true).setTrustedCertificateAuthorities(List.of(trustedCa)))
+        .compose(ok -> addTenant("tenantTwo", new Tenant().setEnabled(true)))
         .compose(ok -> {
             // WHEN updating the second tenant to use the same CA as the first tenant
-            tenantTwo.setTrustedCertificateAuthorities(List.of(trustedCa));
+            final Tenant updatedTenantTwo = new Tenant().setEnabled(true)
+                    .setTrustedCertificateAuthorities(List.of(trustedCa));
             return getTenantManagementService().updateTenant(
                     "tenantTwo",
-                    tenantTwo,
+                    updatedTenantTwo,
                     Optional.empty(),
                     NoopSpan.INSTANCE);
         })
@@ -628,7 +625,13 @@ public interface AbstractTenantServiceTest {
      */
     default Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenant) {
 
-        return getTenantManagementService().createTenant(Optional.ofNullable(tenantId), tenant, NoopSpan.INSTANCE)
+        // map to JSON and back in order to clone the object
+        // this is necessary because the file based registry keeps the
+        // Tenant object by reference
+        final JsonObject tenantSpec = JsonObject.mapFrom(tenant);
+        final Tenant tenantToAdd = tenantSpec.mapTo(Tenant.class);
+
+        return getTenantManagementService().createTenant(Optional.ofNullable(tenantId), tenantToAdd, NoopSpan.INSTANCE)
                 .map(response -> {
                     if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
                         return response;
@@ -636,17 +639,6 @@ public interface AbstractTenantServiceTest {
                         throw StatusCodeMapper.from(response.getStatus(), null);
                     }
                 });
-    }
-
-    /**
-     * Adds a tenant.
-     *
-     * @param tenantId The identifier of the tenant.
-     * @param payload The properties to register for the tenant.
-     * @return A succeeded future if the tenant has been created.
-     */
-    default Future<OperationResult<Id>> addTenant(final String tenantId, final JsonObject payload) {
-        return addTenant(tenantId, payload.mapTo(Tenant.class));
     }
 
     /**
