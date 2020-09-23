@@ -861,6 +861,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 if (failure instanceof ClientErrorException) {
                     commandContext.reject(getErrorCondition(failure));
                 } else {
+                    TracingHelper.logError(commandContext.getTracingSpan(), failure);
                     commandContext.release();
                 }
                 metrics.reportCommand(

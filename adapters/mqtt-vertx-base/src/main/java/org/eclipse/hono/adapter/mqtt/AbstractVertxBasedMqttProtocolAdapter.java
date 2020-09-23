@@ -812,6 +812,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 if (t instanceof ClientErrorException) {
                     commandContext.reject(getErrorCondition(t));
                 } else {
+                    TracingHelper.logError(commandContext.getTracingSpan(), t);
                     commandContext.release();
                 }
                 metrics.reportCommand(
