@@ -41,8 +41,6 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
      */
     public static final String PROPERTY_CLIENT_IDENTIFIER = "client-id";
 
-    static final String AUTH_PROVIDER_CONTEXT_KEY = ExecutionContextAuthHandler.class.getName() + ".provider";
-
     /**
      * A logger that is shared with implementations.
      */
@@ -68,13 +66,18 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
         this.authProvider = authProvider;
     }
 
-    @Override
-    public final DeviceCredentialsAuthProvider<?> getAuthProvider() {
-        return authProvider;
+    /**
+     * Gets the PreCredentialsValidationHandler.
+     *
+     * @return The PreCredentialsValidationHandler or {@code null}.
+     */
+    PreCredentialsValidationHandler<T> getPreCredentialsValidationHandler() {
+        return preCredentialsValidationHandler;
     }
 
+
     @Override
-    public Future<DeviceUser> authenticateDevice(final T context) {
+    public final Future<DeviceUser> authenticateDevice(final T context) {
 
         Objects.requireNonNull(context);
 
@@ -114,21 +117,20 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
         return authResult.future();
     }
 
-    private DeviceCredentialsAuthProvider<?> getAuthProvider(final T ctx) {
-
-        // check whether a compatible provider was put in the context;
-        // the ChainAuthHandler does this so that the AuthProvider of one of its contained AuthHandlers is used
-        final Object obj = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
-        if (obj instanceof DeviceCredentialsAuthProvider<?>) {
-            log.debug("using auth provider found in context");
-            // we're overruling the configured one for this request
-            return (DeviceCredentialsAuthProvider<?>) obj;
-        } else {
-            // no provider in context or bad type
-            if (obj != null) {
-                log.warn("unsupported auth provider found in context [type: {}]", obj.getClass().getName());
-            }
-            return authProvider;
-        }
+    /**
+     * Gets the auth provider to be used with the given execution context.
+     * <p>
+     * This default implementation just returns the auth provider given via the constructor.
+     * <p>
+     * Subclasses may override this method in order to return an auth provider obtained via the context.
+     *
+     * @param context The execution context.
+     * @return The auth handler or {@code null}.
+     * @throws NullPointerException if the context is {@code null}
+     */
+    @Override
+    public DeviceCredentialsAuthProvider<?> getAuthProvider(final T context) {
+        Objects.requireNonNull(context);
+        return authProvider;
     }
 }
