@@ -15,6 +15,8 @@ package org.eclipse.hono.tests.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.CommonSecret;
 import org.eclipse.hono.service.management.credentials.GenericCredential;
 import org.eclipse.hono.service.management.credentials.GenericSecret;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -33,13 +36,11 @@ import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -395,66 +396,65 @@ public class CredentialsManagementIT {
     /**
      * Verifies that the service accepts an update credentials request for existing credentials.
      *
-     * @param context The vert.x test context.
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsSucceeds(final VertxTestContext context) {
+    public void testUpdateCredentialsSucceeds(final VertxTestContext ctx) {
 
-        final PasswordCredential altered = JsonObject
-                .mapFrom(hashedPasswordCredential)
-                .mapTo(PasswordCredential.class);
-        altered.getSecrets().get(0).setComment("test");
-
-        registry.updateCredentials(
-                tenantId,
-                deviceId,
-                List.of(hashedPasswordCredential),
-                HttpURLConnection.HTTP_NO_CONTENT)
-            .compose(responseHeaders -> {
-                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
-                return registry.updateCredentialsWithVersion(
-                        tenantId,
-                        deviceId,
-                        List.of(altered),
-                        resourceVersion.get(),
-                        HttpURLConnection.HTTP_NO_CONTENT);
-            })
-            .compose(responseHeaders -> {
-                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
-                return registry.getCredentials(tenantId, deviceId);
-            })
-            .onComplete(context.succeeding(gr -> {
-                final JsonObject retrievedSecret = gr.toJsonArray().getJsonObject(0).getJsonArray("secrets").getJsonObject(0);
-                context.verify(() -> assertThat(retrievedSecret.getString("comment")).isEqualTo("test"));
-                context.completeNow();
-            }));
-    }
-
-    /**
-     * Verifies that the service accepts an update credentials request for existing credentials.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    @Disabled("Requires support for clear text passwords")
-    public void testUpdateCredentialsSucceedsForClearTextPassword(final VertxTestContext context) {
-
-        final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(authId, "newPassword");
+        final AtomicReference<CommonSecret> originalSecret = new AtomicReference<>();
 
         registry.addCredentials(tenantId, deviceId, List.of(hashedPasswordCredential))
-                .compose(ar -> registry.updateCredentials(tenantId, deviceId, secret))
-                .compose(ur -> registry.getCredentials(tenantId, deviceId))
-                .onComplete(context.succeeding(gr -> {
-                    final CredentialsObject o = extractFirstCredential(gr.toJsonObject())
-                            .mapTo(CredentialsObject.class);
-                    context.verify(() -> {
-                        assertThat(o.getAuthId()).isEqualTo(authId);
-                        assertThat(o.getCandidateSecrets(s -> CredentialsConstants.getPasswordHash(s))
-                                .stream().anyMatch(hash -> ORIG_BCRYPT_PWD.equals(hash)))
-                        .isFalse();
-                    });
-                    context.completeNow();
-                }));
+            .compose(ok -> registry.getCredentials(tenantId, deviceId))
+            .compose(httpResponse -> {
+                // WHEN updating the existing password
+                final JsonArray bodyAsJsonArray = httpResponse.toJsonArray();
+                LOG.debug("received original credentials list: {}", bodyAsJsonArray.encodePrettily());
+                ctx.verify(() -> assertThat(bodyAsJsonArray).hasSize(1));
+                final PasswordCredential existingCredentials = bodyAsJsonArray.getJsonObject(0).mapTo(PasswordCredential.class);
+                ctx.verify(() -> {
+                    assertThat(existingCredentials.getSecrets()).hasSize(1);
+                    final PasswordSecret existingSecret = existingCredentials.getSecrets().get(0);
+                    assertThat(existingSecret.getId()).isNotNull();
+                    originalSecret.set(existingSecret);
+                });
+                final PasswordSecret changedSecret = new PasswordSecret();
+                changedSecret.setId(originalSecret.get().getId());
+                changedSecret.setPasswordPlain("completely-different-password");
+                changedSecret.setComment("updated");
+                // and adding a new one
+                final PasswordSecret newSecret = new PasswordSecret();
+                newSecret.setPasswordPlain("future-password");
+                newSecret.setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS));
+                final PasswordCredential updatedCredentials = new PasswordCredential(existingCredentials.getAuthId());
+                updatedCredentials.setSecrets(List.of(changedSecret, newSecret));
+                return registry.updateCredentials(
+                        tenantId,
+                        deviceId,
+                        List.of(updatedCredentials),
+                        HttpURLConnection.HTTP_NO_CONTENT);
+            })
+            .compose(httpResponse -> {
+                ctx.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse));
+                return registry.getCredentials(tenantId, deviceId);
+            })
+            .onComplete(ctx.succeeding(httpResponse -> {
+                final JsonArray bodyAsJsonArray = httpResponse.toJsonArray();
+                LOG.debug("received updated credentials list: {}", bodyAsJsonArray.encodePrettily());
+                ctx.verify(() -> {
+                    assertThat(bodyAsJsonArray).hasSize(1);
+                    final PasswordCredential updatedCredentials = bodyAsJsonArray.getJsonObject(0).mapTo(PasswordCredential.class);
+                    assertThat(updatedCredentials.getSecrets()).hasSize(2);
+                    // THEN the original secret has been updated
+                    final PasswordSecret updatedSecret = updatedCredentials.getSecrets()
+                            .stream()
+                            .filter(s -> originalSecret.get().getId().equals(s.getId()))
+                            .findAny()
+                            .orElse(null);
+                    assertThat(updatedSecret).isNotNull();
+                    assertThat(updatedSecret.getComment()).isEqualTo("updated");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -669,10 +669,6 @@ public class CredentialsManagementIT {
 
     private static String getRandomAuthId(final String authIdPrefix) {
         return authIdPrefix + "-" + UUID.randomUUID();
-    }
-
-    private JsonObject extractFirstCredential(final JsonObject json) {
-        return json.getJsonArray(CredentialsConstants.CREDENTIALS_ENDPOINT).getJsonObject(0);
     }
 
     private static JsonObject stripPrivateInfoFromSecrets(final JsonObject credentials) {

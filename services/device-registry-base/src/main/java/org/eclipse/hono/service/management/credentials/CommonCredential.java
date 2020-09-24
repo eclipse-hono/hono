@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -239,7 +240,7 @@ public abstract class CommonCredential {
      *                                  same identifiers as this one's.
      */
     @JsonIgnore
-    public CommonCredential merge(final CommonCredential other) {
+    public final CommonCredential merge(final CommonCredential other) {
 
         Objects.requireNonNull(other);
 
@@ -261,6 +262,18 @@ public abstract class CommonCredential {
         });
 
         return this;
+    }
+
+    /**
+     * Assigns a unique ID to each secret that does not have one already.
+     */
+    public final void createMissingSecretIds() {
+        getSecrets().stream()
+            .forEach(secret -> {
+                if (secret.getId() == null) {
+                    secret.setId(DeviceRegistryUtils.getUniqueIdentifier());
+                }
+            });
     }
 
     private Optional<? extends CommonSecret> findSecretById(final String secretId) {

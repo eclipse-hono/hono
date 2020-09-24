@@ -11,6 +11,9 @@ title = "Release Notes"
 * The Device Registry Management API erroneously declared the *plaintext password* conveyed in the
   *update credentials* operation's request payload as a Base64 encoded byte array instead of a
   plain string. This has been fixed.
+* The file based as well as the Mongo DB based registry implementations had failed to do both
+  updating an existing secret (referred to by ID) and adding a new secret to the same credentials
+  in a single request. This has been fixed.
 
 ## 1.3.0
 
