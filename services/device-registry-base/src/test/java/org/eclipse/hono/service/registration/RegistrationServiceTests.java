@@ -437,10 +437,10 @@ public interface RegistrationServiceTests {
     default void testReadDeviceReturnsCopyOfOriginalData(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
-        final Promise<OperationResult<DeviceWithStatus>> getResult = Promise.promise();
+        final Promise<OperationResult<Device>> getResult = Promise.promise();
 
         createDevice(deviceId, new Device())
-                .compose(r -> getDeviceManagementService().<DeviceWithStatus>readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .compose(r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
                 .map(result -> {
                     getResult.complete(result);
                     return result;
