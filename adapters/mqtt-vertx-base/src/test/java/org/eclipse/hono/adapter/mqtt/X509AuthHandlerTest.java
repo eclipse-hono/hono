@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -100,7 +100,7 @@ public class X509AuthHandlerTest {
         when(endpoint.sslSession()).thenReturn(sslSession);
         when(endpoint.clientIdentifier()).thenReturn("mqtt-device");
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint, span);
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
             .onComplete(ctx.succeeding(info -> {
@@ -137,7 +137,7 @@ public class X509AuthHandlerTest {
         when(endpoint.isSsl()).thenReturn(true);
         when(endpoint.sslSession()).thenReturn(sslSession);
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint, span);
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.authenticateDevice(context)
             // THEN the request context is failed with the 503 error code
             .onComplete(ctx.failing(t -> {
