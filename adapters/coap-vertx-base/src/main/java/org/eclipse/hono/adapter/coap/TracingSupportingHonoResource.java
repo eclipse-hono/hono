@@ -23,6 +23,7 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -56,7 +57,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     protected final Logger log = LoggerFactory.getLogger(getClass());
     final Tracer tracer;
     final String adapterName;
-    final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider;
+    final TenantClientFactory tenantClientFactory;
 
     /**
      * Creates a new resource that supports tracing of request processing.
@@ -64,19 +65,18 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param tracer The OpenTracing tracer.
      * @param resourceName The resource name.
      * @param adapterName The name of the protocol adapter that this resource is exposed on.
-     * @param tenantObjectWithAuthIdProvider The provider that determines the tenant and auth-id
-     *                                       associated with a request.
+     * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public TracingSupportingHonoResource(
             final Tracer tracer,
             final String resourceName,
             final String adapterName,
-            final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider) {
+            final TenantClientFactory tenantClientFactory) {
         super(resourceName);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
-        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(tenantObjectWithAuthIdProvider);
+        this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory);
     }
 
     /**
@@ -171,17 +171,17 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     /**
      * Applies the trace sampling priority configured for the tenant associated with the
      * given CoAP context to the given span.
-     * <p>
-     * Also ensures that the span context is set in the CoAP context.
      *
      * @param ctx The CoAP context.
      * @param span The OpenTracing span.
      * @return A succeeded future with the given CoAP context.
      */
     protected final Future<CoapContext> applyTraceSamplingPriority(final CoapContext ctx, final Span span) {
-        return tenantObjectWithAuthIdProvider.get(ctx, span.context())
-                .map(tenantObjectWithAuthId -> {
-                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObjectWithAuthId, span);
+        return tenantClientFactory.getOrCreateTenantClient()
+                .compose(tenantClient -> tenantClient.get(ctx.getTenantId(), span.context()))
+                .map(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, ctx.getAuthId());
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, ctx.getAuthId(), span);
                     return ctx;
                 })
                 .recover(t -> {

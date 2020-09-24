@@ -362,18 +362,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private Future<Endpoint> createSecureEndpoint(final NetworkConfig config) {
 
-        final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider = new CoapContextTenantAndAuthIdProvider(
-                getConfig(), getTenantClientFactory());
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
                 .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
-                        getCredentialsClientFactory(), tenantObjectWithAuthIdProvider));
+                        getCredentialsClientFactory(), getTenantClientFactory()));
         final AdvancedPskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
                     if (deviceResolver instanceof AdvancedPskStore) {
                         return (AdvancedPskStore) deviceResolver;
                     } else {
                         return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
-                                getCredentialsClientFactory(), tenantObjectWithAuthIdProvider);
+                                getCredentialsClientFactory(), getTenantClientFactory());
                     }
                 });
 

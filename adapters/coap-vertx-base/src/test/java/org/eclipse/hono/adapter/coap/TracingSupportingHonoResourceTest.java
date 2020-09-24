@@ -24,6 +24,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -35,8 +36,11 @@ import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +71,8 @@ public class TracingSupportingHonoResourceTest {
     private Span span;
     private SpanBuilder spanBuilder;
     private TracingSupportingHonoResource resource;
-    private CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider;
+    private TenantClient tenantClient;
+    private TenantClientFactory tenantClientFactory;
 
     /**
      * Sets up the fixture.
@@ -80,13 +85,18 @@ public class TracingSupportingHonoResourceTest {
         tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 
-        tenantObjectWithAuthIdProvider = mock(CoapContextTenantAndAuthIdProvider.class);
-        final TenantObject tenantObject = TenantObject.from(TENANT_ID, true);
-        final TenantObjectWithAuthId tenantObjectWithAuthId = new TenantObjectWithAuthId(tenantObject, AUTH_ID);
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
 
-        when(tenantObjectWithAuthIdProvider.get(any(CoapContext.class), any()))
-                .thenReturn(Future.succeededFuture(tenantObjectWithAuthId));
-        resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantObjectWithAuthIdProvider) {
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.isConnected())
+                .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+
+        resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantClientFactory) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange, final Span span) {
@@ -158,10 +168,7 @@ public class TracingSupportingHonoResourceTest {
         final TenantTracingConfig tracingConfig = new TenantTracingConfig();
         tracingConfig.setSamplingMode(TracingSamplingMode.NONE);
         tenantObject.setTracingConfig(tracingConfig);
-        final TenantObjectWithAuthId tenantObjectWithAuthId = new TenantObjectWithAuthId(tenantObject, AUTH_ID);
-
-        when(tenantObjectWithAuthIdProvider.get(any(CoapContext.class), any()))
-                .thenReturn(Future.succeededFuture(tenantObjectWithAuthId));
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantObject));
 
         final Request request = new Request(Code.POST);
         final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
@@ -186,10 +193,7 @@ public class TracingSupportingHonoResourceTest {
         final TenantTracingConfig tracingConfig = new TenantTracingConfig();
         tracingConfig.setSamplingModePerAuthId(Map.of(AUTH_ID, TracingSamplingMode.ALL));
         tenantObject.setTracingConfig(tracingConfig);
-        final TenantObjectWithAuthId tenantObjectWithAuthId = new TenantObjectWithAuthId(tenantObject, AUTH_ID);
-
-        when(tenantObjectWithAuthIdProvider.get(any(CoapContext.class), any()))
-                .thenReturn(Future.succeededFuture(tenantObjectWithAuthId));
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantObject));
 
         final Request request = new Request(Code.POST);
         final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));

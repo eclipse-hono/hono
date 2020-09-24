@@ -38,6 +38,7 @@ import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -78,7 +79,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     private final String adapterName;
     private final CoapAdapterProperties config;
     private final CredentialsClientFactory credentialsClientFactory;
-    private final CoapContextTenantAndAuthIdProvider coapContextTenantAndAuthIdProvider;
+    private final TenantClientFactory tenantClientFactory;
     private volatile PskSecretResultHandler californiumResultHandler;
 
     /**
@@ -89,8 +90,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * @param adapterName The name of the protocol adapter.
      * @param config The configuration properties.
      * @param credentialsClientFactory The factory to use for creating clients to the Credentials service.
-     * @param coapContextTenantAndAuthIdProvider The provider that determines the tenant and auth-id
-     *                                           associated with a request.
+     * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public DefaultDeviceResolver(
@@ -99,14 +99,14 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
             final String adapterName,
             final CoapAdapterProperties config,
             final CredentialsClientFactory credentialsClientFactory,
-            final CoapContextTenantAndAuthIdProvider coapContextTenantAndAuthIdProvider) {
+            final TenantClientFactory tenantClientFactory) {
 
         this.context = Objects.requireNonNull(vertxContext);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
-        this.coapContextTenantAndAuthIdProvider = coapContextTenantAndAuthIdProvider;
+        this.tenantClientFactory = tenantClientFactory;
     }
 
     /**
@@ -252,9 +252,11 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     }
 
     private Future<Void> applyTraceSamplingPriority(final PreSharedKeyDeviceIdentity deviceIdentity, final Span span) {
-        return coapContextTenantAndAuthIdProvider.get(deviceIdentity, span.context())
-                .map(tenantObjectWithAuthId -> {
-                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObjectWithAuthId, span);
+        return tenantClientFactory.getOrCreateTenantClient()
+                .compose(tenantClient -> tenantClient.get(deviceIdentity.getTenantId(), span.context()))
+                .map(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, deviceIdentity.getAuthId());
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, deviceIdentity.getAuthId(), span);
                     return (Void) null;
                 })
                 .recover(t -> Future.succeededFuture());
