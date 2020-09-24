@@ -14,15 +14,16 @@ package org.eclipse.hono.deviceregistry.mongodb.model;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
-import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
-import org.eclipse.hono.service.management.credentials.CommonSecret;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -55,7 +56,7 @@ public final class CredentialsDto extends BaseDto {
      * This constructor also makes sure that
      * <ul>
      * <li>none of the credentials have the same type and authentication identifier and</li>
-     * <li>that each secret has a unique identifier within its credentials object.</li>
+     * <li>that the identifiers of the credentials' secrets are unique within their credentials object.</li>
      * </ul>
      * <p>
      * These properties are supposed to be asserted before persisting this DTO.
@@ -80,12 +81,35 @@ public final class CredentialsDto extends BaseDto {
         Optional.ofNullable(credentials)
                 .ifPresent(creds -> {
                     assertTypeAndAuthId(creds);
-                    assertSecretIds(creds);
+                    assertSecretIdUniqueness(creds);
                 });
         setCredentials(credentials);
 
         setVersion(version);
         setUpdatedOn(Instant.now());
+    }
+
+    @JsonIgnore
+    private void assertSecretIdUniqueness(final List<? extends CommonCredential> credentials) {
+
+        credentials.stream()
+            .map(CommonCredential::getSecrets)
+            .forEach(secrets -> {
+                final Set<String> secretIds = new HashSet<>();
+                final AtomicInteger count = new AtomicInteger(0);
+                secrets.stream()
+                    .forEach(secret -> {
+                        if (secret.getId() != null) {
+                            requiresMerging = true;
+                            secretIds.add(secret.getId());
+                            count.incrementAndGet();
+                        }
+                    });
+                if (secretIds.size() < count.get()) {
+                    throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "secret IDs must be unique within each credentials object");
+                }
+            });
     }
 
     /**
@@ -145,17 +169,26 @@ public final class CredentialsDto extends BaseDto {
     }
 
     /**
-     * Checks if the secrets contained in this DTO need to be merged when updating
+     * Checks if the secrets contained in this DTO need to be merged with
      * existing credentials.
      * <p>
      * Otherwise the existing credentials can simply be replaced with the data contained
      * in this DTO.
      *
-     * @return {@code true} if the secrets need to be merged.
+     * @return {@code true} if any of the secrets has an ID property and thus refers to
+     *         an existing secret.
      */
     @JsonIgnore
     public boolean requiresMerging() {
         return requiresMerging;
+    }
+
+    /**
+     * Assigns a unique ID to each of the credentials' secrets that do not have one already.
+     */
+    public void createMissingSecretIds() {
+        Optional.ofNullable(credentials)
+            .ifPresent(creds -> creds.stream().forEach(CommonCredential::createMissingSecretIds));
     }
 
     /**
@@ -179,7 +212,9 @@ public final class CredentialsDto extends BaseDto {
     }
 
     @JsonIgnore
-    private Optional<CommonCredential> findCredentialByIdAndType(final String authId, final String authType,
+    private static Optional<CommonCredential> findCredentialByIdAndType(
+            final String authId,
+            final String authType,
             final List<CommonCredential> credentials) {
         return credentials.stream()
                 .filter(credential -> authId.equals(credential.getAuthId()) && authType.equals(credential.getType()))
@@ -187,17 +222,7 @@ public final class CredentialsDto extends BaseDto {
     }
 
     @JsonIgnore
-    private <T extends CommonSecret> T generateSecretId(final T secret) {
-        if (secret.getId() == null) {
-            secret.setId(DeviceRegistryUtils.getUniqueIdentifier());
-        } else {
-            this.requiresMerging = true;
-        }
-        return secret;
-    }
-
-    @JsonIgnore
-    private void assertTypeAndAuthId(final List<? extends CommonCredential> credentials) {
+    private static void assertTypeAndAuthId(final List<? extends CommonCredential> credentials) {
 
         final long uniqueAuthIdAndTypeCount = credentials.stream()
             .map(credential -> String.format("%s::%s", credential.getType(), credential.getAuthId()))
@@ -208,23 +233,5 @@ public final class CredentialsDto extends BaseDto {
             throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "credentials must have unique (type, auth-id)");
         }
-    }
-
-    @JsonIgnore
-    private void assertSecretIds(final List<? extends CommonCredential> credentials) {
-
-        credentials.stream()
-            .map(CommonCredential::getSecrets)
-            .forEach(secrets -> {
-                final long uniqueIdsCount = secrets.stream()
-                        .map(this::generateSecretId)
-                        .map(CommonSecret::getId)
-                        .distinct()
-                        .count();
-                if (secrets.size() > uniqueIdsCount) {
-                    throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                            "secret IDs must be unique within each credentials object");
-                }
-            });
     }
 }

@@ -191,12 +191,14 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         return Future.succeededFuture(updatedCredentialsDto);
                     }
 
-                }).compose(credentialsDto -> updateCredentials(
-                        deviceKey,
-                        resourceVersion,
-                        JsonObject.mapFrom(credentialsDto),
-                        span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                }).compose(credentialsDto -> {
+                    credentialsDto.createMissingSecretIds();
+                    return updateCredentials(
+                            deviceKey,
+                            resourceVersion,
+                            JsonObject.mapFrom(credentialsDto),
+                            span);
+                }).recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
     /**
