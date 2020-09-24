@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ public interface AuthHandler<T extends ExecutionContext> {
      *
      * @param context The execution context.
      * @return The credentials.
-     * @throws NullPointerException if the context is {@code null}
+     * @throws NullPointerException if the context is {@code null}.
      */
     Future<JsonObject> parseCredentials(T context);
 
@@ -45,7 +45,7 @@ public interface AuthHandler<T extends ExecutionContext> {
      *
      * @param context The execution context.
      * @return The authenticated device.
-     * @throws NullPointerException if the context is {@code null}
+     * @throws NullPointerException if the context is {@code null}.
      */
     Future<DeviceUser> authenticateDevice(T context);
 
@@ -53,7 +53,9 @@ public interface AuthHandler<T extends ExecutionContext> {
      * Gets the auth provider that can be used to validate the credentials
      * parsed by this handler.
      *
-     * @return The provider.
+     * @param context The execution context.
+     * @return The provider or {@code null}.
+     * @throws NullPointerException if the context is {@code null}.
      */
-    DeviceCredentialsAuthProvider<?> getAuthProvider();
+    DeviceCredentialsAuthProvider<?> getAuthProvider(T context);
 }
