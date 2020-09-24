@@ -67,7 +67,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     }
 
     @Override
-    protected Future<OperationResult<Device>> processReadDevice(final DeviceKey key, final Span span) {
+    protected Future<OperationResult<? extends Device>> processReadDevice(final DeviceKey key, final Span span) {
 
         return this.store.readDevice(key, span.context())
 
