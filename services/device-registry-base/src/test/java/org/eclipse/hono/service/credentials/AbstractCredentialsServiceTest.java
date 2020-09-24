@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,6 +30,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
@@ -153,7 +156,8 @@ public interface AbstractCredentialsServiceTest {
                 if (secret instanceof PasswordSecret) {
                     assertPasswordSecretDoesNotContainPasswordDetails((PasswordSecret) secret);
                 } else if (secret instanceof PskSecret) {
-                    assertThat(((PskSecret) secret).getKey()).isNull();
+                    assertThat(((PskSecret) secret).getKey())
+                        .as("PSK secret does not contain shared key").isNull();
                 }
             });
         });
@@ -165,9 +169,9 @@ public interface AbstractCredentialsServiceTest {
      * @param secret The secret to check.
      */
     default void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
-        assertNull(secret.getPasswordHash());
-        assertNull(secret.getHashFunction());
-        assertNull(secret.getSalt());
+        assertThat(secret.getPasswordHash()).as("password secret has no password hash").isNull();;
+        assertThat(secret.getHashFunction()).as("password secret has no hash function").isNull();;
+        assertThat(secret.getSalt()).as("password secret has no salt").isNull();
     }
 
     /**
@@ -184,10 +188,13 @@ public interface AbstractCredentialsServiceTest {
             final String expectedDeviceId,
             final String expectedType,
             final String expectedAuthId) {
-        assertThat(response).isNotNull();
-        assertThat(response.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(expectedDeviceId);
-        assertThat(response.getString(CredentialsConstants.FIELD_TYPE)).isEqualTo(expectedType);
-        assertThat(response.getString(CredentialsConstants.FIELD_AUTH_ID)).isEqualTo(expectedAuthId);
+        assertThat(response).as("response is not empty").isNotNull();
+        assertThat(response.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
+            .as("credentials contain expected device-id").isEqualTo(expectedDeviceId);
+        assertThat(response.getString(CredentialsConstants.FIELD_TYPE))
+            .as("credentials are of expected type").isEqualTo(expectedType);
+        assertThat(response.getString(CredentialsConstants.FIELD_AUTH_ID))
+            .as("credentials contain expected auth-id").isEqualTo(expectedAuthId);
     }
 
     /**
@@ -199,10 +206,14 @@ public interface AbstractCredentialsServiceTest {
      */
     default void assertPwdSecretContainsHash(final JsonObject secret, final boolean expectSalt) {
         assertThat(secret).isNotNull();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN)).isFalse();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH)).isTrue();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION)).isTrue();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_SALT)).isEqualTo(expectSalt);
+        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN))
+            .as("password secret does not contain plain text password").isFalse();
+        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH))
+            .as("password secret contains password hash").isTrue();
+        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION))
+            .as("password secret contains hash function").isTrue();
+        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_SALT))
+            .as("password secret does%s contain salt", expectSalt ? "" : " not").isEqualTo(expectSalt);
     }
 
     /**
@@ -277,8 +288,12 @@ public interface AbstractCredentialsServiceTest {
      * @param adapterValidation The validation logic for the protocol adapter data.
      * @param whenComplete Call when this assertion was successful.
      */
-    default void assertGet(final VertxTestContext ctx,
-            final String tenantId, final String deviceId, final String authId, final String type,
+    default void assertGet(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final String deviceId,
+            final String authId,
+            final String type,
             final ThrowingConsumer<OperationResult<List<CommonCredential>>> mangementValidation,
             final ThrowingConsumer<CredentialsResult<JsonObject>> adapterValidation,
             final ExecutionBlock whenComplete) {
@@ -525,7 +540,7 @@ public interface AbstractCredentialsServiceTest {
 
         final Promise<?> phase1 = Promise.promise();
 
-        // phase 1 - initially create device and set credentials
+        // phase 1 - create device and set initial password credentials
 
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                 () -> getDeviceManagementService()
@@ -550,10 +565,10 @@ public interface AbstractCredentialsServiceTest {
 
         phase1.future().compose(v -> {
 
-            final var newSecret = Credentials.createPasswordCredential(authId, "baz");
+            final var newCredentials = Credentials.createPasswordCredential(authId, "baz");
 
             return getCredentialsManagementService().updateCredentials(tenantId, deviceId,
-                    Collections.singletonList(newSecret), Optional.empty(),
+                    Collections.singletonList(newCredentials), Optional.empty(),
                     NoopSpan.INSTANCE);
         })
         .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
@@ -959,88 +974,114 @@ public interface AbstractCredentialsServiceTest {
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
+        final PasswordCredential origCredential = Credentials.createPasswordCredential(authId, "orig-password");
 
-        final List<CommonCredential> credentials = Collections.singletonList(credential);
+        final PasswordSecret origSecret = origCredential.getSecrets().get(0);
+        origSecret.setNotAfter(Instant.now().plus(1, ChronoUnit.DAYS));
 
-        // create device & set credentials
+        // create device & set initial credentials
 
         final Promise<?> phase1 = Promise.promise();
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
-                        .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
+                .compose(n -> getCredentialsManagementService().updateCredentials(
+                        tenantId,
+                        deviceId,
+                        List.of(origCredential),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> phase1.complete()));
 
         // Retrieve credentials IDs
 
         final Promise<?> phase2 = Promise.promise();
-        final List<String> secretIDs = new ArrayList<>();
-        final PasswordCredential newCredential = Credentials.createPasswordCredential(authId, "foo");
+        final AtomicReference<String> pwdSecretId = new AtomicReference<>();
+        final PasswordCredential updatedCredential = new PasswordCredential(authId);
 
         phase1.future()
-                .onComplete(ctx.succeeding(n -> getCredentialsService()
-                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
+                .compose(n -> getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
 
-                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        assertThat(s.getPayload()).hasSize(1);
+                        final CommonCredential creds = s.getPayload().get(0);
 
-                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                        assertThat(creds.getAuthId()).isEqualTo(authId);
+                        assertThat(creds).isInstanceOf(PasswordCredential.class);
+                        assertThat(creds.getSecrets()).as("password credentials contain a single secret").hasSize(1);
 
-                            assertEquals(authId, creds.getAuthId());
-                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                            assertEquals(1, creds.getSecrets().size());
+                        final String id = creds.getSecrets().get(0).getId();
+                        assertThat(id).as("password secret has ID").isNotNull();
+                        pwdSecretId.set(id);
 
-                            final String id = creds.getSecrets()
-                                    .getJsonObject(0)
-                                    .getString(RegistryManagementConstants.FIELD_ID);
+                        // change the password of the existing secret (using its secret ID)
+                        final PasswordSecret changedSecret = new PasswordSecret();
+                        changedSecret.setId(id);
+                        changedSecret.setPasswordPlain("changed-password");
+                        changedSecret.setNotAfter(origSecret.getNotAfter());
+                        // and add another password without an ID
+                        final PasswordSecret newSecret = new PasswordSecret();
+                        newSecret.setPasswordPlain("future-password");
+                        newSecret.setNotBefore(origSecret.getNotAfter());
+                        updatedCredential.setSecrets(List.of(changedSecret, newSecret));
+                    });
+                    phase2.complete();
+               }));
 
-                            assertNotNull(id);
-                            secretIDs.add(id);
-                            newCredential.getSecrets().get(0).setId(secretIDs.get(0));
-
-                            phase2.complete();
-                        })))));
-
-        // re-set credentials
+        // update credentials, including additional PSK credentials
         final Promise<?> phase3 = Promise.promise();
 
-        // Change the password
+        phase2.future()
+            .compose(n -> getCredentialsManagementService().updateCredentials(
+                    tenantId,
+                    deviceId,
+                    List.of(updatedCredential, Credentials.createPSKCredential(authId, "shared-key")),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> phase3.complete()));
 
-        phase2.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
-                .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
-                        NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s -> phase3.complete()))));
-
-
-        // Retrieve credentials again, the ID should have changed.
-
-        final Promise<?> phase4 = Promise.promise();
-
+        // Retrieve credentials again, the updated secret's ID should remain the same but the password hash should have changed.
         phase3.future()
-                .onComplete(ctx.succeeding(n -> getCredentialsService()
-                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
+            .onSuccess(ok -> assertGet(
+                    ctx,
+                    tenantId,
+                    deviceId,
+                    authId,
+                    CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    readCredentialsResult -> {
+                        assertThat(readCredentialsResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        assertThat(readCredentialsResult.getPayload()).hasSize(2);
+                        assertReadCredentialsResponseProperties(readCredentialsResult.getPayload());
+                        final PasswordCredential pwdCreds = readCredentialsResult.getPayload()
+                                .stream()
+                                .filter(PasswordCredential.class::isInstance)
+                                .map(PasswordCredential.class::cast)
+                                .findAny()
+                                .orElse(null);
+                        assertThat(pwdCreds).isNotNull();
+                        assertThat(pwdCreds.getSecrets()).hasSize(2);
+                        final boolean containsPasswordSecretWithOriginalId = pwdCreds.getSecrets()
+                                .stream()
+                                .map(PasswordSecret::getId)
+                                .anyMatch(pwdSecretId.get()::equals);
+                        assertThat(containsPasswordSecretWithOriginalId);
+                    },
+                    getCredentialsResult -> {
+                        assertThat(getCredentialsResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        final CredentialsObject credentialsObj = getCredentialsResult.getPayload().mapTo(CredentialsObject.class);
+                        assertThat(credentialsObj.getSecrets()).hasSize(2);
+                        // verify that none of the secrets contains the original password hash anymore
+                        credentialsObj.getSecrets()
+                            .stream()
+                            .map(JsonObject.class::cast)
+                            .forEach(secret -> {
+                                assertThat(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH))
+                                    .isNotEqualTo(origSecret.getPasswordHash());
+                            });
+                    },
+                    ctx::completeNow));
 
-                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-
-                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
-
-                            assertEquals(authId, creds.getAuthId());
-                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                            assertEquals(1, creds.getSecrets().size());
-
-                            final String id = creds.getSecrets()
-                                    .getJsonObject(0)
-                                    .getString(RegistryManagementConstants.FIELD_ID);
-                            assertEquals(id, secretIDs.get(0));
-
-                            phase4.complete();
-                        })))));
-
-        // finally complete
-
-        phase4.future().onComplete(ctx.completing());
     }
 
     /**
