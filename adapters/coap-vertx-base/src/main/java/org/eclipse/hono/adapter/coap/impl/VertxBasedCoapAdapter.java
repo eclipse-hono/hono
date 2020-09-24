@@ -25,7 +25,6 @@ import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapContext;
-import org.eclipse.hono.adapter.coap.CoapContextTenantAndAuthIdProvider;
 import org.eclipse.hono.adapter.coap.RequestDeviceAndAuth;
 import org.eclipse.hono.adapter.coap.TracingSupportingHonoResource;
 import org.eclipse.hono.auth.Device;
@@ -122,11 +121,8 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     @Override
     protected Future<Void> preStartup() {
 
-        final CoapContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider = new CoapContextTenantAndAuthIdProvider(
-                getConfig(), getTenantClientFactory());
-
         final Set<Resource> result = new HashSet<>();
-        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
+        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName(), getTenantClientFactory()) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
@@ -149,7 +145,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             }
         });
 
-        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
+        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName(), getTenantClientFactory()) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
@@ -171,7 +167,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 return uploadEventMessage(ctx);
             }
         });
-        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName(), tenantObjectWithAuthIdProvider) {
+        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName(), getTenantClientFactory()) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
