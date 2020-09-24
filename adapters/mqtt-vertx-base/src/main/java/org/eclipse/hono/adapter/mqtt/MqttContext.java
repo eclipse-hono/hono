@@ -117,23 +117,6 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Creates a new context for a connection attempt.
-     *
-     * @param endpoint The endpoint representing the client's connection attempt.
-     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
-     * @return The context.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public static MqttContext fromConnectPacket(final MqttEndpoint endpoint, final Span span) {
-        Objects.requireNonNull(endpoint);
-        Objects.requireNonNull(span);
-
-        final MqttContext result = new MqttContext(span, null);
-        result.deviceEndpoint = endpoint;
-        return result;
-    }
-
-    /**
      * Gets the MQTT message to process.
      *
      * @return The message.

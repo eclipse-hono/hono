@@ -43,6 +43,7 @@ import org.eclipse.hono.service.AuthorizationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.auth.device.ChainAuthHandler;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
@@ -59,7 +60,6 @@ import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -113,8 +113,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private MqttServer server;
     private MqttServer insecureServer;
-    private AuthHandler<MqttContext> authHandler;
-    private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
+    private AuthHandler<MqttConnectContext> authHandler;
 
     /**
      * Sets the authentication handler to use for authenticating devices.
@@ -122,19 +121,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param authHandler The handler to use.
      * @throws NullPointerException if handler is {@code null}.
      */
-    public final void setAuthHandler(final AuthHandler<MqttContext> authHandler) {
+    public final void setAuthHandler(final AuthHandler<MqttConnectContext> authHandler) {
         this.authHandler = Objects.requireNonNull(authHandler);
-    }
-
-    /**
-     * Sets the provider that determines the tenant and auth-id associated with a request.
-     *
-     * @param tenantObjectWithAuthIdProvider the provider.
-     * @throws NullPointerException if tenantObjectWithAuthIdProvider is {@code null}.
-     */
-    public void setTenantObjectWithAuthIdProvider(
-            final ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider) {
-        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(tenantObjectWithAuthIdProvider);
     }
 
     @Override
@@ -188,9 +176,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @return The handler.
      */
-    protected AuthHandler<MqttContext> createAuthHandler() {
+    protected AuthHandler<MqttConnectContext> createAuthHandler() {
 
-        return new ChainAuthHandler<MqttContext>()
+        return new ChainAuthHandler<>(this::handleBeforeCredentialsValidation)
                 .append(new X509AuthHandler(
                         new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                         new X509AuthProvider(getCredentialsClientFactory(), tracer)))
@@ -201,16 +189,33 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Creates the provider that determines the tenant and auth-id associated with a request.
+     * Handles any operations that should be invoked as part of the authentication process after the credentials got
+     * determined and before they get validated. Can be used to perform checks using the credentials and tenant
+     * information before the potentially expensive credentials validation is done
      * <p>
-     * This default implementation creates a {@link MqttContextTenantAndAuthIdProvider}.
+     * The default implementation updates the trace sampling priority in the execution context tracing span.
      * <p>
-     * Subclasses may override this method in order to return a different implementation.
+     * Subclasses should override this method in order to perform additional operations after calling this super method.
      *
-     * @return The provider.
+     * @param credentials The credentials.
+     * @param executionContext The execution context, including the TenantObject.
+     * @return A future indicating the outcome of the operation. A failed future will fail the authentication attempt.
      */
-    protected ExecutionContextTenantAndAuthIdProvider<MqttContext> createTenantAndAuthIdProvider() {
-        return new MqttContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
+    protected Future<Void> handleBeforeCredentialsValidation(final DeviceCredentials credentials,
+            final MqttConnectContext executionContext) {
+
+        final String tenantId = credentials.getTenantId();
+        final Span span = executionContext.getTracingSpan();
+        final String authId = credentials.getAuthId();
+
+        return getTenantConfiguration(tenantId, span.context())
+                .compose(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantId, null, authId);
+                    final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper.applyTraceSamplingPriority(
+                            tenantObject, authId, span);
+                    executionContext.setTraceSamplingPriority(traceSamplingPriority);
+                    return Future.succeededFuture();
+                });
     }
 
     /**
@@ -326,9 +331,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .compose(ok -> {
                 if (authHandler == null) {
                     authHandler = createAuthHandler();
-                }
-                if (tenantObjectWithAuthIdProvider == null) {
-                    tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
                 }
                 return Future.succeededFuture((Void) null);
             })
@@ -524,9 +526,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
             final Span currentSpan) {
 
-        final MqttContext context = MqttContext.fromConnectPacket(endpoint, currentSpan);
-        final Future<OptionalInt> traceSamplingPriority = applyTenantTraceSamplingPriority(context, currentSpan);
-        final Future<DeviceUser> authAttempt = traceSamplingPriority.compose(v -> authenticate(context));
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, currentSpan);
+
+        final Future<DeviceUser> authAttempt = authHandler.authenticateDevice(context);
         return authAttempt
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
@@ -540,7 +542,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
-                .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, traceSamplingPriority.result()))
+                .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority()))
                 .recover(t -> {
                     if (authAttempt.failed()) {
                         log.debug("could not authenticate device", t);
@@ -550,31 +552,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     }
                     return Future.failedFuture(t);
                 });
-    }
-
-    /**
-     * Applies the trace sampling priority configured for the tenant derived from the given context to the given span.
-     *
-     * @param context The execution context.
-     * @param currentSpan The span to apply the configuration to.
-     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
-     *         with the applied sampling priority or an empty <em>OptionalInt</em> if no priority was applied.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final Future<OptionalInt> applyTenantTraceSamplingPriority(final MqttContext context, final Span currentSpan) {
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(currentSpan);
-        return tenantObjectWithAuthIdProvider.get(context, currentSpan.context())
-                .map(tenantObjectWithAuthId -> TenantTraceSamplingHelper
-                        .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan))
-                .recover(t -> {
-                    return Future.succeededFuture(OptionalInt.empty());
-                });
-    }
-
-    private Future<DeviceUser> authenticate(final MqttContext connectContext) {
-
-        return authHandler.authenticateDevice(connectContext);
     }
 
     /**
@@ -843,7 +820,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    void handlePublishedMessage(final MqttPublishMessage message, final MqttEndpoint endpoint, final Device authenticatedDevice) {
+    void handlePublishedMessage(final MqttPublishMessage message, final MqttEndpoint endpoint,
+            final Device authenticatedDevice, final OptionalInt traceSamplingPriority) {
 
         // try to extract a SpanContext from the property bag of the message's topic (if set)
         final SpanContext spanContext = message.topicName() != null
@@ -852,18 +830,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         propertyBag::getPropertiesIterator))
                 .orElse(null)
                 : null;
-        final MqttQoS qos = message.qosLevel();
-        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "PUBLISH", getTypeName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.topicName())
-                .withTag(TracingHelper.TAG_QOS.getKey(), qos.toString())
-                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
-                .start();
+        final Span span = newChildSpan(spanContext, "PUBLISH", endpoint, authenticatedDevice);
+        span.setTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.topicName());
+        span.setTag(TracingHelper.TAG_QOS.getKey(), message.qosLevel().toString());
+        traceSamplingPriority.ifPresent(prio -> TracingHelper.setTraceSamplingPriority(span, prio));
 
         final MqttContext context = MqttContext.fromPublishPacket(message, endpoint, span, authenticatedDevice);
         context.setTimer(getMetrics().startTimer());
 
-        applyTenantTraceSamplingPriority(context, span)
+        final Future<Void> spanPreparationFuture = authenticatedDevice == null
+                ? applyTraceSamplingPriorityForTopicTenant(context.topic(), span)
+                : Future.succeededFuture();
+
+        spanPreparationFuture
                 .compose(v -> checkTopic(context))
                 .compose(ok -> onPublishedMessage(context))
                 .onComplete(processing -> {
@@ -890,6 +869,32 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     }
                     span.finish();
                 });
+    }
+
+    /**
+     * Applies the trace sampling priority configured for the tenant derived from the given topic on the given span.
+     * <p>
+     * This is for unauthenticated MQTT connections where the tenant id gets taken from the message topic.
+     *
+     * @param topic The topic (may be {@code null}).
+     * @param span The <em>OpenTracing</em> span to apply the configuration to.
+     * @return A succeeded future indicating the outcome of the operation. A failure to determine the tenant is ignored
+     *         here.
+     * @throws NullPointerException if span is {@code null}.
+     */
+    protected final Future<Void> applyTraceSamplingPriorityForTopicTenant(final ResourceIdentifier topic, final Span span) {
+        Objects.requireNonNull(span);
+        if (topic == null || topic.getTenantId() == null) {
+            // an invalid address is ignored here
+            return Future.succeededFuture();
+        }
+        return getTenantConfiguration(topic.getTenantId(), span.context())
+                .map(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null);
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, null, span);
+                    return (Void) null;
+                })
+                .recover(t -> Future.succeededFuture());
     }
 
     private Future<Void> checkTopic(final MqttContext context) {
@@ -1594,7 +1599,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final CommandSubscriptionsManager<T> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, getConfig());
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdSubscriptionsManager, traceSamplingPriority));
         endpoint.publishHandler(
-                message -> handlePublishedMessage(message, endpoint, authenticatedDevice));
+                message -> handlePublishedMessage(message, endpoint, authenticatedDevice, traceSamplingPriority));
         endpoint.publishAcknowledgeHandler(cmdSubscriptionsManager::handlePubAck);
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdSubscriptionsManager,
                 traceSamplingPriority));
