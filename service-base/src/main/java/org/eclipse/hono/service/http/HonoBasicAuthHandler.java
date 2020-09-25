@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.service.http;
 
-import org.eclipse.hono.tracing.TracingHelper;
+import java.util.Objects;
+
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 
 import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
@@ -30,21 +33,67 @@ import io.vertx.ext.web.impl.RoutingContextDecorator;
  * that extracts and handles a {@link org.eclipse.hono.client.ServiceInvocationException} conveyed as the
  * root cause in an {@code HttpStatusException} when an authentication failure
  * occurs.
+ * <p>
+ * Apart from that, support for a {@link PreCredentialsValidationHandler} and for
+ * transferring a span context to the AuthProvider is added here.
+ *
  */
-public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
+public class HonoBasicAuthHandler extends BasicAuthHandlerImpl implements HonoHttpAuthHandler {
 
+    private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
     private final Tracer tracer;
+
+    /**
+     * Creates a new handler for an auth provider and a realm name.
+     * <p>
+     * This constructor is intended to be used with an auth provider that doesn't extend
+     * {@link DeviceCredentialsAuthProvider}.
+     *
+     * @param authProvider The provider to use for validating credentials.
+     * @param realm The realm name.
+     * @param tracer The tracer to use.
+     * @throws NullPointerException If authProvider is {@code null}.
+     */
+    public HonoBasicAuthHandler(final AuthProvider authProvider, final String realm, final Tracer tracer) {
+        super(Objects.requireNonNull(authProvider), realm);
+        this.tracer = tracer;
+        this.preCredentialsValidationHandler = null;
+    }
 
     /**
      * Creates a new handler for an auth provider and a realm name.
      *
      * @param authProvider The provider to use for validating credentials.
      * @param realm The realm name.
-     * @param tracer The tracer to use.
+     * @throws NullPointerException If authProvider is {@code null}.
      */
-    public HonoBasicAuthHandler(final AuthProvider authProvider, final String realm, final Tracer tracer) {
-        super(authProvider, realm);
-        this.tracer = tracer;
+    public HonoBasicAuthHandler(final DeviceCredentialsAuthProvider<?> authProvider, final String realm) {
+        this(authProvider, realm, (PreCredentialsValidationHandler<HttpContext>) null);
+    }
+
+    /**
+     * Creates a new handler for an auth provider and a realm name.
+     *
+     * @param authProvider The provider to use for validating credentials.
+     * @param realm The realm name.
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
+     * @throws NullPointerException If authProvider is {@code null}.
+     */
+    public HonoBasicAuthHandler(
+            final DeviceCredentialsAuthProvider<?> authProvider,
+            final String realm,
+            final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler) {
+        super(Objects.requireNonNull(authProvider), realm);
+        this.tracer = null;
+        this.preCredentialsValidationHandler = preCredentialsValidationHandler;
+    }
+
+    @Override
+    public PreCredentialsValidationHandler<HttpContext> getPreCredentialsValidationHandler() {
+        return preCredentialsValidationHandler;
     }
 
     /**
@@ -71,19 +120,14 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
         // context.fail(e) thereby the DefaultFailureHandler is being invoked. This sends http status code 500
         // instead of 400. To resolve this, the RoutingContextDecorator is used. The overridden fail(Throwable) method
         // ensures that http status code 400 is returned.
-        final RoutingContextDecorator routingContextDecorator = new RoutingContextDecorator(context.currentRoute(),
-                context) {
+        final RoutingContextDecorator routingContextDecorator = new RoutingContextDecorator(context.currentRoute(), context) {
 
             @Override
             public void fail(final Throwable throwable) {
                 HttpUtils.badRequest(context, "Malformed authorization header");
             }
         };
-        super.parseCredentials(routingContextDecorator, ar -> {
-            if (ar.succeeded()) {
-                TracingHelper.injectSpanContext(tracer, TracingHandler.serverSpanContext(context), ar.result());
-            }
-            handler.handle(ar);
-        });
+        super.parseCredentials(routingContextDecorator,
+                ar -> processParseCredentialsResult(authProvider, context, tracer, ar, handler));
     }
 }

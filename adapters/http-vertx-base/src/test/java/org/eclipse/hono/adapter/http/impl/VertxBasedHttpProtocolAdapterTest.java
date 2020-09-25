@@ -51,6 +51,7 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.JsonHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -252,10 +253,20 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
 
         doAnswer(invocation -> {
-            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
+        doAnswer(invocation -> {
+            final JsonObject authInfo = invocation.getArgument(0);
+            final String username = JsonHelper.getValue(authInfo, "username", String.class, null);
+            final String password = JsonHelper.getValue(authInfo, "password", String.class, null);
+            if (username == null || password == null) {
+                return null;
+            } else {
+                return UsernamePasswordCredentials.create(username, password);
+            }
+        }).when(usernamePasswordAuthProvider).getCredentials(any(JsonObject.class));
     }
 
     /**
@@ -311,10 +322,10 @@ public class VertxBasedHttpProtocolAdapterTest {
     public void testPostTelemetryFailsForUnreachableCredentialsService(final VertxTestContext ctx) {
 
         doAnswer(invocation -> {
-            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "service down")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
@@ -653,10 +664,10 @@ public class VertxBasedHttpProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     private void mockSuccessfulAuthentication(final String tenantId, final String deviceId) {
         doAnswer(invocation -> {
-            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
             resultHandler.handle(Future.succeededFuture(new DeviceUser(tenantId, deviceId)));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
     }
 
     private ResponsePredicateResult assertCorsHeaders(final HttpResponse<?> response) {
