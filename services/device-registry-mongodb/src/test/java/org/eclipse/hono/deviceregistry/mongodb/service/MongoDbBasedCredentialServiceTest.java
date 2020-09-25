@@ -110,7 +110,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 new JsonObject(),
                 testContext.succeeding(ok -> clean.flag()));
         mongoClient.removeDocuments(
-                credentialsServiceConfig.getCollectionName(),
+                registrationServiceConfig.getCollectionName(),
                 new JsonObject(),
                 testContext.succeeding(ok -> clean.flag()));
     }
@@ -124,7 +124,6 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     public void finishTest(final VertxTestContext testContext) {
 
         final Checkpoint shutdown = testContext.checkpoint(3);
-        mongoClient.close();
         credentialsService.stop().onComplete(s -> shutdown.flag());
         registrationService.stop().onComplete(s -> shutdown.flag());
         vertx.close(s -> shutdown.flag());
