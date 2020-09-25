@@ -82,7 +82,7 @@ The health check server can be configured by means of the following environment 
 
 
 {{% warning title="Failure to start" %}}
-The component/service will fail to start if neither the secure not the insecure server have been configured properly.
+The component/service will fail to start if neither the secure nor the insecure server have been configured properly.
 {{% /warning %}}
 
 ## Tracing
