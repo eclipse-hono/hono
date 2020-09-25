@@ -1460,7 +1460,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Tags.MESSAGE_BUS_DESTINATION.set(commandContext.getTracingSpan(), publishTopic);
         TracingHelper.TAG_QOS.set(commandContext.getTracingSpan(), subscription.getQos().name());
 
-        endpoint.publish(publishTopic, command.getPayload(), subscription.getQos(), false, false, sentHandler -> {
+        final Buffer payload = Optional.ofNullable(command.getPayload()).orElseGet(Buffer::buffer);
+        endpoint.publish(publishTopic, payload, subscription.getQos(), false, false, sentHandler -> {
             if (sentHandler.succeeded()) {
 
                 if (command.isTargetedAtGateway()) {
