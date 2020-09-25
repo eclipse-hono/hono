@@ -30,13 +30,10 @@ import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpContext;
-import org.eclipse.hono.service.http.HttpContextTenantAndAuthIdProvider;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
 import org.eclipse.hono.service.http.X509AuthHandler;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
@@ -61,7 +58,6 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-    private ExecutionContextTenantAndAuthIdProvider<HttpContext> tenantObjectWithAuthIdProvider;
 
     /**
      * Sets the provider to use for authenticating devices based on
@@ -92,23 +88,6 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     /**
-     * Sets the provider that determines the tenant and auth-id associated with a request.
-     *
-     * @param provider The provider to use.
-     * @throws NullPointerException if provider is {@code null}.
-     */
-    public void setTenantObjectWithAuthIdProvider(final ExecutionContextTenantAndAuthIdProvider<HttpContext> provider) {
-        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(provider);
-    }
-
-    @Override
-    protected TenantTraceSamplingHandler getTenantTraceSamplingHandler() {
-        return new TenantTraceSamplingHandler(
-                Optional.ofNullable(tenantObjectWithAuthIdProvider)
-                        .orElse(new HttpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory(), PARAM_TENANT, PARAM_DEVICE_ID)));
-    }
-
-    /**
      * {@inheritDoc}
      *
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_HTTP}
@@ -123,15 +102,15 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final ChainAuthHandler authHandler = new HonoChainAuthHandler();
+            final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
             authHandler.append(new X509AuthHandler(
                     new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                     Optional.ofNullable(clientCertAuthProvider).orElse(
-                            new X509AuthProvider(getCredentialsClientFactory(), tracer)), tracer));
+                            new X509AuthProvider(getCredentialsClientFactory(), tracer))));
             authHandler.append(new HonoBasicAuthHandler(
                     Optional.ofNullable(usernamePasswordAuthProvider).orElse(
                             new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer)),
-                    getConfig().getRealm(), tracer));
+                    getConfig().getRealm()));
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);
             addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, authHandler);

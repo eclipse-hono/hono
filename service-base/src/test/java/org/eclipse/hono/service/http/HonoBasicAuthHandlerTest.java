@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,11 +25,16 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.junit.jupiter.api.BeforeEach;
+import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.auth.device.AbstractDeviceCredentials;
+import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -51,24 +57,6 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class HonoBasicAuthHandlerTest {
 
-    private HonoBasicAuthHandler authHandler;
-    private AuthProvider authProvider;
-
-    /**
-     * Sets up the fixture.
-     */
-    @BeforeEach
-    public void setUp() {
-        authProvider = mock(AuthProvider.class);
-        authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create()) {
-
-            @Override
-            public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
-                handler.handle(Future.succeededFuture(new JsonObject()));
-            }
-        };
-    }
-
     /**
      * Verifies that the handler returns the status code conveyed in a
      * failed {@code AuthProvider} invocation in the response.
@@ -79,6 +67,7 @@ public class HonoBasicAuthHandlerTest {
 
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
+        final AuthProvider authProvider = mock(AuthProvider.class);
         final ServiceInvocationException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
         doAnswer(invocation -> {
             final Handler handler = invocation.getArgument(1);
@@ -86,11 +75,16 @@ public class HonoBasicAuthHandlerTest {
             return null;
         }).when(authProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
+        final HonoBasicAuthHandler authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create()) {
+            @Override
+            public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
+                handler.handle(Future.succeededFuture(new JsonObject()));
+            }
+        };
+
         // WHEN trying to authenticate a request using the HTTP BASIC scheme
-        final String authorization = new StringBuffer()
-                .append("BASIC ")
-                .append(Base64.getEncoder().encodeToString("user:password".getBytes(StandardCharsets.UTF_8)))
-                .toString();
+        final String authorization = "BASIC "
+                + Base64.getEncoder().encodeToString("user:password".getBytes(StandardCharsets.UTF_8));
         final MultiMap headers = mock(MultiMap.class);
         when(headers.get(eq(HttpHeaders.AUTHORIZATION))).thenReturn(authorization);
         final HttpServerRequest req = mock(HttpServerRequest.class);
@@ -113,7 +107,8 @@ public class HonoBasicAuthHandlerTest {
     @Test
     public void testHandleFailsForMalformedAuthorizationHeader() {
 
-        authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create());
+        final AuthProvider authProvider = mock(AuthProvider.class);
+        final HonoBasicAuthHandler authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create());
         final ArgumentCaptor<Throwable> exceptionCaptor = ArgumentCaptor.forClass(Throwable.class);
         // WHEN trying to authenticate a request using the HTTP BASIC scheme
         final String authorization = "BASIC test test";
@@ -135,4 +130,58 @@ public class HonoBasicAuthHandlerTest {
                 .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
 
     }
+
+    /**
+     * Verifies that the PreCredentialsValidationHandler given for the AuthHandler is invoked
+     * when authenticating.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testPreCredentialsValidationHandlerGetsInvoked() {
+
+        final AbstractDeviceCredentials deviceCredentials = mock(AbstractDeviceCredentials.class);
+        final DeviceUser deviceUser = new DeviceUser("tenant", "device");
+
+        // prepare authProvider
+        final DeviceCredentialsAuthProvider<?> authProvider = mock(DeviceCredentialsAuthProvider.class);
+        doReturn(deviceCredentials).when(authProvider).getCredentials(any(JsonObject.class));
+        doAnswer(invocation -> {
+            final Handler handler = invocation.getArgument(2);
+            handler.handle(Future.succeededFuture(deviceUser));
+            return null;
+        }).when(authProvider).authenticate(any(), any(), any());
+
+        // prepare PreCredentialsValidationHandler
+        final PreCredentialsValidationHandler<HttpContext> preCredValidationHandler = mock(
+                PreCredentialsValidationHandler.class);
+        when(preCredValidationHandler.handle(eq(deviceCredentials), any())).thenReturn(Future.succeededFuture());
+
+        // GIVEN an auth handler with a PreCredentialsValidationHandler
+        final HonoBasicAuthHandler authHandler = new HonoBasicAuthHandler(authProvider, "test", preCredValidationHandler);
+
+        // WHEN the auth handler handles a request
+        final String authorization = "BASIC "
+                + Base64.getEncoder().encodeToString("user:password".getBytes(StandardCharsets.UTF_8));
+        final MultiMap headers = mock(MultiMap.class);
+        when(headers.get(eq(HttpHeaders.AUTHORIZATION))).thenReturn(authorization);
+        final HttpServerRequest req = mock(HttpServerRequest.class);
+        when(req.headers()).thenReturn(headers);
+        final HttpServerResponse resp = mock(HttpServerResponse.class);
+        final RoutingContext routingContext = mock(RoutingContext.class);
+        final Map<String, Object> routingContextMap = new HashMap<>();
+        when(routingContext.put(any(), any())).thenAnswer(invocation -> {
+            routingContextMap.put(invocation.getArgument(0), invocation.getArgument(1));
+            return routingContext;
+        });
+        when(routingContext.get(any())).thenAnswer(invocation -> routingContextMap.get(invocation.getArgument(0)));
+        when(routingContext.request()).thenReturn(req);
+        when(routingContext.response()).thenReturn(resp);
+        when(routingContext.currentRoute()).thenReturn(mock(Route.class));
+        authHandler.handle(routingContext);
+
+        // THEN authentication succeeds and the PreCredentialsValidationHandler has been invoked
+        verify(routingContext).setUser(eq(deviceUser));
+        verify(preCredValidationHandler).handle(eq(deviceCredentials), any());
+    }
+
 }

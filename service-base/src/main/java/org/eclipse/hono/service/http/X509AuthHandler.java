@@ -20,13 +20,12 @@ import java.util.Objects;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -41,15 +40,19 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
  * <p>
  * On successful validation of the certificate, the subject DN of the certificate is used
  * to retrieve X.509 credentials for the device in order to determine the device identifier. 
+ * <p>
+ * Apart from that, support for a {@link PreCredentialsValidationHandler} and for
+ * transferring a span context to the AuthProvider is added here.
  *
  */
-public class X509AuthHandler extends AuthHandlerImpl {
+public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(X509AuthHandler.class);
     private static final HttpStatusException UNAUTHORIZED = new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED);
 
     private final X509Authentication auth;
-    private final Tracer tracer;
+    private final DeviceCredentialsAuthProvider<SubjectDnCredentials> deviceCredentialsAuthProvider;
+    private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
 
     /**
      * Creates a new handler for an authentication provider and a
@@ -58,16 +61,40 @@ public class X509AuthHandler extends AuthHandlerImpl {
      * @param clientAuth The service to use for validating the client's certificate path.
      * @param authProvider The authentication provider to use for verifying
      *              the device identity.
-     * @param tracer The tracer to use.
+     * @throws NullPointerException if client auth is {@code null}.
+     */
+    public X509AuthHandler(
+            final X509Authentication clientAuth,
+            final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider) {
+        this(clientAuth, authProvider, null);
+    }
+
+    /**
+     * Creates a new handler for an authentication provider and a
+     * Tenant service client.
+     *
+     * @param clientAuth The service to use for validating the client's certificate path.
+     * @param authProvider The authentication provider to use for verifying
+     *              the device identity.
+     * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
+     *            before they get validated. Can be used to perform checks using the credentials and tenant information
+     *            before the potentially expensive credentials validation is done. A failed future returned by the
+     *            handler will fail the corresponding authentication attempt.
      * @throws NullPointerException if client auth is {@code null}.
      */
     public X509AuthHandler(
             final X509Authentication clientAuth,
             final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider,
-            final Tracer tracer) {
+            final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler) {
         super(authProvider);
         this.auth = Objects.requireNonNull(clientAuth);
-        this.tracer = tracer;
+        this.deviceCredentialsAuthProvider = authProvider;
+        this.preCredentialsValidationHandler = preCredentialsValidationHandler;
+    }
+
+    @Override
+    public PreCredentialsValidationHandler<HttpContext> getPreCredentialsValidationHandler() {
+        return preCredentialsValidationHandler;
     }
 
     @Override
@@ -80,13 +107,7 @@ public class X509AuthHandler extends AuthHandlerImpl {
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
                 auth.validateClientCertificate(path, TracingHandler.serverSpanContext(context))
-                        .onComplete(ar -> {
-                            if (ar.succeeded()) {
-                                TracingHelper.injectSpanContext(tracer, TracingHandler.serverSpanContext(context),
-                                        ar.result());
-                            }
-                            handler.handle(ar);
-                        });
+                        .onComplete(ar -> processParseCredentialsResult(authProvider, context, null, ar, handler));
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
                 LOG.debug("could not retrieve client certificate from request: {}", e.getMessage());

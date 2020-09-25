@@ -34,11 +34,11 @@ import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.http.WebSpanDecorator;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -47,6 +47,7 @@ import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -284,9 +285,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <li>a handler to log when the connection is closed prematurely,</li>
      * <li>a default failure handler,</li>
      * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
-     * properties,</li>
-     * <li>(optional) a handler that applies the trace sampling priority configured for the tenant/auth-id of a
-     * request.</li>
+     * properties.</li>
      * </ol>
      *
      * @return The newly created router (never {@code null}).
@@ -321,25 +320,38 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize());
         matchAllRoute.handler(bodyHandler);
-
-        // 6. handler to set the trace sampling priority
-        Optional.ofNullable(getTenantTraceSamplingHandler())
-                .ifPresent(tenantTraceSamplingHandler -> matchAllRoute.handler(tenantTraceSamplingHandler));
         return router;
     }
 
     /**
-     * Gets a handler that determines the tenant associated with a request and applies the tenant specific trace
-     * sampling configuration (if set).
+     * Handles any operations that should be invoked as part of the authentication process after the credentials got
+     * determined and before they get validated. Can be used to perform checks using the credentials and tenant
+     * information before the potentially expensive credentials validation is done
      * <p>
-     * This method returns {@code null} by default.
+     * The default implementation updates the trace sampling priority in the execution context tracing span.
      * <p>
-     * Subclasses may override this method in order to return an appropriate handler.
+     * Subclasses should override this method in order to perform additional operations after calling this super method.
      *
-     * @return The handler or {@code null}.
+     * @param credentials The credentials.
+     * @param executionContext The execution context, including the TenantObject.
+     * @return A future indicating the outcome of the operation. A failed future will fail the authentication attempt.
      */
-    protected TenantTraceSamplingHandler getTenantTraceSamplingHandler() {
-        return null;
+    protected Future<Void> handleBeforeCredentialsValidation(final DeviceCredentials credentials,
+            final HttpContext executionContext) {
+
+        final String tenantId = credentials.getTenantId();
+        final Span span = executionContext.getTracingSpan();
+        final String authId = credentials.getAuthId();
+        if (span == null) {
+            log.warn("handleBeforeCredentialsValidation: no span context set in httpContext");
+            return Future.succeededFuture();
+        }
+        return getTenantConfiguration(tenantId, span.context())
+                .compose(tenantObject -> {
+                    TracingHelper.setDeviceTags(span, tenantId, null, authId);
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, authId, span);
+                    return Future.succeededFuture();
+                });
     }
 
     /**

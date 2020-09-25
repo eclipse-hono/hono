@@ -48,7 +48,6 @@ import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -73,7 +72,7 @@ public class X509AuthHandlerTest {
     public void setUp() {
         clientAuth = mock(X509Authentication.class);
         authProvider = mock(DeviceCredentialsAuthProvider.class);
-        authHandler = new X509AuthHandler(clientAuth, authProvider, NoopTracerFactory.create());
+        authHandler = new X509AuthHandler(clientAuth, authProvider, null);
     }
 
     /**
