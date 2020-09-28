@@ -17,8 +17,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.NoConsumerException;
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.client.HttpResponse;
@@ -40,6 +43,7 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.proton.ProtonDelivery;
 
 
 /**
@@ -174,26 +178,34 @@ public class TelemetryHttpIT extends HttpTestBase {
      * when the consumer doesn't update the message delivery state and the
      * <em>sendMessageTimeout</em> has elapsed.
      *
+     * @param vertx The vert.x instance.
      * @param ctx The test context
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(final VertxTestContext ctx)
+    public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(final Vertx vertx, final VertxTestContext ctx)
             throws InterruptedException {
 
         // GIVEN a device and a northbound message consumer that doesn't update the message delivery state
         final Tenant tenant = new Tenant();
         final Checkpoint messageReceived = ctx.checkpoint();
+        final Checkpoint deliveryStateCheckDone = ctx.checkpoint();
         final Checkpoint httpResponseReceived = ctx.checkpoint();
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint setupDone = setup.checkpoint();
+        final AtomicReference<ProtonDelivery> deliveryRef = new AtomicReference<>();
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
                 .compose(ok -> helper.applicationClientFactory.createTelemetryConsumer(
                         tenantId, 
                         (delivery, msg) -> {
+                            deliveryRef.set(delivery);
                             logger.debug("received {}", msg);
+                            ctx.verify(() -> {
+                                assertThat(delivery.remotelySettled()).isFalse();
+                                assertThat(delivery.getRemoteState()).isNull();
+                            });
                             messageReceived.flag();
                             // don't update the delivery state here
                         },
@@ -228,6 +240,18 @@ public class TelemetryHttpIT extends HttpTestBase {
                                 .getLocalizedMessage(SendMessageTimeoutException.CLIENT_FACING_MESSAGE_KEY));
                     });
                     httpResponseReceived.flag();
+                    // verify that the telemetry message delivery is remotely settled via the timeout handling in the adapter
+                    vertx.setTimer(50, tid -> {
+                        ctx.verify(() -> {
+                            final ProtonDelivery delivery = deliveryRef.get();
+                            assertThat(delivery).isNotNull();
+                            assertThat(delivery.remotelySettled()).isTrue();
+                            assertThat(delivery.getRemoteState()).isNotNull();
+                            assertThat(delivery.getRemoteState().getType())
+                                    .isEqualTo(DeliveryState.DeliveryStateType.Released);
+                        });
+                        deliveryStateCheckDone.flag();
+                    });
                 }));
     }
 }

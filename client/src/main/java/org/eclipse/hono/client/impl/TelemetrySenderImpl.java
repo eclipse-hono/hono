@@ -15,7 +15,9 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
@@ -38,6 +40,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
@@ -170,6 +173,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
 
         final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
 
+        final AtomicReference<ProtonDelivery> deliveryRef = new AtomicReference<>();
         final ClientConfigProperties config = connection.getConfig();
         final AtomicBoolean timeoutReached = new AtomicBoolean(false);
         final Long timerId = config.getSendMessageTimeout() > 0
@@ -180,6 +184,11 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
                         logMessageSendingError(
                                 "waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
                                 messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
+                        // settle and release the delivery - this ensures that the message isn't considered "in flight"
+                        // anymore in the AMQP messaging network and that it doesn't count towards the link capacity
+                        // (it would be enough to just settle the delivery without an outcome but that cannot be done with proton-j as of now)
+                        Optional.ofNullable(deliveryRef.get())
+                                .ifPresent(delivery -> ProtonHelper.released(delivery, true));
                         TracingHelper.logError(currentSpan, exception.getMessage());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                         currentSpan.finish();
@@ -188,7 +197,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
                 })
                 : null;
 
-        final ProtonDelivery result = sender.send(message, deliveryUpdated -> {
+        final ProtonDelivery delivery = sender.send(message, deliveryUpdated -> {
             if (timerId != null) {
                 connection.getVertx().cancelTimer(timerId);
             }
@@ -208,10 +217,11 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
             }
             currentSpan.finish();
         });
+        deliveryRef.set(delivery);
         log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
                 getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
-        return Future.succeededFuture(result);
+        return Future.succeededFuture(delivery);
     }
 
     @Override
