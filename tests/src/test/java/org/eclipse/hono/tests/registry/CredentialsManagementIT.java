@@ -19,11 +19,14 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.GenericCredential;
@@ -31,6 +34,8 @@ import org.eclipse.hono.service.management.credentials.GenericSecret;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.service.management.credentials.PskCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -242,12 +247,10 @@ public class CredentialsManagementIT {
         // GIVEN a hashed password using bcrypt with more than the configured max iterations
         final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS + 1);
 
-        final PasswordCredential credential = new PasswordCredential(authId);
-
         final PasswordSecret secret = new PasswordSecret();
         secret.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
         secret.setPasswordHash(encoder.encode("thePassword"));
-        credential.setSecrets(List.of(secret));
+        final PasswordCredential credential = new PasswordCredential(authId, List.of(secret));
 
         // WHEN adding the credentials
         testAddCredentialsWithErroneousPayload(
@@ -418,8 +421,9 @@ public class CredentialsManagementIT {
                 final PasswordSecret newSecret = new PasswordSecret();
                 newSecret.setPasswordPlain("future-password");
                 newSecret.setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS));
-                final PasswordCredential updatedCredentials = new PasswordCredential(existingCredentials.getAuthId());
-                updatedCredentials.setSecrets(List.of(changedSecret, newSecret));
+                final PasswordCredential updatedCredentials = new PasswordCredential(
+                        existingCredentials.getAuthId(),
+                        List.of(changedSecret, newSecret));
                 return registry.updateCredentialsWithVersion(
                         tenantId,
                         deviceId,
@@ -522,77 +526,34 @@ public class CredentialsManagementIT {
     }
 
     /**
-     * Verify that multiple (2) correctly added credentials records of the same authId can be successfully looked up by
-     * single requests using their type and authId again.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testGetAddedCredentialsMultipleTypesSingleRequests(final VertxTestContext context) {
-
-        final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
-        credentialsListToAdd.add(hashedPasswordCredential);
-        credentialsListToAdd.add(pskCredentials);
-
-        registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
-            .compose(ar -> registry.getCredentials(tenantId, deviceId))
-            .onComplete(context.succeeding(httpResponse -> {
-                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsListToAdd));
-                context.completeNow();
-        }));
-    }
-
-    /**
-     * Verifies that the service returns all credentials registered for a given device regardless of authentication identifier.
+     * Verifies that the service returns all credentials registered for a given device regardless of
+     * authentication identifier and type.
      * <p>
-     * The returned JsonArray must consist exactly the same credentials as originally added.
+     * The returned JsonArray must contain exactly the same credentials as originally added.
      *
      * @param context The vert.x test context.
-     * @throws InterruptedException if registration of credentials is interrupted.
      */
     @Test
-    public void testGetAllCredentialsForDeviceSucceeds(final VertxTestContext context) throws InterruptedException {
+    public void testGetAllCredentialsForDeviceSucceeds(final VertxTestContext context) {
 
         final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(pskCredentials);
         credentialsListToAdd.add(hashedPasswordCredential);
-        credentialsListToAdd.add(IntegrationTestSupport.createPskCredentials("other-auth", "other-key"));
-
-        registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
-            .compose(ar -> registry.getCredentials(tenantId, deviceId))
-            .onComplete(context.succeeding(httpResponse -> {
-                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsListToAdd));
-                context.completeNow();
-            }));
-    }
-
-    /**
-     * Verifies that the service returns all credentials registered for a given device regardless of type.
-     * <p>
-     * The returned JsonArray must contain all the credentials previously added to the registry.
-     *
-     * @param context The vert.x test context.
-     * @throws InterruptedException if registration of credentials is interrupted.
-     */
-    @Test
-    public void testGetCredentialsForDeviceRegardlessOfType(final VertxTestContext context) throws InterruptedException {
-
-        final String pskAuthId = getRandomAuthId(PREFIX_AUTH_ID);
-        final List<CommonCredential> credentialsToAdd = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            final GenericCredential credential = new GenericCredential("type" + i, pskAuthId);
+        credentialsListToAdd.add(new X509CertificateCredential("CN=Acme", List.of(new X509CertificateSecret())));
+        for (int i = 0; i < 3; i++) {
 
             final GenericSecret secret = new GenericSecret();
-            secret.getAdditionalProperties().put("field" + i, "setec astronomy");
+            secret.setAdditionalProperties(Map.of("field-" + i, "setec astronomy"));
 
-            credential.setSecrets(List.of(secret));
-            credentialsToAdd.add(credential);
+            final GenericCredential credential = new GenericCredential("type-" + i, getRandomAuthId(PREFIX_AUTH_ID), List.of(secret));
+
+            credentialsListToAdd.add(credential);
         }
 
-        registry.addCredentials(tenantId, deviceId, credentialsToAdd)
+        registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
             .compose(ar -> registry.getCredentials(tenantId, deviceId))
             .onComplete(context.succeeding(httpResponse -> {
-                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsToAdd));
+                context.verify(() -> assertResponseBodyContainsAllCredentials(httpResponse.bodyAsJsonArray(), credentialsListToAdd));
                 context.completeNow();
             }));
     }
@@ -605,8 +566,7 @@ public class CredentialsManagementIT {
     @Test
     public void testGetAddedCredentialsButWithWrongType(final VertxTestContext context)  {
 
-        registry.updateCredentials(tenantId, deviceId, List.of(hashedPasswordCredential),
-                HttpURLConnection.HTTP_NO_CONTENT)
+        registry.updateCredentials(tenantId, deviceId, hashedPasswordCredential)
             .compose(ar -> registry.getCredentials(tenantId, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
             .onComplete(context.completing());
     }
@@ -619,8 +579,7 @@ public class CredentialsManagementIT {
     @Test
     public void testGetAddedCredentialsButWithWrongAuthId(final VertxTestContext context)  {
 
-        registry.updateCredentials(tenantId, deviceId, List.of(hashedPasswordCredential),
-                HttpURLConnection.HTTP_NO_CONTENT)
+        registry.updateCredentials(tenantId, deviceId, hashedPasswordCredential)
             .compose(ar -> registry.getCredentials(
                     tenantId,
                     "wrong-auth-id",
@@ -631,59 +590,24 @@ public class CredentialsManagementIT {
 
     private static void assertResponseBodyContainsAllCredentials(final JsonArray responseBody, final List<CommonCredential> expected) {
 
-        assertThat(expected.size()).isEqualTo(responseBody.size());
+        final List<CommonCredential> returnedCreds = responseBody.stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .map(json -> json.mapTo(CommonCredential.class))
+                .collect(Collectors.toList());
 
-        responseBody.forEach(credential -> {
-            JsonObject.mapFrom(credential).getJsonArray(CredentialsConstants.FIELD_SECRETS)
-                    .forEach(secret -> {
-                        // each secret should contain an ID.
-                        assertThat(JsonObject.mapFrom(secret)
-                                .getString(RegistryManagementConstants.FIELD_ID))
-                                .as("contains 'id' field")
-                                .isNotNull();
-                    });
-        });
+        final RecursiveComparisonConfiguration config = RecursiveComparisonConfiguration.builder()
+                .withStrictTypeChecking(true)
+                .withIgnoreCollectionOrder(true)
+                .withIgnoredFields("secrets.id", "secrets.key", "secrets.passwordHash", "secrets.passwordPlain", "secrets.hashFunction", "secrets.salt")
+                .build();
 
-        // secrets id were added by registry, strip it so we can compare other fields.
-        responseBody.forEach(credential -> {
-            ((JsonObject) credential).getJsonArray(CredentialsConstants.FIELD_SECRETS)
-                    .forEach(secret -> {
-                        ((JsonObject) secret).remove(RegistryManagementConstants.FIELD_ID);
-                    });
-        });
-
-        // The returned secrets won't contains the hashed password details fields, strip them from the expected values.
-        final JsonArray expectedArray = new JsonArray();
-        expected.forEach(credential -> {
-            final JsonObject jsonCredential = JsonObject.mapFrom(credential);
-            expectedArray.add(stripPrivateInfoFromSecrets(jsonCredential));
-        });
-
-        // now compare
-        assertThat(responseBody)
-                .isEqualTo(expectedArray);
+        assertThat(returnedCreds)
+            .usingRecursiveFieldByFieldElementComparator(config)
+            .containsExactlyInAnyOrderElementsOf(expected);
     }
 
     private static String getRandomAuthId(final String authIdPrefix) {
         return authIdPrefix + "-" + UUID.randomUUID();
-    }
-
-    private static JsonObject stripPrivateInfoFromSecrets(final JsonObject credentials) {
-
-        Optional.ofNullable(credentials.getJsonArray(CredentialsConstants.FIELD_SECRETS))
-            .map(JsonArray.class::cast)
-            .ifPresent(array -> array.stream()
-                    .map(JsonObject.class::cast)
-                    .forEach(secret -> {
-                        // password hash
-                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION);
-                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH);
-                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_SALT);
-                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN);
-                        // pre-shared key
-                        secret.remove(RegistryManagementConstants.FIELD_SECRETS_KEY);
-                    }));
-
-        return credentials;
     }
 }

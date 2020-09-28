@@ -12,8 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import javax.security.auth.x500.X500Principal;
@@ -37,9 +39,7 @@ public class X509CertificateCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
 
-    @JsonProperty
-    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
-    private List<X509CertificateSecret> secrets = new LinkedList<>();
+    private final List<X509CertificateSecret> secrets = new LinkedList<>();
 
     /**
      * Creates a new credentials object for a an X.500 Distinguished Name.
@@ -47,11 +47,16 @@ public class X509CertificateCredential extends CommonCredential {
      * The given distinguished name will be normalized to RFC 2253 format.
      *
      * @param distinguishedName The DN to use as the authentication identifier.
-     * @throws NullPointerException if the DN is {@code null}.
-     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name.
+     * @param secrets The credential's secret(s).
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name or if
+     *                                  secrets is empty.
      */
-    public X509CertificateCredential(@JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String distinguishedName) {
+    public X509CertificateCredential(
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String distinguishedName,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<X509CertificateSecret> secrets) {
         super(new X500Principal(distinguishedName).getName(X500Principal.RFC2253));
+        setSecrets(secrets);
     }
 
     /**
@@ -77,9 +82,15 @@ public class X509CertificateCredential extends CommonCredential {
         return TYPE;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return An unmodifiable list of secrets.
+     */
     @Override
+    @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
     public final List<X509CertificateSecret> getSecrets() {
-        return secrets;
+        return Collections.unmodifiableList(secrets);
     }
 
     /**
@@ -88,14 +99,17 @@ public class X509CertificateCredential extends CommonCredential {
      * The list cannot be empty and each secret is scoped to the validity period of the certificate.
      *
      * @param secrets The secret to set.
-     * @return        a reference to this for fluent use.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if secrets is {@code null}.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
     public final X509CertificateCredential setSecrets(final List<X509CertificateSecret> secrets) {
-        if (secrets != null && secrets.isEmpty()) {
+        Objects.requireNonNull(secrets);
+        if (secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets cannot be empty");
         }
-        this.secrets = secrets;
+        this.secrets.clear();
+        this.secrets.addAll(secrets);
         return this;
     }
 }

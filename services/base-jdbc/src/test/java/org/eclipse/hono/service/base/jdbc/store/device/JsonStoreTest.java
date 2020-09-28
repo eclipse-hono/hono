@@ -36,8 +36,7 @@ public class JsonStoreTest {
         final PskSecret psk1 = new PskSecret();
         psk1.setKey("foo".getBytes(StandardCharsets.UTF_8));
 
-        final PskCredential result = new PskCredential(authId);
-        result.setSecrets(Arrays.asList(psk1));
+        final PskCredential result = new PskCredential(authId, List.of(psk1));
 
         return result;
     }
