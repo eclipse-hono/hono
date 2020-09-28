@@ -23,9 +23,9 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -299,10 +299,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final var secret2 = AbstractCredentialsServiceTest.createPasswordSecret("hono-password",
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
 
-        final var credential = new PasswordCredential(authId);
-        credential.setSecrets(Arrays.asList(secret1, secret2));
-
-        return credential;
+        return new PasswordCredential(authId, List.of(secret1, secret2));
     }
 
     private static void assertStandardProperties(

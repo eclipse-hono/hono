@@ -43,12 +43,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
@@ -1142,7 +1140,9 @@ public final class IntegrationTestSupport {
      * @return The new instance.
      */
     public static PasswordCredential createPasswordCredential(final String authId, final String password) {
-        return AbstractCredentialsServiceTest.createPasswordCredential(authId, password,
+        return Credentials.createPasswordCredential(
+                authId,
+                password,
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
     }
 
@@ -1159,8 +1159,6 @@ public final class IntegrationTestSupport {
         Objects.requireNonNull(authId);
         Objects.requireNonNull(key);
 
-        final PskCredential creds = new PskCredential(authId);
-        creds.setSecrets(List.of(new PskSecret().setKey(key.getBytes(StandardCharsets.UTF_8))));
-        return creds;
+        return Credentials.createPSKCredential(authId, key);
     }
 }

@@ -81,9 +81,9 @@ public abstract class CommonCredential {
     }
 
     /**
-     * Get a list of secrets for this credential.
+     * Gets the secrets for this credential.
      *
-     * @return The list of credentials, must not be {@code null}.
+     * @return The credentials (never {@code null}).
      */
     public abstract List<? extends CommonSecret> getSecrets();
 

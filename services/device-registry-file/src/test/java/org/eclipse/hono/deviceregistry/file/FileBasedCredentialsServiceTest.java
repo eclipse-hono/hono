@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,13 +36,12 @@ import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -373,28 +371,19 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         when(fileSystem.existsBlocking(credentialsConfig.getFilename())).thenReturn(Boolean.TRUE);
 
         // 4700
-        final PasswordCredential passwordCredential = new PasswordCredential("bumlux");
-
-        final PasswordSecret hashedPassword = new PasswordSecret();
-        hashedPassword.setPasswordHash("$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.");
-        hashedPassword.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
-        passwordCredential.setSecrets(Collections.singletonList(hashedPassword));
+        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "thepwd");
 
         // 4711RegistryManagementConstants.FIELD_ID
-        final PskCredential pskCredential = new PskCredential("sensor1");
-
-        final PskSecret pskSecret = new PskSecret();
-        pskSecret.setKey("sharedkey".getBytes(StandardCharsets.UTF_8));
-        pskCredential.setSecrets(Collections.singletonList(pskSecret));
+        final PskCredential pskCredential = Credentials.createPSKCredential("sensor1", "sharedkey");
 
         setCredentials(getCredentialsManagementService(),
                 Constants.DEFAULT_TENANT, "4700",
-                Collections.<CommonCredential> singletonList(pskCredential))
+                List.of(pskCredential))
 
                         .compose(ok -> {
                             return setCredentials(getCredentialsManagementService(),
                                     "OTHER_TENANT", "4711",
-                                    Collections.<CommonCredential> singletonList(passwordCredential));
+                                    List.of(passwordCredential));
                         })
 
                         .compose(ok -> {
@@ -526,18 +515,13 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         credentialsConfig.setHashAlgorithmsWhitelist(whitelist);
 
         // 4700
-        final PasswordCredential passwordCredential = new PasswordCredential("bumlux");
-
-        final PasswordSecret hashedPassword = new PasswordSecret();
-        hashedPassword.setPasswordHash("$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.");
-        hashedPassword.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
-        passwordCredential.setSecrets(Collections.singletonList(hashedPassword));
+        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "thepwd");
 
         // WHEN trying to set the credentials
             getCredentialsManagementService().updateCredentials(
                 "tenant",
                 "device",
-                Collections.singletonList(passwordCredential),
+                List.of(passwordCredential),
                 Optional.empty(),
                 NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
@@ -561,12 +545,8 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
 
-        final PskSecret pskSecret = new PskSecret();
-        pskSecret.setKey("sharedkey".getBytes(StandardCharsets.UTF_8));
-
-        final PskCredential pskCredential = new PskCredential(authId);
+        final PskCredential pskCredential = Credentials.createPSKCredential(authId, "haredkey");
         pskCredential.setExtensions(Map.of("property-to-match", expectedContextValue));
-        pskCredential.setSecrets(Collections.singletonList(pskSecret));
 
         setCredentials(getCredentialsManagementService(), tenantId, deviceId, List.of(pskCredential))
                 .compose(ok -> {

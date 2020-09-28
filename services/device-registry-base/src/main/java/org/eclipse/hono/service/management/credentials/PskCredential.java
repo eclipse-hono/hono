@@ -12,8 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -32,19 +34,22 @@ public class PskCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY;
 
-    @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
-    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
-    private List<PskSecret> secrets = new LinkedList<>();
+    private final List<PskSecret> secrets = new LinkedList<>();
 
     /**
      * Creates a new credentials object for an authentication identifier.
      *
      * @param authId The authentication identifier.
-     * @throws NullPointerException if the auth ID is {@code null}.
-     * @throws IllegalArgumentException if auth ID does not match {@link org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
+     * @param secrets The credential's shared secret(s).
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if auth ID does not match {@link org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE}
+     *                                  or if secrets is empty.
      */
-    public PskCredential(@JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId) {
+    public PskCredential(
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<PskSecret> secrets) {
         super(authId);
+        setSecrets(secrets);
     }
 
     /**
@@ -56,9 +61,15 @@ public class PskCredential extends CommonCredential {
         return TYPE;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return An unmodifiable list of secrets.
+     */
     @Override
+    @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
     public final List<PskSecret> getSecrets() {
-        return secrets;
+        return Collections.unmodifiableList(secrets);
     }
 
     /**
@@ -68,13 +79,16 @@ public class PskCredential extends CommonCredential {
      *
      * @param secrets The secret to set.
      * @return        a reference to this for fluent use.
+     * @throws NullPointerException if secrets is {@code null}.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
     public final PskCredential setSecrets(final List<PskSecret> secrets) {
-        if (secrets != null && secrets.isEmpty()) {
+        Objects.requireNonNull(secrets);
+        if (secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets cannot be empty");
         }
-        this.secrets = secrets;
+        this.secrets.clear();
+        this.secrets.addAll(secrets);
         return this;
     }
 

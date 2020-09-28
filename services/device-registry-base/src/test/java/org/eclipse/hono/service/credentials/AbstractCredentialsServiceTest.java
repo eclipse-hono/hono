@@ -321,14 +321,8 @@ public abstract class AbstractCredentialsServiceTest {
      * @return The fully populated secret.
      */
     public static PskCredential createPSKCredential(final String authId, final String psk) {
-        final PskCredential p = new PskCredential(authId);
 
-        final PskSecret s = new PskSecret();
-        s.setKey(psk.getBytes());
-
-        p.setSecrets(Collections.singletonList(s));
-
-        return p;
+        return Credentials.createPSKCredential(authId, psk);
     }
 
     /**
@@ -341,11 +335,8 @@ public abstract class AbstractCredentialsServiceTest {
      */
     public static PasswordCredential createPasswordCredential(final String authId, final String password,
             final OptionalInt maxBcryptIterations) {
-        final PasswordCredential p = new PasswordCredential(authId);
 
-        p.setSecrets(Collections.singletonList(createPasswordSecret(password, maxBcryptIterations)));
-
-        return p;
+        return Credentials.createPasswordCredential(authId, password, maxBcryptIterations);
     }
 
     /**
@@ -356,14 +347,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @return The fully populated credential.
      */
     public static PasswordCredential createPlainPasswordCredential(final String authId, final String password) {
-        final PasswordCredential p = new PasswordCredential(authId);
-
-        final PasswordSecret secret = new PasswordSecret();
-        secret.setPasswordPlain(password);
-
-        p.setSecrets(Collections.singletonList(secret));
-
-        return p;
+        return Credentials.createPlainPasswordCredential(authId, password);
     }
 
     private static PasswordCredential createPasswordCredential(final String authId, final String password) {
@@ -915,11 +899,10 @@ public abstract class AbstractCredentialsServiceTest {
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final PasswordCredential credential = new PasswordCredential(authId);
         final PasswordSecret sec1 = new PasswordSecret().setPasswordPlain("bar");
         final PasswordSecret sec2 = new PasswordSecret().setPasswordPlain("foo");
 
-        credential.setSecrets(Arrays.asList(sec1, sec2));
+        final PasswordCredential credential = new PasswordCredential(authId, List.of(sec1, sec2));
 
         // create device & set credentials
 
@@ -965,12 +948,10 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().onComplete(ctx.succeeding(n -> {
             // create a credential object with only one of the ID.
-            final PasswordCredential credentialWithOnlyId = new PasswordCredential(authId);
-
             final PasswordSecret secretWithOnlyId = new PasswordSecret();
             secretWithOnlyId.setId(secretIDs.get(0));
 
-            credentialWithOnlyId.setSecrets(Collections.singletonList(secretWithOnlyId));
+            final PasswordCredential credentialWithOnlyId = new PasswordCredential(authId, List.of(secretWithOnlyId));
 
             getCredentialsManagementService()
                     .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithOnlyId),
@@ -1040,9 +1021,8 @@ public abstract class AbstractCredentialsServiceTest {
 
         // Retrieve credentials IDs
 
-        final Promise<?> phase2 = Promise.promise();
+        final Promise<PasswordCredential> phase2 = Promise.promise();
         final AtomicReference<String> pwdSecretId = new AtomicReference<>();
-        final PasswordCredential updatedCredential = new PasswordCredential(authId);
 
         phase1.future()
                 .compose(n -> getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE))
@@ -1070,16 +1050,16 @@ public abstract class AbstractCredentialsServiceTest {
                         final PasswordSecret newSecret = new PasswordSecret();
                         newSecret.setPasswordPlain("future-password");
                         newSecret.setNotBefore(origSecret.getNotAfter());
-                        updatedCredential.setSecrets(List.of(changedSecret, newSecret));
+                        final PasswordCredential updatedCredential = new PasswordCredential(authId, List.of(changedSecret, newSecret));
+                        phase2.complete(updatedCredential);
                     });
-                    phase2.complete();
                }));
 
         // update credentials, including additional PSK credentials
         final Promise<?> phase3 = Promise.promise();
 
         phase2.future()
-            .compose(n -> getCredentialsManagementService().updateCredentials(
+            .compose(updatedCredential -> getCredentialsManagementService().updateCredentials(
                     tenantId,
                     deviceId,
                     List.of(updatedCredential, createPSKCredential(authId, "shared-key")),
@@ -1187,14 +1167,11 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().onComplete(ctx.succeeding(n -> {
             // Add some metadata to the secret
-            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential(authId);
-
             final PasswordSecret secretWithOnlyIdAndMetadata = new PasswordSecret();
             secretWithOnlyIdAndMetadata.setId(secretIDs.get(0));
             secretWithOnlyIdAndMetadata.setComment("secret comment");
 
-
-            credentialWithMetadataUpdate.setSecrets(Collections.singletonList(secretWithOnlyIdAndMetadata));
+            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential(authId, List.of(secretWithOnlyIdAndMetadata));
 
             getCredentialsManagementService()
                     .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithMetadataUpdate),
@@ -1297,12 +1274,11 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().onComplete(ctx.succeeding(n -> {
             // Add some other metadata to the secret
-            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential(authId);
-
             final PasswordSecret secretWithOnlyIdAndMetadata = new PasswordSecret();
             secretWithOnlyIdAndMetadata.setId(secretIDs.get(0));
             secretWithOnlyIdAndMetadata.setComment("secret comment");
-            credentialWithMetadataUpdate.setSecrets(Collections.singletonList(secretWithOnlyIdAndMetadata));
+
+            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential(authId, List.of(secretWithOnlyIdAndMetadata));
 
             getCredentialsManagementService()
                     .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithMetadataUpdate),

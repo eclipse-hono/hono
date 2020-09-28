@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,8 +45,7 @@ class CredentialsDtoTest {
         existingSecret = new PskSecret();
         existingSecret.setId("abc");
         existingSecret.setKey("shared-key".getBytes(StandardCharsets.UTF_8));
-        existingCred = new PskCredential("psk-id");
-        existingCred.setSecrets(List.of(existingSecret));
+        existingCred = new PskCredential("psk-id", List.of(existingSecret));
     }
 
     @Test
@@ -62,8 +62,7 @@ class CredentialsDtoTest {
     @Test
     void testNewSecretWithoutIdDoesNotRequireMerging() {
 
-        final PskCredential updatedCred = new PskCredential("psk-id");
-        updatedCred.setSecrets(List.of(new PskSecret().setKey("other-key".getBytes(StandardCharsets.UTF_8))));
+        final PskCredential updatedCred = Credentials.createPSKCredential("psk-id", "other-key");
 
         final CredentialsDto updatedDto = new CredentialsDto("tenant", "device", List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging()).isFalse();
@@ -78,8 +77,7 @@ class CredentialsDtoTest {
         final PskSecret updatedSecret = new PskSecret();
         updatedSecret.setId("def");
         updatedSecret.setKey("irrelevant".getBytes(StandardCharsets.UTF_8));
-        final PskCredential updatedCred = new PskCredential("psk-id");
-        updatedCred.setSecrets(List.of(existingSecret, updatedSecret));
+        final PskCredential updatedCred = new PskCredential("psk-id", List.of(existingSecret, updatedSecret));
 
         final CredentialsDto updatedDto = new CredentialsDto("tenant", "device", List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging());
@@ -102,8 +100,7 @@ class CredentialsDtoTest {
         final PskSecret newSecret = new PskSecret();
         newSecret.setKey("irrelevant".getBytes(StandardCharsets.UTF_8));
 
-        final PskCredential updatedCred = new PskCredential("psk-id");
-        updatedCred.setSecrets(List.of(unchangedSecret, newSecret));
+        final PskCredential updatedCred = new PskCredential("psk-id", List.of(unchangedSecret, newSecret));
 
         final CredentialsDto updatedDto = new CredentialsDto("tenant", "device", List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging());
