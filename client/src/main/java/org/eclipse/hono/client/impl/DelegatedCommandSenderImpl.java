@@ -15,6 +15,8 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
@@ -36,6 +38,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
@@ -127,6 +130,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
 
+        final AtomicReference<ProtonDelivery> deliveryRef = new AtomicReference<>();
         final Promise<ProtonDelivery> result = Promise.promise();
         final String messageId = message.getMessageId() != null ? message.getMessageId().toString() : "";
         logMessageIdAndSenderInfo(currentSpan, messageId);
@@ -142,13 +146,18 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                                         + connection.getConfig().getSendMessageTimeout() + "ms");
                         logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
                                 messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
+                        // settle and release the delivery - this ensures that the message isn't considered "in flight"
+                        // anymore in the AMQP messaging network and that it doesn't count towards the link capacity
+                        // (it would be enough to just settle the delivery without an outcome but that cannot be done with proton-j as of now)
+                        Optional.ofNullable(deliveryRef.get())
+                                .ifPresent(delivery -> ProtonHelper.released(delivery, true));
                         result.fail(exception);
                         sample.timeout();
                     }
                 })
                 : null;
 
-        sender.send(message, deliveryUpdated -> {
+        deliveryRef.set(sender.send(message, deliveryUpdated -> {
             if (timerId != null) {
                 connection.getVertx().cancelTimer(timerId);
             }
@@ -168,7 +177,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                         "peer did not settle message, failing delivery");
                 result.fail(e);
             }
-        });
+        }));
         log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
                 getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
