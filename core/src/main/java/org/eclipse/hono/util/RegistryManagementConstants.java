@@ -314,12 +314,12 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The default regular expression to validate tenant IDs supplied when creating tenants are legal.
      */
-    public static final String DEFAULT_TENANT_ID_REGEX = "^" + DEFAULT_ID_REGEX + "$";
+    public static final String DEFAULT_TENANT_ID_PATTERN = "^" + DEFAULT_ID_REGEX + "$";
 
     /**
      * The default regular expression to validate device IDs supplied when creating devices are legal.
      */
-    public static final String DEFAULT_DEVICE_ID_REGEX = "^" + DEFAULT_ID_REGEX + "+$";
+    public static final String DEFAULT_DEVICE_ID_PATTERN = "^" + DEFAULT_ID_REGEX + "$";
 
     private RegistryManagementConstants() {
         // prevent instantiation
