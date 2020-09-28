@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,7 +26,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -35,27 +36,27 @@ public class GenericCredential extends CommonCredential {
 
     private static final Predicate<String> typeValidator = CredentialsConstants.PATTERN_TYPE_VALUE.asMatchPredicate();
 
-    @JsonProperty(value = RegistryManagementConstants.FIELD_TYPE)
-    private String type;
+    private final String type;
+    private final List<GenericSecret> secrets = new LinkedList<>();
 
-    @JsonAnySetter
     private Map<String, Object> additionalProperties = new HashMap<>();
 
-    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
-    private List<GenericSecret> secrets = new LinkedList<>();
 
     /**
      * Creates a new credentials object for a type and authentication identifier.
      *
      * @param type The credentials type to set.
      * @param authId The authentication identifier.
-     * @throws NullPointerException if type or auth ID are {@code null}.
-     * @throws IllegalArgumentException if type does not match {@link CredentialsConstants#PATTERN_TYPE_VALUE}
-     *         or if auth ID does not match {@link CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
+     * @param secrets The credential's (generic) secret(s).
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if type does not match {@link CredentialsConstants#PATTERN_TYPE_VALUE},
+     *         if auth ID does not match {@link CredentialsConstants#PATTERN_AUTH_ID_VALUE} or
+     *         if secrets is empty.
      */
     public GenericCredential(
             @JsonProperty(value = RegistryManagementConstants.FIELD_TYPE, required = true) final String type,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId) {
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<GenericSecret> secrets) {
         super(authId);
         Objects.requireNonNull(type);
         if (typeValidator.test(type)) {
@@ -64,32 +65,41 @@ public class GenericCredential extends CommonCredential {
             throw new IllegalArgumentException("type name must match pattern "
                     + CredentialsConstants.PATTERN_TYPE_VALUE.pattern());
         }
+        setSecrets(secrets);
     }
 
     @Override
+    @JsonIgnore
     public final String getType() {
         return type;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return An unmodifiable list of secrets.
+     */
     @Override
+    @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
     public final List<GenericSecret> getSecrets() {
-        return this.secrets;
+        return Collections.unmodifiableList(this.secrets);
     }
 
     /**
      * Sets the list of secrets to use for authenticating a device to protocol adapters.
-     * <p>
-     * The list cannot be empty and each secret is scoped to its validity period.
      *
      * @param secrets The secret to set.
-     * @return        a reference to this for fluent use.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if secrets is {@code null}.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
     public final GenericCredential setSecrets(final List<GenericSecret> secrets) {
-        if (secrets != null && secrets.isEmpty()) {
+        Objects.requireNonNull(secrets);
+        if (secrets.isEmpty()) {
             throw new IllegalArgumentException("Secrets cannot be empty");
         }
-        this.secrets = secrets;
+        this.secrets.clear();
+        this.secrets.addAll(secrets);
         return this;
     }
 
@@ -99,6 +109,7 @@ public class GenericCredential extends CommonCredential {
      * @param additionalProperties  The additional properties for this credential.
      * @return                      a reference to this for fluent use.
      */
+    @JsonAnySetter
     public final GenericCredential setAdditionalProperties(final Map<String, Object> additionalProperties) {
         this.additionalProperties = additionalProperties;
         return this;

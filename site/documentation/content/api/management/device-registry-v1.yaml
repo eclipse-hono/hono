@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.4.2
+   version: 1.4.3
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -1088,6 +1088,8 @@ components:
          allOf:
             - $ref: '#/components/schemas/CommonCredentials'
             - type: object
+              required:
+                 - secrets
               additionalProperties: false
               properties:
                  "type":
@@ -1097,12 +1099,15 @@ components:
                     type: array
                     items:
                        $ref: '#/components/schemas/PasswordSecret'
+                    minItems: 1
 
       PSKCredentials:
          additionalProperties: false
          allOf:
             - $ref: '#/components/schemas/CommonCredentials'
             - type: object
+              required:
+                 - secrets
               additionalProperties: false
               properties:
                  "type":
@@ -1112,12 +1117,15 @@ components:
                     type: array
                     items:
                        $ref: '#/components/schemas/PSKSecret'
+                    minItems: 1
 
       X509CertificateCredentials:
          additionalProperties: false
          allOf:
             - $ref: '#/components/schemas/CommonCredentials'
             - type: object
+              required:
+                 - secrets
               additionalProperties: false
               properties:
                  "type":
@@ -1127,6 +1135,7 @@ components:
                     type: array
                     items:
                        $ref: '#/components/schemas/X509CertificateSecret'
+                    minItems: 1
 
       CommonSecret:
          type: object

@@ -14,7 +14,7 @@
 package org.eclipse.hono.service.credentials;
 
 import java.util.Base64;
-import java.util.Collections;
+import java.util.List;
 import java.util.OptionalInt;
 
 import org.eclipse.hono.auth.EncodedPassword;
@@ -40,14 +40,10 @@ public final class Credentials {
      * @return The fully populated secret.
      */
     public static PskCredential createPSKCredential(final String authId, final String psk) {
-        final PskCredential p = new PskCredential(authId);
 
         final PskSecret s = new PskSecret();
         s.setKey(psk.getBytes());
-
-        p.setSecrets(Collections.singletonList(s));
-
-        return p;
+        return new PskCredential(authId, List.of(s));
     }
 
     /**
@@ -63,11 +59,9 @@ public final class Credentials {
             final String password,
             final OptionalInt bcryptCostFactor) {
 
-        final PasswordCredential p = new PasswordCredential(authId);
-
-        p.setSecrets(Collections.singletonList(createPasswordSecret(password, bcryptCostFactor)));
-
-        return p;
+        return new PasswordCredential(
+                authId,
+                List.of(createPasswordSecret(password, bcryptCostFactor)));
     }
 
     /**
@@ -78,14 +72,10 @@ public final class Credentials {
      * @return The fully populated credential.
      */
     public static PasswordCredential createPlainPasswordCredential(final String authId, final String password) {
-        final PasswordCredential p = new PasswordCredential(authId);
 
         final PasswordSecret secret = new PasswordSecret();
         secret.setPasswordPlain(password);
-
-        p.setSecrets(Collections.singletonList(secret));
-
-        return p;
+        return new PasswordCredential(authId, List.of(secret));
     }
 
     /**
