@@ -14,7 +14,6 @@
 package org.eclipse.hono.tests;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +29,6 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
@@ -1057,8 +1055,7 @@ public final class DeviceRegistryHttpClient {
                 .compose(ok -> {
 
                     final String authId = deviceCert.getSubjectDN().getName();
-                    final X509CertificateCredential credential = new X509CertificateCredential(authId);
-                    credential.getSecrets().add(new X509CertificateSecret());
+                    final X509CertificateCredential credential = new X509CertificateCredential(authId, List.of(new X509CertificateSecret()));
 
                     return addCredentials(tenantId, deviceId, Collections.singleton(credential));
 
@@ -1113,11 +1110,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(deviceData);
         Objects.requireNonNull(key);
 
-        final PskCredential credential = new PskCredential(deviceId);
-
-        final PskSecret secret = new PskSecret();
-        secret.setKey(key.getBytes(StandardCharsets.UTF_8));
-        credential.getSecrets().add(secret);
+        final PskCredential credential = IntegrationTestSupport.createPskCredentials(deviceId, key);
 
         return addTenant(tenantId, tenant)
                 .compose(ok -> registerDevice(tenantId, deviceId, deviceData))
@@ -1139,11 +1132,7 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<HttpResponse<Buffer>> addPskDeviceToTenant(final String tenantId, final String deviceId, final String key) {
 
-        final PskCredential credential = new PskCredential(deviceId);
-
-        final PskSecret secret = new PskSecret();
-        secret.setKey(key.getBytes(StandardCharsets.UTF_8));
-        credential.getSecrets().add(secret);
+        final PskCredential credential = IntegrationTestSupport.createPskCredentials(deviceId, key);
 
         return registerDevice(tenantId, deviceId)
                 .compose(ok -> addCredentials(tenantId, deviceId, Collections.singleton(credential)));

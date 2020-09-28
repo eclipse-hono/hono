@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.mqtt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -240,8 +241,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 }).compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
                 .compose(ok -> {
                     final String authId = new X500Principal("CN=4711").getName(X500Principal.RFC2253);
-                    final X509CertificateCredential credential = new X509CertificateCredential(authId);
-                    credential.getSecrets().add(new X509CertificateSecret());
+                    final X509CertificateCredential credential = new X509CertificateCredential(authId, List.of(new X509CertificateSecret()));
                     return helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(credential));
                 })
                 // WHEN the device tries to connect using a client certificate with an unknown subject DN

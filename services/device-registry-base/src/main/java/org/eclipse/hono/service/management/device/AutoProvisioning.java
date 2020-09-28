@@ -83,8 +83,7 @@ public final class AutoProvisioning {
 
                     // 2. set the certificate credential
                     final String authId = clientCertificate.getSubjectX500Principal().getName(X500Principal.RFC2253);
-                    final X509CertificateCredential certCredential = new X509CertificateCredential(authId)
-                            .setSecrets(List.of(new X509CertificateSecret()));
+                    final X509CertificateCredential certCredential = new X509CertificateCredential(authId, List.of(new X509CertificateSecret()));
                     certCredential.setEnabled(true).setComment(comment);
 
                     final String deviceId = r.getPayload().getId();
