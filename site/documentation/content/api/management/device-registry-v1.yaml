@@ -1073,10 +1073,8 @@ components:
          properties:
             "type":
                type: string
-               pattern: "^[a-z0-9-]+$"
             "auth-id":
                type: string
-               pattern: "^[a-zA-Z0-9-_=.]+$"
             "enabled":
                type: boolean
                default: true
@@ -1095,6 +1093,12 @@ components:
                  "type":
                     type: string
                     pattern: "hashed-password"
+                 "auth-id":
+                    type: string
+                    description: |
+                       The authentication identifier provided by the device as part of the *user name*.
+                       Example: For user name `sensor1@DEFAULT_TENANT` the authentication identifier to be registered
+                       is `sensor1`.
                  "secrets":
                     type: array
                     items:
@@ -1113,6 +1117,9 @@ components:
                  "type":
                     type: string
                     pattern: "psk"
+                 "auth-id":
+                    type: string
+                    description: The *PSK identity* provided by the device in the TLS handshake.
                  "secrets":
                     type: array
                     items:
@@ -1131,6 +1138,9 @@ components:
                  "type":
                     type: string
                     pattern: "x509-cert"
+                 "auth-id":
+                    type: string
+                    description: The *subject DN* of the public key contained in the device's X.509 certificate.
                  "secrets":
                     type: array
                     items:
@@ -1148,12 +1158,17 @@ components:
             "enabled":
                type: boolean
                default: true
+               description: Indicates if this secret can be used for authentication.
             "not-before":
                type: string
                format: date-time
+               description: |
+                  The point in time from which on this secret will be accepted for authentication.
             "not-after":
                type: string
                format: date-time
+               description: |
+                  The point in time after which this secret will no longer be accepted for authentication.
             "comment":
                type: string
 
@@ -1209,6 +1224,7 @@ components:
                  "key":
                     type: string
                     format: byte
+                    description: The secret key shared between device and Hono.
 
       FilterJson:
         description: Filters to be applied to bulk queries.
@@ -1268,16 +1284,6 @@ components:
          schema:
             type: string
          example: 4711
-
-      type:
-         name: type
-         in: path
-         description: The credentials type
-         required: true
-         schema:
-            type: string
-            pattern: "^[a-z0-9-]+$"
-         example: sha-256
 
       pageSize:
         name: pageSize

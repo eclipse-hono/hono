@@ -16,7 +16,10 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
 
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -33,6 +36,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class PasswordCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
+
+    /**
+     * A predicate for matching authentication identifiers against the
+     * {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
+     */
+    private static final Predicate<String> AUTH_ID_VALIDATOR_DEFAULT = authId -> {
+        final Matcher matcher = CredentialsConstants.PATTERN_AUTH_ID_VALUE.matcher(authId);
+        if (matcher.matches()) {
+            return true;
+        } else {
+            throw new IllegalArgumentException("authentication identifier must match pattern "
+                    + CredentialsConstants.PATTERN_AUTH_ID_VALUE.pattern());
+        }
+    };
 
     private final List<PasswordSecret> secrets = new LinkedList<>();
 
@@ -51,6 +68,17 @@ public class PasswordCredential extends CommonCredential {
 
         super(authId);
         setSecrets(secrets);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return A predicate that matches the identifier against the {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE
+     * default pattern}.
+     */
+    @Override
+    protected Predicate<String> getAuthIdValidator() {
+        return AUTH_ID_VALIDATOR_DEFAULT;
     }
 
     /**

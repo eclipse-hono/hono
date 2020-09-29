@@ -18,10 +18,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -39,21 +37,6 @@ import com.google.common.base.Strings;
 @JsonTypeIdResolver(CredentialTypeResolver.class)
 public abstract class CommonCredential {
 
-    /**
-     * A predicate for matching authentication identifiers against the
-     * {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
-     */
-    protected static final Predicate<String> AUTH_ID_VALIDATOR_DEFAULT = authId -> {
-        final Matcher matcher = CredentialsConstants.PATTERN_AUTH_ID_VALUE.matcher(authId);
-        if (matcher.matches()) {
-            return true;
-        } else {
-            throw new IllegalArgumentException("authentication identifier must match pattern "
-                    + CredentialsConstants.PATTERN_AUTH_ID_VALUE.pattern());
-        }
-    };
-
-    @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID)
     private String authId;
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
@@ -69,7 +52,8 @@ public abstract class CommonCredential {
      *
      * @param authId The authentication identifier.
      * @throws NullPointerException if the auth ID is {@code null}.
-     * @throws IllegalArgumentException if auth ID does not match {@link CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
+     * @throws IllegalArgumentException if the {@linkplain #getAuthIdValidator() auth-id validator} evaluates to
+     *                {@code false} for the given identifier.
      */
     protected CommonCredential(final String authId) {
         Objects.requireNonNull(authId);
@@ -98,8 +82,7 @@ public abstract class CommonCredential {
      * Gets a predicate to use for validating authentication identifiers.
      * <p>
      * The predicate is invoked by the constructor before setting the authId property.
-     * This default implementation returns a predicate that matches the identifier
-     * against the {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
+     * This default implementation returns a predicate that always evaluates to {@code true}.
      * <p>
      * The constructor will re-throw an {@code IllegalArgumentException}y thrown by the
      * predicate's <em>test</em> method. This might be used to convey additional information
@@ -110,23 +93,15 @@ public abstract class CommonCredential {
      * @return The predicate.
      */
     protected Predicate<String> getAuthIdValidator() {
-        return AUTH_ID_VALIDATOR_DEFAULT;
+        return s -> true;
     }
 
     /**
-     * Sets the authentication identifier used by the device.
+     * Gets the authentication identifier used with these credentials.
      *
-     * @param authId The identifier.
-     * @return A reference to this for fluent use.
-     * @throws NullPointerException if ID is {@code null}.
+     * @return The identifier.
      */
-    @JsonIgnore
-    protected final CommonCredential setAuthId(final String authId) {
-        Objects.requireNonNull(authId);
-        this.authId = authId;
-        return this;
-    }
-
+    @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID)
     public final String getAuthId() {
         return authId;
     }
