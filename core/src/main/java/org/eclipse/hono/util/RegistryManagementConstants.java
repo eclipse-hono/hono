@@ -307,19 +307,14 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
 
     /**
-     * The default regular expression validating IDs contain only legal characters.
-     */
-    public static final String DEFAULT_ID_REGEX = "[a-zA-Z0-9-_\\.]+";
-
-    /**
      * The default regular expression to validate tenant IDs supplied when creating tenants are legal.
      */
-    public static final String DEFAULT_TENANT_ID_PATTERN = "^" + DEFAULT_ID_REGEX + "$";
+    public static final String DEFAULT_TENANT_ID_PATTERN = "^[a-zA-Z0-9-_\\.]+$";
 
     /**
      * The default regular expression to validate device IDs supplied when creating devices are legal.
      */
-    public static final String DEFAULT_DEVICE_ID_PATTERN = "^" + DEFAULT_ID_REGEX + "$";
+    public static final String DEFAULT_DEVICE_ID_PATTERN = "^[a-zA-Z0-9-_\\.:]+$";
 
     private RegistryManagementConstants() {
         // prevent instantiation
