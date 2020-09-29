@@ -19,6 +19,8 @@ title = "Release Notes"
 ### API Changes
 
 * The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.
+* The default pattern for valid device identifiers used for the file based and the MongoDB based registry
+  implementations now also contains a colon for compatibility with Eclipse Ditto.
 
 ### Fixes & Enhancements
 * The wildcards ( `?` and `*`) are now supported by the search devices operation in the MongoDB based device registry. 
@@ -54,9 +56,11 @@ title = "Release Notes"
 
 ### Deprecations
  
- * The configuration property `singleTenant` of the protocol adapters and the device registry is now deprecated
-   and planned to be removed in a future release. The use case of a system with just a single tenant should be
-   realized by configuring just one tenant in the device registry.
+* The configuration property `singleTenant` of the protocol adapters and the device registry is now deprecated
+  and planned to be removed in a future release. The use case of a system with just a single tenant should be
+  realized by configuring just one tenant in the device registry.
+* The `HONO_REGISTRY_REST_*` configuration properties of the file based device registry have been deprecated
+  in favor of corresponding properties with the `HONO_REGISTRY_HTTP_` prefix.
 
 ## 1.3.0
 
@@ -148,6 +152,14 @@ title = "Release Notes"
   properties instead of working on given ones. The new method name now more accurately conveys
   what the method is used for. The same change has been applied to the other `customize[*]Config`
   methods in the `AbstractAdapterConfig` class.
+* The file based as well as the MongoDB based device registry implementations now disallow certain
+  special characters in device and tenant identifiers. The configuration properties
+  `HONO_REGISTRY_HTTP_TENANT_ID_PATTERN` and `HONO_REGISTRY_HTTP_DEVICE_ID_PATTERN` (and corresponding ones with
+  prefix `HONO_REGISTRY_REST` for the file based registry) can be used to override the patterns for matching
+  valid identifiers. Please refer to the 
+  [file based registry]({{% doclink "/admin-guide/file-based-device-registry-config/#service-configuration" %}}) or
+  [MongoDB based registry]({{% doclink "/admin-guide/mongodb-device-registry-config/#service-configuration" %}})
+  configuration guide for details.
  
 ### Deprecations
  

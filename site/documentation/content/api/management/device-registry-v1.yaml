@@ -1249,7 +1249,6 @@ components:
          required: true
          schema:
             type: string
-            pattern: "^[a-zA-Z0-9-_\\.]+$"
          example: DEFAULT_TENANT
 
       deviceId:
@@ -1259,7 +1258,6 @@ components:
          required: true
          schema:
             type: string
-            pattern: "^[a-zA-Z0-9-_\\.]+$"
          example: 4711
 
       type:
