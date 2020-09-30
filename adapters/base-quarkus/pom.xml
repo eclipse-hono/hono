@@ -24,7 +24,9 @@
     <packaging>pom</packaging>
 
     <properties>
-      <quarkus.container-image.group>eclipse</quarkus.container-image.group>
+      <quarkus.container-image.group>${docker.image.org-name}</quarkus.container-image.group>
+      <quarkus.container-image.additional-tags>latest,${docker.image.additional.tag}</quarkus.container-image.additional-tags>
+      <quarkus.container-image.registry>${docker.registry-name}</quarkus.container-image.registry>
       <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
       <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
     </properties>
@@ -148,7 +150,7 @@
       <profile>
         <id>docker-push-image</id>
         <properties>
-          <quarkus.container-image.build>true</quarkus.container-image.build>
+          <quarkus.container-image.push>true</quarkus.container-image.push>
         </properties>
       </profile>
 

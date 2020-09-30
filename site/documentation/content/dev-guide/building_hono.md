@@ -56,12 +56,38 @@ If you plan to build the Docker images more frequently, e.g. because you want to
 The first build might take several minutes because Docker will need to download all the base images that Hono is relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
 {{% /note %}}
 
+#### Using custom Image Names
+
+The container images being created will have names based on the following pattern:
+`${docker.registry-name}/${docker.image.org-name}/${project.artifactId}:${project.version}`.
+
+The variables in the name are standard Maven properties. The default value for the *docker.registry-name* property is `index.docker.io`.
+The default value for *docker.image.org-name* is `eclipse`. The following build command creates Hono's images using the `quay.io` registry
+and the `custom` repository name:
+
+```sh
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
+```
+
+#### Building native Images
+
 You can create _native_ Docker images for some of the Hono services. In order to do so, you need to use `native` Maven profile:
 
 ```sh
 # in the "hono" folder containing the source code
 mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,native
 ```
+
+#### Pushing Images
+
+The container images that are created as part of the build process can be automatically pushed to a container registry using the `docker-push-image` Maven profile:
+
+```sh
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,docker-push-image
+```
+
+Note that the container registry might require authentication in order to push images. The build uses the Docker Maven Plugin for creating and pushing images.
+Please refer to the [plugin documentation](http://dmp.fabric8.io/#authentication) for details regarding how to configure credentials for the registry.
 
 ## Perform the integration tests
 
