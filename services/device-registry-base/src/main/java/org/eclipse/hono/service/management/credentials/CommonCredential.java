@@ -37,7 +37,8 @@ import com.google.common.base.Strings;
 @JsonTypeIdResolver(CredentialTypeResolver.class)
 public abstract class CommonCredential {
 
-    private String authId;
+    private final String authId;
+
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
     @JsonProperty(RegistryManagementConstants.FIELD_COMMENT)

@@ -50,7 +50,7 @@ public class CredentialsTest {
     private static final Instant NOT_AFTER = Instant.parse(NOT_AFTER_STRING);
     private static final String SECRET_COMMENT = "secret comment";
 
-    static Stream<String> illegalAuthIds() {
+    static Stream<String> illegalPasswordCredentialAuthIds() {
         return Stream.of("$", "#", "%", "!", "(", ")", "?", ",", ";", ":", "@", " ", "");
     }
 
@@ -490,13 +490,13 @@ public class CredentialsTest {
     }
 
     /**
-     * Verifies that a credentials object requires the authentication identifier to match
-     * the {@linkplain org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE auth id regex}.
+     * Verifies that PasswordCredentials and X.509CertificateCredentials require the authentication
+     * identifier to match type specific patterns.
      */
     @Test
     public void testInstantiationFailsForIllegalAuthId() {
 
-        illegalAuthIds().forEach(authId -> {
+        illegalPasswordCredentialAuthIds().forEach(authId -> {
             assertThatThrownBy(() -> new PasswordCredential(authId, List.of(new PasswordSecret())))
                 .isInstanceOf(IllegalArgumentException.class);
         });
@@ -506,23 +506,27 @@ public class CredentialsTest {
     }
 
     /**
-     * Verifies that decoding of a JSON object to a PSK credential
+     * Verifies that decoding of a JSON object to a credential object
      * fails if the authentication identifier does not match the auth ID regex.
      */
     @Test
     public void testDecodeFailsForIllegalAuthId() {
 
-        illegalAuthIds().forEach(illegalAuthId -> {
+        final JsonObject pwdSecret = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN, "the-pwd");
+        illegalPasswordCredentialAuthIds().forEach(illegalAuthId -> {
             final JsonObject jsonCredential = new JsonObject()
                     .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
-                    .put(RegistryManagementConstants.FIELD_AUTH_ID, illegalAuthId);
-            assertThatThrownBy(() -> jsonCredential.mapTo(CommonCredential.class))
+                    .put(RegistryManagementConstants.FIELD_AUTH_ID, illegalAuthId)
+                    .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(pwdSecret));
+            assertThatThrownBy(() -> jsonCredential.mapTo(PasswordCredential.class))
                 .isInstanceOf(IllegalArgumentException.class);
         });
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "not-a-subject-DN");
-        assertThatThrownBy(() -> jsonCredential.mapTo(CommonCredential.class))
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "not-a-subject-DN")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
+        assertThatThrownBy(() -> jsonCredential.mapTo(X509CertificateCredential.class))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -533,7 +537,8 @@ public class CredentialsTest {
     @Test
     public void testDecodeCredentialFailsForMissingType() {
         final JsonObject jsonCredential = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "device1");
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "device1")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
         assertThatThrownBy(() -> jsonCredential.mapTo(CommonCredential.class))
             .isInstanceOf(IllegalArgumentException.class);
     }
