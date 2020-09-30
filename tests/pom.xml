@@ -328,6 +328,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <image>
                   <name>${docker.repository}/hono-jaeger-all-in-one-test</name>
                   <alias>jaeger</alias>
+                  <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${jaeger.image.name}</from>
+                  </build>
                   <run>
                     <skip>${jaeger.disabled}</skip>
                     <ports>
