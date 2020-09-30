@@ -28,13 +28,13 @@
   <description>A &quot;bill-of-materials&quot; for Hono.</description>
 
   <properties>
-    <artemis.image.name>quay.io/enmasse/artemis-base:2.10.1</artemis.image.name>
+    <artemis.image.name>quay.io/enmasse/artemis-base:2.13.0</artemis.image.name>
     <assertj-core.version>3.17.2</assertj-core.version>
     <c3p0.version>0.9.5.4</c3p0.version>
     <caffeine.version>2.8.4</caffeine.version>
     <californium.version>2.3.1</californium.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.12.0</dispatch-router.image.name>
+    <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.14.0</dispatch-router.image.name>
     <flapdoodle.version>2.2.0</flapdoodle.version>
     <guava.version>28.0-jre</guava.version>
     <gson.version>2.8.5</gson.version>
