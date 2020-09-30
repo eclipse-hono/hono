@@ -188,12 +188,12 @@
     <!--
       The Docker registry to use for our Docker image names.
     -->
-    <docker.registry>index.docker.io</docker.registry>
+    <docker.registry-name>index.docker.io</docker.registry-name>
 
     <!--
       The Docker repository to use for our Docker image names.
     -->
-    <docker.repository>${docker.registry}/${docker.image.org-name}</docker.repository>
+    <docker.repository>${docker.registry-name}/${docker.image.org-name}</docker.repository>
 
     <!--
       Additional tag which can be defined for custom builds
