@@ -8,7 +8,10 @@ on:
     branches: [ github_actions ]
 
 env:
-  registry-name: ghcr.io
+  registry-name: docker.pkg.github.com
+  image-org-name: $GITHUB_REPOSITORY
+  container-registry-user: ${{ github.actor }}
+  container-registry-pwd: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   build:
@@ -39,10 +42,10 @@ jobs:
       uses: docker/login-action@v1
       with:
         registry: ${{ env.registry-name }}
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.CR_PAT }}
+        username: ${{ env.container-registry-user }}
+        password: ${{ env.container-registry-pwd }}
     - name: Build all components incl. running unit tests
-      run: mvn install -B -e -DcreateJavadoc=true -Ddocker.registry-name=${{ env.registry-name }} -Ddocker.image.org-name=${{ github.repository_owner }} -Pbuild-docker-image,docker-push-image
+      run: mvn install -B -e -DcreateJavadoc=true -Ddocker.registry-name=${{ env.registry-name }} -Ddocker.image.org-name=${{ env.image-org-name }} -Pbuild-docker-image,docker-push-image
 
   integration-test:
     needs: build
@@ -67,7 +70,7 @@ jobs:
       uses: docker/login-action@v1
       with:
         registry: ${{ env.registry-name }}
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.CR_PAT }}
+        username: ${{ env.container-registry-user }}
+        password: ${{ env.container-registry-pwd }}
     - name: Run integration tests
-      run: mvn verify -B -e -DCI=$CI -Ddocker.registry-name=${{ env.registry-name }} -Ddocker.image.org-name=${{ github.repository_owner }} -Dhono.deviceregistry.type=${{ matrix.device-registry }} -pl :hono-tests -Prun-tests
+      run: mvn verify -B -e -DCI=$CI -Ddocker.registry-name=${{ env.registry-name }} -Ddocker.image.org-name=${{ env.image-org-name }} -Dhono.deviceregistry.type=${{ matrix.device-registry }} -pl :hono-tests -Prun-tests
