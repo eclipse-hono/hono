@@ -49,9 +49,8 @@ public class GenericCredential extends CommonCredential {
      * @param authId The authentication identifier.
      * @param secrets The credential's (generic) secret(s).
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if type does not match {@link CredentialsConstants#PATTERN_TYPE_VALUE},
-     *         if auth ID does not match {@link CredentialsConstants#PATTERN_AUTH_ID_VALUE} or
-     *         if secrets is empty.
+     * @throws IllegalArgumentException if type does not match {@link CredentialsConstants#PATTERN_TYPE_VALUE} or
+     *                                  if secrets is empty.
      */
     public GenericCredential(
             @JsonProperty(value = RegistryManagementConstants.FIELD_TYPE, required = true) final String type,
