@@ -118,10 +118,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String EVENT_BUS_ADDRESS_CREDENTIALS_IN = "credentials.in";
     /**
-     * The regular expression to validate that the auth-id field supplied in credentials is legal.
-     */
-    public static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile("^[a-zA-Z0-9-_=.]+$");
-    /**
      * The regular expression to validate that the type field supplied in credentials is legal.
      */
     public static final Pattern PATTERN_TYPE_VALUE = Pattern.compile("^[a-z0-9-]+$");
