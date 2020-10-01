@@ -16,7 +16,11 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -32,7 +36,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordCredential extends CommonCredential {
 
+    /**
+     * The regular expression that authentication identifiers need to match.
+     */
+    public static final String REGEX_AUTH_ID = "^[a-zA-Z0-9-_=\\.]+$";
+
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
+
+    private static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile(REGEX_AUTH_ID);
+    /**
+     * A predicate for matching authentication identifiers against the
+     * {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
+     */
+    private static final Predicate<String> AUTH_ID_VALIDATOR_DEFAULT = authId -> {
+        final Matcher matcher = PATTERN_AUTH_ID_VALUE.matcher(authId);
+        if (matcher.matches()) {
+            return true;
+        } else {
+            throw new IllegalArgumentException("authentication identifier must match pattern "
+                    + PATTERN_AUTH_ID_VALUE.pattern());
+        }
+    };
 
     private final List<PasswordSecret> secrets = new LinkedList<>();
 
@@ -42,8 +66,7 @@ public class PasswordCredential extends CommonCredential {
      * @param authId The authentication identifier.
      * @param secrets The credential's secret password(s).
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if auth ID does not match {@link org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE}
-     *                                  or if secrets is empty.
+     * @throws IllegalArgumentException if auth ID does not match {@value #REGEX_AUTH_ID} or if secrets is empty.
      */
     public PasswordCredential(
             @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
@@ -51,6 +74,16 @@ public class PasswordCredential extends CommonCredential {
 
         super(authId);
         setSecrets(secrets);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return A predicate that matches the identifier against the {@linkplain #REGEX_AUTH_ID default pattern}.
+     */
+    @Override
+    protected Predicate<String> getAuthIdValidator() {
+        return AUTH_ID_VALIDATOR_DEFAULT;
     }
 
     /**

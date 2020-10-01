@@ -42,8 +42,7 @@ public class PskCredential extends CommonCredential {
      * @param authId The authentication identifier.
      * @param secrets The credential's shared secret(s).
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if auth ID does not match {@link org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE}
-     *                                  or if secrets is empty.
+     * @throws IllegalArgumentException if secrets is empty.
      */
     public PskCredential(
             @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
