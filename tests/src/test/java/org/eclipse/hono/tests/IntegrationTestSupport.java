@@ -280,7 +280,11 @@ public final class IntegrationTestSupport {
      * by Hono.
      */
     public static final String PROPERTY_MAX_BCRYPT_COST_FACTOR = "max.bcrypt.costFactor";
-
+    /**
+     * The name of the system property to use for setting the maximum time (in ms) that adapters
+     * wait for an acknowledgement of a command sent to a device.
+     */
+    public static final String PROPERTY_SEND_MESSAGE_TO_DEVICE_TIMEOUT = "adapter.sendMessageToDeviceTimeout";
 
     /**
      * The IP address of the Auth service.
@@ -406,6 +410,11 @@ public final class IntegrationTestSupport {
      * The maximum BCrypt cost factor supported by Hono.
      */
     public static final int MAX_BCRYPT_COST_FACTOR = Integer.getInteger(PROPERTY_MAX_BCRYPT_COST_FACTOR, DEFAULT_MAX_BCRYPT_COST_FACTOR);
+
+    /**
+     * The maximum time (in ms) that adapters wait for an acknowledgement of a command sent to a device.
+     */
+    public static final long SEND_MESSAGE_TO_DEVICE_TIMEOUT = Long.getLong(PROPERTY_SEND_MESSAGE_TO_DEVICE_TIMEOUT, 1000L);
 
     /**
      * The time to wait for the response to an AMQP 1.0 performative.
@@ -589,11 +598,10 @@ public final class IntegrationTestSupport {
      * a command to a device.
      *
      * @return The time out in milliseconds. The value will be
-     *         {@value #AMQP_TIMEOUT} multiplied by twice the value returned by
-     *         {@link #getTimeoutMultiplicator()}.
+     *         {@link #SEND_MESSAGE_TO_DEVICE_TIMEOUT} + ({@link #AMQP_TIMEOUT} * {@link #getTimeoutMultiplicator()} * 2).
      */
     public static long getSendCommandTimeout() {
-        return AMQP_TIMEOUT * getTimeoutMultiplicator() * 2;
+        return SEND_MESSAGE_TO_DEVICE_TIMEOUT + (AMQP_TIMEOUT * getTimeoutMultiplicator() * 2);
     }
 
     /**

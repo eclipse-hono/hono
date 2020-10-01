@@ -1123,6 +1123,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
                 <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>
+                <adapter.sendMessageToDeviceTimeout>${adapter.sendMessageToDeviceTimeout}</adapter.sendMessageToDeviceTimeout>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
                 <max.bcrypt.costFactor>${max.bcrypt.costFactor}</max.bcrypt.costFactor>

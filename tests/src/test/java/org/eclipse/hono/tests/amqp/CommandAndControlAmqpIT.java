@@ -682,10 +682,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final long start = System.currentTimeMillis();
+        final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
         final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
-                .onSuccess(c -> c.setRequestTimeout(300))
+                .onSuccess(c -> c.setRequestTimeout(commandTimeout))
                 .onComplete(commandClientCreation.completing());
 
         assertThat(commandClientCreation.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
@@ -730,7 +731,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandSent.await();
         }
 
-        final long timeToWait = totalNoOfCommandsToSend * 300 + 300;
+        final long timeToWait = 300 + (totalNoOfCommandsToSend * commandTimeout);
         if (!commandsFailed.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for commands", timeToWait);
         }
@@ -775,10 +776,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final long start = System.currentTimeMillis();
+        final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
         final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
-                .onSuccess(c -> c.setRequestTimeout(1300)) // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
+                .onSuccess(c -> c.setRequestTimeout(commandTimeout))
                 .onComplete(commandClientCreation.completing());
 
         assertThat(commandClientCreation.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
@@ -822,8 +824,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandSent.await();
         }
 
-        // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for each command message
-        final long timeToWait = 300 + (totalNoOfCommandsToSend * 1300);
+        final long timeToWait = 300 + (totalNoOfCommandsToSend * commandTimeout);
         if (!commandsFailed.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for commands", timeToWait);
         }
