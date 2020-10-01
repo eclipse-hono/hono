@@ -68,7 +68,7 @@
     <protostream.version>4.3.2.Final</protostream.version>
     <proton.version>0.33.6</proton.version>
     <qpid-jms.version>0.52.0</qpid-jms.version>
-    <quarkus.platform.version>1.6.1.Final</quarkus.platform.version>
+    <quarkus.platform.version>1.8.1.Final</quarkus.platform.version>
     <rxjava.version>2.2.12</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.26</snakeyaml.version>
