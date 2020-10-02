@@ -596,14 +596,18 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
     private Predicate<DeviceWithId> buildJsonBasedPredicate(final Filter filter) {
         return deviceWithId -> {
-            final Object field = filter.getField().queryJson(JsonObject.mapFrom(deviceWithId));
+            final Object value = filter.getField().queryJson(JsonObject.mapFrom(deviceWithId));
 
-            if (field != null) {
+            if (value != null) {
                 switch (filter.getOperator()) {
-                    case eq:
-                        return field == filter.getValue();
-                    default:
-                        return true;
+                case eq:
+                    if (filter.getValue() instanceof String && value instanceof String) {
+                        return ((String) value).matches(
+                                DeviceRegistryUtils.getRegexExpressionForSearchOperation((String) filter.getValue()));
+                    }
+                    return value == filter.getValue();
+                default:
+                    return true;
                 }
             } else {
                 return true;
