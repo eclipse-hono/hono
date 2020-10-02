@@ -13,7 +13,6 @@
 package org.eclipse.hono.deviceregistry.file;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -538,119 +537,137 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
      * so the paging may be inconsistent.
      */
     @Override
-    public Future<OperationResult<SearchDevicesResult>> searchDevices(final String tenantId, final int pageSize, final int pageOffset,
-                                                                       final List<Filter> filters, final List<Sort> sortOptions, final Span span) {
+    public Future<OperationResult<SearchDevicesResult>> searchDevices(
+            final String tenantId,
+            final int pageSize,
+            final int pageOffset,
+            final List<Filter> filters,
+            final List<Sort> sortOptions,
+            final Span span) {
 
-        final Set<String> allDevicesIds = getDevicesForTenant(tenantId).keySet();
-        List<DeviceWithId> devicesList = new ArrayList<>();
+        // The following code is sub-optimal in that it requires mapping from value objects (Device)
+        // to JSON in order to perform the filtering and sorting before finally mapping back
+        // to a value object again (DeviceWithId).
+        // This is currently necessary because of the usage of JsonPointer for retrieving
+        // the values of the fields that are used for selection and sorting.
 
-        for (int i = 0; i < allDevicesIds.size(); i++) {
-            final String id = (String) allDevicesIds.toArray()[i];
-            final Device device = getDevicesForTenant(tenantId).get(id).getValue();
-            final DeviceWithId withId = DeviceWithId.from(id, device);
-
-            devicesList.add(withId);
-        }
-
-        final List<Predicate<DeviceWithId>> predicates = new ArrayList<>();
-        for (Filter f : filters) {
-            predicates.add(buildJsonBasedPredicate(f));
-        }
-
-        //Regroup predicates in a single one with AND.
-        final Predicate<DeviceWithId> predicate = predicates.stream()
-                .reduce(x -> true, Predicate::and);
-
-        // 1. apply the filter options to the list
-        devicesList = devicesList
+        // 1. filter all the tenants devices
+        final Predicate<JsonObject> filterPredicate = buildJsonBasedPredicate(filters);
+        final List<JsonObject> matchingDevices = getDevicesForTenant(tenantId).entrySet()
                 .stream()
-                .filter(predicate)
+                .map(entry -> {
+                    return JsonObject.mapFrom(entry.getValue().getValue()).put(RegistryManagementConstants.FIELD_ID, entry.getKey());
+                })
+                .filter(filterPredicate)
                 .collect(Collectors.toList());
 
         // 2. sort the selected elements
-        for (Sort s : sortOptions) {
-            devicesList = sortDeviceList(devicesList, s);
-        }
+        final Comparator<JsonObject> comparator = buildJsonBasedComparator(sortOptions);
+        matchingDevices.sort(comparator);
 
         // 3. limit the results according to the page settings.
-        final List<DeviceWithId> returnDevicesList = new ArrayList<>();
+        final int startIdxIncl = pageOffset * pageSize;
+        final int endIdxExcl = startIdxIncl + pageSize;
+        final AtomicInteger currentIdx = new AtomicInteger(0);
+        final List<DeviceWithId> returnDevicesList = matchingDevices.stream()
+                .filter(obj -> {
+                    final int idx = currentIdx.getAndIncrement();
+                    return idx >= startIdxIncl && idx < endIdxExcl;
+                })
+                .map(obj -> obj.mapTo(DeviceWithId.class))
+                .collect(Collectors.toList());
 
-        for (int i = pageOffset * pageSize;
-             i < devicesList.size() && returnDevicesList.size() < pageSize;
-             i++) {
-            returnDevicesList.add(devicesList.get(i));
-        }
-
-        if (returnDevicesList.size() == 0) {
+        if (returnDevicesList.isEmpty()) {
             return Future.succeededFuture(
                     OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND));
         } else {
             return Future.succeededFuture(
                     OperationResult.ok(
                             HttpURLConnection.HTTP_OK,
-                            new SearchDevicesResult(devicesList.size(), returnDevicesList),
+                            new SearchDevicesResult(matchingDevices.size(), returnDevicesList),
                             Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                             Optional.empty()));
         }
     }
 
-    private Predicate<DeviceWithId> buildJsonBasedPredicate(final Filter filter) {
-        return deviceWithId -> {
-            final Object value = filter.getField().queryJson(JsonObject.mapFrom(deviceWithId));
+    private static Predicate<JsonObject> buildJsonBasedPredicate(final List<Filter> filters) {
+        final Predicate<JsonObject> result = filters.stream()
+                .map(filter -> {
+                    final Predicate<JsonObject> predicate = deviceWithId -> {
+                        final Object value = filter.getField().queryJson(JsonObject.mapFrom(deviceWithId));
 
-            if (value != null) {
-                switch (filter.getOperator()) {
-                case eq:
-                    if (filter.getValue() instanceof String && value instanceof String) {
-                        return ((String) value).matches(
-                                DeviceRegistryUtils.getRegexExpressionForSearchOperation((String) filter.getValue()));
-                    }
-                    return value == filter.getValue();
-                default:
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        };
+                        if (value != null) {
+                            switch (filter.getOperator()) {
+                            case eq:
+                                if (filter.getValue() instanceof String && value instanceof String) {
+                                    return ((String) value).matches(
+                                            DeviceRegistryUtils
+                                                    .getRegexExpressionForSearchOperation((String) filter.getValue()));
+                                }
+                                return value.equals(filter.getValue());
+                            default:
+                                return true;
+                            }
+                        } else {
+                            return false;
+                        }
+                    };
+                    return predicate;
+                })
+                .reduce(x -> true, Predicate::and);
+        return result;
     }
 
-    private List<DeviceWithId> sortDeviceList(final List<DeviceWithId> list, final Sort sort) {
-
-        return list
-                .stream()
-                .sorted(buildJsonBasedComparator(sort))
-                .collect(Collectors.toList());
-    }
-
-    private Comparator<DeviceWithId> buildJsonBasedComparator(final Sort sort) {
+    private static Comparator<JsonObject> buildJsonBasedComparator(final List<Sort> sortOptions) {
 
         return new Comparator<>() {
             @Override
-            public int compare(final DeviceWithId d1, final DeviceWithId d2) {
-                final JsonObject device1 = JsonObject.mapFrom(d1);
-                final JsonObject device2 = JsonObject.mapFrom(d2);
+            public int compare(final JsonObject d1, final JsonObject d2) {
 
-                final Object s1 = sort.getField().queryJson(device1);
-                final Object s2 = sort.getField().queryJson(device2);
+                int result = 0;
+                for (final Sort sortOption : sortOptions) {
+                    result = compare(d1, d2, sortOption);
+                    if (result != 0) {
+                        return result;
+                    }
+                }
+                return result;
+            }
 
-                if (s1 instanceof String) {
-                    switch (sort.getDirection()) {
-                        case asc:
-                            return ((String) s1).compareTo((String) s2);
-                        default:
-                            return ((String) s2).compareTo((String) s1);
-                    }
-                } else if (s1 instanceof Integer) {
-                    switch (sort.getDirection()) {
-                        case asc:
-                            return ((Integer) s1).compareTo((Integer) s2);
-                        default:
-                            return ((Integer) s2).compareTo((Integer) s1);
-                    }
-                } else {
-                    // cannot compare, consider equals.
+            private int compare(final JsonObject a, final JsonObject b, final Sort sortOption) {
+
+                final Object objA = sortOption.getField().queryJson(a);
+                final Object objB = sortOption.getField().queryJson(b);
+
+                if (objA == null && objB != null) {
+                    return -1;
+                } else if (objA == null && objB == null) {
                     return 0;
+                } else if (objA != null && objB == null) {
+                    return 1;
+                } else {
+                    if (objA.getClass().equals(objB.getClass())) {
+                        if (objA instanceof String) {
+                            return compareValues((String) objA, (String) objB, sortOption);
+                        } else if (objA instanceof Integer) {
+                            return compareValues((Integer) objA, (Integer) objB, sortOption);
+                        } else if (objA instanceof Double) {
+                            return compareValues((Double) objA, (Double) objB, sortOption);
+                        } else if (objA instanceof Float) {
+                            return compareValues((Float) objA, (Float) objB, sortOption);
+                        } else if (objA instanceof Boolean) {
+                            return compareValues((Boolean) objA, (Boolean) objB, sortOption);
+                        }
+                    }
+                    return 0;
+                }
+            }
+
+            private <T extends Comparable<? super T>> int compareValues(final T a, final T b, final Sort sortOption) {
+                if (sortOption.isAscending()) {
+                    return a.compareTo(b);
+                } else {
+                    return b.compareTo(a);
                 }
             }
         };

@@ -79,4 +79,13 @@ public final class Sort {
     public void setDirection(final Direction direction) {
         this.direction = direction;
     }
+
+    /**
+     * Checks if the sort direction is <em>ascending</em>.
+     *
+     * @return {@code true} if the direction is ascending.
+     */
+    public boolean isAscending() {
+        return direction == Direction.asc;
+    }
 }

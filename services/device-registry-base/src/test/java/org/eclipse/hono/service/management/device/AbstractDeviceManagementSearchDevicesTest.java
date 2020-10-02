@@ -85,19 +85,19 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(false)))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
-                                        NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getDeviceManagementService()
+                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
+                            NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchDevicesResult searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
-                                    });
-                                    ctx.completeNow();
-                                })));
+                    final SearchDevicesResult searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -149,17 +149,17 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
-                                        NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        assertThat(s.getPayload().getTotal()).isEqualTo(2);
-                                        assertThat(s.getPayload().getResult()).hasSize(1);
-                                    });
-                                    ctx.completeNow();
-                                })));
+            .compose(ok -> getDeviceManagementService()
+                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
+                            NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    assertThat(s.getPayload().getTotal()).isEqualTo(2);
+                    assertThat(s.getPayload().getResult()).hasSize(1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -215,20 +215,20 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setExtensions(Map.of("id", "aaa")),
                 "testDevice2", new Device().setEnabled(true).setExtensions(Map.of("id", "bbb"))))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(sortOption),
-                                        NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getDeviceManagementService()
+                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(sortOption),
+                            NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchDevicesResult searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(2);
-                                        assertThat(searchResult.getResult()).hasSize(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice2");
-                                    });
-                                    ctx.completeNow();
-                                })));
+                    final SearchDevicesResult searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice2");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

@@ -114,19 +114,19 @@ public final class FileBasedDeviceManagementSearchDevicesTest implements Abstrac
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
-                .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, List.of(filter),
-                                List.of(sortOption),
-                                NoopSpan.INSTANCE)
-                        .onComplete(ctx.succeeding(s -> {
-                            ctx.verify(() -> {
-                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getDeviceManagementService()
+                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter),
+                            List.of(sortOption),
+                            NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                final SearchDevicesResult searchResult = s.getPayload();
-                                assertThat(searchResult.getTotal()).isEqualTo(2);
-                                assertThat(searchResult.getResult()).hasSize(1);
-                            });
-                            ctx.completeNow();
-                        })));
+                    final SearchDevicesResult searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                });
+                ctx.completeNow();
+            }));
     }
 }

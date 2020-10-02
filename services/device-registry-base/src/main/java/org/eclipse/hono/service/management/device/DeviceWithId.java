@@ -28,6 +28,14 @@ public final class DeviceWithId extends Device {
     @JsonProperty(RegistryManagementConstants.FIELD_ID)
     private String id;
 
+    /**
+     * Empty default constructor.
+     * <p>
+     * Mainly useful for mapping from JSON.
+     */
+    private DeviceWithId() {
+    }
+
     private DeviceWithId(final String id, final Device device) {
         super(device);
         this.id = id;
