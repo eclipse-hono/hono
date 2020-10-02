@@ -38,14 +38,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <flow.latency>1000</flow.latency>
     <request.timeout>500</request.timeout>
     <adapter.sendMessageToDeviceTimeout>1000</adapter.sendMessageToDeviceTimeout>
-    <!-- use minimum cost factor in order to speed up test execution --> 
+    <!-- use minimum cost factor in order to speed up test execution -->
     <max.bcrypt.costFactor>4</max.bcrypt.costFactor>
     <max.event-loop.execute-time>5000</max.event-loop.execute-time>
     <!-- should be set to false if testing against a registry that doesn't support GW mode -->
     <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
     <deviceregistry.credentials.supportsClientContext>true</deviceregistry.credentials.supportsClientContext>
     <!-- should be set to true if testing against a registry that supports search devices operation -->
-    <deviceregistry.supportsSearchDevices>false</deviceregistry.supportsSearchDevices>
+    <deviceregistry.supportsSearchDevices>true</deviceregistry.supportsSearchDevices>
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
     <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>

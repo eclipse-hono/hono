@@ -53,7 +53,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -69,7 +68,6 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
     private FileBasedRegistrationService registrationService;
     private FileBasedRegistrationConfigProperties registrationConfig;
     private Vertx vertx;
-    private EventBus eventBus;
     private FileSystem fileSystem;
 
     /**
@@ -78,9 +76,7 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
     @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
-        when(vertx.eventBus()).thenReturn(eventBus);
         when(vertx.fileSystem()).thenReturn(fileSystem);
 
         registrationConfig = new FileBasedRegistrationConfigProperties();
