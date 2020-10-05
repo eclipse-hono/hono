@@ -20,7 +20,6 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -46,7 +45,7 @@ public class PasswordCredential extends CommonCredential {
     private static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile(REGEX_AUTH_ID);
     /**
      * A predicate for matching authentication identifiers against the
-     * {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
+     * {@linkplain #PATTERN_AUTH_ID_VALUE default pattern}.
      */
     private static final Predicate<String> AUTH_ID_VALIDATOR_DEFAULT = authId -> {
         final Matcher matcher = PATTERN_AUTH_ID_VALUE.matcher(authId);

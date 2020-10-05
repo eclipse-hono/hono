@@ -182,9 +182,6 @@ public abstract class CommonSecret {
 
     /**
      * Merges another secret's properties into this one's.
-     * <p>
-     * This method merges the other secret's comment, enabled, notBefore and notAfter
-     * properties into this secret and then invokes {@link #mergeCommonProperties(CommonSecret)}.
      *
      * @param otherSecret The secret to be merged.
      * @throws NullPointerException if the given secret is {@code null}.

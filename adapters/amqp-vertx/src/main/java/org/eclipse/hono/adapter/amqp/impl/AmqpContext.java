@@ -13,7 +13,6 @@
 package org.eclipse.hono.adapter.amqp.impl;
 
 import java.util.Objects;
-import java.util.OptionalInt;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -41,7 +40,6 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
     private Buffer payload;
     private EndpointType endpoint;
     private Sample timer;
-    private OptionalInt traceSamplingPriority = OptionalInt.empty();
 
     private AmqpContext(final Span span, final Device authenticatedDevice) {
         super(span, authenticatedDevice);

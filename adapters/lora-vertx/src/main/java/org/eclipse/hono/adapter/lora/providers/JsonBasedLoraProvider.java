@@ -89,7 +89,7 @@ abstract class JsonBasedLoraProvider implements LoraProvider {
      */
     protected LoraMetaData getMetaData(final JsonObject uplinkMessage) {
         return null;
-    };
+    }
 
     /**
      * Gets any data contained in an uplink message in addition to the device EUI,
@@ -103,7 +103,7 @@ abstract class JsonBasedLoraProvider implements LoraProvider {
      */
     protected JsonObject getAdditionalData(final JsonObject uplinkMessage) {
         return uplinkMessage;
-    };
+    }
 
     /**
      * Creates an object representation of a Lora uplink message.

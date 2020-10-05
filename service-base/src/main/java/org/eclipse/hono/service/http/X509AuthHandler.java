@@ -51,7 +51,6 @@ public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHand
     private static final HttpStatusException UNAUTHORIZED = new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED);
 
     private final X509Authentication auth;
-    private final DeviceCredentialsAuthProvider<SubjectDnCredentials> deviceCredentialsAuthProvider;
     private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
 
     /**
@@ -88,7 +87,6 @@ public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHand
             final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler) {
         super(authProvider);
         this.auth = Objects.requireNonNull(clientAuth);
-        this.deviceCredentialsAuthProvider = authProvider;
         this.preCredentialsValidationHandler = preCredentialsValidationHandler;
     }
 

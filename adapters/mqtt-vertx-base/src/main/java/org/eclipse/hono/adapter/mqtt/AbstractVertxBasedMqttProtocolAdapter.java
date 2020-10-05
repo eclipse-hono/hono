@@ -46,7 +46,6 @@ import org.eclipse.hono.service.auth.device.ChainAuthHandler;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
-import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
@@ -1307,46 +1306,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param endpoint The connection to be closed.
      */
     protected void onClose(final MqttEndpoint endpoint) {
-    }
-
-    /**
-     * Extracts credentials from a client's MQTT <em>CONNECT</em> packet.
-     * <p>
-     * This default implementation returns a future with {@link UsernamePasswordCredentials} created from the
-     * <em>username</em> and <em>password</em> fields of the <em>CONNECT</em> packet.
-     * <p>
-     * Subclasses should override this method if the device uses credentials that do not comply with the format expected
-     * by {@link UsernamePasswordCredentials}.
-     *
-     * @param endpoint The MQTT endpoint representing the client.
-     * @return A future indicating the outcome of the operation.
-     *         The future will succeed with the client's credentials extracted from the CONNECT packet
-     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
-     */
-    protected final Future<UsernamePasswordCredentials> getCredentials(final MqttEndpoint endpoint) {
-
-        if (endpoint.auth() == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device did not provide credentials in CONNECT packet"));
-        }
-
-        if (endpoint.auth().getUsername() == null || endpoint.auth().getPassword() == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device provided malformed credentials in CONNECT packet"));
-        }
-
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
-                .create(endpoint.auth().getUsername(), endpoint.auth().getPassword());
-
-        if (credentials == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device provided malformed credentials in CONNECT packet"));
-        } else {
-            return Future.succeededFuture(credentials);
-        }
     }
 
     /**
