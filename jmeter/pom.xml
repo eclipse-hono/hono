@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -28,6 +28,10 @@
   <name>Hono JMeter Plugin</name>
   <description>JMeter Plugin for Hono with sender and receiver samplers using the Hono Client</description>
   <url>https://www.eclipse.org/hono</url>
+
+  <properties>
+    <jmeter.disabled>true</jmeter.disabled>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -80,13 +84,14 @@
 
   <profiles>
     <profile>
-      <id>build-jmeter-image</id>
+      <id>build-docker-image</id>
       <build>
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
             <configuration>
+              <skipBuild>${jmeter.disabled}</skipBuild>
               <images>
                 <image>
                   <build>
@@ -106,6 +111,9 @@
               <plugin>
                   <groupId>io.fabric8</groupId>
                   <artifactId>docker-maven-plugin</artifactId>
+                  <configuration>
+                    <skipPush>${jmeter.disabled}</skipPush>
+                  </configuration>
                   <executions>
                       <execution>
                           <id>docker-push-image</id>
