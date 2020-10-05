@@ -121,14 +121,16 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         // on the outcome of the sending operation
         final Span span = startChildSpan(parent, rawMessage);
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
+        TracingHelper.TAG_QOS.set(span, sender.getQoS().toString());
         TracingHelper.setDeviceTags(span, tenantId, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServerErrorException e = new NoConsumerException("no credit available");
-                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
-                        rawMessage.getMessageId(), getMessageAddress(rawMessage));
+                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available (drain={})",
+                        rawMessage.getMessageId(), getMessageAddress(rawMessage), sender.getDrain());
+                TracingHelper.TAG_CREDIT.set(span, 0);
                 logError(span, e);
                 span.finish();
                 result.fail(e);

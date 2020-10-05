@@ -637,7 +637,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .withTag(TracingHelper.TAG_TENANT_ID, tenant)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                .withTag(Constants.HEADER_QOS_LEVEL, qos.asTag().getValue())
+                .withTag(TracingHelper.TAG_QOS, qos.name())
                 .start();
 
         final Promise<Void> responseReady = Promise.promise();

@@ -165,14 +165,16 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
         final Span span = startSpan(parent, rawMessage);
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
+        TracingHelper.TAG_QOS.set(span, sender.getQoS().toString());
         TracingHelper.setDeviceTags(span, tenantId, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServerErrorException e = new NoConsumerException("no credit available");
-                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
-                        rawMessage.getMessageId(), getMessageAddress(rawMessage));
+                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available (drain={})",
+                        rawMessage.getMessageId(), getMessageAddress(rawMessage), sender.getDrain());
+                TracingHelper.TAG_CREDIT.set(span, 0);
                 logError(span, e);
                 span.finish();
                 result.fail(e);
@@ -352,10 +354,9 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      * @throws NullPointerException if currentSpan is {@code null}.
      */
     protected final void logMessageIdAndSenderInfo(final Span currentSpan, final String messageId) {
-        final Map<String, Object> details = new HashMap<>(3);
+        final Map<String, Object> details = new HashMap<>(2);
         details.put(TracingHelper.TAG_MESSAGE_ID.getKey(), messageId);
         details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
-        details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
         currentSpan.log(details);
     }
 

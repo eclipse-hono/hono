@@ -87,8 +87,9 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
-                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
-                        rawMessage.getMessageId(), getMessageAddress(rawMessage));
+                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available (drain={})",
+                        rawMessage.getMessageId(), getMessageAddress(rawMessage), sender.getDrain());
+                TracingHelper.TAG_CREDIT.set(span, 0);
                 logError(span, e);
                 span.finish();
                 result.fail(e);
