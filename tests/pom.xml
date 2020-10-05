@@ -191,6 +191,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
   <profiles>
     <profile>
       <id>device-registry-mongodb</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>mongodb</value>
+        </property>
+      </activation>
       <properties>
         <deviceregistry.image>hono-service-device-registry-mongodb</deviceregistry.image>
         <hono.mongodb.disabled>false</hono.mongodb.disabled>
