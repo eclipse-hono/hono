@@ -23,6 +23,10 @@ title = "Release Notes"
 * The registry implementations did not accept X.509 credentials in an update Credentials request.
   They also failed to remove existing credentials of a device if they were not inlcuded in an
   update Credentials request. This has been fixed.
+* The file based device registry also now supports searching devices for a tenant with optional filters,
+  paging and sorting options.
+  Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
+  for details. 
 
 ### API Changes
 
