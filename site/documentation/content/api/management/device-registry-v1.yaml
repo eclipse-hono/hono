@@ -626,6 +626,8 @@ paths:
                $ref: '#/components/responses/NotAllowed'
             404:
                $ref: '#/components/responses/DeviceNotFound'
+            409:
+               $ref: '#/components/responses/AlreadyExists'
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
 

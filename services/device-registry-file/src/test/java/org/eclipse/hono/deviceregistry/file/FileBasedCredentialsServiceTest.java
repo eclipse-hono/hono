@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +31,7 @@ import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
@@ -81,6 +81,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
 
     private static final String REGISTRATION_FILE_NAME = "/device-identities.json";
     private static final String CREDENTIALS_FILE_NAME = "/credentials.json";
+    private static final HonoPasswordEncoder PASSWORD_ENCODER = new SpringBasedHonoPasswordEncoder();
 
     private Vertx vertx;
     private EventBus eventBus;
@@ -95,8 +96,9 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
     private FileBasedDeviceBackend svc;
 
     /**
-     * Sets up fixture.
+     * Creates a new service instance.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
@@ -104,6 +106,15 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
         when(vertx.fileSystem()).thenReturn(fileSystem);
+        // make sure that plain text passwords can be encoded on vert.x using a blocking thread
+        doAnswer(invocation -> {
+            final Promise<?> promise = Promise.promise();
+            final Handler<Promise<?>> blockingCode = invocation.getArgument(0);
+            blockingCode.handle(promise);
+            final Handler<AsyncResult<?>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(promise.future());
+            return null;
+        }).when(vertx).executeBlocking(any(Handler.class), any(Handler.class));
 
         this.registrationConfig = new FileBasedRegistrationConfigProperties();
         this.registrationConfig.setCacheMaxAge(30);
@@ -113,9 +124,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         this.registrationService = new FileBasedRegistrationService(vertx);
         this.registrationService.setConfig(registrationConfig);
 
-        this.credentialsService = new FileBasedCredentialsService(vertx);
-        this.credentialsService.setPasswordEncoder(new SpringBasedHonoPasswordEncoder());
-        this.credentialsService.setConfig(credentialsConfig);
+        this.credentialsService = new FileBasedCredentialsService(vertx, credentialsConfig, PASSWORD_ENCODER);
 
         this.svc = new FileBasedDeviceBackend(this.registrationService, this.credentialsService);
     }
@@ -309,7 +318,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         final Promise<Void> startTracker = Promise.promise();
         startTracker.future()
                 // THEN the credentials from the file are read in
-                .compose(s -> assertRegistered(svc,
+                .compose(s -> assertRegistered(getCredentialsService(),
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> getCredentialsManagementService()
@@ -371,82 +380,90 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         when(fileSystem.existsBlocking(credentialsConfig.getFilename())).thenReturn(Boolean.TRUE);
 
         // 4700
-        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "thepwd");
+        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "secret-pwd");
 
         // 4711RegistryManagementConstants.FIELD_ID
         final PskCredential pskCredential = Credentials.createPSKCredential("sensor1", "sharedkey");
 
-        setCredentials(getCredentialsManagementService(),
+        setCredentials(
+                getCredentialsManagementService(),
                 Constants.DEFAULT_TENANT, "4700",
                 List.of(pskCredential))
 
-                        .compose(ok -> {
-                            return setCredentials(getCredentialsManagementService(),
-                                    "OTHER_TENANT", "4711",
-                                    List.of(passwordCredential));
-                        })
+            .compose(ok -> setCredentials(
+                    getCredentialsManagementService(),
+                    "OTHER_TENANT", "4711",
+                    List.of(passwordCredential)))
 
-                        .compose(ok -> {
+            .compose(ok -> {
 
-                            // WHEN saving the registry content to the file
-                            final Promise<Void> write = Promise.promise();
-                            doAnswer(invocation -> {
-                                final Handler handler = invocation.getArgument(2);
-                                handler.handle(Future.succeededFuture());
-                                write.complete();
-                                return null;
-                            }).when(fileSystem).writeFile(eq(credentialsConfig.getFilename()), any(Buffer.class),
-                                    any(Handler.class));
+                final Promise<Buffer> result = Promise.promise();
+                when(fileSystem.writeFile(
+                        anyString(),
+                        any(Buffer.class),
+                        any(Handler.class)))
+                    .then(invocation -> {
+                        final Handler handler = invocation.getArgument(2);
+                        handler.handle(Future.succeededFuture());
+                        result.complete(invocation.getArgument(1));
+                        return fileSystem;
+                    });
 
-                            svc.saveToFile();
-                            // and clearing the registry
-                            svc.clear();
-                            return write.future();
-                        })
+                // WHEN saving the registry content to the file
+                return CompositeFuture.all(credentialsService.saveToFile(), result.future());
+            })
 
-                        .compose(w -> assertNotRegistered(
-                                getCredentialsService(),
-                                Constants.DEFAULT_TENANT,
-                                "sensor1",
-                                CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY))
+            .compose(w -> {
 
-                        .map(w -> {
-                            final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
-                            ctx.verify(() -> {
-                                verify(fileSystem).writeFile(eq(credentialsConfig.getFilename()), buffer.capture(),
-                                        any(Handler.class));
-                            });
-                            return buffer.getValue();
-                        })
+                // and clearing the registry
+                credentialsService.clear();
 
-                        .compose(b -> {
+                return assertNotRegistered(
+                        getCredentialsService(),
+                        Constants.DEFAULT_TENANT,
+                        "sensor1",
+                        CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
+                })
 
-                            // THEN the credentials can be loaded back in from the file
-                            final Promise<Void> read = Promise.promise();
-                            doAnswer(invocation -> {
-                                final Handler<AsyncResult<Buffer>> handler = invocation.getArgument(1);
-                                handler.handle(Future.succeededFuture(b));
-                                read.complete();
-                                return null;
-                            }).when(fileSystem).readFile(eq(credentialsConfig.getFilename()), any(Handler.class));
+            .compose(ok -> {
 
-                            svc.loadFromFile();
+                final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
+                ctx.verify(() -> {
+                    verify(fileSystem).writeFile(
+                            eq(credentialsConfig.getFilename()),
+                            buffer.capture(),
+                            any(Handler.class));
+                });
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("wrote credentials to file: {}", buffer.getValue().toJsonArray().encodePrettily());
+                }
 
-                            return read.future();
-                        })
+                // THEN the credentials can be loaded back in from the file
+                final Promise<Void> read = Promise.promise();
+                doAnswer(invocation -> {
+                    final Handler<AsyncResult<Buffer>> handler = invocation.getArgument(1);
+                    handler.handle(Future.succeededFuture(buffer.getValue()));
+                    read.complete();
+                    return null;
+                }).when(fileSystem).readFile(eq(credentialsConfig.getFilename()), any(Handler.class));
 
-                        // and the credentials can be looked up again
-                        .compose(r -> assertRegistered(
-                                getCredentialsService(),
-                                Constants.DEFAULT_TENANT,
-                                "sensor1",
-                                CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY))
-                        .compose(ok -> assertRegistered(
-                                getCredentialsService(),
-                                "OTHER_TENANT",
-                                "bumlux",
-                                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
-                        .onComplete(ctx.completing());
+                credentialsService.loadCredentials();
+
+                return read.future();
+            })
+
+            // and the credentials can be looked up again
+            .compose(r -> assertRegistered(
+                    getCredentialsService(),
+                    Constants.DEFAULT_TENANT,
+                    "sensor1",
+                    CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY))
+            .compose(ok -> assertRegistered(
+                    getCredentialsService(),
+                    "OTHER_TENANT",
+                    "bumlux",
+                    CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -463,12 +480,12 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         final CommonCredential secret = Credentials.createPasswordCredential("myId", "bar", OptionalInt.empty());
 
         // containing a set of credentials
-        setCredentials(getCredentialsManagementService(), "tenant", "device", Collections.singletonList(secret))
+        setCredentials(getCredentialsManagementService(), "tenant", "device", List.of(secret))
                 .compose(ok -> {
-                    // WHEN trying to update the credentials
+                    // WHEN trying to update the existing credentials
                     final PasswordCredential newSecret = Credentials.createPasswordCredential("myId", "baz", OptionalInt.empty());
-                    return svc.updateCredentials("tenant", "device",
-                            Collections.singletonList(newSecret),
+                    return getCredentialsManagementService().updateCredentials("tenant", "device",
+                            List.of(newSecret),
                             Optional.empty(),
                             NoopSpan.INSTANCE);
                 })
@@ -477,6 +494,71 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
                 })));
+    }
+
+    /**
+     * Verifies that updating hashed-password credentials using a hash-function that is not on the
+     * service's configured white list, fails with a 400 status code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateCredentialsFailsForUnsupportedHashFunction(final VertxTestContext ctx) {
+
+        // GIVEN a service configured to allow only SHA-256.
+        final String[] whitelist = { RegistryManagementConstants.HASH_FUNCTION_SHA256 };
+        credentialsConfig.setHashAlgorithmsWhitelist(whitelist);
+
+        // WHEN trying to add credentials using the bcrypt hash-function
+        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "thepwd");
+
+        getCredentialsManagementService()
+            .updateCredentials(
+                "tenant",
+                "device",
+                List.of(passwordCredential),
+                Optional.empty(),
+                NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
+
+                // THEN the update fails with a 400 BAD REQUEST
+                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                ctx.completeNow();
+            }))
+        );
+    }
+
+    /**
+     * Verifies that updating credentials of a device using an auth-id that is already in use
+     * for another device of the tenant fails with a 409 status code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateCredentialsFailsForDuplicateAuthId(final VertxTestContext ctx) {
+
+        // GIVEN a device with a set of credentials
+        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("taken-auth-id", "thepwd");
+        setCredentials(getCredentialsManagementService(), "tenant", "existing-device", List.of(passwordCredential))
+            .compose(result -> {
+                ctx.verify(() -> assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
+                // WHEN trying to add credentials of the same type for another device using the same authentication identifier
+                final PasswordCredential conflictingCredentials = Credentials.createPasswordCredential("taken-auth-id", "otherpwd");
+                return getCredentialsManagementService().updateCredentials(
+                        "tenant",
+                        "other-device",
+                        List.of(conflictingCredentials),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    // THEN the update fails with a 409 CONFLICT
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
+                });
+                ctx.completeNow();
+            })
+        );
     }
 
     /**
@@ -499,38 +581,6 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
     @Test
     public void testGetCredentialsFailsForNonMatchingClientContext(final VertxTestContext ctx) {
         testGetCredentialsWithClientContext(ctx, "expected-value", "other-value", HttpURLConnection.HTTP_NOT_FOUND);
-    }
-
-
-    /**
-     * Verifies that an unauthorised hashing algorithm is refused by the device registry.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testSetCredentialsWithUnauthorisedHashingAlgorithmFails(final VertxTestContext ctx) {
-
-        // GIVEN a service configured to allow only SHA-256.
-        final String[] whitelist = {RegistryManagementConstants.HASH_FUNCTION_SHA256};
-        credentialsConfig.setHashAlgorithmsWhitelist(whitelist);
-
-        // 4700
-        final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "thepwd");
-
-        // WHEN trying to set the credentials
-            getCredentialsManagementService().updateCredentials(
-                "tenant",
-                "device",
-                List.of(passwordCredential),
-                Optional.empty(),
-                NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
-
-                    // THEN the update fails with a 400 BAD REQUEST
-                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
-                    ctx.completeNow();
-                }))
-        );
     }
 
     private void testGetCredentialsWithClientContext(

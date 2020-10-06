@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -68,7 +67,6 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
             MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
 
-    private final HonoPasswordEncoder passwordEncoder;
     private final MongoDbBasedCredentialsConfigProperties config;
     private final MongoClient mongoClient;
     private final MongoDbCallExecutor mongoDbCallExecutor;
@@ -88,14 +86,16 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
             final MongoDbBasedCredentialsConfigProperties config,
             final HonoPasswordEncoder passwordEncoder) {
 
-        super(Objects.requireNonNull(vertx), Objects.requireNonNull(passwordEncoder));
+        super(Objects.requireNonNull(vertx),
+                Objects.requireNonNull(passwordEncoder),
+                config.getMaxBcryptIterations(),
+                config.getHashAlgorithmsWhitelist());
 
         Objects.requireNonNull(mongoClient);
         Objects.requireNonNull(config);
 
         this.mongoClient = mongoClient;
         this.config = config;
-        this.passwordEncoder = passwordEncoder;
         this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);
     }
 
@@ -213,36 +213,12 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         Objects.requireNonNull(span);
 
         return getCredentialsDto(deviceKey)
-                .map(credentialsDto -> {
-                    final List<CommonCredential> credentials = credentialsDto.getCredentials()
-                            .stream()
-                            .map(CommonCredential::stripPrivateInfo)
-                            .collect(Collectors.toList());
-
-                    return OperationResult.ok(
-                            HttpURLConnection.HTTP_OK,
-                            credentials,
-                            Optional.empty(),
-                            Optional.of(credentialsDto.getVersion()));
-                })
+                .map(credentialsDto -> OperationResult.ok(
+                        HttpURLConnection.HTTP_OK,
+                        credentialsDto.getCredentials(),
+                        Optional.empty(),
+                        Optional.of(credentialsDto.getVersion())))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected List<CommonCredential> checkCredentials(final List<CommonCredential> credentials) {
-
-        for (final CommonCredential credential : credentials) {
-            DeviceRegistryUtils.checkCredential(
-                    credential,
-                    passwordEncoder,
-                    config.getHashAlgorithmsWhitelist(),
-                    config.getMaxBcryptIterations());
-        }
-
-        return credentials;
     }
 
     /**
