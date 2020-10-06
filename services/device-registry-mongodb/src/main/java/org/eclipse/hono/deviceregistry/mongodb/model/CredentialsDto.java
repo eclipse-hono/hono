@@ -53,11 +53,8 @@ public final class CredentialsDto extends BaseDto {
     /**
      * Creates a new instance for a list of credentials.
      * <p>
-     * This constructor also makes sure that
-     * <ul>
-     * <li>none of the credentials have the same type and authentication identifier and</li>
-     * <li>that the identifiers of the credentials' secrets are unique within their credentials object.</li>
-     * </ul>
+     * This constructor also makes sure that the identifiers of the credentials'
+     * secrets are unique within their credentials object.
      * <p>
      * These properties are supposed to be asserted before persisting this DTO.
      *
@@ -66,7 +63,7 @@ public final class CredentialsDto extends BaseDto {
      * @param credentials The list of credentials.
      * @param version The version of the credentials to be sent as request header.
      * @throws NullPointerException if any of the parameters except credentials is {@code null}
-     * @throws ClientErrorException if any of the checks fail.
+     * @throws org.eclipse.hono.client.ClientErrorException if any of the checks fail.
      */
     public CredentialsDto(
             final String tenantId,
@@ -80,7 +77,6 @@ public final class CredentialsDto extends BaseDto {
         //Validate the given credentials, secrets and generate secret ids if not available.
         Optional.ofNullable(credentials)
                 .ifPresent(creds -> {
-                    assertTypeAndAuthId(creds);
                     assertSecretIdUniqueness(creds);
                 });
         setCredentials(credentials);
@@ -216,22 +212,9 @@ public final class CredentialsDto extends BaseDto {
             final String authId,
             final String authType,
             final List<CommonCredential> credentials) {
+
         return credentials.stream()
                 .filter(credential -> authId.equals(credential.getAuthId()) && authType.equals(credential.getType()))
                 .findFirst();
-    }
-
-    @JsonIgnore
-    private static void assertTypeAndAuthId(final List<? extends CommonCredential> credentials) {
-
-        final long uniqueAuthIdAndTypeCount = credentials.stream()
-            .map(credential -> String.format("%s::%s", credential.getType(), credential.getAuthId()))
-            .distinct()
-            .count();
-
-        if (credentials.size() > uniqueAuthIdAndTypeCount) {
-            throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "credentials must have unique (type, auth-id)");
-        }
     }
 }

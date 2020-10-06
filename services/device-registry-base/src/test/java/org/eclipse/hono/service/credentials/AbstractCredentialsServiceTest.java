@@ -31,6 +31,9 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.auth.EncodedPassword;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
@@ -42,6 +45,8 @@ import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.credentials.PskSecret;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.util.CacheDirective;
@@ -293,7 +298,9 @@ public abstract class AbstractCredentialsServiceTest {
                     // assert a few basics, optionals may be empty
                     // but must not be null
                     assertNotNull(s3.getCacheDirective());
-                    assertResourceVersion(s3);
+                    if (s3.isOk()) {
+                        assertResourceVersion(s3);
+                    }
 
                     mangementValidation.accept(s3);
 
@@ -432,8 +439,10 @@ public abstract class AbstractCredentialsServiceTest {
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
-        final var pwdCredentials = createPasswordCredential(authId, "bar");
-        final var pskCredentials = createPSKCredential(authId, "the-shared-key");
+        final var pwdCredentials = Credentials.createPasswordCredential(authId, "bar");
+        final var pskCredentials = Credentials.createPSKCredential("psk-id", "the-shared-key");
+        final String subjectDn = new X500Principal("emailAddress=foo@bar.com, CN=foo, O=bar").getName(X500Principal.RFC2253);
+        final var x509Credentials = new X509CertificateCredential(subjectDn, List.of(new X509CertificateSecret()));
 
         //create device and set credentials.
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
@@ -442,7 +451,7 @@ public abstract class AbstractCredentialsServiceTest {
                         .compose(response -> getCredentialsManagementService().updateCredentials(
                                 tenantId,
                                 deviceId,
-                                List.of(pwdCredentials, pskCredentials),
+                                List.of(pwdCredentials, pskCredentials, x509Credentials),
                                 Optional.empty(),
                                 NoopSpan.INSTANCE))
                         .compose(response -> {
@@ -456,8 +465,20 @@ public abstract class AbstractCredentialsServiceTest {
                             ctx.verify(() -> {
                                 assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
                                 assertResourceVersion(response);
-                                assertThat(response.getPayload()).hasSize(2);
+                                assertThat(response.getPayload()).hasSize(3);
                                 assertReadCredentialsResponseProperties(response.getPayload());
+                            });
+                            return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, subjectDn);
+                        })
+                        .compose(response -> {
+                            ctx.verify(() -> {
+                                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertGetCredentialsResponseProperties(
+                                        response.getPayload(),
+                                        deviceId,
+                                        CredentialsConstants.SECRETS_TYPE_X509_CERT,
+                                        subjectDn);
+                                assertThat(response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS)).isNotEmpty();
                             });
                             return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId);
                         })
@@ -474,7 +495,7 @@ public abstract class AbstractCredentialsServiceTest {
                                     .map(JsonObject.class::cast)
                                     .forEach(secret -> assertPwdSecretContainsHash(secret, false));
                             });
-                            return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, authId);
+                            return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "psk-id");
                         })
                         .onComplete(ctx.succeeding(response -> {
                             ctx.verify(() -> {
@@ -483,7 +504,7 @@ public abstract class AbstractCredentialsServiceTest {
                                         response.getPayload(),
                                         deviceId,
                                         CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
-                                        authId);
+                                        "psk-id");
                                 final JsonArray secrets = response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS);
                                 secrets.stream()
                                     .map(JsonObject.class::cast)
@@ -512,19 +533,22 @@ public abstract class AbstractCredentialsServiceTest {
         assertGetMissing(ctx, tenantId, deviceId, authId, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD,
                 () -> getDeviceManagementService()
                         .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                        .compose(response -> getCredentialsManagementService().updateCredentials(
-                                tenantId,
-                                deviceId,
-                                List.of(pwdCredentials),
-                                Optional.empty(),
-                                NoopSpan.INSTANCE))
+                        .compose(response -> {
+                            ctx.verify(() -> {
+                                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+                            });
+                            return getCredentialsManagementService().updateCredentials(
+                                    tenantId,
+                                    deviceId,
+                                    List.of(pwdCredentials),
+                                    Optional.empty(),
+                                    NoopSpan.INSTANCE);
+                        })
                         .onComplete(ctx.succeeding(response -> ctx.verify(() -> {
-
                             assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
                             assertResourceVersion(response);
 
-                            assertGet(ctx, tenantId, deviceId, authId,
-                                    RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                            assertGet(ctx, tenantId, deviceId, authId, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                     r -> {
                                         assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
                                         final List<CommonCredential> credentials = r.getPayload();
@@ -887,22 +911,25 @@ public abstract class AbstractCredentialsServiceTest {
     }
 
     /**
-     * Verifies that existing secrets are deleted when their IDs are not contained
-     * in the request payload.
+     * Verifies that existing credentials and secrets are deleted when they are omitted from
+     * the body of an update Credentials request.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsSupportsRemovingExistingSecrets(final VertxTestContext ctx) {
+    public void testUpdateCredentialsSupportsRemovingExistingCredentialsAndSecrets(final VertxTestContext ctx) {
 
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
+        final String otherAuthId = UUID.randomUUID().toString();
 
         final PasswordSecret sec1 = new PasswordSecret().setPasswordPlain("bar");
         final PasswordSecret sec2 = new PasswordSecret().setPasswordPlain("foo");
 
         final PasswordCredential credential = new PasswordCredential(authId, List.of(sec1, sec2));
+        final PskCredential pskCredentialSameAuthId = Credentials.createPSKCredential(authId, "shared-key");
+        final PskCredential pskCredential = Credentials.createPSKCredential(otherAuthId, "other-shared-key");
 
         // create device & set credentials
 
@@ -910,11 +937,19 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
-                        .updateCredentials(tenantId, deviceId, Collections.singletonList(credential),
-                                Optional.empty(),
-                                NoopSpan.INSTANCE)
-                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
+                .compose(result -> {
+                    ctx.verify(() -> assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                    return getCredentialsManagementService().updateCredentials(
+                            tenantId,
+                            deviceId,
+                            List.of(credential, pskCredential, pskCredentialSameAuthId),
+                            Optional.empty(),
+                            NoopSpan.INSTANCE);
+                })
+                .onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
+                    phase1.complete();
+                }));
 
         // Retrieve credentials IDs
 
@@ -922,71 +957,99 @@ public abstract class AbstractCredentialsServiceTest {
         final List<String> secretIDs = new ArrayList<>();
 
         phase1.future()
-                .onComplete(ctx.succeeding(n -> getCredentialsService()
-                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
+            .compose(ok -> getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
 
-                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    assertThat(s.getPayload()).hasSize(3);
+                    assertResourceVersion(s);
+                    assertReadCredentialsResponseProperties(s.getPayload());
 
-                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                    final List<PskCredential> pskCredentials = s.getPayload().stream()
+                            .filter(PskCredential.class::isInstance)
+                            .map(PskCredential.class::cast)
+                            .collect(Collectors.toList());
+                    assertThat(pskCredentials).as("PSK credentials have been registered").hasSize(2);
 
-                            assertEquals(authId, creds.getAuthId());
-                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                            assertEquals(2, creds.getSecrets().size());
+                    s.getPayload().stream()
+                        .filter(PasswordCredential.class::isInstance)
+                        .map(PasswordCredential.class::cast)
+                        .findFirst()
+                        .ifPresentOrElse(
+                                creds -> {
+                                    assertThat(creds.getAuthId()).isEqualTo(authId);
+                                    assertThat(creds.getSecrets()).hasSize(2);
+                                    creds.getSecrets().stream()
+                                        .forEach(secret -> {
+                                            assertThat(secret.getId()).isNotNull();
+                                            secretIDs.add(secret.getId());
+                                        });
+                                },
+                                () -> ctx.failNow(new AssertionError("failed to retrieve hashed-password credential")));
 
-                            for (Object secret : creds.getSecrets()) {
-                                final String id = ((JsonObject) secret).getString(RegistryManagementConstants.FIELD_ID);
-                                assertNotNull(id);
-                                secretIDs.add(id);
-                            }
+                });
+                phase2.complete();
+           }));
 
-                            phase2.complete();
-                        })))));
-
-        // re-set credentials
+        // update credentials
         final Promise<?> phase3 = Promise.promise();
 
-        phase2.future().onComplete(ctx.succeeding(n -> {
-            // create a credential object with only one of the ID.
-            final PasswordSecret secretWithOnlyId = new PasswordSecret();
-            secretWithOnlyId.setId(secretIDs.get(0));
+        phase2.future()
+            .compose(ok -> {
+                // create a hashed-password credential with only one of the existing secrets
+                final PasswordSecret firstSecret = new PasswordSecret();
+                firstSecret.setId(secretIDs.get(0));
+                final PasswordCredential credentialWithFirstSecretOnly = new PasswordCredential(authId, List.of(firstSecret));
 
-            final PasswordCredential credentialWithOnlyId = new PasswordCredential(authId, List.of(secretWithOnlyId));
+                // and omit the PSK credentials
+                return getCredentialsManagementService().updateCredentials(
+                        tenantId,
+                        deviceId,
+                        List.of(credentialWithFirstSecretOnly),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+           .onComplete(ctx.succeeding(s -> {
+               ctx.verify(() -> assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
+               phase3.complete();
+           }));
 
-            getCredentialsManagementService()
-                    .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithOnlyId),
-                            Optional.empty(), NoopSpan.INSTANCE)
-                    .onComplete(ctx.succeeding(s -> phase3.complete()));
-        }));
 
-
-        // Retrieve credentials again, one should be deleted.
-
-        final Promise<?> phase4 = Promise.promise();
+        // Retrieve credentials again
 
         phase3.future()
-                .onComplete(ctx.succeeding(n -> getCredentialsService()
-                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
+            .compose(ok -> getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE))
+            .compose(result -> {
+                ctx.verify(() -> {
+                    assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                    final boolean pskCredentialHasBeenDeleted = result.getPayload().stream()
+                        .noneMatch(PskCredential.class::isInstance);
+                    assertThat(pskCredentialHasBeenDeleted).as("PSK credentials have been deleted");
 
-                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
-
-                            assertEquals(authId, creds.getAuthId());
-                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                            assertEquals(1, creds.getSecrets().size());
-
-                            final String id = creds.getSecrets().getJsonObject(0)
-                                    .getString(RegistryManagementConstants.FIELD_ID);
-                            assertEquals(id, secretIDs.get(0));
-
-                            phase4.complete();
-                        })))));
-
-        // finally complete
-
-        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
+                    assertThat(result.getPayload().get(0)).isInstanceOf(PasswordCredential.class);
+                    final PasswordCredential creds = (PasswordCredential) result.getPayload().get(0);
+                    assertThat(creds.getAuthId()).isEqualTo(authId);
+                    assertThat(creds.getSecrets())
+                        .as("second password has been deleted")
+                        .hasSize(1);
+                    assertThat(creds.getSecrets().get(0).getId()).isEqualTo(secretIDs.get(0));
+                });
+                return getCredentialsService().get(tenantId, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY, authId);
+            })
+            .compose(result -> {
+                ctx.verify(() -> assertThat(result.getStatus())
+                        .as("Credentials service does not return PSK credential")
+                        .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                return getCredentialsService().get(tenantId, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY, otherAuthId);
+            })
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> assertThat(result.getStatus())
+                        .as("Credentials service does not return PSK credential")
+                        .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
     }
 
     /**

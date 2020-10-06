@@ -16,6 +16,9 @@ title = "Release Notes"
   in a single request. This has been fixed.
 * The property names for specifying the patterns for validating Tenant and Device IDs have been fixed
   in the admin guides for the file based and the Mongo DB based registry implementations.
+* The registry implementations did not accept X.509 credentials in an update Credentials request.
+  They also failed to remove existing credentials of a device if they were not inlcuded in an
+  update Credentials request. This has been fixed.
 
 ### API Changes
 

@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -153,41 +154,53 @@ public class CredentialsManagementIT {
     }
 
     /**
-     * Verifies that when a device is created, an associated entry is created in the credential Service.
+     * Verifies that a newly added device has an empty set of credentials and that the
+     * service successfully adds arbitrary types of credentials.
      *
      * @param context The vert.x test context.
      */
     @Test
-    public void testNewDeviceReturnsEmptyCredentials(final VertxTestContext context) {
+    public void testAddCredentialsSucceeds(final VertxTestContext context) {
+
+        final PasswordCredential pwdCredential = IntegrationTestSupport.createPasswordCredential(authId, "thePassword");
+        pwdCredential.getExtensions().put("client-id", "MQTT-client-2384236854");
+
+        final PskCredential pskCredential = IntegrationTestSupport.createPskCredentials("psk-id", "psk-key");
+
+        final X509CertificateCredential x509Credential = new X509CertificateCredential(
+                "emailAddress=foo@bar.com, CN=foo, O=bar",
+                List.of(new X509CertificateSecret()));
+        x509Credential.setComment("non-standard attribute type");
+
+        final List<CommonCredential> credentials = List.of(pwdCredential, pskCredential, x509Credential);
 
         registry.getCredentials(tenantId, deviceId)
-            .onComplete(context.succeeding(responseBody -> {
+            .compose(httpResponse -> {
+                context.verify(() -> assertThat(httpResponse.toJsonArray()).isEmpty());
+                return registry.addCredentials(tenantId, deviceId, credentials);
+            })
+            .compose(httpResponse -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse));
+                return registry.getCredentials(tenantId, deviceId);
+            })
+            .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
-                    final CommonCredential[] credentials = Json.decodeValue(responseBody,
-                            CommonCredential[].class);
-                    assertThat(credentials).isEmpty();
-                });
-                context.completeNow();
-            }));
-
-    }
-
-    /**
-     * Verifies that the service accepts a request to add credentials request containing valid credentials.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testAddCredentialsSucceeds(final VertxTestContext context)  {
-
-        registry.updateCredentials(
-                tenantId,
-                deviceId,
-                List.of(hashedPasswordCredential),
-                HttpURLConnection.HTTP_NO_CONTENT)
-            .onComplete(context.succeeding(responseHeaders -> {
-                context.verify(() -> {
-                    assertResourceVersionHasChanged(resourceVersion, responseHeaders);
+                    final CommonCredential[] credsOnRecord = Json.decodeValue(httpResponse, CommonCredential[].class);
+                    assertThat(credsOnRecord).hasSize(3);
+                    Arrays.stream(credsOnRecord)
+                        .forEach(creds -> {
+                            assertThat(creds.getExtensions().get("device-id")).isNull();
+                            if (creds instanceof PasswordCredential) {
+                                assertThat(creds.getExtensions().get("client-id")).isEqualTo("MQTT-client-2384236854");
+                            } else if (creds instanceof X509CertificateCredential) {
+                                assertThat(creds.getComment()).isEqualTo("non-standard attribute type");
+                            }
+                            creds.getSecrets()
+                                .forEach(secret -> {
+                                    assertThat(secret.isEnabled());
+                                    assertThat(secret.getId()).isNotNull();
+                                });
+                        });
                 });
                 context.completeNow();
             }));
