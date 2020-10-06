@@ -403,6 +403,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         final ProtonClientOptions options = new ProtonClientOptions();
         options.setConnectTimeout(config.getConnectTimeout());
         options.setHeartbeat(config.getHeartbeatInterval());
+        options.setMaxFrameSize(config.getMaxFrameSize());
         options.setReconnectAttempts(0);
         return options;
     }

@@ -155,7 +155,7 @@ public class AbstractConfigTest {
     @Test
     public void testConstructorCopiesAllProperties() {
 
-        final List<String> protocols = Collections.singletonList("TLS1.2");
+        final List<String> protocols = Collections.singletonList("NON-EXISTING");
         final TestConfig other = new TestConfig();
         other.setCertPath("cert/path");
         other.setKeyFormat(FileFormat.PEM);

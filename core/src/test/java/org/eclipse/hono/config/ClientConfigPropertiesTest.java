@@ -32,12 +32,17 @@ public class ClientConfigPropertiesTest {
     public void testCreateFromOtherProperties() {
 
         final ClientConfigProperties other = new ClientConfigProperties();
+        other.setAddressRewriteRule("([a-z_]+)/([\\w-]+) test-vhost/$1/$2");
         other.setAmqpHostname("virtual-host");
         other.setConnectTimeout(1000);
         other.setFlowLatency(500);
         other.setIdleTimeout(5000);
         other.setInitialCredits(200);
         other.setLinkEstablishmentTimeout(500);
+        other.setMaxFrameSize(64 * 1024);
+        other.setMaxMessageSize(3000L);
+        other.setMaxSessionFrames(100);
+        other.setMinMaxMessageSize(16 * 1024);
         other.setName("name");
         other.setReconnectAttempts(10);
         other.setReconnectDelayIncrement(100);
@@ -54,12 +59,18 @@ public class ClientConfigPropertiesTest {
         other.setUsername("user");
 
         final ClientConfigProperties newProps = new ClientConfigProperties(other);
+        assertThat(newProps.getAddressRewritePattern().pattern()).isEqualTo("([a-z_]+)/([\\w-]+)");
+        assertThat(newProps.getAddressRewriteReplacement()).isEqualTo("test-vhost/$1/$2");
         assertThat(newProps.getAmqpHostname()).isEqualTo("virtual-host");
         assertThat(newProps.getConnectTimeout()).isEqualTo(1000);
         assertThat(newProps.getFlowLatency()).isEqualTo(500);
         assertThat(newProps.getIdleTimeout()).isEqualTo(5000);
         assertThat(newProps.getInitialCredits()).isEqualTo(200);
         assertThat(newProps.getLinkEstablishmentTimeout()).isEqualTo(500);
+        assertThat(newProps.getMaxFrameSize()).isEqualTo(64 * 1024);
+        assertThat(newProps.getMaxMessageSize()).isEqualTo(3000L);
+        assertThat(newProps.getMaxSessionFrames()).isEqualTo(100);
+        assertThat(newProps.getMinMaxMessageSize()).isEqualTo(16 * 1024);
         assertThat(newProps.getName()).isEqualTo("name");
         assertThat(newProps.getReconnectAttempts()).isEqualTo(10);
         assertThat(newProps.getReconnectDelayIncrement()).isEqualTo(100);

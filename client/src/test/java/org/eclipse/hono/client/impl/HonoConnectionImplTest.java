@@ -35,6 +35,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -69,6 +70,7 @@ import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.ProtonSession;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
@@ -81,6 +83,7 @@ public class HonoConnectionImplTest {
 
     private Vertx vertx;
     private ProtonConnection con;
+    private ProtonSession session;
     private DisconnectHandlerProvidingConnectionFactory connectionFactory;
     private ClientConfigProperties props;
     private HonoConnectionImpl honoConnection;
@@ -99,11 +102,67 @@ public class HonoConnectionImplTest {
             handler.handle(null);
             return 0L;
         });
+        session = mock(ProtonSession.class);
         con = mock(ProtonConnection.class);
         when(con.getRemoteContainer()).thenReturn("server");
+        when(con.createSession()).thenReturn(session);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
         props = new ClientConfigProperties();
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+    }
+
+    /**
+     * Verifies that the client establishes an AMQP session with the
+     * configured incoming window size on the connection.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testConnectEstablishesSession(final VertxTestContext ctx) {
+
+        // GIVEN a client that is configured with a specific incoming session
+        // window size
+        props.setMaxFrameSize(16 * 1024);
+        props.setMaxSessionFrames(10);
+
+        // WHEN the client tries to connect
+        honoConnection.connect()
+            .onComplete(ctx.succeeding(con -> {
+                // THEN the session has been configured with an incoming window size
+                ctx.verify(() -> {
+                    verify(session).setIncomingCapacity(10 * 16 * 1024);
+                    verify(session).open();
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the client fails a connection attempt if no AMQP session can be established
+     * with the peer.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectFailsIfSessionCannotBeEstablished(final VertxTestContext ctx) {
+
+        // GIVEN a client attempting to connect to a peer that does not allow opening
+        // a session
+        final Future<HonoConnection> result = honoConnection.connect();
+        ctx.verify(() -> {
+            verify(session).open();
+            // WHEN the peer closes the session
+            final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = ArgumentCaptor.forClass(Handler.class);
+            verify(session).closeHandler(sessionCloseHandler.capture());
+            sessionCloseHandler.getValue().handle(Future.failedFuture("malfunction"));
+
+            // THEN the connection attempt fails
+            assertThat(result.failed());
+            // and the connection has been closed again
+            verify(con).close();
+        });
+        ctx.completeNow();
     }
 
     /**
@@ -295,6 +354,45 @@ public class HonoConnectionImplTest {
             });
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that the client tries to reconnect to the peer if the peer
+     * closes the connection's session.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testRemoteSessionCloseTriggersReconnection(final VertxTestContext ctx) {
+
+        // GIVEN a client that is connected to a server
+        final Promise<HonoConnection> connected = Promise.promise();
+        final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
+        props.setServerRole("service-provider");
+        honoConnection.addDisconnectListener(disconnectListener);
+        honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
+            .onComplete(connected);
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
+
+        connected.future().onComplete(ctx.succeeding(c -> {
+
+            ctx.verify(() -> {
+                // WHEN the peer closes the session
+                final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(session).closeHandler(sessionCloseHandler.capture());
+                sessionCloseHandler.getValue().handle(Future.succeededFuture(session));
+                // THEN the client invokes the registered disconnect handler
+                verify(disconnectListener).onDisconnect(honoConnection);
+                // and the original connection has been closed locally
+                verify(con).close();
+                verify(con).disconnectHandler(null);
+                // and the connection is re-established
+                assertThat(connectionFactory.await()).isTrue();
+            });
+            ctx.completeNow();
+        }));
+
     }
 
     /**
@@ -532,7 +630,7 @@ public class HonoConnectionImplTest {
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(receiver.getSource()).thenReturn(source);
         when(receiver.getRemoteSource()).thenReturn(source);
-        when(con.createReceiver(anyString())).thenReturn(receiver);
+        when(session.createReceiver(anyString())).thenReturn(receiver);
 
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
         final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> captor = VertxMockSupport.argumentCaptorHandler();
@@ -575,6 +673,43 @@ public class HonoConnectionImplTest {
     }
 
     /**
+     * Verifies that the client sets configured properties on receiver links
+     * that it creates.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testCreateReceiverSetsConfiguredProperties(final VertxTestContext ctx) {
+
+        // GIVEN a client configured with some properties
+        props.setMaxMessageSize(3000L);
+        props.setInitialCredits(123);
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(session.createReceiver(anyString())).thenReturn(receiver);
+        @SuppressWarnings("unchecked")
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // WHEN establishing a connection
+        honoConnection.connect()
+            .onComplete(ctx.succeeding(c -> {
+
+                // and then creating a receiver
+                c.createReceiver(
+                        "source",
+                        ProtonQoS.AT_LEAST_ONCE,
+                        (delivery, msg) -> {},
+                        remoteCloseHook);
+                ctx.verify(() -> {
+                    // THEN the client configures the receiver according to the given properties
+                    verify(receiver).setMaxMessageSize(eq(new UnsignedLong(3000L)));
+                    verify(receiver).setQoS(ProtonQoS.AT_LEAST_ONCE);
+                    verify(receiver).setPrefetch(123);
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that the attempt to create a receiver fails with a
      * {@code ServiceInvocationException} if the remote peer refuses
      * to open the link with an error condition.
@@ -612,7 +747,7 @@ public class HonoConnectionImplTest {
 
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteCondition()).thenReturn(errorSupplier.get());
-        when(con.createReceiver(anyString())).thenReturn(receiver);
+        when(session.createReceiver(anyString())).thenReturn(receiver);
         @SuppressWarnings("unchecked")
         final Handler<String> remoteCloseHook = mock(Handler.class);
         when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
@@ -660,7 +795,7 @@ public class HonoConnectionImplTest {
 
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
-        when(con.createReceiver(anyString())).thenReturn(receiver);
+        when(session.createReceiver(anyString())).thenReturn(receiver);
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
@@ -700,7 +835,7 @@ public class HonoConnectionImplTest {
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(receiver.getSource()).thenReturn(source);
         when(receiver.getRemoteSource()).thenReturn(source);
-        when(con.createReceiver(anyString())).thenReturn(receiver);
+        when(session.createReceiver(anyString())).thenReturn(receiver);
 
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
@@ -767,7 +902,7 @@ public class HonoConnectionImplTest {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.getRemoteCondition()).thenReturn(errorSupplier.get());
-        when(con.createSender(anyString())).thenReturn(sender);
+        when(session.createSender(anyString())).thenReturn(sender);
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
         when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             // do not run timers immediately
@@ -808,7 +943,7 @@ public class HonoConnectionImplTest {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(con.createSender(anyString())).thenReturn(sender);
+        when(session.createSender(anyString())).thenReturn(sender);
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
@@ -855,7 +990,6 @@ public class HonoConnectionImplTest {
 
     }
 
-
     /**
      * Verifies that the attempt to create a sender fails with a
      * {@code ServerErrorException} if the remote peer sends a
@@ -868,7 +1002,7 @@ public class HonoConnectionImplTest {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.getRemoteTarget()).thenReturn(null);
-        when(con.createSender(anyString())).thenReturn(sender);
+        when(session.createSender(anyString())).thenReturn(sender);
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
@@ -900,6 +1034,48 @@ public class HonoConnectionImplTest {
     }
 
     /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ClientErrorException} if the remote peer does not support the
+     * client's minimum max-message-size.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateSenderFailsForInsufficientMaxMessageSize(final VertxTestContext ctx) {
+
+        // GIVEN a client that requires a minimum max-message-size of 2kb
+        props.setMinMaxMessageSize(2048L);
+
+        // WHEN trying to open a sender link to a peer that has a max-message-size of 1kb
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        when(session.createSender(anyString())).thenReturn(sender);
+        final Target target = new Target();
+        target.setAddress("someAddress");
+        when(sender.getRemoteTarget()).thenReturn(target);
+        when(sender.getRemoteMaxMessageSize()).thenReturn(new UnsignedLong(1024L));
+        // mock handlers
+        doAnswer(AdditionalAnswers.answerVoid(
+                (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
+                        .when(sender).openHandler(VertxMockSupport.anyHandler());
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
+
+        honoConnection.connect()
+            .compose(c -> honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
+            .onComplete(ctx.failing(t -> {
+                // THEN link establishment fails
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    // and the sender link has been closed locally
+                    verify(sender).close();
+                });
+                ctx.completeNow();
+            }));
+
+    }
+
+    /**
      * Verifies that the attempt to create a sender succeeds when sender never gets credits.
      *
      * @param ctx The vert.x test context.
@@ -908,7 +1084,7 @@ public class HonoConnectionImplTest {
     public void testCreateSenderThatGetsNoCredits(final VertxTestContext ctx) {
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(con.createSender(anyString())).thenReturn(sender);
+        when(session.createSender(anyString())).thenReturn(sender);
         final Target target = new Target();
         target.setAddress("someAddress");
         when(sender.getRemoteTarget()).thenReturn(target);
@@ -950,7 +1126,7 @@ public class HonoConnectionImplTest {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(con.createSender(anyString())).thenReturn(sender);
+        when(session.createSender(anyString())).thenReturn(sender);
         final Target target = new Target();
         target.setAddress("someAddress");
         when(sender.getRemoteTarget()).thenReturn(target);
@@ -996,7 +1172,7 @@ public class HonoConnectionImplTest {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(con.createSender(anyString())).thenReturn(sender);
+        when(session.createSender(anyString())).thenReturn(sender);
         final Target target = new Target();
         target.setAddress("someAddress");
         when(sender.getRemoteTarget()).thenReturn(target);

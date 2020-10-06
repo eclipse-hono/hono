@@ -30,6 +30,7 @@ import javax.net.ssl.SSLException;
 import javax.security.sasl.AuthenticationException;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DisconnectListener;
@@ -62,6 +63,7 @@ import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.ProtonSession;
 import io.vertx.proton.sasl.MechanismMismatchException;
 import io.vertx.proton.sasl.SaslSystemException;
 
@@ -119,6 +121,8 @@ public class HonoConnectionImpl implements HonoConnection {
     private AtomicInteger connectAttempts;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
     private Tracer tracer = NoopTracerFactory.create();
+    private ProtonSession session;
+    private Handler<AsyncResult<ProtonConnection>> connectionCloseHandler;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -301,7 +305,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * @return {@code true} if the connection is established.
      */
     protected boolean isConnectedInternal() {
-        return connection != null && !connection.isDisconnected();
+        return connection != null && !connection.isDisconnected() && session != null;
     }
 
     @Override
@@ -313,10 +317,12 @@ public class HonoConnectionImpl implements HonoConnection {
      * Sets the connection used to interact with the Hono server.
      *
      * @param connection The connection to use.
+     * @param session The session to use for links created on the connection.
      */
-    void setConnection(final ProtonConnection connection) {
+    void setConnection(final ProtonConnection connection, final ProtonSession session) {
         synchronized (connectionLock) {
             this.connection = connection;
+            this.session = session;
             if (connection == null) {
                 this.offeredCapabilities = Collections.emptyList();
                 context = null;
@@ -405,12 +411,13 @@ public class HonoConnectionImpl implements HonoConnection {
                         connectionFactory.getServerRole());
 
                 clientOptions = options;
+                connectionCloseHandler = remoteClose -> onRemoteClose(remoteClose, disconnectHandler);
                 connectionFactory.connect(
                         clientOptions,
                         null,
                         null,
                         containerId,
-                        remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
+                        connectionCloseHandler,
                         failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
@@ -436,7 +443,8 @@ public class HonoConnectionImpl implements HonoConnection {
                                             connectionFactory.getPort(),
                                             connectionFactory.getServerRole(),
                                             newConnection.getRemoteContainer());
-                                    setConnection(newConnection);
+                                    final ProtonSession session = createDefaultSession(newConnection);
+                                    setConnection(newConnection, session);
                                     wrappedConnectionHandler.handle(Future.succeededFuture(this));
                                 }
                             }
@@ -453,7 +461,7 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<ProtonConnection> connectionLossHandler) {
 
         if (remoteClose.failed()) {
-            log.info("remote server [{}:{}, role: {}] closed connection with error condition: {}",
+            log.info("remote server [{}:{}, role: {}] closed connection: {}",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole(),
@@ -511,7 +519,8 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected void clearState() {
 
-        setConnection(null);
+        connectionCloseHandler = null;
+        setConnection(null, null);
 
         notifyDisconnectHandlers();
         // make sure we make configured number of attempts to re-connect
@@ -707,6 +716,33 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
+    private ProtonSession createDefaultSession(final ProtonConnection connection) {
+
+        if (connection == null) {
+            throw new IllegalStateException("no connection to create session for");
+        } else {
+            log.debug("establishing AMQP session with server [{}:{}, role: {}]",
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole());
+            final ProtonSession session = connection.createSession();
+            session.closeHandler(remoteClose -> {
+                final StringBuilder msgBuilder = new StringBuilder("the connection's session closed unexpectedly");
+                Optional.ofNullable(session.getRemoteCondition())
+                    .ifPresent(error -> {
+                        msgBuilder.append(String.format(" [condition: %s, description: %s]",
+                                error.getCondition(), error.getDescription()));
+                    });
+                session.close();
+                Optional.ofNullable(connectionCloseHandler)
+                    .ifPresent(ch -> ch.handle(Future.failedFuture(msgBuilder.toString())));
+            });
+            session.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
+            session.open();
+            return session;
+        }
+    }
+
     /**
      * Creates a sender link.
      *
@@ -739,7 +775,7 @@ public class HonoConnectionImpl implements HonoConnection {
                 }
 
                 final Promise<ProtonSender> senderPromise = Promise.promise();
-                final ProtonSender sender = connection.createSender(targetAddress);
+                final ProtonSender sender = session.createSender(targetAddress);
                 sender.setQoS(qos);
                 sender.setAutoSettle(true);
                 final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
@@ -769,9 +805,21 @@ public class HonoConnectionImpl implements HonoConnection {
 
                     } else if (HonoProtonHelper.isLinkEstablished(sender)) {
 
-                        log.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
-                        // wait on credits a little time, if not already given
-                        if (sender.getCredit() <= 0) {
+                        log.debug("sender open [target: {}, sendQueueFull: {}, remote max-message-size: {}]",
+                                targetAddress, sender.sendQueueFull(), sender.getRemoteMaxMessageSize());
+                        final long remoteMaxMessageSize = Optional.ofNullable(sender.getRemoteMaxMessageSize())
+                                .map(UnsignedLong::longValue)
+                                .orElse(0L);
+                        if (remoteMaxMessageSize > 0 && remoteMaxMessageSize < clientConfigProperties.getMinMaxMessageSize()) {
+                            // peer won't accept our (biggest) messages
+                            sender.close();
+                            final String msg = String.format(
+                                    "peer does not support minimum max-message-size [required: {}, supported: {}",
+                                    clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
+                            log.debug(msg);
+                            senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED, msg));
+                        } else if (sender.getCredit() <= 0) {
+                            // wait on credits a little time, if not already given
                             final long waitOnCreditsTimerId = vertx.setTimer(clientConfigProperties.getFlowLatency(),
                                     timerID -> {
                                         log.debug("sender [target: {}] has {} credits after grace period of {}ms",
@@ -856,7 +904,10 @@ public class HonoConnectionImpl implements HonoConnection {
         return executeOnContext(result -> {
             checkConnected().compose(v -> {
                 final Promise<ProtonReceiver> receiverPromise = Promise.promise();
-                final ProtonReceiver receiver = connection.createReceiver(sourceAddress);
+                final ProtonReceiver receiver = session.createReceiver(sourceAddress);
+                if (clientConfigProperties.getMaxMessageSize() > ClientConfigProperties.MAX_MESSAGE_SIZE_UNLIMITED) {
+                    receiver.setMaxMessageSize(new UnsignedLong(clientConfigProperties.getMaxMessageSize()));
+                }
                 receiver.setAutoAccept(autoAccept);
                 receiver.setQoS(qos);
                 receiver.setPrefetch(preFetchSize);
