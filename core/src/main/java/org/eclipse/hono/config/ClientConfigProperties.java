@@ -72,12 +72,37 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public static final long DEFAULT_SEND_MESSAGE_TIMEOUT = 1000L; // ms
 
+    /**
+     * The value indicating an unlimited AMQP frame size.
+     */
+    public static final int MAX_FRAME_SIZE_UNLIMITED = -1;
+    /**
+     * The value indicating that this client accepts messages of any size from a peer.
+     */
+    public static final long MAX_MESSAGE_SIZE_UNLIMITED = -1;
+    /**
+     * The value indicating an unlimited number of frames that can be in flight for an AMQP session.
+     */
+    public static final int MAX_SESSION_FRAMES_UNLIMITED = -1;
+    /**
+     * The value indicating that this client does not require a peer to accept messages of a particular
+     * size.
+     */
+    public static final long MIN_MESSAGE_SIZE_NONE = 0;
+
+    private Pattern addressRewritePattern;
+    private String addressRewriteReplacement;
+    private String addressRewriteRule = null;
     private String amqpHostname = null;
     private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     private long flowLatency = DEFAULT_FLOW_LATENCY;
     private int idleTimeout = DEFAULT_IDLE_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
+    private int maxFrameSize = MAX_FRAME_SIZE_UNLIMITED;
+    private long maxMessageSize = MAX_MESSAGE_SIZE_UNLIMITED;
+    private int maxSessionFrames = MAX_SESSION_FRAMES_UNLIMITED;
+    private long minMessageSize = MIN_MESSAGE_SIZE_NONE;
     private String name = null;
     private int reconnectAttempts = -1;
     private long reconnectMinDelay = DEFAULT_RECONNECT_MIN_DELAY;
@@ -85,9 +110,6 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     private long reconnectDelayIncrement = DEFAULT_RECONNECT_DELAY_INCREMENT;
     private long requestTimeout = DEFAULT_REQUEST_TIMEOUT;
     private long sendMessageTimeout = DEFAULT_SEND_MESSAGE_TIMEOUT;
-    private String addressRewriteRule = null;
-    private Pattern addressRewritePattern;
-    private String addressRewriteReplacement;
 
     /**
      * Creates new properties with default values.
@@ -104,12 +126,18 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public ClientConfigProperties(final ClientConfigProperties otherProperties) {
         super(otherProperties);
+        this.addressRewritePattern = otherProperties.addressRewritePattern;
+        this.addressRewriteReplacement = otherProperties.addressRewriteReplacement;
+        this.addressRewriteRule = otherProperties.addressRewriteRule;
         this.amqpHostname = otherProperties.amqpHostname;
         this.connectTimeout = otherProperties.connectTimeout;
         this.flowLatency = otherProperties.flowLatency;
         this.idleTimeout = otherProperties.idleTimeout;
         this.initialCredits = otherProperties.initialCredits;
         this.linkEstablishmentTimeout = otherProperties.linkEstablishmentTimeout;
+        this.maxFrameSize = otherProperties.maxFrameSize;
+        this.maxMessageSize = otherProperties.maxMessageSize;
+        this.maxSessionFrames = otherProperties.maxSessionFrames;
         this.name = otherProperties.name;
         this.reconnectAttempts = otherProperties.reconnectAttempts;
         this.reconnectMinDelay = otherProperties.reconnectMinDelay;
@@ -574,5 +602,141 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public final String getAddressRewriteReplacement() {
         return addressRewriteReplacement;
+    }
+
+    /**
+     * Gets the minimum size of AMQP 1.0 messages that this client requires a peer to accept.
+     * <p>
+     * The default value of this property is {@value #MIN_MESSAGE_SIZE_NONE}.
+     * <p>
+     * The value of this property will be used by the client during sender link establishment.
+     * Link establishment will fail, if the peer indicates a max-message-size in its <em>attach</em>
+     * frame that is smaller than the configured minimum message size.
+     *
+     * @return The message size in bytes or {@value #MIN_MESSAGE_SIZE_NONE}, indicating no minimum size at all.
+     */
+    public final long getMinMessageSize() {
+        return minMessageSize;
+    }
+
+    /**
+     * Sets the minimum size of AMQP 1.0 messages that this client requires a peer to accept.
+     * <p>
+     * The default value of this property is {@value #MIN_MESSAGE_SIZE_NONE}.
+     * <p>
+     * The value of this property will be used by the client during sender link establishment.
+     * Link establishment will fail, if the peer indicates a max-message-size in its <em>attach</em>
+     * frame that is smaller than the configured minimum message size.
+     *
+     * @param size The message size in bytes or {@value #MIN_MESSAGE_SIZE_NONE}, indicating no minimum size at all.
+     * @throws IllegalArgumentException if size is &lt; 0.
+     */
+    public final void setMinMessageSize(final long size) {
+        if (size < MIN_MESSAGE_SIZE_NONE) {
+            throw new IllegalArgumentException("min message size must be >= 0");
+        }
+        this.minMessageSize = size;
+    }
+
+
+    /**
+     * Gets the maximum size of an AMQP 1.0 message that this client accepts from a peer.
+     * <p>
+     * The default value of this property is {@value #MAX_MESSAGE_SIZE_UNLIMITED}.
+     *
+     * @return The message size in bytes or {@value #MAX_MESSAGE_SIZE_UNLIMITED}, indicating messages of any size.
+     */
+    public final long getMaxMessageSize() {
+        return maxMessageSize;
+    }
+
+    /**
+     * Sets the maximum size of an AMQP 1.0 message that this client should accept from a peer.
+     * <p>
+     * The default value of this property is {@value #MAX_MESSAGE_SIZE_UNLIMITED}.
+     *
+     * @param size The message size in bytes or {@value #MAX_MESSAGE_SIZE_UNLIMITED}, indicating messages of any size.
+     * @throws IllegalArgumentException if size is &lt; 0 and not {@value #MAX_MESSAGE_SIZE_UNLIMITED}.
+     */
+    public final void setMaxMessageSize(final long size) {
+        if (size != MAX_MESSAGE_SIZE_UNLIMITED && size < 0) {
+            throw new IllegalArgumentException("max-message-size must be >= 0");
+        }
+        this.maxMessageSize = size;
+    }
+
+    /**
+     * Gets the maximum number of bytes that can be contained in a single AMQP <em>transfer</em> frame.
+     * <p>
+     * The default value of this property is {@value #MAX_FRAME_SIZE_UNLIMITED}.
+     *
+     * @return The frame size in bytes or {@value #MAX_FRAME_SIZE_UNLIMITED}, indicating that the frame size is not limited.
+     */
+    public final int getMaxFrameSize() {
+        return maxFrameSize;
+    }
+
+    /**
+     * Sets the maximum number of bytes that can be contained in a single AMQP <em>transfer</em> frame.
+     * <p>
+     * The default value of this property is {@value #MAX_FRAME_SIZE_UNLIMITED}.
+     *
+     * @param maxFrameSize The frame size in bytes or {@value #MAX_FRAME_SIZE_UNLIMITED}, indicating that the
+     *        frame size is not limited.
+     * @throws IllegalArgumentException if frame size &lt; 512 (minimum value
+     *           defined by AMQP 1.0 spec) and not {@value #MAX_FRAME_SIZE_UNLIMITED}.
+     */
+    public final void setMaxFrameSize(final int maxFrameSize) {
+        if (maxFrameSize != -1 && maxFrameSize < 512) {
+            throw new IllegalArgumentException("frame size must be at least 512 bytes");
+        }
+        this.maxFrameSize = maxFrameSize;
+    }
+
+    /**
+     * Gets the maximum number of AMQP transfer frames for sessions created on this connection.
+     * This is the number of transfer frames that may simultaneously be in flight for all links
+     * in the session.
+     * <p>
+     * The default value of this property is {@value #MAX_SESSION_FRAMES_UNLIMITED}.
+     *
+     * @return The number of frames or {@value #MAX_SESSION_FRAMES_UNLIMITED}, indicating that the number
+     *         of frames is unlimited.
+     */
+    public final int getMaxSessionFrames() {
+        return maxSessionFrames;
+    }
+
+    /**
+     * Sets the maximum number of AMQP transfer frames for sessions created on this connection.
+     * This is the number of transfer frames that may simultaneously be in flight for all links
+     * in the session.
+     * <p>
+     * The default value of this property is {@value #MAX_SESSION_FRAMES_UNLIMITED}.
+     *
+     * @param maxSessionFrames The number of frames.
+     * @throws IllegalArgumentException if the number is less than 1 and not {@value #MAX_SESSION_FRAMES_UNLIMITED}.
+     */
+    public final void setMaxSessionFrames(final int maxSessionFrames) {
+        if (maxSessionFrames != MAX_SESSION_FRAMES_UNLIMITED && maxSessionFrames < 1) {
+            throw new IllegalArgumentException("must support at least one frame being in flight");
+        }
+        this.maxSessionFrames = maxSessionFrames;
+    }
+
+    /**
+     * Gets the maximum AMQP session window size.
+     *
+     * @return The session window size in bytes or 0, indicating that the window size is unlimited.
+     *         The value returned is computed as the product of maxSessionFrames and maxFrameSize if they
+     *         are different from {@link #MAX_SESSION_FRAMES_UNLIMITED} and {@link #MAX_FRAME_SIZE_UNLIMITED}
+     *         respectively.
+     */
+    public final int getMaxSessionWindowSize() {
+        if (maxSessionFrames != MAX_SESSION_FRAMES_UNLIMITED && maxFrameSize != MAX_FRAME_SIZE_UNLIMITED) {
+            return maxSessionFrames * maxFrameSize;
+        } else {
+            return 0;
+        }
     }
 }

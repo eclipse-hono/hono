@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.connection.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -239,5 +240,29 @@ public class ConnectionFactoryImplTest {
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
         verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
         assertTrue(optionsCaptor.getValue().isSsl());
+    }
+
+    /**
+     * Verifies that the factory sets the maximum frame size on the connection to the value from the client configuration.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectSetsMaxFrameSize() {
+
+        // GIVEN a factory configured with a max-message-size
+        final ClientConfigProperties config = new ClientConfigProperties();
+        config.setHost("remote.host");
+        config.setMaxFrameSize(64 * 1024);
+        final ProtonClient client = mock(ProtonClient.class);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, config);
+        factory.setProtonClient(client);
+
+        // WHEN connecting to the server
+        factory.connect(null, null, null, c -> {});
+
+        // THEN the factory sets the max-message-size when establishing the connection
+        final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
+        assertThat(optionsCaptor.getValue().getMaxFrameSize()).isEqualTo(64 * 1024);
     }
 }
