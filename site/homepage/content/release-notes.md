@@ -15,6 +15,14 @@ title = "Release Notes"
 * The Device Registry Management API erroneously declared the *plaintext password* conveyed in the
   *update credentials* operation's request payload as a Base64 encoded byte array instead of a
   plain string. This has been fixed.
+* The file based as well as the Mongo DB based registry implementations had failed to do both
+  updating an existing secret (referred to by ID) and adding a new secret to the same credentials
+  in a single request. This has been fixed.
+* The property names for specifying the patterns for validating Tenant and Device IDs have been fixed
+  in the admin guides for the file based and the Mongo DB based registry implementations.
+* The registry implementations did not accept X.509 credentials in an update Credentials request.
+  They also failed to remove existing credentials of a device if they were not inlcuded in an
+  update Credentials request. This has been fixed.
 
 ### API Changes
 
