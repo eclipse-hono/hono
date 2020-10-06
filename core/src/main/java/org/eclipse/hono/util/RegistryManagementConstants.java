@@ -12,10 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.Objects;
-
-import io.vertx.core.json.JsonObject;
-
 /**
  * Constants &amp; utility methods used throughout the Device Management API.
  */
@@ -353,17 +349,5 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
 
     private RegistryManagementConstants() {
         // prevent instantiation
-    }
-
-    /**
-     * Checks if a given secret is of type {@value #SECRETS_TYPE_HASHED_PASSWORD}.
-     *
-     * @param secret The secret to check.
-     * @return {@code true} if the secret has a string property with name {@value #FIELD_TYPE}
-     *         and value {@value #SECRETS_TYPE_HASHED_PASSWORD}.
-     */
-    public static boolean isHashedPasswordSecret(final JsonObject secret) {
-        Objects.requireNonNull(secret);
-        return SECRETS_TYPE_HASHED_PASSWORD.equals(secret.getValue(FIELD_TYPE));
     }
 }
