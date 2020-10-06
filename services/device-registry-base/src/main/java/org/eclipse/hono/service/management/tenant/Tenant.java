@@ -344,7 +344,7 @@ public class Tenant {
 
         return Optional.ofNullable(trustedCertificateAuthorities)
                 .map(list -> list.stream().map(ca -> ca.getSubjectDn()).collect(Collectors.toSet()))
-                .orElse(Set.of());
+                .orElseGet(Set::of);
     }
 
     /**

@@ -861,7 +861,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         .addDeviceToTenant(tenantId, deviceId, password)
         .compose(ok -> Optional.ofNullable(consumerFactory)
                 .map(Supplier::get)
-                .orElse(Future.succeededFuture()))
+                .orElseGet(() -> Future.succeededFuture()))
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .recover(t -> {
             log.error("failed to establish connection to AMQP adapter [host: {}, port: {}]",

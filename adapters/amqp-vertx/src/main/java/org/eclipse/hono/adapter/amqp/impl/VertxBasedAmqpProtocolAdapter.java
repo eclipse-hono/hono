@@ -401,7 +401,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 // try to pick up span that has been created during SASL handshake
                 .ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class))
                 // or create a fresh one if no SASL handshake has been performed
-                .orElse(tracer.buildSpan("open connection")
+                .orElseGet(() -> tracer.buildSpan("open connection")
                     .ignoreActiveSpan()
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
@@ -1255,7 +1255,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         @SuppressWarnings("unchecked")
         final Map<String, Function<Span, Future<Void>>> handlers = Optional
                 .ofNullable(con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class))
-                .orElse(new HashMap<>());
+                .orElseGet(HashMap::new);
         handlers.put(key, handler);
         con.attachments().set(KEY_CONNECTION_LOSS_HANDLERS, Map.class, handlers);
     }

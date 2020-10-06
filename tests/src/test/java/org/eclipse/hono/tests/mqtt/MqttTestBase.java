@@ -147,7 +147,7 @@ public abstract class MqttTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
                 .compose(ok -> Optional.ofNullable(consumerFactory)
                         .map(factory -> factory.get())
-                        .orElse(Future.succeededFuture()))
+                        .orElseGet(() -> Future.succeededFuture()))
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
                 .recover(t -> {
                     LOGGER.info("failed to establish connection to MQTT adapter [host: {}, port: {}]",
@@ -163,7 +163,7 @@ public abstract class MqttTestBase {
      * @param username The username to use for authentication.
      * @param password The password to use for authentication.
      * @return A future that will be completed with the CONNACK packet received
-     *         from the adapter or failed with a {@link MqttConnectionException}
+     *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
      *         if the connection could not be established.
      */
     protected final Future<MqttConnAckMessage> connectToAdapter(
@@ -192,7 +192,7 @@ public abstract class MqttTestBase {
      *
      * @param cert The client certificate to use for authentication.
      * @return A future that will be completed with the CONNACK packet received
-     *         from the adapter or failed with a {@link MqttConnectionException}
+     *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
      *         if the connection could not be established.
      */
     protected final Future<MqttConnAckMessage> connectToAdapter(

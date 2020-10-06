@@ -182,7 +182,7 @@ public abstract class AbstractCredentialsService implements CredentialsService {
                                     }
                                 }))
 
-                        .orElse(Future.succeededFuture(result)));
+                        .orElseGet(() -> Future.succeededFuture(result)));
 
     }
 

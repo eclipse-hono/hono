@@ -494,7 +494,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String uri = Optional.ofNullable(deviceId)
                 .map(id -> registrationInstanceUri(tenantId, id))
-                .orElse(registrationWithoutIdUri(tenantId));
+                .orElseGet(() -> registrationWithoutIdUri(tenantId));
         return httpClient.create(
                 uri,
                 device,

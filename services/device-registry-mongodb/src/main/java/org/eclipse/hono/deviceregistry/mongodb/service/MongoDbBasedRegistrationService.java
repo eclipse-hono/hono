@@ -147,7 +147,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .compose(ok -> processCreateDevice(
                         new DeviceDto(
                                 tenantId,
-                                deviceId.orElse(DeviceRegistryUtils.getUniqueIdentifier()),
+                                deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()),
                                 device,
                                 new Versioned<>(device).getVersion()),
                         span))
@@ -229,7 +229,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                         .map(ok -> getRegistrationResult(
                                 deviceKey.getDeviceId(),
                                 result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)))
-                        .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                        .orElseGet(() -> RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
     private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
@@ -315,7 +315,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             span.log("successfully deleted device");
                             return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
                         })
-                        .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 deviceId,
                                 resourceVersion,
                                 findDevice(tenantId, deviceId))));
@@ -410,7 +410,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                         .map(json -> json.mapTo(DeviceDto.class))
                         .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getDevice()))
                         .collect(Collectors.toList()))
-                .orElse(new ArrayList<>());
+                .orElseGet(ArrayList::new);
     }
 
     private static JsonArray getSearchDevicesAggregatePipelineQuery(final String tenantId, final int pageSize,
@@ -484,7 +484,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                     Optional.empty(),
                                     Optional.of(result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
                         })
-                        .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 deviceId,
                                 resourceVersion,
                                 findDevice(tenantId, deviceId))));

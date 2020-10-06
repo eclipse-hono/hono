@@ -56,7 +56,7 @@ public final class MappedMessage {
             final Map<String, String> additionalProperties) {
 
         this.targetAddress = Objects.requireNonNull(targetAddress);
-        this.payload = Optional.ofNullable(payload).orElse(Buffer.buffer());
+        this.payload = Optional.ofNullable(payload).orElseGet(Buffer::buffer);
         Optional.ofNullable(additionalProperties)
             .ifPresent(props -> this.additionalProperties.putAll(additionalProperties));
     }

@@ -206,13 +206,10 @@ public final class HttpUtils {
         Objects.requireNonNull(ctx);
 
         try {
-            return Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)).map(cmdResponseStatusHeader ->
-                    Optional.of(Integer.parseInt(cmdResponseStatusHeader))
-            ).orElse(Optional.ofNullable(ctx.request().getParam(Constants.HEADER_COMMAND_RESPONSE_STATUS)).map(cmdResponseStatusParam ->
-                    Optional.of(Integer.parseInt(cmdResponseStatusParam))
-            ).orElse(
-                    Optional.empty()
-            ));
+            return Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS))
+                    .map(Integer::parseInt)
+                    .or(() -> Optional.ofNullable(ctx.request().getParam(Constants.HEADER_COMMAND_RESPONSE_STATUS))
+                            .map(Integer::parseInt));
         } catch (final NumberFormatException e) {
             return Optional.empty();
         }

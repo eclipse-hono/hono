@@ -161,13 +161,12 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
 
         return getService().get(tenantId, type, authId, payload, span)
                 .map(res -> {
-                    final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
+                    Optional.ofNullable(res.getPayload())
                             .map(p -> getTypesafeValueForField(String.class, p,
                                     CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
-                            .orElse(null);
-                    if (deviceIdFromPayload != null) {
-                        TracingHelper.TAG_DEVICE_ID.set(span, deviceIdFromPayload);
-                    }
+                            .ifPresent(deviceIdFromPayload -> {
+                                TracingHelper.TAG_DEVICE_ID.set(span, deviceIdFromPayload);
+                            });
                     return CredentialsConstants.getAmqpReply(
                             CredentialsConstants.CREDENTIALS_ENDPOINT,
                             tenantId,

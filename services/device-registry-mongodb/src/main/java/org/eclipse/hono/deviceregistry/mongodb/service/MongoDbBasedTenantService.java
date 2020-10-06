@@ -167,7 +167,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                                     Optional.empty(),
                                     Optional.of(updateResult.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
                         })
-                        .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 tenantId, resourceVersion, findTenant(tenantId)))
                 )
                 .recover(error -> {
@@ -354,7 +354,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(span);
 
-        final String tenantIdOrGenerated = tenantId.orElse(DeviceRegistryUtils.getUniqueIdentifier());
+        final String tenantIdOrGenerated = tenantId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier());
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(ok -> processCreateTenant(tenantIdOrGenerated, tenantObj, span))

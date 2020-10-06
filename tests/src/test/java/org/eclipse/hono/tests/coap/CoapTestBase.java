@@ -483,7 +483,7 @@ public abstract class CoapTestBase {
                 logger.info("messages received: {}", numberOfMessages - received.getCount());
             }
         })
-        .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
+        .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElseGet(() -> Future.succeededFuture()))
         .onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 

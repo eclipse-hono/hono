@@ -210,7 +210,7 @@ public class HonoCommander extends AbstractClient {
                         .sendCommand(deviceId, sampler.getCommand(), Buffer.buffer(sampler.getCommandPayload()))
                         .map(commandResponse -> {
                             final String commandResponseText = Optional.ofNullable(commandResponse.getPayload())
-                                    .orElse(Buffer.buffer()).toString();
+                                    .orElseGet(Buffer::buffer).toString();
                             LOG.debug("Command response from device [{}:{}] received [{}]", tenantId,
                                     deviceId, commandResponseText);
                             synchronized (lock) {

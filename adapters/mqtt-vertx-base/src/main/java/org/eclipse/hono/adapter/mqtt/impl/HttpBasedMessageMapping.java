@@ -140,7 +140,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                                 LOG.debug("original {} has been mapped to [device-id: {}]", ctx.authenticatedDevice(), id);
                                 return id;
                             })
-                            .orElse(targetAddress.getResourceId());
+                            .orElseGet(() -> targetAddress.getResourceId());
 
                     result.complete(new MappedMessage(
                             ResourceIdentifier.from(targetAddress.getEndpoint(), targetAddress.getTenantId(), mappedDeviceId),

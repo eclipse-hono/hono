@@ -363,7 +363,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private Future<Endpoint> createSecureEndpoint(final NetworkConfig config) {
 
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
-                .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
+                .orElseGet(() -> new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
                         getCredentialsClientFactory(), getTenantClientFactory()));
         final AdvancedPskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
@@ -1160,7 +1160,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 responseStatus));
         final Future<CommandResponse> commandResponseTracker = cmdResponse
                 .map(res -> Future.succeededFuture(res))
-                .orElse(Future.failedFuture(
+                .orElseGet(() -> Future.failedFuture(
                         new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                         String.format("command-request-id [%s] or status code [%s] is missing/invalid",
                                 commandRequestId, responseStatus))));

@@ -170,11 +170,11 @@ public final class HttpContext implements TelemetryExecutionContext {
 
         try {
             return Optional.ofNullable(routingContext.request().getHeader(Constants.HEADER_TIME_TO_LIVE))
-                    .map(ttlInHeader -> Long.parseLong(ttlInHeader))
-                    .map(ttl -> Duration.ofSeconds(ttl))
-                    .orElse(Optional.ofNullable(routingContext.request().getParam(Constants.HEADER_TIME_TO_LIVE))
-                            .map(ttlInParam -> Long.parseLong(ttlInParam))
-                            .map(ttl -> Duration.ofSeconds(ttl))
+                    .map(Long::parseLong)
+                    .map(Duration::ofSeconds)
+                    .orElseGet(() -> Optional.ofNullable(routingContext.request().getParam(Constants.HEADER_TIME_TO_LIVE))
+                            .map(Long::parseLong)
+                            .map(Duration::ofSeconds)
                             .orElse(null));
         } catch (final NumberFormatException e) {
             return null;

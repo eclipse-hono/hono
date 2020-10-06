@@ -127,7 +127,8 @@ public class EverynetProvider extends JsonBasedLoraProvider {
     protected LoraMessageType getMessageType(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_EVERYNET_TYPE, String.class)
-                .map(s -> "uplink".equals(s) ? LoraMessageType.UPLINK : LoraMessageType.UNKNOWN)
+                .filter("uplink"::equals)
+                .map(s -> LoraMessageType.UPLINK)
                 .orElse(LoraMessageType.UNKNOWN);
     }
 

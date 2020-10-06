@@ -183,7 +183,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
                                                         return getNewCredentials(tenantId, authId, span);
                                                     }
                                                 }))
-                                        .orElse(Future.succeededFuture(result)));
+                                        .orElseGet(() -> Future.succeededFuture(result)));
                     }
                     return Future.succeededFuture(result);
                 });

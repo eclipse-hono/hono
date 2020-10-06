@@ -121,7 +121,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
         return Optional.ofNullable(connection)
                 .map(c -> Future.succeededFuture((Void) null))
-                .orElse(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
     }
 
     /**

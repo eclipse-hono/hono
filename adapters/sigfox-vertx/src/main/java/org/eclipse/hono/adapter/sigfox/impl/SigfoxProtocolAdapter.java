@@ -105,8 +105,8 @@ public final class SigfoxProtocolAdapter
         final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
 
         authHandler.append(new HonoBasicAuthHandler(
-                Optional.ofNullable(this.usernamePasswordAuthProvider).orElse(
-                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), this.tracer)),
+                Optional.ofNullable(this.usernamePasswordAuthProvider).orElseGet(
+                        () -> new UsernamePasswordAuthProvider(getCredentialsClientFactory(), this.tracer)),
                 getConfig().getRealm()));
 
         router.route().handler(authHandler);

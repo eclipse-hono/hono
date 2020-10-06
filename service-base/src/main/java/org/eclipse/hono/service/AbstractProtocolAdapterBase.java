@@ -912,24 +912,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final List<Future> connections = new ArrayList<>();
         connections.add(Optional.ofNullable(tenantClientFactory)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set"))));
         connections.add(Optional.ofNullable(registrationClientFactory)
                 .map(client -> client.isConnected())
-                .orElse(Future
-                        .failedFuture(new ServerErrorException(
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set"))));
         connections.add(Optional.ofNullable(credentialsClientFactory)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set"))));
         connections.add(Optional.ofNullable(downstreamSenderFactory)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set"))));
         connections.add(Optional.ofNullable(commandConsumerFactory)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set"))));
         connections.add(Optional.ofNullable(deviceConnectionClientFactory)
                 .map(client -> {
@@ -939,7 +938,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         return Future.succeededFuture();
                     }
                 })
-                .orElse(Future.failedFuture(new ServerErrorException(
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set"))));
         return CompositeFuture.all(connections).mapEmpty();
     }

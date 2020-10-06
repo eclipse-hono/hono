@@ -93,7 +93,8 @@ public class LoriotProvider extends JsonBasedLoraProvider {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_LORIOT_MESSAGE_TYPE, String.class)
-                .map(s -> MESSAGE_TYPE_UPLINK.equals(s) ? LoraMessageType.UPLINK : LoraMessageType.UNKNOWN)
+                .filter(MESSAGE_TYPE_UPLINK::equals)
+                .map(s -> LoraMessageType.UPLINK)
                 .orElse(LoraMessageType.UNKNOWN);
     }
 

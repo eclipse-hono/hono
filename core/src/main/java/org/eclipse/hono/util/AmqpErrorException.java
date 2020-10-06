@@ -69,7 +69,7 @@ public final class AmqpErrorException extends RuntimeException {
             final Rejected rejected = (Rejected) deliveryState;
             return Optional.ofNullable(rejected.getError())
                     .map(ec -> new AmqpErrorException(ec.getCondition(), ec.getDescription()))
-                    .orElse(new AmqpErrorException(deliveryState.getType().toString(), null));
+                    .orElseGet(() -> new AmqpErrorException(deliveryState.getType().toString(), null));
         default:
             return new AmqpErrorException(deliveryState.getType().toString(), null);
         }

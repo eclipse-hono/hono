@@ -322,7 +322,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         final ConnectionLimitManager connectionLimitManager = Optional.ofNullable(
-                getConnectionLimitManager()).orElse(createConnectionLimitManager());
+                getConnectionLimitManager()).orElseGet(() -> createConnectionLimitManager());
         setConnectionLimitManager(connectionLimitManager);
 
         checkPortConfiguration()

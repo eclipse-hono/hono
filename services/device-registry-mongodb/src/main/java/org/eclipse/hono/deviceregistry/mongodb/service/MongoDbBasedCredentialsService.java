@@ -332,7 +332,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .compose(result -> Optional.ofNullable(result)
                         .map(credentialsDtoJson -> credentialsDtoJson.mapTo(CredentialsDto.class))
                         .map(Future::succeededFuture)
-                        .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 deviceKey.getDeviceId(),
                                 resourceVersion,
                                 getCredentialsDto(deviceKey))));
@@ -372,7 +372,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                 HttpURLConnection.HTTP_OK,
                                 credential,
                                 getCacheDirective(type)))
-                        .orElse(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+                        .orElseGet(() -> CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
     private CacheDirective getCacheDirective(final String type) {
@@ -417,7 +417,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         tenantId,
                         deviceId,
                         credentials,
-                        resourceVersion.orElse(DeviceRegistryUtils.getUniqueIdentifier()))),
+                        resourceVersion.orElseGet(DeviceRegistryUtils::getUniqueIdentifier))),
                 addCredentialsPromise);
 
         return addCredentialsPromise.future()
@@ -447,7 +447,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                             LOG.debug("successfully removed credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
                             return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
                         })
-                        .orElse(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
+                        .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
     }
 
     private Future<OperationResult<Void>> updateCredentials(

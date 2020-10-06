@@ -95,7 +95,8 @@ public class FireflyProvider extends JsonBasedLoraProvider {
                 .map(serverData -> serverData.getValue(FIELD_FIREFLY_MESSAGE_TYPE))
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
-                .map(type -> MESSAGE_TYPE_UPLINK.equals(type) ? LoraMessageType.UPLINK : LoraMessageType.UNKNOWN)
+                .filter(MESSAGE_TYPE_UPLINK::equals)
+                .map(type -> LoraMessageType.UPLINK)
                 .orElse(LoraMessageType.UNKNOWN);
     }
 

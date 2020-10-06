@@ -351,7 +351,7 @@ public class HonoExampleApplicationBase {
         commandClient.sendCommand(deviceId, command, "application/json", commandBuffer, buildCommandProperties()).map(result -> {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
-                LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
+                LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElseGet(Buffer::buffer).toString());
             }
 
             if (ttdNotification.getTtd() != -1) {

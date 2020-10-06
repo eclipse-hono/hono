@@ -150,11 +150,11 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
         authHandler.append(new X509AuthHandler(
                 new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
-                Optional.ofNullable(clientCertAuthProvider).orElse(
-                        new X509AuthProvider(getCredentialsClientFactory(), tracer))));
+                Optional.ofNullable(clientCertAuthProvider).orElseGet(
+                        () -> new X509AuthProvider(getCredentialsClientFactory(), tracer))));
         authHandler.append(new HonoBasicAuthHandler(
-                Optional.ofNullable(usernamePasswordAuthProvider).orElse(
-                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer)),
+                Optional.ofNullable(usernamePasswordAuthProvider).orElseGet(
+                        () -> new UsernamePasswordAuthProvider(getCredentialsClientFactory(), tracer)),
                 getConfig().getRealm()));
 
         router.route().handler(authHandler);

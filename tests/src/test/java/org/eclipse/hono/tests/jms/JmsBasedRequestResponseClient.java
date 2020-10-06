@@ -97,7 +97,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
                 .orElse(endpoint);
         this.replyToAddress = Optional.ofNullable(tenant)
                 .map(t -> String.format("%s/%s/%s", endpoint, tenant, UUID.randomUUID().toString()))
-                .orElse(String.format("%s/%s", endpoint, UUID.randomUUID().toString()));
+                .orElseGet(() -> String.format("%s/%s", endpoint, UUID.randomUUID().toString()));
 
         this.connection = connection;
     }
@@ -293,7 +293,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
                 final BytesMessage byteMessage = (BytesMessage) message;
                 error = Optional.ofNullable(byteMessage.getBody(byte[].class))
                         .map(b -> new ServiceInvocationException(status, new String(b, StandardCharsets.UTF_8)))
-                        .orElse(new ServiceInvocationException(status));
+                        .orElseGet(() -> new ServiceInvocationException(status));
             } else {
                 // ignore body
                 error = new ServiceInvocationException(status);

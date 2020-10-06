@@ -122,7 +122,7 @@ public class Commander extends AbstractApplicationClient {
 
     private Void printResponse(final BufferResult result) {
         log.info("Received Command response : {}",
-                Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()));
+                Optional.ofNullable(result.getPayload()).orElseGet(Buffer::buffer));
         return null;
     }
 

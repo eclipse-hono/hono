@@ -281,7 +281,7 @@ public abstract class EventBusService extends AbstractVerticle {
                 log.trace("adding 'enabled=true' property to request payload");
                 return pl.copy().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE);
             }
-        }).orElse(new JsonObject().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE));
+        }).orElseGet(() -> new JsonObject().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE));
     }
 
     /**
