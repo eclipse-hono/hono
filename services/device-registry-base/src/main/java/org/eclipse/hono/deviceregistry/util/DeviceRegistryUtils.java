@@ -19,6 +19,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -243,6 +244,30 @@ public final class DeviceRegistryUtils {
                 passwordSecret.checkValidity();
                 passwordSecret.verifyHashAlgorithm(hashAlgorithmsWhitelist, maxBcryptCostFactor);
             }
+        }
+    }
+
+    /**
+     * Verifies that the elements of a list of credentials are unique regarding type and authentication
+     * identifier.
+     *
+     * @param credentials The credentials to check.
+     * @return A future indicating the outcome of the check.
+     *         The future will be failed with a {@link ClientErrorException} if the elements are
+     *         not unique.
+     */
+    public static Future<?> assertTypeAndAuthIdUniqueness(final List<? extends CommonCredential> credentials) {
+
+        final long uniqueAuthIdAndTypeCount = credentials.stream()
+            .map(credential -> String.format("%s::%s", credential.getType(), credential.getAuthId()))
+            .distinct()
+            .count();
+
+        if (credentials.size() > uniqueAuthIdAndTypeCount) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "credentials must have unique (type, auth-id)"));
+        } else {
+            return Future.succeededFuture();
         }
     }
 

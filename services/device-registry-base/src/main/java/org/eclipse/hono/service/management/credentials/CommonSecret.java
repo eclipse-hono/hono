@@ -14,10 +14,12 @@ package org.eclipse.hono.service.management.credentials;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
@@ -30,10 +32,10 @@ import com.google.common.base.Strings;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public abstract class CommonSecret {
 
-    @JsonProperty
+    @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
 
-    @JsonProperty
+    @JsonProperty(RegistryManagementConstants.FIELD_ID)
     private String id;
 
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE)
@@ -42,11 +44,12 @@ public abstract class CommonSecret {
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER)
     @HonoTimestamp
     private Instant notAfter;
-    @JsonProperty
+    @JsonProperty(RegistryManagementConstants.FIELD_COMMENT)
     private String comment;
 
-    public Boolean getEnabled() {
-        return enabled;
+    @JsonIgnore
+    public final boolean isEnabled() {
+        return Optional.ofNullable(enabled).orElse(true);
     }
 
     /**
@@ -55,20 +58,31 @@ public abstract class CommonSecret {
      * @param enabled  Whether this secret type should be used to authenticate devices.
      * @return         a reference to this for fluent use.
      */
+    @JsonIgnore
     public final CommonSecret setEnabled(final Boolean enabled) {
         this.enabled = enabled;
         return this;
     }
 
+    /**
+     * Gets the identifier of the secret.
+     * <p>
+     * This id may be assigned by the device registry.
+     * The id must be unique within the credentials set containing it.
+     *
+     * @return The identifier or {@code null} if not assigned.
+     */
     public final String getId() {
         return id;
     }
 
     /**
-     * Sets the ID of the secret. This id may be assigned by the device registry.
+     * Sets the identifier of the secret.
+     * <p>
+     * This id may be assigned by the device registry.
      * The id must be unique within the credentials set containing it.
      *
-     * @param id The string to set as the id.
+     * @param id The identifier.
      * @return   a reference to this for fluent use.
      */
     public final CommonSecret setId(final String id) {
