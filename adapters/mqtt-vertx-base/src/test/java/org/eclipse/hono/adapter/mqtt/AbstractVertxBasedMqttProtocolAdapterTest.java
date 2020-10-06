@@ -70,6 +70,7 @@ import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -108,7 +109,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     private static final String ADAPTER_TYPE = "mqtt";
 
-    private static Vertx vertx = Vertx.vertx();
+    private static Vertx vertx;
 
     private TenantClientFactory tenantClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
@@ -125,6 +126,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private CommandTargetMapper commandTargetMapper;
     private Context context;
     private Span span;
+
+    /**
+     * Initializes vert.x.
+     */
+    @BeforeAll
+    public static void init() {
+        vertx = Vertx.vertx();
+    }
 
     /**
      * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
@@ -215,6 +224,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @AfterAll
     public static void shutDown(final VertxTestContext ctx) {
         vertx.close(ctx.completing());
+        vertx = null;
     }
 
     private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint, final Span span) {
@@ -1406,9 +1416,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 getMqttServer(false));
         forceClientMocksToConnected();
 
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
-                .thenReturn(Future.succeededFuture(sender));
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        outcome.complete(mock(ProtonDelivery.class));
+        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
 
         // WHEN a "device" of "tenant" publishes an event message with a TTL value of 30 seconds.
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -1418,7 +1428,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 newMqttContext(msg, mockEndpoint(), span),
                 "tenant",
                 "device",
-                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
+                Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
                         verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), (SpanContext) any());
@@ -1446,9 +1456,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
                 getMqttServer(false));
         forceClientMocksToConnected();
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
-                .thenReturn(Future.succeededFuture(sender));
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        outcome.complete(mock(ProtonDelivery.class));
+        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
 
         // WHEN a device publishes an event message with a TTL value of 30 seconds.
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -1458,7 +1468,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 newMqttContext(msg, mockEndpoint(), span),
                 "tenant",
                 "device",
-                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
+                Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
 

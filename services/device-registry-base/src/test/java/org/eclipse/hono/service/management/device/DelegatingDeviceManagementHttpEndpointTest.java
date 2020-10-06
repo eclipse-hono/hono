@@ -135,6 +135,8 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         router.handle(request);
 
         verify(response).setStatusCode(HttpURLConnection.HTTP_CREATED);
+        verify(response).write(argThat((Buffer buffer) -> "mydeviceid"
+                .equals(buffer.toJsonObject().getString(RegistryManagementConstants.FIELD_ID))));
         verify(service).createDevice(
                 eq("mytenant"),
                 argThat(deviceId -> "mydeviceid".equals(deviceId.get())),
@@ -361,6 +363,8 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         final HttpServerResponse response = mock(HttpServerResponse.class);
         when(response.ended()).thenReturn(false);
         when(response.putHeader(any(CharSequence.class), any(CharSequence.class))).thenReturn(response);
+        final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+        when(response.headers()).thenReturn(headers);
         return response;
     }
 }
