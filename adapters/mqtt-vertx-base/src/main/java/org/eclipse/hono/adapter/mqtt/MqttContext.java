@@ -58,7 +58,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
             case AT_MOST_ONCE:
                 return QoS.AT_MOST_ONCE;
             default:
-                return QoS.UNKNOWN;
+                return null;
         }
     }
 

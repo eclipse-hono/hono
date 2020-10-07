@@ -1120,7 +1120,7 @@ public final class MessageHelper {
         msg.setAddress(ri.getBasePath());
         addDeviceId(msg, ri.getResourceId());
         addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
-        if (qos != null && qos != QoS.UNKNOWN) {
+        if (qos != null) {
             addProperty(msg, MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
         }
         annotate(msg, ri);

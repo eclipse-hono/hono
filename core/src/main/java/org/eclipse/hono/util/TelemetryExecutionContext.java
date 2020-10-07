@@ -42,7 +42,7 @@ public interface TelemetryExecutionContext extends ExecutionContext {
     /**
      * Gets the QoS level as set in the request by the device.
      *
-     * @return The QoS level requested by the device.
+     * @return The QoS level requested by the device or {@code null} if the level could not be determined.
      */
     QoS getRequestedQos();
 }

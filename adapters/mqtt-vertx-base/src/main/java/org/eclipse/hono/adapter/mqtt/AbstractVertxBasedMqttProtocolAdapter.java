@@ -823,12 +823,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Device authenticatedDevice, final OptionalInt traceSamplingPriority) {
 
         // try to extract a SpanContext from the property bag of the message's topic (if set)
-        final SpanContext spanContext = message.topicName() != null
-                ? Optional.ofNullable(PropertyBag.fromTopic(message.topicName()))
-                .map(propertyBag -> TracingHelper.extractSpanContext(tracer,
-                        propertyBag::getPropertiesIterator))
-                .orElse(null)
-                : null;
+        final SpanContext spanContext = Optional.ofNullable(message.topicName())
+                .flatMap(topic -> Optional.ofNullable(PropertyBag.fromTopic(message.topicName())))
+                .map(propertyBag -> TracingHelper.extractSpanContext(tracer, propertyBag::getPropertiesIterator))
+                .orElse(null);
         final Span span = newChildSpan(spanContext, "PUBLISH", endpoint, authenticatedDevice);
         span.setTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.topicName());
         span.setTag(TracingHelper.TAG_QOS.getKey(), message.qosLevel().toString());
