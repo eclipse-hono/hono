@@ -17,7 +17,6 @@ package org.eclipse.hono.client.registry;
 import io.opentracing.SpanContext;
 import io.vertx.core.Closeable;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 /**
  * A client for accessing Hono's Device Registration API.
@@ -38,8 +37,8 @@ public interface DeviceRegistrationClient extends Closeable {
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with a status code in the [200, 300) range
-     *         has been received from the Device Registration service. The JSON object will then
-     *         contain values as defined in
+     *         has been received from the Device Registration service. The contained object will
+     *         then have properties according to the response message defined by
      *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
@@ -47,7 +46,7 @@ public interface DeviceRegistrationClient extends Closeable {
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant or device ID are {@code null}.
      */
-    Future<JsonObject> assertRegistration(String tenantId, String deviceId, SpanContext context);
+    Future<RegistrationAssertion> assertRegistration(String tenantId, String deviceId, SpanContext context);
 
     /**
      * Asserts that a device is registered and <em>enabled</em>.
@@ -65,8 +64,8 @@ public interface DeviceRegistrationClient extends Closeable {
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with a status code in the [200, 300) range
-     *         has been received from the Device Registration service. The JSON object will then
-     *         contain values as defined in
+     *         has been received from the Device Registration service. The contained object will
+     *         then have properties according to the response message defined by
      *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
@@ -74,7 +73,7 @@ public interface DeviceRegistrationClient extends Closeable {
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant, device or gateway ID are {@code null}.
      */
-    Future<JsonObject> assertRegistration(
+    Future<RegistrationAssertion> assertRegistration(
             String tenantId,
             String deviceId,
             String gatewayId,

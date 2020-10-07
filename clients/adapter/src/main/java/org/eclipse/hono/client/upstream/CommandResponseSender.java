@@ -15,7 +15,6 @@ package org.eclipse.hono.client.upstream;
 import io.opentracing.SpanContext;
 import io.vertx.core.Closeable;
 import io.vertx.core.Future;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * A client for publishing a device's response to a command received from a downstream application.

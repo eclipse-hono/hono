@@ -48,7 +48,7 @@ public interface TenantClient extends Closeable {
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant ID is {@code null}.
      */
-    Future<TenantObject> get(final String tenantId, final SpanContext context);
+    Future<TenantObject> get(String tenantId, SpanContext context);
 
     /**
      * Gets configuration information for a tenant having a given trust anchor.
@@ -73,5 +73,5 @@ public interface TenantClient extends Closeable {
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if subject DN is {@code null}.
      */
-    Future<TenantObject> get(X500Principal subjectDn, final SpanContext context);
+    Future<TenantObject> get(X500Principal subjectDn, SpanContext context);
 }

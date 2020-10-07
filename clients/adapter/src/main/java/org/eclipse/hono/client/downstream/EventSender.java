@@ -20,38 +20,11 @@ import io.opentracing.SpanContext;
 import io.vertx.core.Closeable;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * A client for publishing events originating from devices to downstream consumers.
  */
 public interface EventSender extends Closeable {
-
-    /**
-     * Sends an event originating from a device to downstream consumers.
-     *
-     * @param tenantId The ID of the tenant that the device belongs to.
-     * @param deviceId The ID of the device that the data originates from.
-     * @param contentType The content type of the data.
-     * @param payload The data to send.
-     * @param context The currently active OpenTracing span (may be {@code null}). An implementation
-     *                should use this as the parent for any span it creates for tracing
-     *                the execution of this operation.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will be succeeded if the event has been sent downstream.
-     *         <p>
-     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the event
-     *         could not be sent. The error code contained in the exception indicates the
-     *         cause of the failure.
-     * @throws NullPointerException tenant ID, device ID or contentType are {@code null}.
-     */
-    Future<Void> sendEvent(
-            String tenantId,
-            String deviceId,
-            String contentType,
-            Buffer payload,
-            SpanContext context);
 
     /**
      * Sends an event originating from a device to downstream consumers.
