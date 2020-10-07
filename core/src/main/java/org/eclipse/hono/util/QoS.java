@@ -19,9 +19,5 @@ package org.eclipse.hono.util;
 public enum QoS {
 
     AT_MOST_ONCE,
-    AT_LEAST_ONCE,
-    /**
-     * Indicates that the device set a QoS level which is not known or supported.
-     */
-    UNKNOWN;
+    AT_LEAST_ONCE;
 }

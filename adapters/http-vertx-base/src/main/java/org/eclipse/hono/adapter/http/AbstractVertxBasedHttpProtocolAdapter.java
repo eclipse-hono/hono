@@ -46,7 +46,6 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
-import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -615,17 +614,17 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
+        final org.eclipse.hono.util.QoS requestedQos = ctx.getRequestedQos();
+        if (requestedQos == null) {
+            HttpUtils.badRequest(ctx.getRoutingContext(), "unsupported QoS-Level header value");
+            return;
+        }
         if (!isPayloadOfIndicatedType(payload, contentType)) {
             HttpUtils.badRequest(ctx.getRoutingContext(), String.format("content type [%s] does not match payload", contentType));
             return;
         }
-        final String qosHeaderValue = ctx.request().getHeader(Constants.HEADER_QOS_LEVEL);
-        final MetricsTags.QoS qos = getQoSLevel(endpoint, qosHeaderValue);
-        if (qos == MetricsTags.QoS.UNKNOWN) {
-            HttpUtils.badRequest(ctx.getRoutingContext(), "unsupported QoS-Level header value");
-            return;
-        }
 
+        final MetricsTags.QoS qos = getQoSLevel(endpoint, requestedQos);
         final Device authenticatedDevice = ctx.getAuthenticatedDevice();
         final String gatewayId = authenticatedDevice != null && !deviceId.equals(authenticatedDevice.getDeviceId())
                 ? authenticatedDevice.getDeviceId()
@@ -689,7 +688,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     .map(c -> ttdTracker.result())
                     .orElse(null);
             final Message downstreamMessage = newMessage(
-                    ctx.getRequestedQos(),
+                    requestedQos,
                     ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
                     ctx.request().uri(),
                     contentType,
@@ -1256,18 +1255,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 });
     }
 
-    private static MetricsTags.QoS getQoSLevel(final EndpointType endpoint, final String qosValue) {
+    private static MetricsTags.QoS getQoSLevel(
+            final EndpointType endpoint,
+            final org.eclipse.hono.util.QoS requestedQos) {
 
         if (endpoint == EndpointType.EVENT) {
-            return QoS.AT_LEAST_ONCE;
-        } else if (qosValue == null) {
+            return MetricsTags.QoS.AT_LEAST_ONCE;
+        } else if (requestedQos == null) {
+            return MetricsTags.QoS.UNKNOWN;
+        } else if (requestedQos == org.eclipse.hono.util.QoS.AT_MOST_ONCE) {
             return MetricsTags.QoS.AT_MOST_ONCE;
         } else {
-            try {
-                return MetricsTags.QoS.from(Integer.parseInt(qosValue));
-            } catch (final NumberFormatException e) {
-                return MetricsTags.QoS.UNKNOWN;
-            }
+            return MetricsTags.QoS.AT_LEAST_ONCE;
         }
     }
 }

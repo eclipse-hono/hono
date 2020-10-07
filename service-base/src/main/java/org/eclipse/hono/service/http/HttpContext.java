@@ -104,7 +104,7 @@ public final class HttpContext implements TelemetryExecutionContext {
         try {
             qosLevel = Integer.parseInt(qos);
         } catch (final NumberFormatException e) {
-            return QoS.UNKNOWN;
+            return null;
         }
 
         switch (qosLevel) {
@@ -113,7 +113,7 @@ public final class HttpContext implements TelemetryExecutionContext {
             case 1:
                 return QoS.AT_LEAST_ONCE;
             default:
-                return QoS.UNKNOWN;
+                return null;
         }
     }
 
