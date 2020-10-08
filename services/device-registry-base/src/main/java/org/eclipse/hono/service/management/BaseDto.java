@@ -35,7 +35,7 @@ public abstract class BaseDto<T> {
     public static final String FIELD_VERSION = "version";
     public static final String FIELD_DATA = "data";
 
-    @JsonProperty(value = FIELD_VERSION, required = true)
+    @JsonProperty(FIELD_VERSION)
     private String version;
 
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)
@@ -43,7 +43,7 @@ public abstract class BaseDto<T> {
     @HonoTimestamp
     private Instant creationTime;
 
-    @JsonProperty(value = FIELD_UPDATED_ON, required = true)
+    @JsonProperty(FIELD_UPDATED_ON)
     @HonoTimestamp
     private Instant updatedOn;
 
@@ -72,7 +72,6 @@ public abstract class BaseDto<T> {
         final T dto = supplier.get();
         dto.setCreationTime(Instant.now());
         dto.setData(data);
-
         dto.setVersion(version);
 
         return dto;
