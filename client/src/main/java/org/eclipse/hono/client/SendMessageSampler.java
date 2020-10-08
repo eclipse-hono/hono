@@ -55,7 +55,7 @@ public interface SendMessageSampler {
     }
 
     /**
-     * A default no-op implementations.
+     * A default no-op implementation.
      */
     class Noop {
 

@@ -10,7 +10,7 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 
-* The file based as well as the Mongo DB based registry implementations now remove the shared-key from
+* The file based as well as the MongoDB based registry implementations now remove the shared-key from
   PSK credentials returned in the response of the Management API's *get credentials* operation.
 * The Device Registry Management API erroneously declared the *plaintext password* conveyed in the
   *update credentials* operation's request payload as a Base64 encoded byte array instead of a
@@ -21,7 +21,7 @@ title = "Release Notes"
 * The property names for specifying the patterns for validating Tenant and Device IDs have been fixed
   in the admin guides for the file based and the Mongo DB based registry implementations.
 * The registry implementations did not accept X.509 credentials in an update Credentials request.
-  They also failed to remove existing credentials of a device if they were not inlcuded in an
+  They also failed to remove existing credentials of a device if they were not included in an
   update Credentials request. This has been fixed.
 * The file based device registry also now supports searching devices for a tenant with optional filters,
   paging and sorting options.
@@ -183,7 +183,7 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The `HonoConnection` implementation didn't use a delay before a reconnect attempt after
-  a certain number of reconnnect attempts (58 with the default configuration) had already
+  a certain number of reconnect attempts (58 with the default configuration) had already
   failed. This has been fixed.
 * An error when freeing Command & Control related resources of an idle tenant has been fixed.
 * The Hotrod based DeviceConnectionClientFactory has been improved to prevent locking of

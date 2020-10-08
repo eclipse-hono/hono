@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,7 @@ import org.eclipse.hono.service.metric.NoopBasedMetrics;
 public interface AmqpAdapterMetrics extends Metrics {
 
     /**
-     * A no-op implementation this specific metrics type.
+     * A no-op implementation for this specific metrics type.
      */
     final class Noop extends NoopBasedMetrics implements AmqpAdapterMetrics {
 

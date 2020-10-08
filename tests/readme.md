@@ -54,7 +54,7 @@ In order to stop and remove the Docker containers started by a test run, use:
 
 ### Running the Tests with the MongoDB based device registry
 
-By default, the integration tests include the file based device registry. In order to include the Mongo DB based device registry instead of the file based counterpart, use the `device-registry-mongodb` maven profile:
+By default, the integration tests include the file based device registry. In order to include the MongoDB based device registry instead of the file based counterpart, use the `device-registry-mongodb` maven profile:
 
     $ mvn verify -Pdevice-registry-mongodb,run-tests
 
