@@ -77,7 +77,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         try {
             return Integer.parseInt(s);
         } catch (final NumberFormatException e) {
-            throw new IllegalArgumentException("value is not a an integer");
+            throw new IllegalArgumentException("value is not an integer");
         }
     };
 

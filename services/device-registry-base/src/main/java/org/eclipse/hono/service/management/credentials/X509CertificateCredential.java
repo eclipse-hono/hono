@@ -42,7 +42,7 @@ public class X509CertificateCredential extends CommonCredential {
     private final List<X509CertificateSecret> secrets = new LinkedList<>();
 
     /**
-     * Creates a new credentials object for a an X.500 Distinguished Name.
+     * Creates a new credentials object for an X.500 Distinguished Name.
      * <p>
      * The given distinguished name will be normalized to RFC 2253 format.
      *
