@@ -30,7 +30,6 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.AutoProvisioningEnabledDeviceBackend;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
@@ -116,7 +115,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     }
 
     @Override
-    public Future<OperationResult<DeviceWithStatus>> readDevice(final String tenantId, final String deviceId, final Span span) {
+    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
         return registrationService.readDevice(tenantId, deviceId, span);
     }
 

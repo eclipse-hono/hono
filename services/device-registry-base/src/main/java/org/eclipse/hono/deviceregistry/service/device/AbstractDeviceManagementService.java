@@ -67,7 +67,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
      */
-    protected abstract Future<OperationResult<? extends Device>> processReadDevice(DeviceKey key, Span span);
+    protected abstract Future<OperationResult<Device>> processReadDevice(DeviceKey key, Span span);
 
     /**
      * Update a device with a specified key and value object.
@@ -115,7 +115,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     }
 
     @Override
-    public Future<OperationResult<? extends Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
+    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);

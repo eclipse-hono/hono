@@ -25,6 +25,12 @@ import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
+
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.pointer.JsonPointer;
 
@@ -33,6 +39,7 @@ import io.vertx.core.json.pointer.JsonPointer;
  */
 public final class MongoDbDocumentBuilder {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String FIELD_CREDENTIALS_AUTH_ID_KEY = String.format("%s.%s",
             MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_AUTH_ID);
@@ -67,8 +74,13 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder forUpdateOf(final BaseDto<?> baseDto) {
         final JsonObject updates = new JsonObject();
 
+        final JavaType baseDtoJavaType = OBJECT_MAPPER.getTypeFactory().constructType(baseDto.getClass());
+        final BeanDescription beanDescription = OBJECT_MAPPER.getSerializationConfig().introspect(baseDtoJavaType);
+        final AnnotatedMethod getDataMethod = beanDescription.findMethod("getData", null);
+        final JsonProperty jsonProperty = getDataMethod.getAnnotation(JsonProperty.class);
+
         if (baseDto.getData() != null) {
-            updates.put(MongoDbDeviceRegistryUtils.FIELD_DEVICE, JsonObject.mapFrom(baseDto.getData()));
+            updates.put(jsonProperty.value(), JsonObject.mapFrom(baseDto.getData()));
         }
 
         if (baseDto.getCreationTime() != null) {

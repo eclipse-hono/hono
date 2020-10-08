@@ -26,7 +26,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.DeviceWithStatus;
+import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -713,7 +713,7 @@ public interface RegistrationServiceTests {
                 })
                 .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
                 .map(readResponse -> {
-                    final DeviceWithStatus device = (DeviceWithStatus) readResponse.getPayload();
+                    final Device device = readResponse.getPayload();
                     creationTime.set(device.getStatus().getCreationTime());
                     register.flag();
                     return readResponse;
@@ -728,10 +728,54 @@ public interface RegistrationServiceTests {
                 .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(readResponse -> {
                     ctx.verify(() -> {
-                        final DeviceWithStatus actualDevice = (DeviceWithStatus) readResponse.getPayload();
+                        final Device actualDevice = readResponse.getPayload();
                         assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
                         assertThat(actualDevice.getStatus().getLastUpdate()).isNotNull();
                         assertThat(actualDevice.getStatus().getCreationTime()).isNotEqualTo(actualDevice.getStatus().getLastUpdate());
+                    });
+                    register.flag();
+                }));
+    }
+
+    /**
+     * Verifies that updating a device status is not updateable by clients.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateIgnoresGivenUpdatesOfStatusProperties(final VertxTestContext ctx) {
+        final String deviceId = randomDeviceId();
+        final Checkpoint register = ctx.checkpoint(3);
+        final AtomicReference<String> resourceVersion = new AtomicReference<>();
+        final AtomicReference<Instant> creationTime = new AtomicReference<>();
+
+        getDeviceManagementService()
+                .createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+                .map(createResponse -> {
+                    ctx.verify(() -> assertThat(createResponse.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                    resourceVersion.set(createResponse.getResourceVersion().get());
+                    register.flag();
+                    return createResponse;
+                })
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .map(readResponse -> {
+                    final Device device = readResponse.getPayload();
+                    creationTime.set(device.getStatus().getCreationTime());
+                    register.flag();
+                    return readResponse;
+                })
+                .compose(rr -> getDeviceManagementService().updateDevice(
+                        TENANT,
+                        deviceId,
+                        new Device().setStatus(new Status().setCreationTime(Instant.parse("2000-01-01T00:00:00.000000Z"))),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE)
+                )
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(readResponse -> {
+                    ctx.verify(() -> {
+                        final Device actualDevice = readResponse.getPayload();
+                        assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
                     });
                     register.flag();
                 }));
@@ -770,12 +814,12 @@ public interface RegistrationServiceTests {
      *         Otherwise the future must fail.
      */
     default Future<?> assertDevice(final String tenant, final String deviceId, final Optional<String> gatewayId,
-            final Handler<OperationResult<DeviceWithStatus>> managementAssertions,
+            final Handler<OperationResult<Device>> managementAssertions,
             final Handler<RegistrationResult> adapterAssertions) {
 
         // read management data
 
-        final Future<OperationResult<DeviceWithStatus>> f1 = getDeviceManagementService()
+        final Future<OperationResult<Device>> f1 = getDeviceManagementService()
                 .readDevice(tenant, deviceId, NoopSpan.INSTANCE);
 
         // read adapter data

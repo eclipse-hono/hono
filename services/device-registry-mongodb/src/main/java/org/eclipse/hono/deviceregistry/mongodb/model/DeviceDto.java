@@ -18,7 +18,6 @@ import java.util.Objects;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -54,7 +53,9 @@ public final class DeviceDto extends BaseDto<Device> {
      * @return A DTO instance for creating a new entry.
      */
     public static DeviceDto forCreation(final String tenantId, final String deviceId, final Device device, final String version) {
-        final DeviceDto deviceDto = BaseDto.forCreation(DeviceDto::new, device, version);
+        final DeviceDto deviceDto = BaseDto.forCreation(DeviceDto::new,
+                withoutStatus(device),
+                version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
 
@@ -93,11 +94,26 @@ public final class DeviceDto extends BaseDto<Device> {
      * @return A DTO instance for updating an entry.
      */
     public static DeviceDto forUpdate(final String tenantId, final String deviceId, final Device device, final String version) {
-        final DeviceDto deviceDto = BaseDto.forUpdate(DeviceDto::new, device, version);
+        final DeviceDto deviceDto = BaseDto.forUpdate(DeviceDto::new, withoutStatus(device), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
 
         return deviceDto;
+    }
+
+    /**
+     * Returns a new device without internal status.
+     * <br><br>
+     * The status should be null anyway, since it should not be deserialized in the given device value object.
+     * Also it will be overwritten with the actual internal status when devices are retrieved.
+     * Nevertheless this makes sure that status information will never be persisted.
+     *
+     * @param device The device which should be copied without status.
+     *
+     * @return The copied device.
+     */
+    private static Device withoutStatus(final Device device) {
+        return new Device(device).setStatus(null);
     }
 
     @Override
@@ -150,8 +166,8 @@ public final class DeviceDto extends BaseDto<Device> {
      * @return The device information including internal status or {@code null} if not set.
      */
     @JsonIgnore
-    public DeviceWithStatus getDeviceWithStatus() {
-        final DeviceWithStatus deviceWithStatus = new DeviceWithStatus(getData());
+    public Device getDeviceWithStatus() {
+        final Device deviceWithStatus = new Device(getData());
         deviceWithStatus.setStatus(new Status()
                 .setCreationTime(getCreationTime())
                 .setLastUpdate(getUpdatedOn())

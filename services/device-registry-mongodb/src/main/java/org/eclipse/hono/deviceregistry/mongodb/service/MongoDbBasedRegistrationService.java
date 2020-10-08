@@ -39,7 +39,6 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
-import org.eclipse.hono.service.management.device.DeviceWithStatus;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
@@ -157,7 +156,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Future<OperationResult<DeviceWithStatus>> readDevice(final String tenantId, final String deviceId, final Span span) {
+    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -328,7 +327,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                 findDevice(tenantId, deviceId))));
     }
 
-    private Future<OperationResult<DeviceWithStatus>> processReadDevice(final String tenantId, final String deviceId) {
+    private Future<OperationResult<Device>> processReadDevice(final String tenantId, final String deviceId) {
 
         return findDevice(tenantId, deviceId)
                 .compose(deviceDto -> Future.succeededFuture(

@@ -34,7 +34,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Device Information.
  */
 @JsonInclude(value = Include.NON_NULL)
-@JsonIgnoreProperties({ "status" })
+@JsonIgnoreProperties(value = { RegistryManagementConstants.FIELD_STATUS }, allowGetters = true)
 public class Device {
 
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
@@ -62,6 +62,10 @@ public class Device {
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> memberOf = new LinkedList<>();
+
+    @JsonProperty(RegistryManagementConstants.FIELD_STATUS)
+    @JsonInclude(value = Include.NON_EMPTY)
+    private Status status;
 
     @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
@@ -97,6 +101,7 @@ public class Device {
             this.memberOf = new ArrayList<>(other.memberOf);
         }
         this.mapper = other.mapper;
+        this.status = other.status;
     }
 
     /**
@@ -276,5 +281,25 @@ public class Device {
      */
     public String getMapper() {
         return mapper;
+    }
+
+    /**
+     * Sets the registry internal status information of this device.
+     *
+     * @param status The status information to be set or {@code null} if there is none.
+     * @return A reference to this for fluent use.
+     */
+    public Device setStatus(final Status status) {
+        this.status = status;
+        return this;
+    }
+
+    /**
+     * Gets the registry internal status information of this device.
+     *
+     * @return The registry internal status information or {@code null} if there is none.
+     */
+    public Status getStatus() {
+        return status;
     }
 }
