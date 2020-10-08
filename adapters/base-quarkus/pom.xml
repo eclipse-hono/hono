@@ -40,6 +40,11 @@
           <type>pom</type>
           <scope>import</scope>
         </dependency>
+        <dependency>
+          <groupId>org.jboss.slf4j</groupId>
+          <artifactId>slf4j-jboss-logging</artifactId>
+          <version>1.2.1.Final</version>
+        </dependency>
       </dependencies>
     </dependencyManagement>
     <dependencies>
