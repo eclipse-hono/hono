@@ -18,10 +18,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.buffer.Buffer;
 
@@ -104,7 +107,7 @@ public final class Command {
 
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
         String originalDeviceId = deviceId;
-        if (message.getAddress() == null) {
+        if (Strings.isNullOrEmpty(message.getAddress())) {
             validationErrorJoiner.add("address is not set");
         } else {
             final ResourceIdentifier addressIdentifier = ResourceIdentifier.fromString(message.getAddress());
@@ -119,6 +122,11 @@ public final class Command {
 
         if (message.getSubject() == null) {
             validationErrorJoiner.add("subject not set");
+        }
+
+        if (message.getBody() != null) {
+            // check for unsupported message body
+            getUnsupportedPayloadReason(message).ifPresent(validationErrorJoiner::add);
         }
 
         String correlationId = null;
@@ -160,7 +168,7 @@ public final class Command {
             }
         }
 
-        final Command result = new Command(
+        return new Command(
                 validationErrorJoiner.length() > 0 ? Optional.of(validationErrorJoiner.toString()) : Optional.empty(),
                 message,
                 tenantId,
@@ -168,8 +176,6 @@ public final class Command {
                 correlationId,
                 originalReplyToId,
                 getRequestId(correlationId, originalReplyToId, originalDeviceId));
-
-        return result;
     }
 
     /**
@@ -326,12 +332,10 @@ public final class Command {
     /**
      * Gets the size of this command's payload.
      *
-     * @return The payload size in bytes, 0 if the command has no payload.
+     * @return The payload size in bytes, 0 if the command has no (valid) payload.
      */
     public int getPayloadSize() {
-        return Optional.ofNullable(MessageHelper.getPayload(message))
-                .map(b -> b.length())
-                .orElse(0);
+        return MessageHelper.getPayloadSize(message);
     }
 
     /**
@@ -498,5 +502,41 @@ public final class Command {
                 : replyToId;
         final String bitFlagString = encodeReplyToOptions(replyToContainedDeviceId);
         return String.format("%s/%s%s", deviceId, bitFlagString, replyToIdWithoutDeviceId);
+    }
+
+    /**
+     * Validates the type of the message body containing the payload data and returns an error string if it is
+     * unsupported.
+     * <p>
+     * The message body is considered unsupported if there is a body section and it is neither
+     * <ul>
+     * <li>a Data section,</li>
+     * <li>nor an AmqpValue section containing a byte array or a String.</li>
+     * </ul>
+     *
+     * @param msg The AMQP 1.0 message to parse.
+     * @return An Optional with the error string or an empty Optional if the payload is supported or the
+     *         message has no body section.
+     * @throws NullPointerException if the message is {@code null}.
+     * @see MessageHelper#getPayload(Message)
+     */
+    private static Optional<String> getUnsupportedPayloadReason(final Message msg) {
+        Objects.requireNonNull(msg);
+
+        String reason = null;
+        if (msg.getBody() instanceof AmqpValue) {
+            final Object value = ((AmqpValue) msg.getBody()).getValue();
+            if (value == null) {
+                reason = "message has body with empty amqp-value section";
+            } else if (!(value instanceof byte[] || value instanceof String)) {
+                reason = String.format("message has amqp-value section body with unsupported value type [%s], supported is byte[] or String",
+                        value.getClass().getName());
+            }
+
+        } else if (msg.getBody() != null && !(msg.getBody() instanceof Data)) {
+            reason = String.format("message has unsupported body section [%s], supported section types are 'data' and 'amqp-value'",
+                    msg.getBody().getClass().getName());
+        }
+        return Optional.ofNullable(reason);
     }
 }

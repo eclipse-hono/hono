@@ -19,10 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.qpid.proton.amqp.messaging.AmqpSequence;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -254,6 +258,35 @@ public class CommandTest {
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
         assertThat(cmd.getApplicationProperties()).isNull();
+    }
+
+    /**
+     * Verifies that a command cannot be created from a message that has an unsupported body section.
+     */
+    @Test
+    public void testFromMessageFailsForUnsupportedMessageBody() {
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
+        when(message.getApplicationProperties()).thenReturn(null);
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn(correlationId);
+        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+
+        Section body = new AmqpValue(5L);
+        when(message.getBody()).thenReturn(body);
+        Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason()).contains("body");
+
+        body = new AmqpSequence(Collections.singletonList("test"));
+        when(message.getBody()).thenReturn(body);
+        command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason()).contains("body");
     }
 
     /**
