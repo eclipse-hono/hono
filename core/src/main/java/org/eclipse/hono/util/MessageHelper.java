@@ -391,7 +391,7 @@ public final class MessageHelper {
      *
      * @param msg The AMQP 1.0 message to parse the body of.
      * @return The message body parsed into a JSON object or {@code null} if the message does not have a <em>Data</em>
-     *         nor an <em>AmqpValue</em> section.
+     *         nor an <em>AmqpValue</em> section or if the body section is empty.
      * @throws NullPointerException if the message is {@code null}.
      * @throws DecodeException if the payload cannot be parsed into a JSON object.
      */
@@ -417,32 +417,15 @@ public final class MessageHelper {
      * </ul>
      *
      * @param msg The AMQP 1.0 message to parse the body of.
-     * @return The bytes representing the payload or {@code null} if
-     *         the message neither has a <em>Data</em> nor <em>AmqpValue</em> section.
+     * @return The bytes representing the payload or {@code null} if the message
+     *         neither has a <em>Data</em> nor <em>AmqpValue</em> section or if
+     *         a contained <em>AmqpValue</em> section doesn't have a String or
+     *         byte array value.
      * @throws NullPointerException if the message is {@code null}.
      */
     public static Buffer getPayload(final Message msg) {
-
         Objects.requireNonNull(msg);
-        if (msg.getBody() == null) {
-            LOG.trace("message has no body");
-            return null;
-        }
-
-        if (msg.getBody() instanceof Data) {
-            final Data body = (Data) msg.getBody();
-            return Buffer.buffer(body.getValue().getArray());
-        } else if (msg.getBody() instanceof AmqpValue) {
-            final AmqpValue body = (AmqpValue) msg.getBody();
-            if (body.getValue() instanceof byte[]) {
-                return Buffer.buffer((byte[]) body.getValue());
-            } else if (body.getValue() instanceof String) {
-                return Buffer.buffer((String) body.getValue());
-            }
-        }
-
-        LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
-        return null;
+        return Optional.ofNullable(getPayloadByteArray(msg)).map(Buffer::buffer).orElse(null);
     }
 
     /**
@@ -459,39 +442,56 @@ public final class MessageHelper {
      * <li>In all other cases, {@code null} is returned.</li>
      * </ul>
      *
-     * @param message The AMQP 1.0 message to parse the body of.
-     * @return The String representation of the payload data or {@code null} if the message
-     *         body does not contain data that can be decoded into a String.
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The String representation of the payload data or {@code null} if the
+     *         type or value type of the message body section isn't supported.
      * @throws NullPointerException if the message is {@code null}.
      */
-    public static String getPayloadAsString(final Message message) {
+    public static String getPayloadAsString(final Message msg) {
+        Objects.requireNonNull(msg);
+        // In case of an AmqpValue containing a String,
+        // we prevent encoding/decoding of the String to/from its UTF-8 bytes.
+        if (msg.getBody() instanceof AmqpValue
+                && ((AmqpValue) msg.getBody()).getValue() instanceof String) {
+            return (String) ((AmqpValue) msg.getBody()).getValue();
+        }
+        return Optional.ofNullable(getPayload(msg)).map(Buffer::toString).orElse(null);
+    }
 
-        Objects.requireNonNull(message);
+    /**
+     * Gets the size of the payload data contained in a message's body.
+     * <p>
+     * If there is no body section or if its type is unsupported, {@code 0} is returned.
+     *
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The payload size in bytes, 0 if message body is {@code null} or unsupported.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    public static int getPayloadSize(final Message msg) {
+        Objects.requireNonNull(msg);
+        return Optional.ofNullable(getPayloadByteArray(msg)).map(bytes -> bytes.length).orElse(0);
+    }
 
-        if (message.getBody() == null) {
+    private static byte[] getPayloadByteArray(final Message msg) {
+        Objects.requireNonNull(msg);
+        if (msg.getBody() == null) {
             LOG.trace("message has no body");
             return null;
         }
 
-        // The code below is almost identical to the getPayload method.
-        // However, in case of an AmqpValue containing a String,
-        // we prevent encoding/decoding of the String to/from its UTF-8 bytes.
-        if (message.getBody() instanceof Data) {
-
-            final Data body = (Data) message.getBody();
-            return Buffer.buffer(body.getValue().getArray()).toString();
-
-        } else if (message.getBody() instanceof AmqpValue) {
-
-            final AmqpValue body = (AmqpValue) message.getBody();
+        if (msg.getBody() instanceof Data) {
+            final Data body = (Data) msg.getBody();
+            return body.getValue().getArray();
+        } else if (msg.getBody() instanceof AmqpValue) {
+            final AmqpValue body = (AmqpValue) msg.getBody();
             if (body.getValue() instanceof byte[]) {
-                return Buffer.buffer((byte[]) body.getValue()).toString();
+                return (byte[]) body.getValue();
             } else if (body.getValue() instanceof String) {
-                return (String) body.getValue();
+                return ((String) body.getValue()).getBytes(StandardCharsets.UTF_8);
             }
         }
 
-        LOG.debug("unsupported body type [{}]", message.getBody().getClass().getName());
+        LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
         return null;
     }
 

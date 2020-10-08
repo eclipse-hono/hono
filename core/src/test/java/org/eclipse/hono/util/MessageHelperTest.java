@@ -16,9 +16,11 @@ package org.eclipse.hono.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.junit.jupiter.api.Test;
@@ -109,6 +111,25 @@ public class MessageHelperTest {
 
         msg.setBody(new Data(new Binary(new byte[] { (byte) 0xf0, (byte) 0x28, (byte) 0x8c, (byte) 0xbc })));
         assertThat(MessageHelper.getPayloadAsString(msg)).isNotNull();
+    }
+
+    /**
+     * Verifies that the helper returns the correct payload size for messages with different kinds of payload.
+     */
+    @Test
+    public void testGetPayloadSizeMatchesActualByteArrayLength() {
+
+        final Message msg = ProtonHelper.message();
+        final String testString = "über";
+        msg.setBody(new AmqpValue(testString));
+        assertThat(MessageHelper.getPayloadSize(msg)).isEqualTo(testString.getBytes(StandardCharsets.UTF_8).length);
+
+        final byte[] testBytes = { (byte) 0xc3, (byte) 0x28 };
+        msg.setBody(new AmqpValue(testBytes));
+        assertThat(MessageHelper.getPayloadSize(msg)).isEqualTo(testBytes.length);
+
+        msg.setBody(new Data(new Binary(testBytes)));
+        assertThat(MessageHelper.getPayloadSize(msg)).isEqualTo(testBytes.length);
     }
 
     /**
