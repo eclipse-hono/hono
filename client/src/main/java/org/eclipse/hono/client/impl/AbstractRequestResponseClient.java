@@ -604,7 +604,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * with {@code null} for the properties parameter.
      *
      * @param action The operation that the request is supposed to trigger/invoke.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
      * @throws NullPointerException if any of action, result handler or cacheKey is {@code null}.
@@ -626,7 +626,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
      *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
      *                      e.g. because there is no connection to the service or there are no credits available
@@ -656,7 +656,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
      *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
      *                      e.g. because there is no connection to the service or there are no credits available
@@ -691,7 +691,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param contentType The content type of the payload.
      * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
      *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
@@ -745,7 +745,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param contentType The content type of the payload.
      * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
      *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
@@ -783,7 +783,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param address The address to send the message to.
      * @param properties The headers to include in the request message as AMQP application properties.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param contentType The content type of the payload.
      * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
      *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,

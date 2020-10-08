@@ -172,7 +172,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that a request to create a request with non valid name fails fails.
+     * Verifies that a request to register a device with an invalid device identifier fails.
      *
      * @param ctx The vert.x test context.
      */
@@ -184,7 +184,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that a request to create a request with non valid name fails fails.
+     * Verifies that a request to register a device with an invalid tenant identifier fails.
      *
      * @param ctx The vert.x test context.
      */
