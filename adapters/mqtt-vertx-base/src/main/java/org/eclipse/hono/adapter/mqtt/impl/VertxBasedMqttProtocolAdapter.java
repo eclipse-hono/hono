@@ -106,7 +106,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 targetAddress.getResourceId(),
                 ctx.authenticatedDevice(),
                 ctx.getTracingContext())
-                .compose(registratonInfo -> messageMapping.mapMessage(ctx, targetAddress, registratonInfo))
+                .compose(registrationInfo -> messageMapping.mapMessage(ctx, targetAddress, registrationInfo))
                 .map(mappedMessage -> {
                     ctx.put(MAPPER_DATA, mappedMessage.getAdditionalProperties());
                     return mappedMessage;

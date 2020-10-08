@@ -92,7 +92,9 @@ Both the secure as well as the insecure port numbers may be explicitly set to `0
 
 ## Custom Message Mapping
 
-This protocol adapter supports transformation of messages that have been uploaded by devices before forwarding them to downstream consumers.
+This protocol adapter supports transformation of messages that have been uploaded by devices before forwarding them
+ to downstream consumers. This message mapping can be used to overwrite the deviceID, add additional propeties and
+  change the payload.
 
 {{% note title="Experimental" %}}
 This is an experimental feature. The names of the configuration properties, potential values and the overall functionality are therefore
@@ -108,3 +110,17 @@ service endpoint(s) for transforming messages:
 | `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_PORT`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.port` | no | - | The port of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the service name as set in the *mapper* property of the device's registration information. |
 | `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_URI`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.uri` | no | - | The URI of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the service name as set in the *mapper* property of the device's registration information. |
 
+### Implementation
+An implementation of the mapper needs to be provided. Following data will be provided to the mapper:
+- HTTP headers:
+  - orig_address
+  - content-type
+  - all strings configured during registration
+- Body
+  - The payload of the message is provided in the body of the mapping request
+  
+When the mapper responds successfully(=200), the adapter will map the returning values as follows:
+- The header with key `device_id` will overwrite the current deviceID.
+- The remaining HTTP headers will be added to the downstream message as additional properties.
+- The returned body will be used to replace the payload.
+  
