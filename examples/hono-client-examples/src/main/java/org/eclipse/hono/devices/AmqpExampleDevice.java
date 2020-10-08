@@ -19,7 +19,7 @@ import java.util.Map;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
@@ -135,14 +135,12 @@ public class AmqpExampleDevice {
                     if (ar.succeeded()) {
                         System.out.println("Telemetry message with QoS 'AT_LEAST_ONCE' sent: " + payload);
                     } else {
-                        final Throwable cause = ar.cause();
                         String hint = "";
-                        if (cause instanceof ServerErrorException
-                                && ((ServerErrorException) cause).getErrorCode() == 503) {
+                        if (ServiceInvocationException.extractStatusCode(ar.cause()) == 503) {
                             hint = " (Is there a consumer connected?)";
                         }
                         System.out
-                                .println("Sending telemetry message with QoS 'AT_LEAST_ONCE' failed: " + cause + hint);
+                                .println("Sending telemetry message with QoS 'AT_LEAST_ONCE' failed: " + ar.cause() + hint);
                     }
                 });
     }

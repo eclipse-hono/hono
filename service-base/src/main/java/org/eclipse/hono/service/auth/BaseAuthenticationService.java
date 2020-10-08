@@ -12,8 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
-import java.net.HttpURLConnection;
-
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
@@ -90,12 +88,8 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
             if (validation.succeeded()) {
                 message.reply(AuthenticationConstants.getAuthenticationReply(validation.result().getToken()));
             } else {
-                if (validation.cause() instanceof ServiceInvocationException) {
-                    message.fail(((ServiceInvocationException) validation.cause()).getErrorCode(), validation.cause().getMessage());
-                } else {
-                    LOG.debug("unable to get status code from non-ServiceInvocationException", validation.cause());
-                    message.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, validation.cause().getMessage());
-                }
+                message.fail(ServiceInvocationException.extractStatusCode(validation.cause()),
+                        validation.cause().getMessage());
             }
         });
     }
