@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry.file;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -212,8 +213,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                 if (deviceId != null) {
                     LOG.trace("loading device [{}]", deviceId);
                     final Device device = mapFromStoredJson(entry.getJsonObject(RegistrationConstants.FIELD_DATA));
-                    final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forRead(FileBasedDeviceDto::new,
-                            new Versioned<>(device),
+                    final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forRead(new Versioned<>(device),
                             entry.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE),
                             entry.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE),
                             null);
@@ -473,7 +473,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
         }
 
-        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(FileBasedDeviceDto::new, new Versioned<>(device), null);
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(new Versioned<>(device), null);
         if (devices.putIfAbsent(deviceIdValue, deviceDto) == null) {
             dirty.set(true);
             return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
@@ -531,7 +531,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_PRECON_FAILED, OperationResult::empty);
         }
 
-        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(FileBasedDeviceDto::new, newDevice, null)
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(newDevice, null)
                 .merge(currentDevice);
         devices.put(deviceId, deviceDto);
         dirty.set(true);
@@ -718,6 +718,67 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     private static final class FileBasedDeviceDto extends BaseDto<Versioned<Device>> {
 
         FileBasedDeviceDto() {
+        }
+
+        private FileBasedDeviceDto(final Versioned<Device> data, final Instant created, final Instant updated, final String version) {
+            super(data, created, updated, version);
+        }
+
+        /**
+         * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
+         *
+         * @param device The data of the DTO.
+         * @param version The version of the DTO
+         *
+         * @return A DTO instance for creating a new entry.
+         */
+        public static FileBasedDeviceDto forCreation(final Versioned<Device> device, final String version) {
+            final FileBasedDeviceDto deviceDto = new FileBasedDeviceDto(
+                    device,
+                    Instant.now(),
+                    null,
+                    version);
+
+            return deviceDto;
+        }
+
+        /**
+         * Constructs a new DTO to be returned by a read operation.
+         *
+         * @param device The data of the DTO.
+         * @param created The instant when the object was created.
+         * @param updated The instant of the most recent update.
+         * @param version The version of the DTO
+         *
+         * @return A DTO instance for reading an entry.
+         */
+        public static FileBasedDeviceDto forRead(final Versioned<Device> device,
+                                        final Instant created, final Instant updated, final String version) {
+            final FileBasedDeviceDto deviceDto = new FileBasedDeviceDto(
+                    device,
+                    created,
+                    updated,
+                    version);
+
+            return deviceDto;
+        }
+
+        /**
+         * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
+         *
+         * @param device The data of the DTO.
+         * @param version The version of the DTO
+         *
+         * @return A DTO instance for updating an entry.
+         */
+        public static FileBasedDeviceDto forUpdate(final Versioned<Device> device, final String version) {
+            final FileBasedDeviceDto deviceDto = new FileBasedDeviceDto(
+                    device,
+                    null,
+                    Instant.now(),
+                    version);
+
+            return deviceDto;
         }
 
         /**

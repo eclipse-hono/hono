@@ -13,10 +13,12 @@
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -42,6 +44,10 @@ public final class DeviceDto extends BaseDto<Device> {
         // Explicit default constructor.
     }
 
+    private DeviceDto(final Device data, final Instant created, final Instant updated, final String version) {
+        super(data, created, updated, version);
+    }
+
     /**
      * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
@@ -53,8 +59,10 @@ public final class DeviceDto extends BaseDto<Device> {
      * @return A DTO instance for creating a new entry.
      */
     public static DeviceDto forCreation(final String tenantId, final String deviceId, final Device device, final String version) {
-        final DeviceDto deviceDto = BaseDto.forCreation(DeviceDto::new,
+        final DeviceDto deviceDto = new DeviceDto(
                 withoutStatus(device),
+                Instant.now(),
+                null,
                 version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
@@ -76,7 +84,11 @@ public final class DeviceDto extends BaseDto<Device> {
      */
     public static DeviceDto forRead(final String tenantId, final String deviceId, final Device device,
                                     final Instant created, final Instant updated, final String version) {
-        final DeviceDto deviceDto = BaseDto.forRead(DeviceDto::new, device, created, updated, version);
+        final DeviceDto deviceDto = new DeviceDto(
+                withoutStatus(device),
+                created,
+                updated,
+                version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
 
@@ -94,7 +106,11 @@ public final class DeviceDto extends BaseDto<Device> {
      * @return A DTO instance for updating an entry.
      */
     public static DeviceDto forUpdate(final String tenantId, final String deviceId, final Device device, final String version) {
-        final DeviceDto deviceDto = BaseDto.forUpdate(DeviceDto::new, withoutStatus(device), version);
+        final DeviceDto deviceDto = new DeviceDto(
+                withoutStatus(device),
+                null,
+                Instant.now(),
+                version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
 

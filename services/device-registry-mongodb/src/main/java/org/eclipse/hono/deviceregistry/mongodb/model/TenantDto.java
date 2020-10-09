@@ -37,6 +37,10 @@ public final class TenantDto extends BaseDto<Tenant> {
         // Explicit default constructor.
     }
 
+    private TenantDto(final Tenant data, final Instant created, final Instant updated, final String version) {
+        super(data, created, updated, version);
+    }
+
     /**
      * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
@@ -47,7 +51,7 @@ public final class TenantDto extends BaseDto<Tenant> {
      * @return A DTO instance for creating a new entry.
      */
     public static TenantDto forCreation(final String tenantId, final Tenant tenant, final String version) {
-        final TenantDto tenantDto = BaseDto.forCreation(TenantDto::new, tenant, version);
+        final TenantDto tenantDto = new TenantDto(tenant, Instant.now(), null, version);
         tenantDto.setTenantId(tenantId);
 
         return tenantDto;
@@ -65,7 +69,7 @@ public final class TenantDto extends BaseDto<Tenant> {
      * @return A DTO instance for reading an entry.
      */
     public static TenantDto forRead(final String tenantId, final Tenant tenant, final Instant created, final Instant updated, final String version) {
-        final TenantDto tenantDto = BaseDto.forRead(TenantDto::new, tenant, created, updated, version);
+        final TenantDto tenantDto = new TenantDto(tenant, created, updated, version);
         tenantDto.setTenantId(tenantId);
 
         return tenantDto;
@@ -81,7 +85,7 @@ public final class TenantDto extends BaseDto<Tenant> {
      * @return A DTO instance for updating an entry.
      */
     public static TenantDto forUpdate(final String tenantId, final Tenant tenant, final String version) {
-        final TenantDto tenantDto = BaseDto.forUpdate(TenantDto::new, tenant, version);
+        final TenantDto tenantDto = new TenantDto(tenant, null, Instant.now(), version);
         tenantDto.setTenantId(tenantId);
 
         return tenantDto;

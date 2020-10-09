@@ -56,70 +56,11 @@ public abstract class BaseDto<T> {
         // Explicit default constructor.
     }
 
-    /**
-     * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
-     *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param data The data of the DTO.
-     * @param version The version of the DTO
-     *
-     * @param <P> The type of the DTO's payload.
-     * @param <T> The type of the DTO subclass.
-     *
-     * @return A DTO instance for creating a new entry.
-     */
-    public static <P, T extends BaseDto<P>> T forCreation(final Supplier<T> supplier, final P data, final String version) {
-        final T dto = supplier.get();
-        dto.setCreationTime(Instant.now());
-        dto.setData(data);
-        dto.setVersion(version);
-
-        return dto;
-    }
-
-    /**
-     * Constructs a new DTO for <b>updating</b> a persistent entry.
-     *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param data The data of the DTO.
-     * @param version The version of the DTO
-     *
-     * @param <P> The type of the DTO's payload.
-     * @param <T> The type of the DTO subclass.
-     *
-     * @return A DTO instance for updating an entry.
-     */
-    public static <P, T extends BaseDto<P>> T forUpdate(final Supplier<T> supplier, final P data, final String version) {
-        final T dto = supplier.get();
-        dto.setUpdatedOn(Instant.now());
-        dto.setData(data);
-        dto.setVersion(version);
-
-        return dto;
-    }
-
-    /**
-     * Constructs a new DTO to be returned by a read operation.
-     *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param data The data of the DTO.
-     * @param created The instant when the object was created.
-     * @param updated The instant of the most recent update.
-     * @param version The version of the DTO
-     *
-     * @param <P> The type of the DTO's payload.
-     * @param <T> The type of the DTO subclass.
-     *
-     * @return A DTO instance for updating an entry.
-     */
-    public static <P, T extends BaseDto<P>> T forRead(final Supplier<T> supplier, final P data, final Instant created, final Instant updated, final String version) {
-        final T dto = supplier.get();
-        dto.setCreationTime(created);
-        dto.setUpdatedOn(updated);
-        dto.setData(data);
-        dto.setVersion(version);
-
-        return dto;
+    public BaseDto(final T data, final Instant created, final Instant updated, final String version) {
+        setCreationTime(created);
+        setUpdatedOn(updated);
+        setData(data);
+        setVersion(version);
     }
 
     /**

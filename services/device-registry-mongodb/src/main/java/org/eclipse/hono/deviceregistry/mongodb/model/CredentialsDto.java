@@ -49,6 +49,10 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
     public CredentialsDto() {
     }
 
+    private CredentialsDto(final List<CommonCredential> data, final Instant created, final Instant updated, final String version) {
+        super(data, created, updated, version);
+    }
+
     /**
      * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      * <p>
@@ -68,7 +72,7 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      * @throws org.eclipse.hono.client.ClientErrorException if any of the checks fail.
      */
     public static CredentialsDto forCreation(final String tenantId, final String deviceId, final List<CommonCredential> credentials, final String version) {
-        final CredentialsDto credentialsDto = BaseDto.forCreation(CredentialsDto::new, credentials, version);
+        final CredentialsDto credentialsDto = new CredentialsDto(credentials, Instant.now(), null, version);
         credentialsDto.setTenantId(tenantId);
         credentialsDto.setDeviceId(deviceId);
 
@@ -86,7 +90,7 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      * @return A DTO instance for updating an entry.
      */
     public static CredentialsDto forUpdate(final String tenantId, final String deviceId, final List<CommonCredential> credentials, final String version) {
-        final CredentialsDto credentialsDto = BaseDto.forUpdate(CredentialsDto::new, credentials, version);
+        final CredentialsDto credentialsDto = new CredentialsDto(credentials, null, Instant.now(), version);
         credentialsDto.setTenantId(tenantId);
         credentialsDto.setDeviceId(deviceId);
 
