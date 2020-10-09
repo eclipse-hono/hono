@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client.registry;
+package org.eclipse.hono.adapter.client.registry;
 
 import org.eclipse.hono.util.CredentialsObject;
 

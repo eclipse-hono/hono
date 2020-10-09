@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.client.upstream;
+package org.eclipse.hono.adapter.client.command;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Closeable;

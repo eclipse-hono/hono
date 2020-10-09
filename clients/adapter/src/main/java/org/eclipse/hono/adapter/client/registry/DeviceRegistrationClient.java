@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.registry;
+package org.eclipse.hono.adapter.client.registry;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Closeable;

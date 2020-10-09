@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client.upstream;
+package org.eclipse.hono.adapter.client.command;
 
 import java.util.Map;
 import java.util.Objects;

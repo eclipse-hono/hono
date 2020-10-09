@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.downstream;
+package org.eclipse.hono.adapter.client.telemetry;
 
 import java.util.Map;
 

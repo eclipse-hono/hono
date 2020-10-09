@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.registry;
+package org.eclipse.hono.adapter.client.registry;
 
 import java.util.ArrayList;
 import java.util.Collections;
