@@ -15,6 +15,8 @@ package org.eclipse.hono.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.HttpURLConnection;
+
 import org.junit.jupiter.api.Test;
 
 /**
@@ -32,5 +34,39 @@ public class ServiceInvocationExceptionTest {
 
         // assert that getLocalizedMessage doesn't return the key as fallback
         assertThat(ServiceInvocationException.getLocalizedMessage(key)).isNotEqualTo(key);
+    }
+
+    /**
+     * Verifies that the extracted status code matches that of the given instance of
+     * {@link ServiceInvocationException}.
+     */
+    @Test
+    public void testExtractStatusCodeFromServiceInvocationException() {
+
+        final ServiceInvocationException exception = new ServiceInvocationException(
+                HttpURLConnection.HTTP_NOT_FOUND);
+        assertThat(ServiceInvocationException.extractStatusCode(exception)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+    /**
+     * Verifies that the extracted status code is {@link HttpURLConnection#HTTP_INTERNAL_ERROR}
+     * when the given exception is not an instance of {@link ServiceInvocationException}.
+     */
+    @Test
+    public void testExtractStatusCodeFromNonServiceInvocationException() {
+
+        assertThat(ServiceInvocationException.extractStatusCode(new NullPointerException()))
+                .isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+    }
+
+    /**
+     * Verifies that the extracted status code matches {@link HttpURLConnection#HTTP_INTERNAL_ERROR}
+     * when the given exception is{@code null}.
+     */
+    @Test
+    public void testExtractStatusCodeWhenExceptionIsNull() {
+
+        assertThat(ServiceInvocationException.extractStatusCode(null))
+                .isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
     }
 }
