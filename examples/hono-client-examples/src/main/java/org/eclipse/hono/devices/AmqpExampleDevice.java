@@ -98,9 +98,9 @@ public class AmqpExampleDevice {
     private void startDevice(final HonoConnection connection) {
         factory = AmqpAdapterClientFactory.create(connection, TENANT_ID, SendMessageSampler.Factory.noop());
 
-        sendTelemetryMessageWithQos1();
+        sendTelemetryMessageWithQos0();
 
-        VERTX.setTimer(1000, l -> sendTelemetryMessageWithQos2());
+        VERTX.setTimer(1000, l -> sendTelemetryMessageWithQos1());
 
         VERTX.setTimer(2000, l -> sendEvent());
 
@@ -110,7 +110,7 @@ public class AmqpExampleDevice {
         });
     }
 
-    private void sendTelemetryMessageWithQos1() {
+    private void sendTelemetryMessageWithQos0() {
         System.out.println();
 
         final String payload = "42";
@@ -126,7 +126,7 @@ public class AmqpExampleDevice {
                 });
     }
 
-    private void sendTelemetryMessageWithQos2() {
+    private void sendTelemetryMessageWithQos1() {
         final JsonObject payload = new JsonObject().put("weather", "cloudy");
         factory.getOrCreateTelemetrySender()
                 .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(DEVICE_ID,
