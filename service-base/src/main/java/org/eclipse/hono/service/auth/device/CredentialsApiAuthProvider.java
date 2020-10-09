@@ -113,13 +113,11 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         getCredentialsForDevice(deviceCredentials, currentSpan.context())
         .recover(t -> {
 
-            if (t instanceof ServiceInvocationException) {
-                final ServiceInvocationException e = (ServiceInvocationException) t;
-                if (e.getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
-                }
-            }
-            return Future.failedFuture(t);
+                    if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND) {
+                        return Future.failedFuture(
+                                new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+                    }
+                    return Future.failedFuture(t);
         }).compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord, currentSpan.context()))
         .map(device -> new DeviceUser(device.getTenantId(), device.getDeviceId()))
         .onComplete(authAttempt -> {

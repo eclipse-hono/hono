@@ -849,12 +849,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
                         onMessageSent(context);
                     } else {
-                        if (processing.cause() instanceof ServiceInvocationException) {
-                            final ServiceInvocationException sie = (ServiceInvocationException) processing.cause();
-                            Tags.HTTP_STATUS.set(span, sie.getErrorCode());
-                        } else {
-                            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
-                        }
+                        Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(processing.cause()));
                         if (processing.cause() instanceof ClientErrorException) {
                             // nothing to do
                         } else {
