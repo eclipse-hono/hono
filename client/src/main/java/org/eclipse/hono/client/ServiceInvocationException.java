@@ -165,10 +165,11 @@ public class ServiceInvocationException extends RuntimeException {
      * Extract the HTTP status code from an exception.
      *
      * @param t The exception to extract the code from.
-     * @return The HTTP status code, or 500 if the exception is not of type {@link ServiceInvocationException}.
+     * @return The HTTP status code. Otherwise {@link HttpURLConnection#HTTP_INTERNAL_ERROR} 
+     *         if the exception is {@code null} or not of type {@link ServiceInvocationException}.
      */
     public static int extractStatusCode(final Throwable t) {
-        return Optional.of(t).map(cause -> {
+        return Optional.ofNullable(t).map(cause -> {
             if (cause instanceof ServiceInvocationException) {
                 return ((ServiceInvocationException) cause).getErrorCode();
             } else {
