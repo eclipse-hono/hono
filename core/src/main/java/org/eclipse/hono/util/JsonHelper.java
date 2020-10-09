@@ -42,8 +42,12 @@ public final class JsonHelper {
      * @throws NullPointerException if any of the parameters except defaultValue is {@code null}.
      */
     public static <T> T getValue(final JsonObject jsonObject, final String name, final Class<T> clazz,
-                                             final T defaultValue) {
-        final Object value = jsonObject.getValue(Objects.requireNonNull(name), defaultValue);
+            final T defaultValue) {
+        Objects.requireNonNull(jsonObject);
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(clazz);
+
+        final Object value = jsonObject.getValue(name, defaultValue);
         if (value == null) {
             return defaultValue;
         }
