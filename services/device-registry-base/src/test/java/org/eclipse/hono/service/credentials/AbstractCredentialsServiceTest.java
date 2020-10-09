@@ -1132,7 +1132,10 @@ public interface AbstractCredentialsServiceTest {
                     getCredentialsResult -> {
                         assertThat(getCredentialsResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
                         final CredentialsObject credentialsObj = getCredentialsResult.getPayload().mapTo(CredentialsObject.class);
-                        assertThat(credentialsObj.getSecrets()).hasSize(2);
+                        // according to the Credentials API spec, the service implementation
+                        // may choose to NOT include secrets that are disabled or which are not valid at the
+                        // current point in time, according to its notBefore and notAfter properties
+                        assertThat(credentialsObj.getSecrets()).hasSizeBetween(1, 2);
                         // verify that none of the secrets contains the original password hash anymore
                         credentialsObj.getSecrets()
                             .stream()
