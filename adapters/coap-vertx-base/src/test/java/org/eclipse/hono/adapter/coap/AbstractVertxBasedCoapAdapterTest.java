@@ -493,7 +493,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream telemetry consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenATelemetrySenderForAnyTenant(outcome);
 
         // WHEN a device publishes an telemetry message with QoS 1
@@ -513,7 +513,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // and the device does not get a response
         verify(coapExchange, never()).respond(any(Response.class));
         // until the telemetry message has been accepted
-        outcome.complete(mock(ProtonDelivery.class));
+        outcome.complete();
 
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         verify(metrics).reportTelemetry(
@@ -536,7 +536,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream event consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event
@@ -553,7 +553,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         verify(coapExchange, never()).respond(any(Response.class));
 
         // until the event has been accepted
-        outcome.complete(mock(ProtonDelivery.class));
+        outcome.complete();
 
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         verify(metrics).reportTelemetry(
@@ -576,7 +576,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream event consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event that is not accepted by the peer
@@ -613,7 +613,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream telemetry consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> sendTelemetryOutcome = Promise.promise();
+        final Promise<Void> sendTelemetryOutcome = Promise.promise();
         givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
@@ -986,7 +986,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setResourceLimitChecks(resourceLimitChecks);
 
         adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
+        adapter.setEventSender(eventSender);
+        adapter.setTelemetrySender(telemetrySender);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         if (complete) {
             adapter.setCredentialsClientFactory(credentialsClientFactory);

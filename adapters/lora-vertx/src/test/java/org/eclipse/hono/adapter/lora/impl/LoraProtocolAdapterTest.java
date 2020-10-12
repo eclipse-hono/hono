@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
@@ -45,7 +43,9 @@ import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -127,14 +127,18 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
 
-        final ArgumentCaptor<Message> message = ArgumentCaptor.forClass(Message.class);
-        verify(downstreamSender).send(message.capture(), any(SpanContext.class));
-        assertThat(MessageHelper.getPayload(message.getValue())).isEqualTo(Buffer.buffer(TEST_PAYLOAD));
-        assertThat(message.getValue().getContentType()).isEqualTo(LoraConstants.CONTENT_TYPE_LORA_BASE + providerMock.getProviderName());
-        final ApplicationProperties props = message.getValue().getApplicationProperties();
-        assertThat(MessageHelper.getApplicationProperty(props, LoraConstants.APP_PROPERTY_FUNCTION_PORT, Integer.class))
-            .isEqualTo(TEST_FUNCTION_PORT);
-        final String metaData = MessageHelper.getApplicationProperty(props, LoraConstants.APP_PROPERTY_META_DATA, String.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Map<String, Object>> props = ArgumentCaptor.forClass(Map.class);
+        verify(telemetrySender).sendTelemetry(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(QoS.class),
+                eq(LoraConstants.CONTENT_TYPE_LORA_BASE + TEST_PROVIDER),
+                eq(Buffer.buffer(TEST_PAYLOAD)),
+                props.capture(),
+                any());
+        assertThat(props.getValue()).contains(Map.entry(LoraConstants.APP_PROPERTY_FUNCTION_PORT, TEST_FUNCTION_PORT));
+        final String metaData = (String) props.getValue().get(LoraConstants.APP_PROPERTY_META_DATA);
         assertThat(metaData).isNotNull();
         final JsonObject metaDataJson = new JsonObject(metaData);
         assertThat(metaDataJson.getInteger(LoraConstants.APP_PROPERTY_FUNCTION_PORT)).isEqualTo(TEST_FUNCTION_PORT);

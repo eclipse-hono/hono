@@ -17,12 +17,14 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -32,6 +34,7 @@ import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
@@ -46,7 +49,9 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -175,25 +180,10 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
-     * <p>
-     * The factory is initialized with the connection provided by {@link #downstreamConnection()}.
-     *
-     * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
-     * out of the box.
-     * @return The factory.
-     */
-    @Qualifier(Constants.QUALIFIER_MESSAGING)
-    @Bean
-    @Scope("prototype")
-    public DownstreamSenderFactory downstreamSenderFactory(final SendMessageSampler.Factory samplerFactory) {
-        return DownstreamSenderFactory.create(downstreamConnection(), samplerFactory);
-    }
-
-    /**
      * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
-     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}
+     * and is already trying to establish the connection to the configured peer.
      *
      * @return The connection.
      */
@@ -202,6 +192,46 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoConnection downstreamConnection() {
         return HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig());
+    }
+
+    /**
+     * Exposes a client for sending telemetry messages via the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The client is initialized with the connection provided by {@link #downstreamConnection()}.
+     *
+     * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
+     *                       {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
+     *                       out of the box.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The factory.
+     */
+    @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
+    @Bean
+    @Scope("prototype")
+    public TelemetrySender downstreamTelemetrySender(
+            final SendMessageSampler.Factory samplerFactory,
+            final ProtocolAdapterProperties adapterConfig) {
+        return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+    }
+
+    /**
+     * Exposes a client for sending events via the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The client is initialized with the connection provided by {@link #downstreamConnection()}.
+     *
+     * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
+     *                       {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
+     *                       out of the box.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The factory.
+     */
+    @Qualifier(EventConstants.EVENT_ENDPOINT)
+    @Bean
+    @Scope("prototype")
+    public EventSender downstreamEventSender(
+            final SendMessageSampler.Factory samplerFactory,
+            final ProtocolAdapterProperties adapterConfig) {
+        return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
     }
 
     /**

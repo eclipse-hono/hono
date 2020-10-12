@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -26,17 +26,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
-import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
@@ -46,13 +46,11 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.mockito.ArgumentCaptor;
 
@@ -75,17 +73,28 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected C properties;
     protected T adapter;
 
-    protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     protected CommandTargetMapper commandTargetMapper;
-    protected ConnectionEventProducer.Context connectionEventProducerContext;
     protected CredentialsClientFactory credentialsClientFactory;
     protected DeviceConnectionClientFactory deviceConnectionClientFactory;
-    protected DownstreamSender downstreamSender;
-    protected DownstreamSenderFactory downstreamSenderFactory;
+    protected EventSender eventSender;
+    protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     protected RegistrationClient registrationClient;
     protected RegistrationClientFactory registrationClientFactory;
     protected TenantClient tenantClient;
+    protected TelemetrySender telemetrySender;
     protected TenantClientFactory tenantClientFactory;
+
+    private TelemetrySender createTelemetrySenderMock() {
+        final TelemetrySender sender = mock(TelemetrySender.class);
+        when(sender.start()).thenReturn(Future.succeededFuture());
+        return sender;
+    }
+
+    private EventSender createEventSenderMock() {
+        final EventSender sender = mock(EventSender.class);
+        when(sender.start()).thenReturn(Future.succeededFuture());
+        return sender;
+    }
 
     /**
      * Creates default configuration properties for the adapter.
@@ -111,8 +120,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             return null;
         }).when(commandConsumerFactory).disconnect(any(Handler.class));
 
-        commandTargetMapper = mock(CommandTargetMapper.class);
-
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(credentialsClientFactory.isConnected()).thenReturn(Future.succeededFuture());
@@ -130,15 +137,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             shutdownHandler.handle(Future.succeededFuture());
             return null;
         }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(downstreamSenderFactory.isConnected()).thenReturn(Future.succeededFuture());
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(downstreamSenderFactory).disconnect(any(Handler.class));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
@@ -158,9 +156,9 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             return null;
         }).when(tenantClientFactory).disconnect(any(Handler.class));
 
-        connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
-        when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(downstreamSenderFactory);
-        when(connectionEventProducerContext.getTenantClientFactory()).thenReturn(tenantClientFactory);
+        commandTargetMapper = mock(CommandTargetMapper.class);
+        this.telemetrySender = createTelemetrySenderMock();
+        this.eventSender = createEventSenderMock();
     }
 
     /**
@@ -217,77 +215,74 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
+        adapter.setEventSender(eventSender);
         adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setTelemetrySender(telemetrySender);
         adapter.setTenantClientFactory(tenantClientFactory);
     }
 
     /**
-     * Configures the downstream sender factory to create a mock sender
-     * for telemetry messages regardless of tenant ID.
-     * <p>
-     * The returned sender's send methods will always return a succeeded future.
+     * Configures the telemetry sender to always return a succeeded future regardless of tenant ID.
      *
-     * @return The sender that the factory will create.
+     * @return The configured sender.
      */
-    protected DownstreamSender givenATelemetrySenderForAnyTenant() {
-        final Promise<ProtonDelivery> delivery = Promise.promise();
-        delivery.complete(mock(ProtonDelivery.class));
+    protected TelemetrySender givenATelemetrySenderForAnyTenant() {
+        final Promise<Void> delivery = Promise.promise();
+        delivery.complete();
         return givenATelemetrySenderForAnyTenant(delivery);
     }
 
     /**
-     * Configures the downstream sender factory to create a mock sender
-     * for telemetry messages regardless of tenant ID.
-     * <p>
-     * The returned sender's send methods will return the given promise's
-     * corresponding future.
+     * Configures the telemetry sender to return a given promise's
+     * corresponding future regardless of tenant ID.
      *
      * @param outcome The outcome of sending a message using the returned sender.
-     * @return The sender that the factory will create.
+     * @return The configured sender.
      */
-    protected DownstreamSender givenATelemetrySenderForAnyTenant(final Promise<ProtonDelivery> outcome) {
-        this.downstreamSender = mock(DownstreamSender.class);
-        when(this.downstreamSender.send(any(Message.class), any(SpanContext.class)))
-            .thenReturn(outcome.future());
-        when(this.downstreamSender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)))
-            .thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(this.downstreamSender));
-        return this.downstreamSender;
+    protected TelemetrySender givenATelemetrySenderForAnyTenant(final Promise<Void> outcome) {
+        this.telemetrySender = createTelemetrySenderMock();
+        when(this.telemetrySender.sendTelemetry(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(org.eclipse.hono.util.QoS.class),
+                anyString(),
+                any(),
+                any(),
+                any())).thenReturn(outcome.future());
+        this.adapter.setTelemetrySender(this.telemetrySender);
+        return this.telemetrySender;
     }
 
     /**
-     * Configures the downstream sender factory to create a mock sender
-     * for events regardless of tenant ID.
-     * <p>
-     * The returned sender's send methods will always return a succeeded future.
+     * Configures the event sender to always return a succeeded future regardless of tenant ID.
      *
-     * @return The sender that the factory will create.
+     * @return The configured sender.
      */
-    protected DownstreamSender givenAnEventSenderForAnyTenant() {
-        final Promise<ProtonDelivery> delivery = Promise.promise();
-        delivery.complete(mock(ProtonDelivery.class));
+    protected EventSender givenAnEventSenderForAnyTenant() {
+        final Promise<Void> delivery = Promise.promise();
+        delivery.complete();
         return givenAnEventSenderForAnyTenant(delivery);
     }
 
 
     /**
-     * Configures the downstream sender factory to create a mock sender
-     * for events regardless of tenant ID.
-     * <p>
-     * The returned sender's send methods will return the given promise's
-     * corresponding future.
+     * Configures the event sender to return a given promise's
+     * corresponding future regardless of tenant ID.
      *
      * @param outcome The outcome of sending a message using the returned sender.
-     * @return The sender that the factory will create.
+     * @return The configured sender.
      */
-    protected DownstreamSender givenAnEventSenderForAnyTenant(final Promise<ProtonDelivery> outcome) {
-        this.downstreamSender = mock(DownstreamSender.class);
-        when(this.downstreamSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(this.downstreamSender));
-        return this.downstreamSender;
+    protected EventSender givenAnEventSenderForAnyTenant(final Promise<Void> outcome) {
+        this.eventSender = createEventSenderMock();
+        when(this.eventSender.sendEvent(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                anyString(),
+                any(),
+                any(),
+                any())).thenReturn(outcome.future());
+        this.adapter.setEventSender(this.eventSender);
+        return this.eventSender;
     }
 
     /**
@@ -330,8 +325,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected void forceClientMocksToDisconnected() {
         when(tenantClientFactory.isConnected())
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(downstreamSenderFactory.isConnected())
-            .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(registrationClientFactory.isConnected())
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(credentialsClientFactory.isConnected())
@@ -340,23 +333,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(deviceConnectionClientFactory.isConnected())
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-    }
-
-    private void assertMessageProperties(
-            final Message msg,
-            final String endpoint,
-            final String tenant,
-            final String deviceId,
-            final String contentType) {
-
-        final ResourceIdentifier address = ResourceIdentifier.fromString(msg.getAddress());
-        assertThat(address.getEndpoint()).isEqualTo(endpoint);
-        Optional.ofNullable(tenant)
-            .ifPresent(v -> assertThat(address.getTenantId()).isEqualTo(v));
-        Optional.ofNullable(deviceId)
-            .ifPresent(id -> assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isEqualTo(id));
-        Optional.ofNullable(contentType)
-            .ifPresent(ct -> assertThat(msg.getContentType()).isEqualTo(ct));
     }
 
     /**
@@ -380,28 +356,31 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
         Objects.requireNonNull(qos);
 
-        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        final ArgumentCaptor<TenantObject> tenantCaptor = ArgumentCaptor.forClass(TenantObject.class);
+        final ArgumentCaptor<RegistrationAssertion> assertionCaptor = ArgumentCaptor.forClass(RegistrationAssertion.class);
+        final ArgumentCaptor<String> contentTypeCaptor = ArgumentCaptor.forClass(String.class);
 
-        if (QoS.AT_MOST_ONCE == qos) {
-            verify(downstreamSender).send(
-                    msgCaptor.capture(),
-                    (SpanContext) any());
-        } else {
-            verify(downstreamSender).sendAndWaitForOutcome(
-                    msgCaptor.capture(),
-                    (SpanContext) any());
-        }
-        assertThat(MessageHelper.getApplicationProperty(
-                msgCaptor.getValue().getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_QOS,
-                Integer.class))
-            .isEqualTo(qos.ordinal());
-        assertMessageProperties(
-                msgCaptor.getValue(),
-                TelemetryConstants.TELEMETRY_ENDPOINT,
-                tenant,
-                deviceId,
-                contentType);
+        verify(telemetrySender).sendTelemetry(
+                tenantCaptor.capture(),
+                assertionCaptor.capture(),
+                eq(qos),
+                contentTypeCaptor.capture(),
+                any(),
+                any(),
+                any());
+
+        Optional.ofNullable(tenant)
+            .ifPresent(v -> {
+                assertThat(tenantCaptor.getValue().getTenantId()).isEqualTo(v);
+            });
+        Optional.ofNullable(deviceId)
+            .ifPresent(v -> {
+                assertThat(assertionCaptor.getValue().getDeviceId()).isEqualTo(v);
+            });
+        Optional.ofNullable(contentType)
+            .ifPresent(v -> {
+                assertThat(contentTypeCaptor.getValue()).isEqualToIgnoringCase(v);
+            });
     }
 
     /**
@@ -422,19 +401,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ttd);
 
-        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-
-        verify(downstreamSender, atLeastOnce()).sendAndWaitForOutcome(
-                msgCaptor.capture(),
-                (SpanContext) any());
-
-        assertMessageProperties(
-                msgCaptor.getValue(),
-                EventConstants.EVENT_ENDPOINT,
-                tenant,
-                deviceId,
-                EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue())).isEqualTo(ttd);
+        verify(eventSender).sendEvent(
+                argThat(tenantObject -> tenantObject.getTenantId().equals(tenant)),
+                argThat(assertion -> assertion.getDeviceId().equals(deviceId)),
+                eq(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION),
+                any(),
+                argThat(props -> ttd.equals(props.get(MessageHelper.APP_PROPERTY_DEVICE_TTD))),
+                any());
     }
 
     /**
@@ -455,9 +428,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ttd);
 
-        verify(downstreamSender, never()).sendAndWaitForOutcome(
-                argThat(msg -> ttd.equals(MessageHelper.getTimeUntilDisconnect(msg))),
-                (SpanContext) any());
+        verify(eventSender, never()).sendEvent(
+                argThat(tenantObject -> tenantObject.getTenantId().equals(tenant)),
+                argThat(assertion -> assertion.getDeviceId().equals(deviceId)),
+                eq(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION),
+                any(),
+                argThat(props -> ttd.equals(props.get(MessageHelper.APP_PROPERTY_DEVICE_TTD))),
+                any());
     }
 
     /**
@@ -497,25 +474,36 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             final String contentType,
             final Long ttl) {
 
-        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        final ArgumentCaptor<TenantObject> tenantCaptor = ArgumentCaptor.forClass(TenantObject.class);
+        final ArgumentCaptor<RegistrationAssertion> assertionCaptor = ArgumentCaptor.forClass(RegistrationAssertion.class);
+        final ArgumentCaptor<String> contentTypeCaptor = ArgumentCaptor.forClass(String.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Map<String, Object>> propsCaptor = ArgumentCaptor.forClass(Map.class);
 
-        verify(downstreamSender).sendAndWaitForOutcome(
-                msgCaptor.capture(),
-                (SpanContext) any());
+        verify(eventSender).sendEvent(
+                tenantCaptor.capture(),
+                assertionCaptor.capture(),
+                contentTypeCaptor.capture(),
+                any(),
+                propsCaptor.capture(),
+                any());
 
-        assertMessageProperties(
-                msgCaptor.getValue(),
-                EventConstants.EVENT_ENDPOINT,
-                tenant,
-                deviceId,
-                contentType);
-        assertThat(MessageHelper.getApplicationProperty(
-                msgCaptor.getValue().getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_QOS,
-                Integer.class))
-            .isEqualTo(QoS.AT_LEAST_ONCE.ordinal());
+        Optional.ofNullable(tenant)
+            .ifPresent(v -> {
+                assertThat(tenantCaptor.getValue().getTenantId()).isEqualTo(v);
+            });
+        Optional.ofNullable(deviceId)
+            .ifPresent(v -> {
+                assertThat(assertionCaptor.getValue().getDeviceId()).isEqualTo(v);
+            });
+        Optional.ofNullable(contentType)
+            .ifPresent(v -> {
+                assertThat(contentTypeCaptor.getValue()).isEqualToIgnoringCase(v);
+            });
         Optional.ofNullable(ttl)
-            .ifPresent(v -> assertThat(msgCaptor.getValue().getTtl()).isEqualTo(v));
+            .ifPresent(v -> {
+                assertThat(propsCaptor.getValue()).contains(Map.entry(MessageHelper.SYS_HEADER_PROPERTY_TTL, v));
+            });
     }
 
     /**
@@ -524,8 +512,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * @throws AssertionError if a message has been sent.
      */
     protected void assertNoTelemetryMessageHasBeenSentDownstream() {
-        verify(downstreamSender, never()).send(any(Message.class), any());
-        verify(downstreamSender, never()).sendAndWaitForOutcome(any(Message.class), any());
+        verify(telemetrySender, never()).sendTelemetry(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(QoS.class),
+                anyString(),
+                any(),
+                any(),
+                any());
     }
 
     /**
@@ -534,6 +528,12 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * @throws AssertionError if a message has been sent.
      */
     protected void assertNoEventHasBeenSentDownstream() {
-        verify(downstreamSender, never()).sendAndWaitForOutcome(any(Message.class), any());
+        verify(eventSender, never()).sendEvent(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                anyString(),
+                any(),
+                any(),
+                any());
     }
 }

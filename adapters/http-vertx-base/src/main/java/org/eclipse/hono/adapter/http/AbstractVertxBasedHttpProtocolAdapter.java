@@ -24,13 +24,11 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.CommandConsumer;
@@ -53,7 +51,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -559,7 +556,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                getTelemetrySender(tenant),
                 MetricsTags.EndpointType.TELEMETRY);
     }
 
@@ -608,7 +604,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 Objects.requireNonNull(deviceId),
                 payload,
                 contentType,
-                getEventSender(tenant),
                 MetricsTags.EndpointType.EVENT);
     }
 
@@ -618,7 +613,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
         if (!ctx.hasValidQoS()) {
@@ -683,9 +677,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         responseReady,
                         currentSpan));
 
-        // "join" used here to make sure that the "commandConsumerTracker" is completed when handling
-        // a failed "senderTracker" below, allowing a contained command consumer to be closed there.
-        CompositeFuture.join(senderTracker, commandConsumerTracker)
+        commandConsumerTracker
         .compose(ok -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
@@ -695,29 +687,32 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
 
             customizeDownstreamMessageProperties(props, ctx);
-            final Message downstreamMessage = MessageHelper.newMessage(
-                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                    contentType,
-                    payload,
-                    tenantTracker.result(),
-                    props,
-                    tokenTracker.result().getDefaults(),
-                    getConfig().isDefaultsEnabled(),
-                    getConfig().isJmsVendorPropsEnabled());
-
-            final DownstreamSender sender = senderTracker.result();
-
             setTtdRequestConnectionCloseHandler(ctx.getRoutingContext(), commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
-            if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
+            if (EndpointType.EVENT.equals(endpoint)) {
+                ctx.getTimeToLive()
+                    .ifPresent(ttl -> props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, ttl.toSeconds()));
                 return CompositeFuture.all(
-                        sender.send(downstreamMessage, currentSpan.context()),
+                        getEventSender().sendEvent(
+                                tenantTracker.result(),
+                                tokenTracker.result(),
+                                contentType,
+                                payload,
+                                props,
+                                currentSpan.context()),
                         responseReady.future())
                         .map(s -> (Void) null);
             } else {
                 // unsettled
                 return CompositeFuture.all(
-                        sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
+                        getTelemetrySender().sendTelemetry(
+                                tenantTracker.result(),
+                                tokenTracker.result(),
+                                ctx.getRequestedQos(),
+                                contentType,
+                                payload,
+                                props,
+                                currentSpan.context()),
                         responseReady.future())
                         .map(s -> (Void) null);
             }

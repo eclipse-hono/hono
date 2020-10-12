@@ -23,6 +23,7 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.cache.CacheProvider;
@@ -30,7 +31,6 @@ import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -123,14 +123,22 @@ public class Application {
         adapter.setConfig(config.http);
         adapter.setCredentialsClientFactory(credentialsClientFactory());
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory());
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory());
+        adapter.setEventSender(newDownstreamSender());
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setMetrics(metrics);
         adapter.setRegistrationClientFactory(registrationClientFactory());
+        adapter.setTelemetrySender(newDownstreamSender());
         adapter.setTenantClientFactory(tenantClientFactory());
         adapter.setTracer(tracer);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;
+    }
+
+    private ProtonBasedDownstreamSender newDownstreamSender() {
+        return new ProtonBasedDownstreamSender(
+                HonoConnection.newConnection(vertx, config.messaging),
+                metrics,
+                config.http);
     }
 
     @Produces
@@ -159,11 +167,6 @@ public class Application {
     @Produces
     DeviceConnectionClientFactory deviceConnectionClientFactory() {
         return DeviceConnectionClientFactory.create(HonoConnection.newConnection(vertx, config.deviceConnection), metrics);
-    }
-
-    @Produces
-    DownstreamSenderFactory downstreamSenderFactory() {
-        return DownstreamSenderFactory.create(HonoConnection.newConnection(vertx, config.messaging));
     }
 
     @Singleton

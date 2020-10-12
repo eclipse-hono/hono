@@ -12,45 +12,28 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import java.time.Duration;
-import java.util.Objects;
-import java.util.function.BiFunction;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A connection event producer based on a {@link DownstreamSender}.
+ * A connection event producer based on a {@link org.eclipse.hono.adapter.client.telemetry.EventSender}.
  */
 public abstract class AbstractMessageSenderConnectionEventProducer implements ConnectionEventProducer {
 
     /**
-     * The function to derive the sender from the provided sender factory.
+     * Creates an event producer which will send events using an EventSender.
      */
-    private final BiFunction<DownstreamSenderFactory, String, Future<DownstreamSender>> messageSenderSource;
-
-    /**
-     * Creates an event producer which will send events using a downstream sender.
-     *
-     * @param messageSenderSource A function to get a sender for a tenant.
-     */
-    protected AbstractMessageSenderConnectionEventProducer(
-            final BiFunction<DownstreamSenderFactory, String, Future<DownstreamSender>> messageSenderSource) {
-
-        Objects.requireNonNull(messageSenderSource);
-
-        this.messageSenderSource = messageSenderSource;
+    protected AbstractMessageSenderConnectionEventProducer() {
     }
 
     @Override
@@ -91,12 +74,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
         final String tenantId = authenticatedDevice.getTenantId();
         final String deviceId = authenticatedDevice.getDeviceId();
 
-        final Future<TenantObject> tenantObject = getTenant(context.getTenantClientFactory(), tenantId);
-        final Future<DownstreamSender> downstreamSender = getOrCreateSender(context.getMessageSenderClient(), tenantId);
-
-        return CompositeFuture.all(tenantObject, downstreamSender)
-                .map(tenantObject.result())
-                .map(tenant -> {
+        return getTenant(context.getTenantClientFactory(), tenantId)
+                .compose(tenant -> {
 
                     final JsonObject payload = new JsonObject();
                     payload.put("cause", cause);
@@ -107,27 +86,22 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                         payload.put("data", data);
                     }
 
-                    final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenantId, deviceId);
-                    final Duration timeToLive = Duration.ofSeconds(tenant.getResourceLimits().getMaxTtl());
+                    final long timeToLive = tenant.getResourceLimits().getMaxTtl();
 
-                    return MessageHelper.newMessage(
-                            QoS.AT_LEAST_ONCE,
-                            target,
+                    final Map<String, Object> props = new HashMap<>();
+                    props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive);
+
+                    return context.getMessageSenderClient().sendEvent(
+                            tenant,
+                            new RegistrationAssertion(deviceId),
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
-                            payload.toBuffer(), 
-                            tenant, 
-                            timeToLive,
-                            protocolAdapter);
-                })
-                .compose(msg -> downstreamSender.result().send(msg));
+                            payload.toBuffer(),
+                            props,
+                            null);
+                });
     }
 
     private Future<TenantObject> getTenant(final TenantClientFactory factory, final String tenant) {
         return factory.getOrCreateTenantClient().compose(client -> client.get(tenant));
     }
-
-    private Future<DownstreamSender> getOrCreateSender(final DownstreamSenderFactory messageSenderClient, final String tenant) {
-        return messageSenderSource.apply(messageSenderClient, tenant);
-    }
-
 }

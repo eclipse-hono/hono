@@ -47,7 +47,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -64,6 +63,7 @@ import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
@@ -678,27 +678,27 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *         The future will succeed if the message has been processed successfully, otherwise it
      *         will fail with a {@link ServiceInvocationException}.
      */
-    protected Future<ProtonDelivery> onMessageReceived(final AmqpContext ctx) {
+    protected Future<?> onMessageReceived(final AmqpContext ctx) {
 
         log.trace("processing message [address: {}, qos: {}]", ctx.getAddress(), ctx.getRequestedQos());
         final Span msgSpan = ctx.getTracingSpan();
         return validateEndpoint(ctx)
-        .compose(validatedEndpoint -> validateAddress(validatedEndpoint.getAddress(), validatedEndpoint.getAuthenticatedDevice()))
-        .compose(validatedAddress -> uploadMessage(ctx, validatedAddress, msgSpan))
-        .map(d -> {
-            ProtonHelper.accepted(ctx.delivery(), true);
-            return d;
-        }).recover(t -> {
-            if (t instanceof ClientErrorException) {
-                final ErrorCondition condition = AbstractProtocolAdapterBase.getErrorCondition(t);
-                MessageHelper.rejected(ctx.delivery(), condition);
-            } else {
-                ProtonHelper.released(ctx.delivery(), true);
-            }
-            log.debug("failed to process message from device", t);
-            TracingHelper.logError(msgSpan, t);
-            return Future.failedFuture(t);
-        });
+            .compose(validatedEndpoint -> validateAddress(validatedEndpoint.getAddress(), validatedEndpoint.getAuthenticatedDevice()))
+            .compose(validatedAddress -> uploadMessage(ctx, validatedAddress, msgSpan))
+            .map(d -> {
+                ProtonHelper.accepted(ctx.delivery(), true);
+                return d;
+            }).recover(t -> {
+                if (t instanceof ClientErrorException) {
+                    final ErrorCondition condition = AbstractProtocolAdapterBase.getErrorCondition(t);
+                    MessageHelper.rejected(ctx.delivery(), condition);
+                } else {
+                    ProtonHelper.released(ctx.delivery(), true);
+                }
+                log.debug("failed to process message from device", t);
+                TracingHelper.logError(msgSpan, t);
+                return Future.failedFuture(t);
+            });
     }
 
     /**
@@ -1044,29 +1044,24 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *                    trace the forwarding of the message.
      * @return A future indicating the outcome.
      */
-    private Future<ProtonDelivery> uploadMessage(
+    private Future<?> uploadMessage(
             final AmqpContext context,
             final ResourceIdentifier resource,
             final Span currentSpan) {
 
-        final Promise<Void> contentTypeCheck = Promise.promise();
-
-        if (isPayloadOfIndicatedType(context.getMessagePayload(), context.getMessageContentType())) {
-            contentTypeCheck.complete();
-        } else {
-            contentTypeCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "empty notifications must not contain payload"));
-        }
-
         switch (context.getEndpoint()) {
         case TELEMETRY:
-            return contentTypeCheck.future()
-                    .compose(ok -> doUploadMessage(context, resource, getTelemetrySender(resource.getTenantId()),
-                            currentSpan));
         case EVENT:
+            final Promise<Void> contentTypeCheck = Promise.promise();
+
+            if (isPayloadOfIndicatedType(context.getMessagePayload(), context.getMessageContentType())) {
+                contentTypeCheck.complete();
+            } else {
+                contentTypeCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "empty notifications must not contain payload"));
+            }
             return contentTypeCheck.future()
-                    .compose(ok -> doUploadMessage(context, resource, getEventSender(resource.getTenantId()),
-                            currentSpan));
+                    .compose(ok -> doUploadMessage(context, resource, currentSpan));
         case COMMAND_RESPONSE:
             return doUploadCommandResponseMessage(context, resource, currentSpan);
         default:
@@ -1074,10 +1069,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
-    private Future<ProtonDelivery> doUploadMessage(
+    private Future<?> doUploadMessage(
             final AmqpContext context,
             final ResourceIdentifier resource,
-            final Future<DownstreamSender> senderFuture,
             final Span currentSpan) {
 
         log.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
@@ -1095,28 +1089,27 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 checkMessageLimit(tenantObject, context.getPayloadSize(), currentSpan.context()))
                         .map(success -> tenantObject));
 
-        return CompositeFuture.all(tenantValidationTracker, tokenFuture, senderFuture)
+        return CompositeFuture.all(tenantValidationTracker, tokenFuture)
                 .compose(ok -> {
                     final Map<String, Object> props = getDownstreamMessageProperties(context);
-                    props.put(MessageHelper.APP_PROPERTY_QOS, context.getRequestedQos().ordinal());
-                    final Message downstreamMessage = MessageHelper.newMessage(
-                            ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
-                            context.getMessage().getContentType(),
-                            context.getMessagePayload(),
-                            tenantValidationTracker.result(),
-                            props,
-                            tokenFuture.result().getDefaults(),
-                            getConfig().isDefaultsEnabled(),
-                            getConfig().isJmsVendorPropsEnabled());
 
-                    final DownstreamSender sender = senderFuture.result();
-
-                    if (context.isRemotelySettled()) {
-                        // client uses AT_MOST_ONCE delivery semantics -> fire and forget
-                        return sender.send(downstreamMessage, currentSpan.context());
+                    if (context.getEndpoint() == EndpointType.TELEMETRY) {
+                        return getTelemetrySender().sendTelemetry(
+                                tenantValidationTracker.result(),
+                                tokenFuture.result(),
+                                context.getRequestedQos(),
+                                context.getMessageContentType(),
+                                context.getMessagePayload(),
+                                props,
+                                currentSpan.context());
                     } else {
-                        // client uses AT_LEAST_ONCE delivery semantics
-                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+                        return getEventSender().sendEvent(
+                                tenantValidationTracker.result(),
+                                tokenFuture.result(),
+                                context.getMessageContentType(),
+                                context.getMessagePayload(),
+                                props,
+                                currentSpan.context());
                     }
 
                 }).recover(t -> {
@@ -1135,7 +1128,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             context.getTimer());
                     return Future.failedFuture(t);
 
-                }).map(delivery -> {
+                }).map(ok -> {
 
                     metrics.reportTelemetry(
                             context.getEndpoint(),
@@ -1145,7 +1138,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
                             context.getPayloadSize(),
                             context.getTimer());
-                    return delivery;
+                    return ok;
                 });
     }
 
@@ -1180,8 +1173,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
                     currentSpan.log(items);
 
-                    final Future<RegistrationAssertion> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
-                            resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
+                    final Future<RegistrationAssertion> tokenFuture = getRegistrationAssertion(
+                            resource.getTenantId(),
+                            resource.getResourceId(),
+                            context.getAuthenticatedDevice(),
+                            currentSpan.context());
                     final Future<TenantObject> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),
                                     checkMessageLimit(tenantTracker.result(), context.getPayloadSize(),

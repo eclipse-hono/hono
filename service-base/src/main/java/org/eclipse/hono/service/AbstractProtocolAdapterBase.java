@@ -22,7 +22,9 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.ClientErrorException;
@@ -35,8 +37,6 @@ import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
@@ -60,12 +60,14 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -110,7 +112,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
-    private DownstreamSenderFactory downstreamSenderFactory;
+    private TelemetrySender telemetrySender;
+    private EventSender eventSender;
     private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
     private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
@@ -124,8 +127,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
 
         @Override
-        public DownstreamSenderFactory getMessageSenderClient() {
-            return AbstractProtocolAdapterBase.this.downstreamSenderFactory;
+        public EventSender getMessageSenderClient() {
+            return AbstractProtocolAdapterBase.this.eventSender;
         }
 
         @Override
@@ -246,24 +249,45 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory to use for creating a client for the AMQP Messaging Network.
+     * Sets the client to use for sending telemetry messages via the AMQP Messaging Network.
      *
-     * @param factory The factory.
-     * @throws NullPointerException if the factory is {@code null}.
+     * @param sender The sender.
+     * @throws NullPointerException if the sender is {@code null}.
      */
-    @Qualifier(Constants.QUALIFIER_MESSAGING)
+    @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
     @Autowired
-    public final void setDownstreamSenderFactory(final DownstreamSenderFactory factory) {
-        this.downstreamSenderFactory = Objects.requireNonNull(factory);
+    public final void setTelemetrySender(final TelemetrySender sender) {
+        this.telemetrySender = Objects.requireNonNull(sender);
     }
 
     /**
-     * Gets the factory used for creating a client for the AMQP Messaging Network.
+     * Gets the client being used for sending telemetry messages via the AMQP Messaging Network.
      *
-     * @return The factory.
+     * @return The sender.
      */
-    public final DownstreamSenderFactory getDownstreamSenderFactory() {
-        return downstreamSenderFactory;
+    public final TelemetrySender getTelemetrySender() {
+        return telemetrySender;
+    }
+
+    /**
+     * Sets the client to use for sending events via the AMQP Messaging Network.
+     *
+     * @param sender The sender.
+     * @throws NullPointerException if the sender is {@code null}.
+     */
+    @Qualifier(EventConstants.EVENT_ENDPOINT)
+    @Autowired
+    public final void setEventSender(final EventSender sender) {
+        this.eventSender = Objects.requireNonNull(sender);
+    }
+
+    /**
+     * Gets the client being used for sending events via the AMQP Messaging Network.
+     *
+     * @return The sender.
+     */
+    public final EventSender getEventSender() {
+        return eventSender;
     }
 
     /**
@@ -463,8 +487,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClientFactory == null) {
             result.fail(new IllegalStateException("Tenant client factory must be set"));
-        } else if (downstreamSenderFactory == null) {
-            result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
+        } else if (telemetrySender == null) {
+            result.fail(new IllegalStateException("Telemetry message sender must be set"));
+        } else if (eventSender == null) {
+            result.fail(new IllegalStateException("Event sender must be set"));
         } else if (registrationClientFactory == null) {
             result.fail(new IllegalStateException("Device Registration client factory must be set"));
         } else if (credentialsClientFactory == null) {
@@ -477,8 +503,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
+            startServiceClient(telemetrySender, "AMQP Messaging Network (Telemetry)");
+            startServiceClient(eventSender, "AMQP Messaging Network (Event)");
             connectToService(tenantClientFactory, "Tenant service");
-            connectToService(downstreamSenderFactory, "AMQP Messaging Network");
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
             if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
@@ -539,7 +566,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
-        results.add(disconnectFromService(downstreamSenderFactory));
         results.add(disconnectFromService(tenantClientFactory));
         results.add(disconnectFromService(registrationClientFactory));
         results.add(disconnectFromService(credentialsClientFactory));
@@ -547,7 +573,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
             results.add(disconnectFromService((ConnectionLifecycle<?>) deviceConnectionClientFactory));
         }
+        results.add(stopServiceClient(eventSender));
+        results.add(stopServiceClient(telemetrySender));
         return CompositeFuture.all(results);
+    }
+
+    /**
+     * Stops a service client.
+     * <p>
+     * This method invokes the client's {@link Lifecycle#stop()} method.
+     *
+     * @param client The client to stop.
+     * @return A future indicating the outcome of stopping the client.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected final Future<Void> stopServiceClient(final Lifecycle client) {
+
+        Objects.requireNonNull(client);
+        return client.stop();
     }
 
     private Future<Void> disconnectFromService(final ConnectionLifecycle<?> connection) {
@@ -802,6 +845,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Starts a service client.
+     * <p>
+     * This method invokes the given client's {@link Lifecycle#start()} method.
+     *
+     * @param serviceClient The client to start.
+     * @param serviceName The name of the service that the client is for (used for logging).
+     * @return A future indicating the outcome of starting the client.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected final Future<Void> startServiceClient(final Lifecycle serviceClient, final String serviceName) {
+
+        Objects.requireNonNull(serviceClient);
+        Objects.requireNonNull(serviceName);
+
+        return serviceClient.start().map(c -> {
+            log.info("connected to {}", serviceName);
+            return c;
+        }).recover(t -> {
+            log.warn("failed to connect to {}", serviceName, t);
+            return Future.failedFuture(t);
+        });
+    }
+
+    /**
      * Establishes a connection to a Hono Service component.
      *
      * @param factory The client factory for the service that is to be connected.
@@ -908,8 +975,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         <li>a Tenant service</li>
      *         <li>a Device Registration service</li>
      *         <li>a Credentials service</li>
-     *         <li>a service implementing the south bound Telemetry &amp; Event APIs</li>
-     *         <li>a service implementing the south bound Command &amp; Control API</li>
+     *         <li>the AMQP Messaging Network for receiving command messages</li>
+     *         <li>a Device Connection service</li>
      *         </ul>
      *         Otherwise, the future will fail.
      */
@@ -929,10 +996,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set"))));
-        connections.add(Optional.ofNullable(downstreamSenderFactory)
-                .map(client -> client.isConnected())
-                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set"))));
         connections.add(Optional.ofNullable(commandConsumerFactory)
                 .map(client -> client.isConnected())
                 .orElseGet(() -> Future.failedFuture(new ServerErrorException(
@@ -1027,26 +1090,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     }
                     return Future.failedFuture(t);
                 });
-    }
-
-    /**
-     * Gets a client for sending telemetry data for a tenant.
-     *
-     * @param tenantId The tenant to send the telemetry data for.
-     * @return The client.
-     */
-    protected final Future<DownstreamSender> getTelemetrySender(final String tenantId) {
-        return getDownstreamSenderFactory().getOrCreateTelemetrySender(tenantId);
-    }
-
-    /**
-     * Gets a client for sending events for a tenant.
-     *
-     * @param tenantId The tenant to send the events for.
-     * @return The client.
-     */
-    protected final Future<DownstreamSender> getEventSender(final String tenantId) {
-        return getDownstreamSenderFactory().getOrCreateEventSender(tenantId);
     }
 
     /**
@@ -1272,6 +1315,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 return null;
             });
         });
+        if (telemetrySender instanceof ServiceClient) {
+            ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
+        }
+        if (eventSender instanceof ServiceClient) {
+            ((ServiceClient ) eventSender).registerReadinessChecks(handler);
+        }
     }
 
     /**
@@ -1283,6 +1332,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         registerEventLoopBlockedCheck(handler);
+        if (telemetrySender instanceof ServiceClient) {
+            ((ServiceClient) telemetrySender).registerLivenessChecks(handler);
+        }
+        if (eventSender instanceof ServiceClient) {
+            ((ServiceClient ) eventSender).registerLivenessChecks(handler);
+        }
     }
 
     /**
@@ -1338,7 +1393,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<ProtonDelivery> sendConnectedTtdEvent(
+    protected final Future<?> sendConnectedTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1364,7 +1419,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<ProtonDelivery> sendDisconnectedTtdEvent(
+    protected final Future<?> sendDisconnectedTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1388,7 +1443,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
      */
-    protected final Future<ProtonDelivery> sendTtdEvent(
+    protected final Future<?> sendTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1405,26 +1460,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 authenticatedDevice,
                 context);
         final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, context);
-        final Future<DownstreamSender> senderTracker = getEventSender(tenant);
 
-        return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
+        return CompositeFuture.all(tokenTracker, tenantConfigTracker).compose(ok -> {
             if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
-                final DownstreamSender sender = senderTracker.result();
                 final Map<String, Object> props = new HashMap<>();
                 props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
                 props.put(MessageHelper.APP_PROPERTY_QOS, QoS.AT_LEAST_ONCE.ordinal());
                 props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd);
-                final Message msg = MessageHelper.newMessage(
-                        ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
+                return getEventSender().sendEvent(
+                        tenantConfigTracker.result(),
+                        tokenTracker.result(),
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
                         null,
-                        tenantConfigTracker.result(),
                         props,
-                        tokenTracker.result().getDefaults(),
-                        getConfig().isDefaultsEnabled(),
-                        getConfig().isJmsVendorPropsEnabled());
-
-                return sender.sendAndWaitForOutcome(msg, context);
+                        context)
+                    .onSuccess(s -> log.debug(
+                            "successfully sent TTD notification [tenant: {}, device-id: {}, TTD: {}",
+                            tenant, deviceId, ttd))
+                    .onFailure(t -> log.debug(
+                            "failed to send TTD notification [tenant: {}, device-id: {}, TTD: {}",
+                            tenant, deviceId, ttd, t));
             } else {
                 // this adapter is not enabled for the tenant
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
