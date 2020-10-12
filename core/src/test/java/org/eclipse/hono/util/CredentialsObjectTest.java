@@ -16,6 +16,8 @@ package org.eclipse.hono.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
@@ -138,5 +140,30 @@ public class CredentialsObjectTest {
         creds.setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         creds.addSecret(new JsonObject().put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_SHA256));
         assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+    }
+
+    /**
+     * Verifies that the disabled secrets are filtered out out while retrieving valid secrets.
+     */
+    @Test
+    void testGetCandidateSecretsWithADisabledSecret() {
+        final String enabledSecretId = UUID.randomUUID().toString();
+        final CredentialsObject credentials = new CredentialsObject("4711", "my-device",
+                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        final JsonObject disabledSecret = CredentialsObject
+                .hashedPasswordSecretForClearTextPassword("secret", null, null)
+                .put(RegistryManagementConstants.FIELD_ID, UUID.randomUUID().toString())
+                .put(RegistrationConstants.FIELD_ENABLED, false);
+        final JsonObject enabledSecret = CredentialsObject
+                .hashedPasswordSecretForClearTextPassword("secret", null, null)
+                .put(RegistryManagementConstants.FIELD_ID, enabledSecretId)
+                .put(RegistrationConstants.FIELD_ENABLED, true);
+
+        credentials.addSecret(disabledSecret);
+        credentials.addSecret(enabledSecret);
+
+        assertThat(credentials.getCandidateSecrets()).hasSize(1);
+        assertThat(credentials.getCandidateSecrets().get(0).getString(RegistryManagementConstants.FIELD_ID))
+                .isEqualTo(enabledSecretId);
     }
 }

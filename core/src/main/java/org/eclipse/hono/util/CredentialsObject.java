@@ -351,8 +351,8 @@ public final class CredentialsObject extends JsonBackedValueObject {
     /**
      * Filters the currently valid secrets from the secrets on record.
      * <p>
-     * A secret is considered valid if the current instant of time falls
-     * into its validity period.
+     * A secret is considered valid if it is enabled and the current instant 
+     * of time falls into its validity period.
      *
      * @return The secrets.
      */
@@ -365,8 +365,8 @@ public final class CredentialsObject extends JsonBackedValueObject {
     /**
      * Filters the currently valid secrets from the secrets on record.
      * <p>
-     * A secret is considered valid if the current instant of time falls
-     * into its validity period.
+     * A secret is considered valid if it is enabled and the current instant 
+     * of time falls into its validity period.
      *
      * @param <T> The type of the property that the candidate secrets are
      *            projected on.
@@ -383,15 +383,12 @@ public final class CredentialsObject extends JsonBackedValueObject {
         Objects.requireNonNull(projection);
 
         return getSecrets().stream()
-                .filter(obj -> {
-                    if (obj instanceof JsonObject) {
-                        return CredentialsObject.isInValidityPeriod((JsonObject) obj, Instant.now());
-                    } else {
-                        return false;
-                    }
-                }).map(obj -> (JsonObject) obj)
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .filter(CredentialsObject::isSecretEnabled)
+                .filter(secret -> CredentialsObject.isInValidityPeriod(secret, Instant.now()))
                 .map(projection)
-                .filter(obj -> obj != null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
@@ -460,6 +457,11 @@ public final class CredentialsObject extends JsonBackedValueObject {
                 return null;
             }
         }
+    }
+
+    private static boolean isSecretEnabled(final JsonObject secret) {
+        Objects.requireNonNull(secret);
+        return getProperty(secret, CredentialsConstants.FIELD_ENABLED, Boolean.class, true);
     }
 
     /**
