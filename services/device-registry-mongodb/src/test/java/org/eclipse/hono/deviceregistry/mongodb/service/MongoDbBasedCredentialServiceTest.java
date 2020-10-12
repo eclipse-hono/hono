@@ -66,6 +66,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
      * @param testContext The test context to use for running asynchronous tests.
      * @throws IOException if the embedded mongo db could not be started on the available port.
      */
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
     @BeforeAll
     public void setup(final VertxTestContext testContext) throws IOException {
 
