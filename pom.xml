@@ -208,6 +208,7 @@
     <module>cli</module>
     <module>client</module>
     <module>client-device-connection-infinispan</module>
+    <module>clients</module>
     <module>demo-certs</module>
     <module>deploy</module>
     <module>examples</module>
