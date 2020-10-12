@@ -26,18 +26,18 @@ title = "Release Notes"
 * The file based device registry also now supports searching devices for a tenant with optional filters,
   paging and sorting options.
   Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
+  for details.
+* The wildcards `?` and `*` are now supported by the search devices operation in the MongoDB based device registry. 
+  Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
   for details. 
+* Command messages that have their payload in an AMQP body section whose type isn't supported in Hono
+  now get rejected, instead of getting forwarded to the device with an empty payload.
 
 ### API Changes
 
 * The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.
 * The default pattern for valid device identifiers used for the file based and the MongoDB based registry
   implementations now also contains a colon for compatibility with Eclipse Ditto.
-
-### Fixes & Enhancements
-* The wildcards ( `?` and `*`) are now supported by the search devices operation in the MongoDB based device registry. 
-  Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
-  for details.
 
 ## 1.4.0
 
