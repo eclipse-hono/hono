@@ -42,6 +42,7 @@ public class ClientConfigPropertiesTest {
         other.setMaxFrameSize(64 * 1024);
         other.setMaxMessageSize(3000L);
         other.setMaxSessionFrames(100);
+        other.setMinMaxMessageSize(16 * 1024);
         other.setName("name");
         other.setReconnectAttempts(10);
         other.setReconnectDelayIncrement(100);
@@ -69,6 +70,7 @@ public class ClientConfigPropertiesTest {
         assertThat(newProps.getMaxFrameSize()).isEqualTo(64 * 1024);
         assertThat(newProps.getMaxMessageSize()).isEqualTo(3000L);
         assertThat(newProps.getMaxSessionFrames()).isEqualTo(100);
+        assertThat(newProps.getMinMaxMessageSize()).isEqualTo(16 * 1024);
         assertThat(newProps.getName()).isEqualTo("name");
         assertThat(newProps.getReconnectAttempts()).isEqualTo(10);
         assertThat(newProps.getReconnectDelayIncrement()).isEqualTo(100);

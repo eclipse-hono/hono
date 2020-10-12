@@ -88,7 +88,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * The value indicating that this client does not require a peer to accept messages of a particular
      * size.
      */
-    public static final long MIN_MESSAGE_SIZE_NONE = 0;
+    public static final long MIN_MAX_MESSAGE_SIZE_NONE = 0;
 
     private Pattern addressRewritePattern;
     private String addressRewriteReplacement;
@@ -102,7 +102,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     private int maxFrameSize = MAX_FRAME_SIZE_UNLIMITED;
     private long maxMessageSize = MAX_MESSAGE_SIZE_UNLIMITED;
     private int maxSessionFrames = MAX_SESSION_FRAMES_UNLIMITED;
-    private long minMessageSize = MIN_MESSAGE_SIZE_NONE;
+    private long minMaxMessageSize = MIN_MAX_MESSAGE_SIZE_NONE;
     private String name = null;
     private int reconnectAttempts = -1;
     private long reconnectMinDelay = DEFAULT_RECONNECT_MIN_DELAY;
@@ -138,6 +138,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         this.maxFrameSize = otherProperties.maxFrameSize;
         this.maxMessageSize = otherProperties.maxMessageSize;
         this.maxSessionFrames = otherProperties.maxSessionFrames;
+        this.minMaxMessageSize = otherProperties.minMaxMessageSize;
         this.name = otherProperties.name;
         this.reconnectAttempts = otherProperties.reconnectAttempts;
         this.reconnectMinDelay = otherProperties.reconnectMinDelay;
@@ -607,35 +608,35 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     /**
      * Gets the minimum size of AMQP 1.0 messages that this client requires a peer to accept.
      * <p>
-     * The default value of this property is {@value #MIN_MESSAGE_SIZE_NONE}.
+     * The default value of this property is {@value #MIN_MAX_MESSAGE_SIZE_NONE}.
      * <p>
      * The value of this property will be used by the client during sender link establishment.
      * Link establishment will fail, if the peer indicates a max-message-size in its <em>attach</em>
      * frame that is smaller than the configured minimum message size.
      *
-     * @return The message size in bytes or {@value #MIN_MESSAGE_SIZE_NONE}, indicating no minimum size at all.
+     * @return The message size in bytes or {@value #MIN_MAX_MESSAGE_SIZE_NONE}, indicating no minimum size at all.
      */
-    public final long getMinMessageSize() {
-        return minMessageSize;
+    public final long getMinMaxMessageSize() {
+        return minMaxMessageSize;
     }
 
     /**
      * Sets the minimum size of AMQP 1.0 messages that this client requires a peer to accept.
      * <p>
-     * The default value of this property is {@value #MIN_MESSAGE_SIZE_NONE}.
+     * The default value of this property is {@value #MIN_MAX_MESSAGE_SIZE_NONE}.
      * <p>
      * The value of this property will be used by the client during sender link establishment.
      * Link establishment will fail, if the peer indicates a max-message-size in its <em>attach</em>
      * frame that is smaller than the configured minimum message size.
      *
-     * @param size The message size in bytes or {@value #MIN_MESSAGE_SIZE_NONE}, indicating no minimum size at all.
+     * @param size The message size in bytes or {@value #MIN_MAX_MESSAGE_SIZE_NONE}, indicating no minimum size at all.
      * @throws IllegalArgumentException if size is &lt; 0.
      */
-    public final void setMinMessageSize(final long size) {
-        if (size < MIN_MESSAGE_SIZE_NONE) {
+    public final void setMinMaxMessageSize(final long size) {
+        if (size < MIN_MAX_MESSAGE_SIZE_NONE) {
             throw new IllegalArgumentException("min message size must be >= 0");
         }
-        this.minMessageSize = size;
+        this.minMaxMessageSize = size;
     }
 
 
@@ -656,11 +657,11 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * The default value of this property is {@value #MAX_MESSAGE_SIZE_UNLIMITED}.
      *
      * @param size The message size in bytes or {@value #MAX_MESSAGE_SIZE_UNLIMITED}, indicating messages of any size.
-     * @throws IllegalArgumentException if size is &lt; 0 and not {@value #MAX_MESSAGE_SIZE_UNLIMITED}.
+     * @throws IllegalArgumentException if size is &lt; {@value #MAX_MESSAGE_SIZE_UNLIMITED}.
      */
     public final void setMaxMessageSize(final long size) {
-        if (size != MAX_MESSAGE_SIZE_UNLIMITED && size < 0) {
-            throw new IllegalArgumentException("max-message-size must be >= 0");
+        if (size < MAX_MESSAGE_SIZE_UNLIMITED) {
+            throw new IllegalArgumentException("max-message-size must be >= -1");
         }
         this.maxMessageSize = size;
     }

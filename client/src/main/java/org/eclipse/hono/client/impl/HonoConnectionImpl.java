@@ -837,11 +837,11 @@ public class HonoConnectionImpl implements HonoConnection {
                         final long remoteMaxMessageSize = Optional.ofNullable(sender.getRemoteMaxMessageSize())
                                 .map(UnsignedLong::longValue)
                                 .orElse(0L);
-                        if (remoteMaxMessageSize < clientConfigProperties.getMinMessageSize()) {
+                        if (remoteMaxMessageSize < clientConfigProperties.getMinMaxMessageSize()) {
                             // peer won't accept our (biggest) messages
                             sender.close();
                             log.debug("peer does not support minimum message size [required: {}, supported: {}",
-                                    clientConfigProperties.getMinMessageSize(), remoteMaxMessageSize);
+                                    clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
                             senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
                                     "peer does not meet sender's minimum max-message-size requirement"));
                         } else if (sender.getCredit() <= 0) {
@@ -931,7 +931,9 @@ public class HonoConnectionImpl implements HonoConnection {
             checkConnected().compose(v -> {
                 final Promise<ProtonReceiver> receiverPromise = Promise.promise();
                 final ProtonReceiver receiver = session.createReceiver(sourceAddress);
-                receiver.setMaxMessageSize(new UnsignedLong(clientConfigProperties.getMaxMessageSize()));
+                if (clientConfigProperties.getMaxMessageSize() > ClientConfigProperties.MAX_MESSAGE_SIZE_UNLIMITED) {
+                    receiver.setMaxMessageSize(new UnsignedLong(clientConfigProperties.getMaxMessageSize()));
+                }
                 receiver.setAutoAccept(autoAccept);
                 receiver.setQoS(qos);
                 receiver.setPrefetch(preFetchSize);

@@ -981,7 +981,7 @@ public class HonoConnectionImplTest {
     public void testCreateSenderFailsForInsufficientMaxMessageSize(final VertxTestContext ctx) {
 
         // GIVEN a client that requires a minimum max-message-size of 2kb
-        props.setMinMessageSize(2048L);
+        props.setMinMaxMessageSize(2048L);
 
         // WHEN trying to open a sender link to a peer that has a max-message-size of 1kb
         final ProtonSender sender = mock(ProtonSender.class);
