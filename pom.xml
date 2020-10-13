@@ -218,6 +218,7 @@
     <module>services</module>
     <module>site</module>
     <module>tests</module>
+    <module>test-utils</module>
   </modules>
 
 

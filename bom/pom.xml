@@ -10,9 +10,7 @@
     http://www.eclipse.org/legal/epl-2.0
    
     SPDX-License-Identifier: EPL-2.0
- -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+ --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -25,7 +23,7 @@
   <packaging>pom</packaging>
 
   <name>Hono Dependencies</name>
-  <description>A &quot;bill-of-materials&quot; for Hono.</description>
+  <description>A "bill-of-materials" for Hono.</description>
 
   <properties>
     <artemis.image.name>quay.io/enmasse/artemis-base:2.10.1</artemis.image.name>
@@ -779,6 +777,12 @@
       </dependency>
 
       <!-- Testing -->
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>service-base-test-utils</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>de.flapdoodle.embed</groupId>
         <artifactId>de.flapdoodle.embed.mongo</artifactId>

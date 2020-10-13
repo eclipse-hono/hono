@@ -140,14 +140,8 @@ public class AbstractProtocolAdapterBaseTest {
         commandTargetMapper = mock(CommandTargetMapper.class);
 
         properties = new ProtocolAdapterProperties();
-        adapter = newProtocolAdapter(properties);
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
+        adapter = newProtocolAdapter(properties, ADAPTER_NAME);
+        setCollaborators(adapter);
 
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -158,6 +152,30 @@ public class AbstractProtocolAdapterBaseTest {
         });
         context = mock(Context.class);
         adapter.init(vertx, context);
+    }
+
+    private void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setCommandTargetMapper(commandTargetMapper);
+        adapter.setCredentialsClientFactory(credentialsClientFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setTenantClientFactory(tenantClientFactory);
+    }
+
+    private void givenAnAdapterConfiguredWithServiceClients(
+            final Handler<Void> startupHandler,
+            final Handler<Void> commandConnectionEstablishedHandler,
+            final Handler<Void> commandConnectionLostHandler) {
+
+        adapter = newProtocolAdapter(
+                properties,
+                ADAPTER_NAME,
+                startupHandler,
+                commandConnectionEstablishedHandler,
+                commandConnectionLostHandler);
+        setCollaborators(adapter);
     }
 
     /**
@@ -171,13 +189,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
+        setCollaborators(adapter);
 
         // WHEN starting the adapter
         adapter.startInternal().onComplete(ctx.failing(t -> ctx.verify(() -> {
@@ -255,22 +267,6 @@ public class AbstractProtocolAdapterBaseTest {
 
             ctx.completeNow();
         })));
-    }
-
-    private void givenAnAdapterConfiguredWithServiceClients(
-            final Handler<Void> startupHandler,
-            final Handler<Void> commandConnectionEstablishedHandler,
-            final Handler<Void> commandConnectionLostHandler) {
-
-        adapter = newProtocolAdapter(properties, "test", startupHandler,
-                commandConnectionEstablishedHandler, commandConnectionLostHandler);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
     }
 
     /**
@@ -721,12 +717,9 @@ public class AbstractProtocolAdapterBaseTest {
         }));
     }
 
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
-
-        return newProtocolAdapter(props, ADAPTER_NAME);
-    }
-
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props, final String typeName) {
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+            final ProtocolAdapterProperties props,
+            final String typeName) {
         return newProtocolAdapter(props, typeName, start -> {});
     }
 
