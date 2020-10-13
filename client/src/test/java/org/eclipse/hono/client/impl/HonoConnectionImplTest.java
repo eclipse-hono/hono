@@ -136,9 +136,44 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
             .onComplete(ctx.succeeding(con -> {
                 // THEN the session has been configured with an incoming window size
-                ctx.verify(() -> verify(session).setIncomingCapacity(10 * 16 * 1024));
+                ctx.verify(() -> {
+                    verify(session).setIncomingCapacity(10 * 16 * 1024);
+                    verify(session).open();
+                });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the client fails a connection attempt if no AMQP session can be established
+     * with the peer.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectFailsIfSessionCannotBeEstablished(final VertxTestContext ctx) {
+
+        // GIVEN a client attempting to connect to a peer that does not allow opening
+        // a session
+        final AtomicReference<Handler<AsyncResult<ProtonSession>>> sessionOpenHandler = new AtomicReference<>();
+        when(session.openHandler(any(Handler.class))).thenAnswer(invocation -> {
+            sessionOpenHandler.set(invocation.getArgument(0));
+            return session;
+        });
+
+        final Future<HonoConnection> result = honoConnection.connect();
+        ctx.verify(() -> {
+            verify(session).open();
+            // WHEN the peer closes the session
+            sessionOpenHandler.get().handle(Future.failedFuture("malfunction"));
+
+            // THEN the connection attempt fails
+            assertThat(result.failed());
+            // and the connection has been closed again
+            verify(con).close();
+        });
+        ctx.completeNow();
     }
 
     /**
@@ -330,6 +365,45 @@ public class HonoConnectionImplTest {
             });
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that the client tries to reconnect to the peer if the peer
+     * closes the connection's session.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testRemoteSessionCloseTriggersReconnection(final VertxTestContext ctx) {
+
+        // GIVEN a client that is connected to a server
+        final Promise<HonoConnection> connected = Promise.promise();
+        final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
+        props.setServerRole("service-provider");
+        honoConnection.addDisconnectListener(disconnectListener);
+        honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
+            .onComplete(connected);
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
+
+        connected.future().onComplete(ctx.succeeding(c -> {
+
+            ctx.verify(() -> {
+                // WHEN the peer closes the session
+                final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(session).closeHandler(sessionCloseHandler.capture());
+                sessionCloseHandler.getValue().handle(Future.succeededFuture(session));
+                // THEN the client invokes the registered disconnect handler
+                verify(disconnectListener).onDisconnect(honoConnection);
+                // and the original connection has been closed locally
+                verify(con).close();
+                verify(con).disconnectHandler(null);
+                // and the connection is re-established
+                assertThat(connectionFactory.await()).isTrue();
+            });
+            ctx.completeNow();
+        }));
+
     }
 
     /**

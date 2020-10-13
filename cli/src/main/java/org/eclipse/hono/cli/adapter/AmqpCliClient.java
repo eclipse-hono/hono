@@ -93,6 +93,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
 
         options.setConnectTimeout(properties.getConnectTimeout());
         options.setHeartbeat(properties.getHeartbeatInterval());
+        options.setMaxFrameSize(properties.getMaxFrameSize());
         Optional.ofNullable(properties.getAmqpHostname()).ifPresent(s -> options.setVirtualHost(s));
 
         addTlsTrustOptions(options, properties);

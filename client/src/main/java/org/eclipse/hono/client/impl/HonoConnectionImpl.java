@@ -122,6 +122,7 @@ public class HonoConnectionImpl implements HonoConnection {
     private List<Symbol> offeredCapabilities = Collections.emptyList();
     private Tracer tracer = NoopTracerFactory.create();
     private ProtonSession session;
+    private Handler<AsyncResult<ProtonConnection>> connectionCloseHandler;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -410,12 +411,13 @@ public class HonoConnectionImpl implements HonoConnection {
                         connectionFactory.getServerRole());
 
                 clientOptions = options;
+                connectionCloseHandler = remoteClose -> onRemoteClose(remoteClose, disconnectHandler);
                 connectionFactory.connect(
                         clientOptions,
                         null,
                         null,
                         containerId,
-                        remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
+                        connectionCloseHandler,
                         failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
@@ -447,6 +449,9 @@ public class HonoConnectionImpl implements HonoConnection {
                                             wrappedConnectionHandler.handle(Future.succeededFuture(this));
                                         })
                                         .onFailure(t -> {
+                                            newConnection.closeHandler(null);
+                                            newConnection.disconnectHandler(null);
+                                            newConnection.close();
                                             wrappedConnectionHandler.handle(Future.failedFuture(t));
                                         });
                                 }
@@ -464,7 +469,7 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<ProtonConnection> connectionLossHandler) {
 
         if (remoteClose.failed()) {
-            log.info("remote server [{}:{}, role: {}] closed connection with error condition: {}",
+            log.info("remote server [{}:{}, role: {}] closed connection: {}",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole(),
@@ -522,6 +527,7 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected void clearState() {
 
+        connectionCloseHandler = null;
         setConnection(null, null);
 
         notifyDisconnectHandlers();
@@ -749,20 +755,14 @@ public class HonoConnectionImpl implements HonoConnection {
                 }
             });
             session.closeHandler(remoteClose -> {
-                final ErrorCondition error = session.getRemoteCondition();
-                if (error == null) {
-                    log.debug("server [{}:{}, role: {}] closed session",
-                            connectionFactory.getHost(),
-                            connectionFactory.getPort(),
-                            connectionFactory.getServerRole());
-                } else {
-                    log.debug("server [{}:{}, role: {}] closed session with error [condition: {}, description: {}]",
-                            connectionFactory.getHost(),
-                            connectionFactory.getPort(),
-                            connectionFactory.getServerRole(),
-                            error.getCondition(),
-                            error.getDescription());
-                }
+                final StringBuilder msgBuilder = new StringBuilder("the connection's session closed unexpectedly");
+                Optional.ofNullable(session.getRemoteCondition())
+                    .ifPresent(error -> {
+                        msgBuilder.append(String.format(" [condition: %s, description: %s]",
+                                error.getCondition(), error.getDescription()));
+                    });
+                Optional.ofNullable(connectionCloseHandler)
+                    .ifPresent(ch -> ch.handle(Future.failedFuture(msgBuilder.toString())));
             });
             session.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
             session.open();
@@ -837,13 +837,14 @@ public class HonoConnectionImpl implements HonoConnection {
                         final long remoteMaxMessageSize = Optional.ofNullable(sender.getRemoteMaxMessageSize())
                                 .map(UnsignedLong::longValue)
                                 .orElse(0L);
-                        if (remoteMaxMessageSize < clientConfigProperties.getMinMaxMessageSize()) {
+                        if (remoteMaxMessageSize > 0 && remoteMaxMessageSize < clientConfigProperties.getMinMaxMessageSize()) {
                             // peer won't accept our (biggest) messages
                             sender.close();
-                            log.debug("peer does not support minimum message size [required: {}, supported: {}",
+                            final String msg = String.format(
+                                    "peer does not support minimum max-message-size [required: {}, supported: {}",
                                     clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
-                            senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
-                                    "peer does not meet sender's minimum max-message-size requirement"));
+                            log.debug(msg);
+                            senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED, msg));
                         } else if (sender.getCredit() <= 0) {
                             // wait on credits a little time, if not already given
                             final long waitOnCreditsTimerId = vertx.setTimer(clientConfigProperties.getFlowLatency(),
