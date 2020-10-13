@@ -32,6 +32,9 @@ title = "Release Notes"
   for details. 
 * Command messages that have their payload in an AMQP body section whose type isn't supported in Hono
   now get rejected, instead of getting forwarded to the device with an empty payload.
+* The authentication providers in Hono use `CredentialsObject.getCandidateSecrets` to retrieve valid secrets.
+  The secrets are currently filtered based on their validity period regardless of whether the status is enabled
+  or not. This has been fixed now, so that the disabled secrets are filtered out.
 
 ### API Changes
 
