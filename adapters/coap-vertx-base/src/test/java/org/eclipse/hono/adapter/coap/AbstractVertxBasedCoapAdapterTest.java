@@ -28,8 +28,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -108,6 +108,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
     private Span span;
+    private CoapServer server;
 
     /**
      * Sets up common fixture.
@@ -176,12 +177,12 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testStartInvokesOnStartupSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final CoapServer server = getCoapServer(false);
+        server = getCoapServer(false);
         final Checkpoint startupDone = ctx.checkpoint();
         final Checkpoint onStartupSuccess = ctx.checkpoint();
 
         // WHEN starting the adapter
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(
+        adapter = getAdapter(
                 server,
                 true,
                 // THEN the onStartupSuccess method has been invoked
@@ -201,12 +202,10 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testStartRegistersResources(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final CoapServer server = getCoapServer(false);
+        givenAnAdapter(properties);
         // and a set of resources
         final Resource resource = mock(Resource.class);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
-        adapter.setResources(Collections.singleton(resource));
+        adapter.setResources(Set.of(resource));
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -234,7 +233,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter
         final Context context = vertx.getOrCreateContext();
-        final CoapServer server = getCoapServer(false);
+        givenAnAdapter(properties);
         // with a resource
         final Promise<Void> resourceInvocation = Promise.promise();
         final Resource resource = new CoapResource("test") {
@@ -246,11 +245,10 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
             }
         };
 
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
-        adapter.setResources(Collections.singleton(resource));
+        adapter.setResources(Set.of(resource));
+        adapter.init(vertx, context);
 
         final Promise<Void> startupTracker = Promise.promise();
-        adapter.init(vertx, context);
         adapter.start(startupTracker);
 
         startupTracker.future()
@@ -277,10 +275,10 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testStartUpFailsIfCredentialsClientFactoryIsNotSet(final VertxTestContext ctx) {
 
         // GIVEN an adapter that has not all required service clients set
-        final CoapServer server = getCoapServer(false);
+        server = getCoapServer(false);
         @SuppressWarnings("unchecked")
         final Handler<Void> successHandler = mock(Handler.class);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, false, successHandler);
+        adapter = getAdapter(server, false, successHandler);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -305,8 +303,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
-        final CoapServer server = getCoapServer(true);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true,
+        server = getCoapServer(true);
+        adapter = getAdapter(server, true,
                 s -> ctx.failNow(new AssertionError("should not have invoked onStartupSuccess")));
 
         // WHEN starting the adapter
@@ -544,7 +542,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSender(outcome);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
 
         // WHEN a device publishes an event
@@ -584,7 +582,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSender(outcome);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
 
         // WHEN a device publishes an event that is not accepted by the peer
@@ -848,7 +846,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSender(outcome);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
 
         // WHEN the message limit exceeds
@@ -932,13 +930,24 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
-     * {@inheritDoc}
+     * Creates a new adapter instance to be tested.
+     * <p>
+     * This method
+     * <ol>
+     * <li>creates a new {@code CoapServer} using {@link #getCoapServer(boolean)}</li>
+     * <li>assigns the result to property <em>server</em></li>
+     * <li>passes the server in to {@link #getAdapter(CoapServer, boolean, Handler)}</li>
+     * <li>assigns the result to property <em>adapter</em></li>
+     * </ol>
+     *
+     * @param configuration The configuration properties to use.
+     * @return The adapter instance.
      */
-    @Override
-    protected AbstractVertxBasedCoapAdapter<CoapAdapterProperties> newAdapter(final CoapAdapterProperties configuration) {
+    private AbstractVertxBasedCoapAdapter<CoapAdapterProperties> givenAnAdapter(final CoapAdapterProperties configuration) {
 
-        final CoapServer server = getCoapServer(false);
-        return getAdapter(server, true, null);
+        this.server = getCoapServer(false);
+        this.adapter = getAdapter(server, true, null);
+        return adapter;
     }
 
 

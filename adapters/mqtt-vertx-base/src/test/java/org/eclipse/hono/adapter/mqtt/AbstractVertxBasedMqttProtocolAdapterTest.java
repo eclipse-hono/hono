@@ -40,19 +40,10 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -60,6 +51,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -67,7 +59,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -105,27 +96,21 @@ import io.vertx.proton.ProtonDelivery;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class AbstractVertxBasedMqttProtocolAdapterTest {
+public class AbstractVertxBasedMqttProtocolAdapterTest extends
+    ProtocolAdapterTestSupport<MqttProtocolAdapterProperties, AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties>> {
 
     private static final String ADAPTER_TYPE = "mqtt";
 
     private static Vertx vertx;
 
-    private TenantClientFactory tenantClientFactory;
-    private CredentialsClientFactory credentialsClientFactory;
-    private DownstreamSenderFactory downstreamSenderFactory;
-    private RegistrationClientFactory registrationClientFactory;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
     private AuthHandler<MqttConnectContext> authHandler;
     private ResourceLimitChecks resourceLimitChecks;
-    private MqttProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
-    private CommandTargetMapper commandTargetMapper;
     private Context context;
     private Span span;
+    private MqttServer server;
 
     /**
      * Initializes vert.x.
@@ -153,58 +138,25 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final SpanContext spanContext = mock(SpanContext.class);
         when(span.context()).thenReturn(spanContext);
 
-        config = new MqttProtocolAdapterProperties();
-        config.setInsecurePortEnabled(true);
-        config.setMaxConnections(Integer.MAX_VALUE);
-
         metrics = mock(MqttAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject();
         when(regClient.assertRegistration(anyString(), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.succeededFuture(result));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
+                .thenReturn(Future.succeededFuture(regClient));
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
-
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.isConnected())
-                .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.isConnected())
-                .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.isConnected())
-                .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
                 .thenReturn(Future.succeededFuture(mock(DownstreamSender.class)));
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
                 .thenReturn(Future.succeededFuture(mock(DownstreamSender.class)));
-
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.isConnected()).thenReturn(
-                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
-                .thenReturn(Future.succeededFuture(regClient));
-
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(commandConsumerFactory.isConnected()).thenReturn(
-                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        commandTargetMapper = mock(CommandTargetMapper.class);
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -225,6 +177,18 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public static void shutDown(final VertxTestContext ctx) {
         vertx.close(ctx.completing());
         vertx = null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected MqttProtocolAdapterProperties givenDefaultConfigurationProperties() {
+        properties = new MqttProtocolAdapterProperties();
+        properties.setInsecurePortEnabled(true);
+        properties.setMaxConnections(Integer.MAX_VALUE);
+
+        return properties;
     }
 
     private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint, final Span span) {
@@ -250,8 +214,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Test
     public void testStartup(final VertxTestContext ctx) {
 
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        server = getMqttServer(false);
+        adapter = getAdapter(server);
 
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
@@ -275,8 +239,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // GIVEN an adapter that is not connected to
         // all of its required services
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnAdapter(properties);
+        forceClientMocksToDisconnected();
 
         // WHEN a client tries to connect
         final MqttEndpoint endpoint = mockEndpoint();
@@ -294,10 +258,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testEndpointHandlerAcceptsUnauthenticatedDevices() {
 
         // GIVEN an adapter that does not require devices to authenticate
-        config.setAuthenticationRequired(false);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
 
         // WHEN a device connects without providing credentials
         final MqttEndpoint endpoint = mockEndpoint();
@@ -316,15 +278,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testEndpointHandlerRejectsDeviceOfDisabledTenant() {
 
         // GIVEN an adapter
-        final MqttServer server = getMqttServer(false);
+        givenAnAdapter(properties);
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser("my-tenant", "4711")));
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
 
         // WHEN a device of "my-tenant" tries to connect
         final MqttEndpoint endpoint = mockEndpoint();
@@ -343,11 +303,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testEndpointHandlerRejectsUnauthenticatedDevices() {
 
         // GIVEN an adapter that does require devices to authenticate
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnAdapter(properties);
         when(authHandler.authenticateDevice(any(MqttConnectContext.class))).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED)));
-        forceClientMocksToConnected();
 
         // WHEN a device connects without providing proper credentials
         final MqttEndpoint endpoint = mockEndpoint();
@@ -367,10 +325,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testEndpointHandlerTriesToAuthenticateDevice() {
 
         // GIVEN an adapter requiring devices to authenticate endpoint
-        final MqttServer server = getMqttServer(false);
-        config.setAuthenticationRequired(true);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
+        properties.setAuthenticationRequired(true);
+        givenAnAdapter(properties);
 
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttConnectContext.class))).thenReturn(
@@ -390,17 +346,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Test
     public void testEndpointHandlerRejectsConnectionsExceedingAdapterLimit(final VertxTestContext ctx) {
 
-        // GIVEN an adapter
-        final MqttServer server = getMqttServer(false);
-        // with a connection limit of 1
-        config.setMaxConnections(1);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        // GIVEN an adapter with a connection limit of 1
+        properties.setMaxConnections(1);
+        givenAnAdapter(properties);
 
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
         startupTracker.future().onComplete(ctx.succeeding(s -> {
 
-            forceClientMocksToConnected();
             // which already has 1 connection open
             when(metrics.getNumberOfConnections()).thenReturn(1);
 
@@ -428,9 +381,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testAuthenticatedMqttAdapterCreatesMessageHandlersForAuthenticatedDevices() {
 
         // GIVEN an adapter
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
+        givenAnAdapter(properties);
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "4711")));
 
@@ -454,9 +405,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testAuthenticatedMqttAdapterRejectsConnectionForNonExistingDevice() {
 
         // GIVEN an adapter
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
+        givenAnAdapter(properties);
         // which is connected to a Credentials service that has credentials on record for device 9999
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "9999")));
@@ -487,11 +436,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUnauthenticatedMqttAdapterCreatesMessageHandlersForAllDevices() {
 
         // GIVEN an adapter that does not require devices to authenticate
-        config.setAuthenticationRequired(false);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-
-        forceClientMocksToConnected();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
 
         // WHEN a device connects that does not provide any credentials
         final MqttEndpoint endpoint = mockEndpoint();
@@ -511,8 +457,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testHandlePublishedMessageFailsForMalformedTopic() {
 
         // GIVEN an adapter
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a message with a malformed topic
         final MqttEndpoint endpoint = mockEndpoint();
@@ -544,11 +489,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForEmptyTopic() {
 
         // GIVEN an adapter
-        config.setAuthenticationRequired(false);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
-        final DownstreamSender sender = givenAQoS0TelemetrySender();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -587,11 +530,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForMissingTopic() {
 
         // GIVEN an adapter
-        config.setAuthenticationRequired(false);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
-        final DownstreamSender sender = givenAQoS0TelemetrySender();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -630,16 +571,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForUnknownDevice() {
 
         // GIVEN an adapter
-        config.setAuthenticationRequired(false);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
-        givenAQoS0TelemetrySender();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // WHEN an unknown device publishes a telemetry message
         when(regClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
-        final DownstreamSender sender = givenAQoS0TelemetrySender();
 
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -677,15 +615,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForDisabledTenant() {
 
         // GIVEN an adapter
-        config.setAuthenticationRequired(false);
-        final MqttServer server = getMqttServer(false);
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
-        final DownstreamSender sender = givenAQoS1TelemetrySender(Promise.promise());
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // WHEN a device of "my-tenant" publishes a telemetry message
         final MqttEndpoint endpoint = mockEndpoint();
@@ -726,7 +662,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenAnEventSenderForOutcome(outcome);
+        givenAnEventSenderForAnyTenant(outcome);
         testUploadQoS1MessageSendsPubAckOnSuccess(
                 outcome,
                 EndpointType.EVENT,
@@ -747,7 +683,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream telemetry consumer
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenAQoS1TelemetrySender(outcome);
+        givenATelemetrySenderForAnyTenant(outcome);
 
         testUploadQoS1MessageSendsPubAckOnSuccess(
                 outcome,
@@ -768,15 +704,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadEmptyCommandResponseSucceeds(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a command response consumer
-        final CommandResponseSender sender = mock(CommandResponseSender.class);
-        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any()))
-                .thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
-                .thenReturn(Future.succeededFuture(sender));
+        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant();
 
         // WHEN forwarding a command response that has been published
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -811,8 +742,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             final EndpointType type,
             final BiConsumer<AbstractVertxBasedMqttProtocolAdapter<?>, MqttContext> upload) {
 
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a message using QoS 1
         final MqttEndpoint endpoint = mockEndpoint();
@@ -862,9 +792,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenAnEventSenderForOutcome(outcome);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
@@ -908,11 +837,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageIncludesRetainAnnotation(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a downstream telemetry consumer
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete(mock(ProtonDelivery.class));
-        final DownstreamSender sender = givenAQoS1TelemetrySender(outcome);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a message with its retain flag set
         final MqttEndpoint endpoint = mockEndpoint();
@@ -972,11 +898,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private void testOnSubscribeRegistersAndClosesConnection(final MqttQoS qos) {
 
         // GIVEN a device connected to an adapter
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete(mock(ProtonDelivery.class));
-        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
+        givenAnAdapter(properties);
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
@@ -991,7 +914,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final CommandSubscriptionsManager<MqttProtocolAdapterProperties> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, config);
+        final CommandSubscriptionsManager<MqttProtocolAdapterProperties> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, properties);
         endpoint.closeHandler(
                 handler -> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdSubscriptionsManager, OptionalInt.empty()));
         adapter.onSubscribe(endpoint, null, msg, cmdSubscriptionsManager, OptionalInt.empty());
@@ -1019,11 +942,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testOnSubscribeIncludesStatusCodeForEachFilter() {
 
         // GIVEN a device connected to an adapter
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete(mock(ProtonDelivery.class));
-        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
+        givenAnAdapter(properties);
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(true);
 
@@ -1045,7 +965,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        adapter.onSubscribe(endpoint, null, msg, new CommandSubscriptionsManager<>(vertx, config), OptionalInt.empty());
+        adapter.onSubscribe(endpoint, null, msg, new CommandSubscriptionsManager<>(vertx, properties), OptionalInt.empty());
 
         // THEN the adapter sends a SUBACK packet to the device
         // which contains a failure status code for each unsupported filter
@@ -1082,12 +1002,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadMessageSupportsShortAndLongEndpointNames(final VertxTestContext ctx) {
 
         // GIVEN an adapter with downstream telemetry & event consumers
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete(mock(ProtonDelivery.class));
-        givenAQoS1TelemetrySender(outcome);
-        givenAnEventSenderForOutcome(outcome);
+        givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         // WHEN a device publishes events and telemetry messages
         final MqttEndpoint endpoint = mockEndpoint();
@@ -1147,10 +1064,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Test
     public void testConnectionMetrics() {
 
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
-        forceClientMocksToConnected();
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
 
@@ -1174,12 +1089,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Test
     public void testUnauthenticatedConnectionMetrics() {
 
-        config.setAuthenticationRequired(false);
-
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-
-        forceClientMocksToConnected();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
 
         final MqttEndpoint endpoint = mockEndpoint();
         adapter.handleEndpointConnection(endpoint);
@@ -1203,10 +1114,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testConnectionsLimitExceeded() {
 
         // GIVEN an adapter requiring devices to authenticate endpoint
-        final MqttServer server = getMqttServer(false);
-        config.setAuthenticationRequired(true);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
+        properties.setAuthenticationRequired(true);
+        givenAnAdapter(properties);
 
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
@@ -1232,10 +1141,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testConnectionDurationLimitExceeded() {
 
         // GIVEN an adapter requiring devices to authenticate endpoint
-        final MqttServer server = getMqttServer(false);
-        config.setAuthenticationRequired(true);
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
-        forceClientMocksToConnected();
+        properties.setAuthenticationRequired(true);
+        givenAnAdapter(properties);
 
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
@@ -1263,15 +1170,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testMessageLimitExceededForATelemetryMessage(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
-                getMqttServer(false));
-        forceClientMocksToConnected();
-
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
-                .thenReturn(Future.succeededFuture(sender));
 
         // WHEN a device of "my-tenant" publishes a telemetry message
         final MqttEndpoint client = mockEndpoint();
@@ -1314,15 +1216,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testMessageLimitExceededForAnEventMessage(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
-                getMqttServer(false));
-        forceClientMocksToConnected();
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
 
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
-                .thenReturn(Future.succeededFuture(sender));
 
         // WHEN a device of "my-tenant" publishes an event message
         final MqttEndpoint client = mockEndpoint();
@@ -1365,9 +1263,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testMessageLimitExceededForACommandResponseMessage(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
-                getMqttServer(false));
-        forceClientMocksToConnected();
+        givenAnAdapter(properties);
+        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant();
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -1389,7 +1286,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                         // THEN the request fails with a 429 error
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
-
+                        // AND the response is not being forwarded
+                        verify(sender, never()).sendCommandResponse(any(CommandResponse.class), (SpanContext) any());
                         // AND has reported the message as unprocessable
                         verify(metrics).reportCommand(
                                 eq(MetricsTags.Direction.RESPONSE),
@@ -1412,13 +1310,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Test
     public void verifyEventMessageUsesTtlValueGivenInPropertyBag(final VertxTestContext ctx) {
         // Given an adapter
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
-                getMqttServer(false));
-        forceClientMocksToConnected();
-
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete(mock(ProtonDelivery.class));
-        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
 
         // WHEN a "device" of "tenant" publishes an event message with a TTL value of 30 seconds.
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -1453,12 +1346,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .setResourceLimits(new ResourceLimits().setMaxTtl(10L));
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         // Given an adapter
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
-                getMqttServer(false));
-        forceClientMocksToConnected();
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete(mock(ProtonDelivery.class));
-        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
 
         // WHEN a device publishes an event message with a TTL value of 30 seconds.
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -1489,15 +1378,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         return CommandConstants.COMMAND_ENDPOINT;
     }
 
-    private void forceClientMocksToConnected() {
-        when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        when(downstreamSenderFactory.isConnected()).thenReturn(Future.succeededFuture());
-        when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        when(credentialsClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
-        when(deviceConnectionClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-    }
-
     @SuppressWarnings("unchecked")
     private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
         final MqttEndpoint endpoint = mockEndpoint();
@@ -1510,6 +1390,28 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     private MqttEndpoint getMqttEndpointAuthenticated() {
         return getMqttEndpointAuthenticated("sensor1@DEFAULT_TENANT", "test");
+    }
+
+    /**
+     * Creates a new adapter instance to be tested.
+     * <p>
+     * This method
+     * <ol>
+     * <li>creates a new {@code MqttServer} using {@link #getMqttServer(boolean)}</li>
+     * <li>assigns the result to property <em>server</em></li>
+     * <li>passes the server in to {@link #getAdapter(MqttServer)}</li>
+     * <li>assigns the result to property <em>adapter</em></li>
+     * </ol>
+     *
+     * @param configuration The configuration properties to use.
+     * @return The adapter instance.
+     */
+    private AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> givenAnAdapter(
+            final MqttProtocolAdapterProperties configuration) {
+
+        this.server = getMqttServer(false);
+        this.adapter = getAdapter(this.server);
+        return adapter;
     }
 
     @SuppressWarnings("unchecked")
@@ -1546,17 +1448,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 return uploadTelemetryMessage(ctx, topic.getTenantId(), topic.getResourceId(), ctx.message().payload());
             }
         };
-        adapter.setConfig(config);
+        adapter.setConfig(properties);
         adapter.setMetrics(metrics);
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        setCollaborators(adapter);
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);
@@ -1564,42 +1460,5 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         }
 
         return adapter;
-    }
-
-    private DownstreamSender givenAnEventSenderForOutcome(final Promise<ProtonDelivery> outcome) {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.getEndpoint()).thenReturn(EventConstants.EVENT_ENDPOINT);
-        when(sender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private DownstreamSender givenAQoS0TelemetrySender() {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
-        when(sender.send(any(Message.class), (SpanContext) any()))
-                .thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any()))
-                .thenThrow(new UnsupportedOperationException());
-
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
-                .thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private DownstreamSender givenAQoS1TelemetrySender(final Promise<ProtonDelivery> outcome) {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
-        when(sender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
-                .thenReturn(Future.succeededFuture(sender));
-        return sender;
     }
 }
