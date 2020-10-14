@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.message.Message;
@@ -60,6 +61,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -748,9 +750,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 span.log(items);
                 log.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
-                final Future<Void> removalDone = cmdSubscriptionsManager.removeSubscription(topic,
-                        (tenant, device) -> sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, endpoint, span),
-                        span.context());
+                final Future<Void> removalDone = cmdSubscriptionsManager.removeSubscription(topic, span)
+                        .compose(getOnSubscriptionRemovedFunction(authenticatedDevice, endpoint, span));
                 removalDoneFutures.add(removalDone);
             }
         });
@@ -758,6 +759,31 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
         }
         CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
+    }
+
+    private Function<Pair<CommandSubscription, ProtocolAdapterCommandConsumer>, Future<Void>> getOnSubscriptionRemovedFunction(
+            final Device authenticatedDevice,
+            final MqttEndpoint endpoint,
+            final Span span) {
+
+        return subscriptionConsumerPair -> {
+            final CommandSubscription subscription = subscriptionConsumerPair.one();
+            final ProtocolAdapterCommandConsumer commandConsumer = subscriptionConsumerPair.two();
+            return commandConsumer.close(span.context())
+                    .recover(thr -> {
+                        TracingHelper.logError(span, thr);
+                        // ignore all but precon-failed errors
+                        if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
+                            log.debug("command consumer wasn't active anymore - skip sending disconnected event [tenant: {}, device-id: {}]",
+                                    subscription.getTenant(), subscription.getDeviceId());
+                            span.log("command consumer wasn't active anymore - skip sending disconnected event");
+                            return Future.failedFuture(thr);
+                        }
+                        return Future.succeededFuture();
+                    })
+                    .compose(v -> sendDisconnectedTtdEvent(subscription.getTenant(), subscription.getDeviceId(),
+                            authenticatedDevice, endpoint, span));
+        };
     }
 
     private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
@@ -1261,8 +1287,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Span span = newSpan("CLOSE", endpoint, authenticatedDevice, traceSamplingPriority);
         onClose(endpoint);
         final CompositeFuture removalDoneFuture = cmdSubscriptionsManager.removeAllSubscriptions(
-                (tenant, device) -> sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, endpoint, span),
-                span.context());
+                getOnSubscriptionRemovedFunction(authenticatedDevice, endpoint, span), span);
         sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (authenticatedDevice == null) {
             log.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());

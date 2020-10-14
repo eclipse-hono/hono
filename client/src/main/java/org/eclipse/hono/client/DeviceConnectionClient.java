@@ -98,6 +98,10 @@ public interface DeviceConnectionClient extends RequestResponseClient {
      * @return A future indicating the outcome of the operation, with its value indicating whether the protocol
      *         adapter instance value was removed or not.
      *         <p>
+     *         NOTE: this method maps an outcome with status 404 or 412 as defined in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device Connection API
+     *         specification</a> to a succeeded future with value {@code false} here.
+     *         <p>
      *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if there
      *         was an error removing the value.
      * @throws NullPointerException if device id or adapter instance id is {@code null}.

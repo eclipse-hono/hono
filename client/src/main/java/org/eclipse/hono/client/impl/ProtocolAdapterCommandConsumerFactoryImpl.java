@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
@@ -165,18 +167,23 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
             getOrCreateMappingAndDelegatingCommandConsumer(tenantId)
                     .compose(res -> {
                         // register the command handler
+                        final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(tenantId,
+                                deviceId, gatewayId, commandHandler);
                         final CommandHandlerWrapper replacedHandler = adapterInstanceCommandHandler
-                                .putDeviceSpecificCommandHandler(tenantId, deviceId, gatewayId, commandHandler);
+                                .putDeviceSpecificCommandHandler(commandHandlerWrapper);
                         if (replacedHandler != null) {
                             // TODO find a way to provide a notification here so that potential resources associated with the replaced consumer can be freed (maybe add a commandHandlerOverwritten Handler param to createCommandConsumer())
                         }
                         // associate handler with this adapter instance
-                        return setCommandHandlingAdapterInstance(tenantId, deviceId, sanitizedLifespan, context);
-                    })
-                    .map(res -> {
-                        final Function<SpanContext, Future<Void>> onCloseAction = onCloseSpanContext -> removeCommandConsumer(tenantId, deviceId,
-                                onCloseSpanContext);
-                        return (ProtocolAdapterCommandConsumer) new ProtocolAdapterCommandConsumerImpl(onCloseAction);
+                        final Instant lifespanStart = Instant.now();
+                        return setCommandHandlingAdapterInstance(tenantId, deviceId, sanitizedLifespan, context)
+                                .map(v -> {
+                                    final Function<SpanContext, Future<Void>> onCloseAction = onCloseSpanContext -> {
+                                        return removeCommandConsumer(commandHandlerWrapper, sanitizedLifespan,
+                                                lifespanStart, onCloseSpanContext);
+                                    };
+                                    return (ProtocolAdapterCommandConsumer) new ProtocolAdapterCommandConsumerImpl(onCloseAction);
+                                });
                     })
                     .onComplete(result);
         });
@@ -195,11 +202,28 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                 });
     }
 
-    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId,
-            final SpanContext onCloseSpanContext) {
-        log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
-        adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(tenantId, deviceId);
+    private Future<Void> removeCommandConsumer(final CommandHandlerWrapper commandHandlerWrapper, final Duration lifespan,
+            final Instant lifespanStart, final SpanContext onCloseSpanContext) {
 
+        final String tenantId = commandHandlerWrapper.getTenantId();
+        final String deviceId = commandHandlerWrapper.getDeviceId();
+
+        log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+        if (!adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(commandHandlerWrapper)) {
+            // This case happens when trying to remove a command consumer which has been overwritten since its creation
+            // via a 2nd invocation of 'createCommandConsumer' with the same device/tenant id. Since the 2nd 'createCommandConsumer'
+            // invocation has registered a different 'commandHandlerWrapper' instance (and possibly already removed it),
+            // trying to remove the original object will return false here.
+            // On a more abstract level, this case happens when 2 consecutive command subscription requests from the
+            // same device (with no intermittent disconnect/unsubscribe - possibly because of a broken connection in between) have
+            // reached the *same* adapter instance and verticle, using this CommandConsumerFactory. Invoking 'removeCommandConsumer'
+            // on the 1st (obsolete and overwritten) command subscription shall have no impact. Throwing an explicit exception
+            // here will enable the protocol adapter to detect this case and skip an (incorrect) "disconnectedTtd" event message.
+            log.debug("command consumer not removed - handler already replaced or removed [tenant: {}, device: {}]",
+                    tenantId, deviceId);
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
+                    "local command handler already replaced or removed"));
+        }
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId,
                         onCloseSpanContext))
@@ -208,7 +232,23 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                             deviceId, thr);
                     return Future.failedFuture(thr);
                 })
-                .mapEmpty();
+                .compose(removed -> {
+                    final boolean entryNotExpired = lifespan.isNegative() || Instant.now().isBefore(lifespanStart.plus(lifespan));
+                    if (!removed && entryNotExpired) {
+                        // entry wasn't actually removed and entry hasn't expired (yet);
+                        // This case happens when 2 consecutive command subscription requests from the same device
+                        // (with no intermittent disconnect/unsubscribe - possibly because of a broken connection in between)
+                        // have reached *different* protocol adapter instances/verticles. Now calling 'removeCommandHandlingAdapterInstance'
+                        // on the 1st subscription fails because of the non-matching adapterInstanceId parameter.
+                        // Throwing an explicit exception here will enable the protocol adapter to detect this case
+                        // and skip sending an (incorrect) "disconnectedTtd" event message.
+                        log.debug("command handling adapter instance not removed - not matched or already removed [tenant: {}, device: {}]",
+                                tenantId, deviceId);
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
+                                "no matching command consumer mapping found to be removed"));
+                    }
+                    return Future.succeededFuture((Void) null);
+                });
     }
 
     private Future<MessageConsumer> getOrCreateMappingAndDelegatingCommandConsumer(final String tenantId) {

@@ -920,6 +920,54 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     }
 
     /**
+     * Verifies that the adapter doesn't send a 'disconnectedTtdEvent' on connection loss
+     * when removal of the command consumer mapping entry fails (which would be the case
+     * when another command consumer mapping had been registered in the mean time, meaning
+     * the device has already reconnected).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails() {
+
+        // GIVEN a device connected to an adapter
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
+        givenAnAdapter(properties);
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
+
+        // WHEN a device subscribes to commands
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
+        final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
+                newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), MqttQoS.AT_MOST_ONCE));
+        final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
+        when(msg.messageId()).thenReturn(15);
+        when(msg.topicSubscriptions()).thenReturn(subscriptions);
+
+        final CommandSubscriptionsManager<MqttProtocolAdapterProperties> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, properties);
+        endpoint.closeHandler(
+                handler -> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdSubscriptionsManager, OptionalInt.empty()));
+        adapter.onSubscribe(endpoint, null, msg, cmdSubscriptionsManager, OptionalInt.empty());
+
+        // THEN the adapter creates a command consumer that is checked periodically
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any());
+        // and the adapter registers a hook on the connection to the device
+        final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHookCaptor.capture());
+        // which closes the command consumer when the device disconnects
+        closeHookCaptor.getValue().handle(null);
+        verify(commandConsumer).close(any());
+        // and since closing the command consumer fails with a precon-failed exception
+        // there is only one notification sent during consumer creation, no 'disconnectedTtdEvent' event with TTD = 0
+        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender, times(1)).sendAndWaitForOutcome(msgCaptor.capture(), any());
+        assertThat(msgCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue())).isEqualTo(-1);
+    }
+
+    /**
      * Verifies that the adapter includes a status code for each topic filter in its SUBACK packet.
      */
     @SuppressWarnings("unchecked")

@@ -718,6 +718,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             // downstream message sent and (if ttd was set) command was received or ttd has timed out
             final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
                     ? commandConsumerTracker.result().close(currentSpan.context())
+                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
                     : Future.succeededFuture();
 
             if (ctx.response().closed()) {
@@ -788,6 +789,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final boolean responseClosedPrematurely = ctx.response().closed();
             final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
                     ? commandConsumerTracker.result().close(currentSpan.context())
+                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
                     : Future.succeededFuture();
             final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
             if (commandContext != null) {
@@ -878,6 +880,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 cancelCommandReceptionTimer(ctx);
                 // close command consumer
                 messageConsumer.close(currentSpan.context())
+                        .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
                         .onComplete(r -> {
                             currentSpan.finish();
                             logResponseGettingClosedPrematurely(ctx);
@@ -1085,7 +1088,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return new ProtocolAdapterCommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext ignored) {
-                            return consumer.close(waitForCommandSpan.context()).onComplete(ar -> waitForCommandSpan.finish());
+                            return consumer.close(waitForCommandSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(waitForCommandSpan, thr))
+                                    .onComplete(ar -> waitForCommandSpan.finish());
                         }
                     };
                 });

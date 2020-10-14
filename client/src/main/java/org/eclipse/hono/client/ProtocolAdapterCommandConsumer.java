@@ -26,7 +26,10 @@ public interface ProtocolAdapterCommandConsumer {
      * Closes the consumer.
      *
      * @param spanContext The span context (may be {@code null}).
-     * @return A future indicating the outcome of the operation.
+     * @return A future indicating the outcome of the operation. The future will be failed with a
+     *         {@link ServiceInvocationException} if there was an error closing the consumer and with a
+     *         {@link ClientErrorException} with {@link java.net.HttpURLConnection#HTTP_PRECON_FAILED} if the consumer
+     *         was found to have been closed/overwritten already.
      */
     Future<Void> close(SpanContext spanContext);
 

@@ -90,8 +90,9 @@ public final class CommandHandlerWrapper {
     @Override
     public String toString() {
         return "CommandHandlerWrapper{" +
-                "deviceId='" + deviceId + '\'' +
-                ", gatewayId='" + gatewayId + '\'' +
+                "tenantId='" + tenantId + '\'' +
+                ", deviceId='" + deviceId + '\'' +
+                (gatewayId != null ? (", gatewayId='" + gatewayId + '\'') : "") +
                 '}';
     }
 }
