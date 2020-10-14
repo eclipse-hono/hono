@@ -443,17 +443,9 @@ public class HonoConnectionImpl implements HonoConnection {
                                             connectionFactory.getPort(),
                                             connectionFactory.getServerRole(),
                                             newConnection.getRemoteContainer());
-                                    createDefaultSession(newConnection)
-                                        .onSuccess(newSession -> {
-                                            setConnection(newConnection, newSession);
-                                            wrappedConnectionHandler.handle(Future.succeededFuture(this));
-                                        })
-                                        .onFailure(t -> {
-                                            newConnection.closeHandler(null);
-                                            newConnection.disconnectHandler(null);
-                                            newConnection.close();
-                                            wrappedConnectionHandler.handle(Future.failedFuture(t));
-                                        });
+                                    final ProtonSession session = createDefaultSession(newConnection);
+                                    setConnection(newConnection, session);
+                                    wrappedConnectionHandler.handle(Future.succeededFuture(this));
                                 }
                             }
                         });
@@ -724,36 +716,16 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    private Future<ProtonSession> createDefaultSession(final ProtonConnection connection) {
+    private ProtonSession createDefaultSession(final ProtonConnection connection) {
 
-        final Promise<ProtonSession> result = Promise.promise();
         if (connection == null) {
-            result.fail(new NullPointerException("connection must not be null"));
+            throw new IllegalStateException("no connection to create session for");
         } else {
-            log.debug("trying to establish AMQP session with server [{}:{}, role: {}]",
+            log.debug("establishing AMQP session with server [{}:{}, role: {}]",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole());
             final ProtonSession session = connection.createSession();
-            session.openHandler(beginAttempt -> {
-                if (beginAttempt.succeeded()) {
-                    log.debug("successfully established AMQP session with server [{}:{}, role: {}]",
-                            connectionFactory.getHost(),
-                            connectionFactory.getPort(),
-                            connectionFactory.getServerRole());
-                    result.complete(session);
-                } else {
-                    log.debug("failed to establish AMQP session with server [{}:{}, role: {}]",
-                            connectionFactory.getHost(),
-                            connectionFactory.getPort(),
-                            connectionFactory.getServerRole(),
-                            beginAttempt.cause());
-                    result.fail(new ClientErrorException(
-                            HttpURLConnection.HTTP_BAD_REQUEST,
-                            "failed to establish AMQP session with peer",
-                            beginAttempt.cause()));
-                }
-            });
             session.closeHandler(remoteClose -> {
                 final StringBuilder msgBuilder = new StringBuilder("the connection's session closed unexpectedly");
                 Optional.ofNullable(session.getRemoteCondition())
@@ -761,13 +733,14 @@ public class HonoConnectionImpl implements HonoConnection {
                         msgBuilder.append(String.format(" [condition: %s, description: %s]",
                                 error.getCondition(), error.getDescription()));
                     });
+                session.close();
                 Optional.ofNullable(connectionCloseHandler)
                     .ifPresent(ch -> ch.handle(Future.failedFuture(msgBuilder.toString())));
             });
             session.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
             session.open();
+            return session;
         }
-        return result.future();
     }
 
     /**

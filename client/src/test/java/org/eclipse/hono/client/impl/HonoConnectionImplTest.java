@@ -91,7 +91,6 @@ public class HonoConnectionImplTest {
     /**
      * Sets up fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
@@ -104,12 +103,6 @@ public class HonoConnectionImplTest {
             return 0L;
         });
         session = mock(ProtonSession.class);
-        when(session.openHandler(any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<AsyncResult<ProtonSession>> handler = invocation.getArgument(0);
-            // always open session immediately
-            handler.handle(Future.succeededFuture(session));
-            return session;
-        });
         con = mock(ProtonConnection.class);
         when(con.getRemoteContainer()).thenReturn("server");
         when(con.createSession()).thenReturn(session);
@@ -156,17 +149,13 @@ public class HonoConnectionImplTest {
 
         // GIVEN a client attempting to connect to a peer that does not allow opening
         // a session
-        final AtomicReference<Handler<AsyncResult<ProtonSession>>> sessionOpenHandler = new AtomicReference<>();
-        when(session.openHandler(any(Handler.class))).thenAnswer(invocation -> {
-            sessionOpenHandler.set(invocation.getArgument(0));
-            return session;
-        });
-
         final Future<HonoConnection> result = honoConnection.connect();
         ctx.verify(() -> {
             verify(session).open();
             // WHEN the peer closes the session
-            sessionOpenHandler.get().handle(Future.failedFuture("malfunction"));
+            final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = ArgumentCaptor.forClass(Handler.class);
+            verify(session).closeHandler(sessionCloseHandler.capture());
+            sessionCloseHandler.getValue().handle(Future.failedFuture("malfunction"));
 
             // THEN the connection attempt fails
             assertThat(result.failed());
