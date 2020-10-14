@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
+import com.google.common.net.UrlEscapers;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -208,7 +209,7 @@ public final class SQL {
      * @throws IllegalArgumentException if the URL is not a JDBC URL, it must start with {@code jdbc:}.
      */
     public static String getDatabaseDialect(final String url) {
-        final URI uri = URI.create(url);
+        final URI uri = URI.create(UrlEscapers.urlPathSegmentEscaper().escape(url));
         final String scheme = uri.getScheme();
         if (!"jdbc".equals(scheme)) {
             throw new IllegalArgumentException("URL is not a JDBC url: " + url);
