@@ -25,7 +25,7 @@
   <packaging>pom</packaging>
 
   <name>Hono Dependencies</name>
-  <description>A &quot;bill-of-materials&quot; for Hono.</description>
+  <description>A "bill-of-materials" for Hono.</description>
 
   <properties>
     <artemis.image.name>quay.io/enmasse/artemis-base:2.10.1</artemis.image.name>
@@ -779,6 +779,12 @@
       </dependency>
 
       <!-- Testing -->
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>service-base-test-utils</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>de.flapdoodle.embed</groupId>
         <artifactId>de.flapdoodle.embed.mongo</artifactId>

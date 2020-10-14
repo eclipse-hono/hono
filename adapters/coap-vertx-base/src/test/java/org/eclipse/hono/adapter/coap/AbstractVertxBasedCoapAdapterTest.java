@@ -28,8 +28,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -54,24 +54,17 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -92,7 +85,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -103,26 +95,20 @@ import io.vertx.proton.ProtonDelivery;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class AbstractVertxBasedCoapAdapterTest {
+public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSupport<CoapAdapterProperties, AbstractVertxBasedCoapAdapter<CoapAdapterProperties>> {
 
     private static final String ADAPTER_TYPE = "coap";
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private CredentialsClientFactory credentialsClientFactory;
-    private TenantClientFactory tenantClientFactory;
-    private DownstreamSenderFactory downstreamSenderFactory;
-    private RegistrationClientFactory registrationClientFactory;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
-    private CoapAdapterProperties config;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private ProtocolAdapterCommandConsumer commandConsumer;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
-    private CommandTargetMapper commandTargetMapper;
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
     private Span span;
+    private CoapServer server;
+    private Handler<Void> startupHandler;
 
     /**
      * Sets up common fixture.
@@ -131,52 +117,32 @@ public class AbstractVertxBasedCoapAdapterTest {
     @BeforeEach
     public void setup() {
 
-        config = new CoapAdapterProperties();
-        config.setInsecurePortEnabled(true);
-        config.setAuthenticationRequired(false);
-
+        startupHandler = mock(Handler.class);
         metrics = mock(CoapAdapterMetrics.class);
 
         span = mock(Span.class);
         final SpanContext spanContext = mock(SpanContext.class);
         when(span.context()).thenReturn(spanContext);
 
-        regClient = mock(RegistrationClient.class);
-        when(regClient.assertRegistration(anyString(), any(), any(SpanContext.class))).thenReturn(Future.succeededFuture(new JsonObject()));
-
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        regClient = mock(RegistrationClient.class);
+        when(regClient.assertRegistration(anyString(), any(), any(SpanContext.class))).thenReturn(Future.succeededFuture(new JsonObject()));
 
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        commandTargetMapper = mock(CommandTargetMapper.class);
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -192,6 +158,18 @@ public class AbstractVertxBasedCoapAdapterTest {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected CoapAdapterProperties givenDefaultConfigurationProperties() {
+        properties = new CoapAdapterProperties();
+        properties.setInsecurePortEnabled(true);
+        properties.setAuthenticationRequired(false);
+
+        return properties;
+    }
+
+    /**
      * Verifies that the <em>onStartupSuccess</em> method is invoked if the coap server has been started successfully.
      *
      * @param ctx The helper to use for running async tests on vertx.
@@ -200,20 +178,17 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testStartInvokesOnStartupSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final CoapServer server = getCoapServer(false);
-        final Checkpoint startupDone = ctx.checkpoint();
-        final Checkpoint onStartupSuccess = ctx.checkpoint();
+        givenAnAdapter(properties);
 
         // WHEN starting the adapter
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(
-                server,
-                true,
-                // THEN the onStartupSuccess method has been invoked
-                s -> onStartupSuccess.flag());
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
 
-        startupTracker.future().onComplete(ctx.succeeding(v -> startupDone.flag()));
+        startupTracker.future().onComplete(ctx.succeeding(v -> {
+            // THEN the onStartupSuccess method has been invoked
+            ctx.verify(() -> verify(startupHandler).handle(any()));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -225,12 +200,10 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testStartRegistersResources(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final CoapServer server = getCoapServer(false);
+        givenAnAdapter(properties);
         // and a set of resources
         final Resource resource = mock(Resource.class);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
-        adapter.setResources(Collections.singleton(resource));
+        adapter.setResources(Set.of(resource));
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -258,7 +231,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter
         final Context context = vertx.getOrCreateContext();
-        final CoapServer server = getCoapServer(false);
+        givenAnAdapter(properties);
         // with a resource
         final Promise<Void> resourceInvocation = Promise.promise();
         final Resource resource = new CoapResource("test") {
@@ -270,11 +243,10 @@ public class AbstractVertxBasedCoapAdapterTest {
             }
         };
 
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
-        adapter.setResources(Collections.singleton(resource));
+        adapter.setResources(Set.of(resource));
+        adapter.init(vertx, context);
 
         final Promise<Void> startupTracker = Promise.promise();
-        adapter.init(vertx, context);
         adapter.start(startupTracker);
 
         startupTracker.future()
@@ -301,10 +273,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testStartUpFailsIfCredentialsClientFactoryIsNotSet(final VertxTestContext ctx) {
 
         // GIVEN an adapter that has not all required service clients set
-        final CoapServer server = getCoapServer(false);
-        @SuppressWarnings("unchecked")
-        final Handler<Void> successHandler = mock(Handler.class);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, false, successHandler);
+        server = getCoapServer(false);
+        adapter = getAdapter(server, properties, false, startupHandler);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -313,7 +283,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         // THEN startup has failed
         startupTracker.future().onComplete(ctx.failing(t -> {
             // and the onStartupSuccess method has not been invoked
-            ctx.verify(() -> verify(successHandler, never()).handle(any()));
+            ctx.verify(() -> verify(startupHandler, never()).handle(any()));
             ctx.completeNow();
         }));
 
@@ -329,15 +299,15 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
-        final CoapServer server = getCoapServer(true);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true,
-                s -> ctx.failNow(new AssertionError("should not have invoked onStartupSuccess")));
+        server = getCoapServer(true);
+        adapter = getAdapter(server, properties, true, startupHandler);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
         // THEN the onStartupSuccess method has not been invoked, see ctx.fail
         startupTracker.future().onComplete(ctx.failing(s -> {
+            ctx.verify(() -> verify(startupHandler, never()).handle(any()));
             ctx.completeNow();
         }));
     }
@@ -350,13 +320,12 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetryFailsForDisabledTenant() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySender(Promise.promise());
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), any(SpanContext.class))).thenReturn(Future.succeededFuture(myTenantConfig));
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        givenAnAdapter(properties);
 
         // WHEN a device that belongs to "my-tenant" publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -390,9 +359,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetryFailsForMissingContentFormat() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySender(Promise.promise());
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a non-empty message that lacks a content-format option
         final Buffer payload = Buffer.buffer("some payload");
@@ -426,9 +394,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetryFailsForEmptyBody() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySender(Promise.promise());
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an empty message that doesn't contain
         // a URI-query option
@@ -461,9 +428,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadEmptyNotificationSucceeds() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySender(Promise.promise());
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an empty message that is marked as an empty notification
         final OptionSet options = new OptionSet();
@@ -497,11 +463,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetryWithQoS0() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenATelemetrySender(outcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -536,10 +499,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenATelemetrySender(outcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an telemetry message with QoS 1
         final Buffer payload = Buffer.buffer("some payload");
@@ -577,10 +538,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSender(outcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
@@ -619,10 +578,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSender(outcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
@@ -657,10 +614,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
         final Promise<ProtonDelivery> sendTelemetryOutcome = Promise.promise();
-        final DownstreamSender sender = givenATelemetrySender(sendTelemetryOutcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
+        givenAnAdapter(properties);
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
         final Message commandMessage = newMockedCommandMessage("tenant", "device", "doThis");
@@ -717,10 +672,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream application attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final CommandResponseSender sender = givenACommandResponseSender(outcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an command response
         final String reqId = Command.getRequestId("correlation", "replyToId", "device");
@@ -770,10 +723,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream application attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final CommandResponseSender sender = givenACommandResponseSender(outcome);
-        final CoapServer server = getCoapServer(false);
-
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an command response
         final String reqId = Command.getRequestId("correlation", "replyToId", "device");
@@ -816,9 +767,8 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
 
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final CommandResponseSender sender = givenACommandResponseSender(outcome);
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an command response
         final String reqId = Command.getRequestId("correlation", "replyToId", "device");
@@ -855,11 +805,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testMessageLimitExceededForATelemetryMessage() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenATelemetrySender(outcome);
-
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device that belongs to a tenant for which the message limit is exceeded
         // publishes a telemetry message
@@ -895,10 +842,8 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSender(outcome);
-
-        final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -981,9 +926,33 @@ public class AbstractVertxBasedCoapAdapterTest {
     }
 
     /**
+     * Creates a new adapter instance to be tested.
+     * <p>
+     * This method
+     * <ol>
+     * <li>creates a new {@code CoapServer} by invoking {@link #getCoapServer(boolean)} with {@code false}</li>
+     * <li>assigns the result to property <em>server</em></li>
+     * <li>creates a new adapter by invoking {@link #getAdapter(CoapServer, CoapAdapterProperties, boolean, Handler)}
+     * with the server, configuration, {@code true} and the startupHandler</li>
+     * <li>assigns the result to property <em>adapter</em></li>
+     * </ol>
+     *
+     * @param configuration The configuration properties to use.
+     * @return The adapter instance.
+     */
+    private AbstractVertxBasedCoapAdapter<CoapAdapterProperties> givenAnAdapter(final CoapAdapterProperties configuration) {
+
+        this.server = getCoapServer(false);
+        this.adapter = getAdapter(server, configuration, true, startupHandler);
+        return adapter;
+    }
+
+
+    /**
      * Creates a protocol adapter for a given HTTP server.
      *
      * @param server The coap server.
+     * @param configuration The configuration properties to use.
      * @param complete {@code true}, if that adapter should be created with all Hono service clients set, {@code false}, if the
      *            adapter should be created, and all Hono service clients set, but the credentials client is not set.
      * @param onStartupSuccess The handler to invoke on successful startup.
@@ -992,6 +961,7 @@ public class AbstractVertxBasedCoapAdapterTest {
      */
     private AbstractVertxBasedCoapAdapter<CoapAdapterProperties> getAdapter(
             final CoapServer server,
+            final CoapAdapterProperties configuration,
             final boolean complete,
             final Handler<Void> onStartupSuccess) {
 
@@ -1004,14 +974,15 @@ public class AbstractVertxBasedCoapAdapterTest {
 
             @Override
             protected void onStartupSuccess() {
-                if (onStartupSuccess != null) {
-                    onStartupSuccess.handle(null);
-                }
+                Optional.ofNullable(onStartupSuccess).ifPresent(h -> h.handle(null));
             }
         };
 
-        adapter.setConfig(config);
+        adapter.setConfig(configuration);
         adapter.setCoapServer(server);
+        adapter.setMetrics(metrics);
+        adapter.setResourceLimitChecks(resourceLimitChecks);
+
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
@@ -1021,41 +992,8 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setCommandTargetMapper(commandTargetMapper);
-        adapter.setMetrics(metrics);
-        adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.init(vertx, mock(Context.class));
 
         return adapter;
-    }
-
-    private CommandResponseSender givenACommandResponseSender(final Promise<ProtonDelivery> outcome) {
-
-        final CommandResponseSender sender = mock(CommandResponseSender.class);
-        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome.future());
-
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private DownstreamSender givenAnEventSender(final Promise<ProtonDelivery> outcome) {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class))).thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private DownstreamSender givenATelemetrySender(final Promise<ProtonDelivery> outcome) {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.send(any(Message.class), any(SpanContext.class))).thenAnswer(invocation -> {
-            outcome.complete(mock(ProtonDelivery.class));
-            return outcome.future();
-        });
-        when(sender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class))).thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
     }
 }

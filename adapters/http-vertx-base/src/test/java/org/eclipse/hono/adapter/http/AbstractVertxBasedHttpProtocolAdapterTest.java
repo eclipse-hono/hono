@@ -26,26 +26,17 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -57,6 +48,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -84,7 +76,6 @@ import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.ParsedHeaderValues;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -96,26 +87,21 @@ import io.vertx.proton.ProtonDelivery;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class AbstractVertxBasedHttpProtocolAdapterTest {
+public class AbstractVertxBasedHttpProtocolAdapterTest extends
+    ProtocolAdapterTestSupport<HttpProtocolAdapterProperties, AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>> {
 
     private static final String ADAPTER_TYPE = "http";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private CredentialsClientFactory      credentialsClientFactory;
-    private TenantClientFactory           tenantClientFactory;
-    private DownstreamSenderFactory       downstreamSenderFactory;
-    private RegistrationClientFactory     registrationClientFactory;
-    private RegistrationClient            regClient;
-    private TenantClient                  tenantClient;
-    private HttpProtocolAdapterProperties config;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
-    private CommandTargetMapper           commandTargetMapper;
+    private RegistrationClient regClient;
+    private TenantClient tenantClient;
     private ProtocolAdapterCommandConsumer commandConsumer;
-    private Vertx                         vertx;
-    private Context                       context;
-    private HttpAdapterMetrics            metrics;
-    private ResourceLimitChecks           resourceLimitChecks;
+    private Vertx vertx;
+    private Context context;
+    private HttpAdapterMetrics metrics;
+    private ResourceLimitChecks resourceLimitChecks;
+    private HttpServer server;
+    private Handler<Void> startupHandler;
 
     /**
      * Sets up common fixture.
@@ -124,6 +110,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @BeforeEach
     public void setup() {
 
+        startupHandler = mock(Handler.class);
         context = mock(Context.class);
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -133,49 +120,39 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             return 1L;
         });
 
-        config = new HttpProtocolAdapterProperties();
-        config.setInsecurePortEnabled(true);
-
         metrics = mock(HttpAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject();
         when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(result));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
-
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
-
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-
-        commandTargetMapper = mock(CommandTargetMapper.class);
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected HttpProtocolAdapterProperties givenDefaultConfigurationProperties() {
+        properties = new HttpProtocolAdapterProperties();
+        properties.setInsecurePortEnabled(true);
+
+        return properties;
     }
 
     /**
@@ -188,8 +165,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testStartUsesClientProvidedHttpServer(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided HTTP server
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnAdapter(properties);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -214,20 +190,17 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testStartInvokesOnStartupSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server
-        final HttpServer server = getHttpServer(false);
-        final Checkpoint startupDone = ctx.checkpoint();
-        final Checkpoint onStartupSuccess = ctx.checkpoint();
+        givenAnAdapter(properties);
 
         // WHEN starting the adapter
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(
-                server,
-                // THEN the onStartupSuccess method has been invoked
-                s -> onStartupSuccess.flag());
-
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
 
-        startupTracker.future().onComplete(ctx.succeeding(v -> startupDone.flag()));
+        // THEN the onStartupSuccess method has been invoked
+        startupTracker.future().onComplete(ctx.succeeding(v -> {
+            ctx.verify(() -> verify(startupHandler).handle(any()));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -240,16 +213,18 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
-        final HttpServer server = getHttpServer(true);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server,
-                s -> ctx.failNow(new IllegalStateException("should not invoke onStartupSuccess")));
+        server = getHttpServer(true);
+        adapter = getAdapter(server, properties, startupHandler);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.failing(t -> ctx.completeNow()));
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has not been invoked
+        startupTracker.future().onComplete(ctx.failing(t -> {
+            ctx.verify(() -> verify(startupHandler, never()).handle(any()));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -262,14 +237,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadTelemetryFailsForDisabledTenant() {
 
         // GIVEN an adapter
-        final HttpServer server = getHttpServer(false);
-        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), any())).thenReturn(Future.succeededFuture(myTenantConfig));
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN a device that belongs to "my-tenant" publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -307,13 +281,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadTelemetryFailsForUnknownDevice() {
 
         // GIVEN an adapter
-        final HttpServer server = getHttpServer(false);
-        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // with an enabled tenant
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         when(tenantClient.get(eq("my-tenant"), any())).thenReturn(Future.succeededFuture(myTenantConfig));
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN an unknown device that supposedly belongs to that tenant publishes a telemetry message
         // with a TTD value set
@@ -357,10 +330,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenAnEventSenderForOutcome(outcome.future());
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
@@ -411,10 +382,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenAnEventSenderForOutcome(outcome.future());
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
@@ -445,10 +414,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadEventWithTimeToLive() {
         // GIVEN an adapter with a downstream event consumer attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome.future());
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes an event with a time to live value as a header
         final Buffer payload = Buffer.buffer("some payload");
@@ -480,10 +447,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream application attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenACommandResponseSenderForOutcome(outcome.future());
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenACommandResponseSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a command response
         final Buffer payload = Buffer.buffer("some payload");
@@ -529,13 +494,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadEmptyCommandResponseSucceeds() {
 
         // GIVEN an adapter with a downstream application attached
-        final CommandResponseSender sender = mock(CommandResponseSender.class);
-        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(Future.succeededFuture(sender));
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenACommandResponseSenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a command response with an empty payload
         final Buffer payload = null;
@@ -573,8 +533,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         to.addAdapter(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
 
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a command response
         final Buffer payload = Buffer.buffer("some payload");
@@ -601,8 +560,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Test
     public void testUploadCommandResponseFailsForOtherDevice() {
 
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnAdapter(properties);
         final Buffer payload = Buffer.buffer("some payload");
         final HttpContext ctx = newHttpContext(payload, "application/text", mock(HttpServerRequest.class),
                 mock(HttpServerResponse.class));
@@ -643,10 +601,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter with a downstream application attached
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenACommandResponseSenderForOutcome(outcome.future());
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenACommandResponseSenderForAnyTenant(outcome);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a command response that is not accepted by the application
         final Buffer payload = Buffer.buffer("some payload");
@@ -676,11 +632,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadTelemetryDoesNotWaitForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
-        givenATelemetrySenderForOutcome(outcome);
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -719,8 +672,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadTelemetryWithTtdClosesCommandConsumerIfSenderCreationFailed() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnAdapter(properties);
 
         // WHEN a device publishes a telemetry message with a TTD
         final Buffer payload = Buffer.buffer("some payload");
@@ -768,9 +720,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadTelemetryUsesConfiguredMaxTtd() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        givenAnAdapter(properties);
+        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // WHEN a device publishes a telemetry message that belongs to a tenant with
         // a max TTD of 20 secs
@@ -805,11 +756,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testMessageLimitExceededForATelemetryMessage() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
-        givenATelemetrySenderForOutcome(outcome);
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
 
         final Buffer payload = Buffer.buffer("some payload");
         final HttpContext routingContext = newHttpContext(payload);
@@ -842,11 +790,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testMessageLimitExceededForAnEventMessage() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
-        givenAnEventSenderForOutcome(outcome);
-
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenAnEventSenderForAnyTenant();
+        givenAnAdapter(properties);
 
         final Buffer payload = Buffer.buffer("some payload");
         final HttpContext routingContext = newHttpContext(payload);
@@ -880,10 +825,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testMessageLimitExceededForACommandResponseMessage() {
 
         // GIVEN an adapter with a downstream application attached
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(
-                getHttpServer(false), null);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        givenACommandResponseSenderForOutcome(outcome.future());
+        givenAnAdapter(properties);
+        givenACommandResponseSenderForAnyTenant();
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -959,6 +902,29 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         return HttpContext.from(ctx);
     }
 
+    /**
+     * Creates a new adapter instance to be tested.
+     * <p>
+     * This method
+     * This method
+     * <ol>
+     * <li>creates a new {@code HttpServer} by invoking {@link #getHttpServer(boolean)} with {@code false}</li>
+     * <li>assigns the result to property <em>server</em></li>
+     * <li>creates a new adapter by invoking {@link #getAdapter(HttpServer, HttpProtocolAdapterProperties, Handler)}
+     * with the server, configuration and the startupHandler</li>
+     * <li>assigns the result to property <em>adapter</em></li>
+     * </ol>
+     *
+     * @param configuration The configuration properties to use.
+     * @return The adapter instance.
+     */
+    private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> givenAnAdapter(
+            final HttpProtocolAdapterProperties configuration) {
+        this.server = getHttpServer(false);
+        this.adapter = getAdapter(this.server, configuration, startupHandler);
+        return adapter;
+    }
+
     @SuppressWarnings("unchecked")
     private HttpServer getHttpServer(final boolean startupShouldFail) {
 
@@ -982,11 +948,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * Creates a protocol adapter for a given HTTP server.
      *
      * @param server The HTTP server to start.
+     * @param configuration The configuration properties to use.
      * @param onStartupSuccess The handler to invoke on successful startup.
      * @return The adapter.
      */
     private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> getAdapter(
             final HttpServer server,
+            final HttpProtocolAdapterProperties configuration,
             final Handler<Void> onStartupSuccess) {
 
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<>() {
@@ -1002,52 +970,17 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
             @Override
             protected void onStartupSuccess() {
-                if (onStartupSuccess != null) {
-                    onStartupSuccess.handle(null);
-                }
+                Optional.ofNullable(onStartupSuccess).ifPresent(h -> h.handle(null));
             }
         };
 
         adapter.init(vertx, context);
-        adapter.setConfig(config);
+        adapter.setConfig(configuration);
         adapter.setMetrics(metrics);
         adapter.setInsecureHttpServer(server);
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        setCollaborators(adapter);
         return adapter;
-    }
-
-    private CommandResponseSender givenACommandResponseSenderForOutcome(final Future<ProtonDelivery> outcome) {
-
-        final CommandResponseSender sender = mock(CommandResponseSender.class);
-        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome);
-
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private DownstreamSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
-
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private DownstreamSender givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
-
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
-
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
     }
 
     private static void assertContextFailedWithClientError(final HttpContext ctx, final int statusCode) {

@@ -56,18 +56,11 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -77,6 +70,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -116,7 +110,7 @@ import io.vertx.proton.ProtonServer;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 6, timeUnit = TimeUnit.SECONDS)
-public class VertxBasedAmqpProtocolAdapterTest {
+public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSupport<AmqpAdapterProperties, VertxBasedAmqpProtocolAdapter> {
 
     /**
      * A tenant identifier used for testing.
@@ -127,25 +121,16 @@ public class VertxBasedAmqpProtocolAdapterTest {
      */
     private static final String TEST_DEVICE = "test-device";
 
-    private TenantClientFactory tenantClientFactory;
-    private CredentialsClientFactory credentialsClientFactory;
-    private DownstreamSenderFactory downstreamSenderFactory;
-    private RegistrationClientFactory registrationClientFactory;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
-
-    private CommandTargetMapper commandTargetMapper;
-
     private RegistrationClient registrationClient;
     private TenantClient tenantClient;
 
-    private AmqpAdapterProperties config;
     private AmqpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
     private ConnectionLimitManager connectionLimitManager;    
     private Vertx vertx;
     private Context context;
     private Span span;
+    private ProtonServer server;
 
     /**
      * Setups the protocol adapter.
@@ -166,33 +151,17 @@ public class VertxBasedAmqpProtocolAdapterTest {
            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         registrationClient = mock(RegistrationClient.class);
         final JsonObject regAssertion = new JsonObject();
         when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
                 .thenReturn(Future.succeededFuture(regAssertion));
 
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(registrationClient));
-
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        commandTargetMapper = mock(CommandTargetMapper.class);
 
         connectionLimitManager = mock(ConnectionLimitManager.class);
 
@@ -203,10 +172,17 @@ public class VertxBasedAmqpProtocolAdapterTest {
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
+    }
 
-        config = new AmqpAdapterProperties();
-        config.setAuthenticationRequired(false);
-        config.setInsecurePort(5672);
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected AmqpAdapterProperties givenDefaultConfigurationProperties() {
+        properties = new AmqpAdapterProperties();
+        properties.setAuthenticationRequired(false);
+        properties.setInsecurePort(5672);
+        return properties;
     }
 
     /**
@@ -219,8 +195,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testStartUsesClientProvidedAmqpServer(final VertxTestContext ctx) {
         // GIVEN an adapter with a client provided Amqp Server
-        final ProtonServer server = getAmqpServer();
-        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -244,8 +219,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testAdapterSupportsAnonymousRelay() {
 
         // GIVEN an AMQP adapter with a configured server.
-        final ProtonServer server = getAmqpServer();
-        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         // WHEN a device connects
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
@@ -273,8 +247,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testAdapterAcceptsAnonymousRelayReceiverOnly() {
         // GIVEN an AMQP adapter with a configured server.
-        final ProtonServer server = getAmqpServer();
-        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         // WHEN the adapter receives a link that contains a target address
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
@@ -295,7 +268,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testUploadTelemetryWithAtMostOnceDeliverySemantics(final VertxTestContext ctx) {
         // GIVEN an AMQP adapter with a configured server
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
 
@@ -336,7 +309,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testUploadTelemetryWithAtLeastOnceDeliverySemantics() {
         // GIVEN an adapter configured to use a user-define server.
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
         final Promise<ProtonDelivery> downstreamDelivery = Promise.promise();
         when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any()))
@@ -384,7 +357,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForDisabledAdapter(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured to use a user-define server.
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
 
         // AND given a tenant for which the AMQP Adapter is disabled
@@ -430,8 +403,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testUploadEventFailsForGatewayOfDifferentTenant(final VertxTestContext ctx) {
 
         // GIVEN an adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final DownstreamSender eventSender = givenAnEventSender(Promise.promise());
+        givenAnAdapter(properties);
+        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant();
 
         // with an enabled tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -467,9 +440,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testAdapterOpensSenderLinkAndNotifyDownstreamApplication() {
         // GIVEN an AMQP adapter configured to use a user-defined server
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender eventSender = givenAnEventSender(outcome);
+        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
@@ -501,9 +474,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testAdapterClosesCommandConsumerWhenDeviceClosesReceiverLink() {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender eventSender = givenAnEventSender(outcome);
+        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant(outcome);
 
         // and a device that wants to receive commands
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
@@ -585,11 +558,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
             final Handler<ProtonConnection> connectionLossTrigger) throws InterruptedException {
 
         // GIVEN an AMQP adapter
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        outcome.complete();
-        final DownstreamSender downstreamEventSender = givenAnEventSender(outcome);
-        final ProtonServer server = getAmqpServer();
-        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+        givenAnAdapter(properties);
+        final DownstreamSender downstreamEventSender = givenAnEventSenderForAnyTenant();
 
         final Promise<Void> startupTracker = Promise.promise();
         startupTracker.future().onComplete(ctx.completing());
@@ -637,7 +607,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testUploadCommandResponseSucceeds(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture(delivery));
@@ -682,7 +652,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testUploadCommandResponseWithoutPayloadSucceeds(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any()))
@@ -780,7 +750,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
             final ProcessingOutcome expectedProcessingOutcome) {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         //  to which a device is connected
         final ProtonSender deviceLink = mock(ProtonSender.class);
         when(deviceLink.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
@@ -837,7 +807,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                 anyString(),
                 any(),
                 any())).thenReturn(Future.succeededFuture());
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         adapter.setConnectionEventProducer(connectionEventProducer);
 
         // WHEN a device connects
@@ -902,8 +872,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testConnectionCountForAnonymousDevice() {
 
         // GIVEN an AMQP adapter that does not require devices to authenticate
-        config.setAuthenticationRequired(false);
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
 
         // WHEN a device connects
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
@@ -942,7 +912,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testMessageLimitExceededForATelemetryMessage(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -989,8 +959,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testMessageLimitExceededForAnEventMessage(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final DownstreamSender eventSender = givenAnEventSender(Promise.promise());
+        givenAnAdapter(properties);
+        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant(Promise.promise());
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
@@ -1036,7 +1006,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testMessageLimitExceededForACommandResponseMessage(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         // which is enabled for a tenant
@@ -1086,7 +1056,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testLinkForSendingCommandsCloseAfterTimeout() {
         // GIVEN an AMQP adapter
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        givenAnAdapter(properties);
         // to which a device is connected
         final ProtonSender deviceLink = mock(ProtonSender.class);
         when(deviceLink.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
@@ -1122,8 +1092,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testConnectionFailsIfTenantLevelConnectionLimitIsExceeded() {
         // GIVEN an AMQP adapter that requires devices to authenticate
-        config.setAuthenticationRequired(true);
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        properties.setAuthenticationRequired(true);
+        givenAnAdapter(properties);
         // WHEN the connection limit for the given tenant exceeds
         when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -1154,8 +1124,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Test
     public void testConnectionFailsIfAdapterIsDisabled() {
         // GIVEN an AMQP adapter that requires devices to authenticate
-        config.setAuthenticationRequired(true);
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        properties.setAuthenticationRequired(true);
+        givenAnAdapter(properties);
         // AND given a tenant for which the AMQP Adapter is disabled
         givenAConfiguredTenant(TEST_TENANT_ID, false);
         // WHEN a device connects
@@ -1187,8 +1157,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testConnectionFailsForAuthenticatedDeviceIfAdapterLevelConnectionLimitIsExceeded() {
 
         // GIVEN an AMQP adapter that requires devices to authenticate
-        config.setAuthenticationRequired(true);
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        properties.setAuthenticationRequired(true);
+        givenAnAdapter(properties);
         // WHEN the adapter's connection limit exceeds
         when(connectionLimitManager.isLimitExceeded()).thenReturn(true);
         // WHEN a device connects
@@ -1227,8 +1197,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testConnectionFailsForUnauthenticatedDeviceIfAdapterLevelConnectionLimitIsExceeded() {
 
         // GIVEN an AMQP adapter that does not require devices to authenticate
-        config.setAuthenticationRequired(false);
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        properties.setAuthenticationRequired(false);
+        givenAnAdapter(properties);
         // WHEN the adapter's connection limit exceeds
         when(connectionLimitManager.isLimitExceeded()).thenReturn(true);
         // WHEN a device connects
@@ -1319,59 +1289,47 @@ public class VertxBasedAmqpProtocolAdapterTest {
         return message;
     }
 
-    private DownstreamSender givenATelemetrySenderForAnyTenant() {
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
-    private CommandResponseSender givenACommandResponseSenderForAnyTenant() {
-        final CommandResponseSender responseSender = mock(CommandResponseSender.class);
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
-                .thenReturn(Future.succeededFuture(responseSender));
-        return responseSender;
-    }
-
-    private DownstreamSender givenAnEventSender(final Promise<ProtonDelivery> outcome) {
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
-
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
-    }
-
     /**
-     * Gets an AMQP adapter configured to use a given server.
+     * Creates a new adapter instance to be tested.
+     * <p>
+     * This method
+     * <ol>
+     * <li>creates a new {@code ProtonServer} using {@link #getAmqpServer()}</li>
+     * <li>assigns the result to property <em>server</em></li>
+     * <li>passes the server in to {@link #newAdapter(ProtonServer, AmqpAdapterProperties)}</li>
+     * <li>assigns the result to property <em>adapter</em></li>
+     * </ol>
      *
-     * @return The AMQP adapter instance.
+     * @param configuration The configuration properties to use.
+     * @return The adapter instance.
      */
-    private VertxBasedAmqpProtocolAdapter givenAnAmqpAdapter() {
-        final ProtonServer server = getAmqpServer();
-        return getAdapter(server);
+    private VertxBasedAmqpProtocolAdapter givenAnAdapter(final AmqpAdapterProperties configuration) {
+        this.server = getAmqpServer();
+        this.adapter = newAdapter(this.server, configuration);
+        return adapter;
     }
 
     /**
-     * Creates a protocol adapter for a given AMQP Proton server.
+     * Creates an AMQP protocol adapter for a server and configuration.
+     * <p>
+     * The adapter will use the given server for its <em>insecure</em> port.
      *
      * @param server The AMQP Proton server.
+     * @param configuration The adapter's configuration properties.
      * @return The AMQP adapter instance.
      */
-    private VertxBasedAmqpProtocolAdapter getAdapter(final ProtonServer server) {
+    private VertxBasedAmqpProtocolAdapter newAdapter(
+            final ProtonServer server,
+            final AmqpAdapterProperties configuration) {
 
         final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
 
-        adapter.setConfig(config);
+        adapter.setConfig(configuration);
         adapter.setInsecureAmqpServer(server);
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.setConnectionLimitManager(connectionLimitManager);
+        setCollaborators(adapter);
         adapter.init(vertx, context);
         return adapter;
     }
