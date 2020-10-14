@@ -42,7 +42,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public final class MongoDBBasedDeviceManagementSearchDevicesTest implements AbstractDeviceManagementSearchDevicesTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedDeviceManagementSearchDevicesTest.class);
@@ -52,7 +52,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     private Vertx vertx;
 
     /**
-     * Sets up static fixture.
+     * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
      */

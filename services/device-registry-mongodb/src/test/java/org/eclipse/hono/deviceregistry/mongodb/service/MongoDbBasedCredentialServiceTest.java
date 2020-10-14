@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
@@ -46,7 +45,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialServiceTest.class);
@@ -61,14 +60,12 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     private Vertx vertx;
 
     /**
-     * Sets up static fixture.
+     * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
-     * @throws IOException if the embedded mongo db could not be started on the available port.
      */
-    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
     @BeforeAll
-    public void setup(final VertxTestContext testContext) throws IOException {
+    public void startService(final VertxTestContext testContext) {
 
         final Checkpoint started = testContext.checkpoint(2);
         vertx = Vertx.vertx();

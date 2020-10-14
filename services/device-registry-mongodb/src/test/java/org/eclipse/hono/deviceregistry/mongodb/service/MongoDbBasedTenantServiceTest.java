@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
@@ -41,7 +40,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantServiceTest.class);
@@ -52,13 +51,12 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
     private MongoClient mongoClient;
 
     /**
-     * Sets up static fixture.
+     * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
-     * @throws IOException if the embedded mongo db could not be started on the available port.
      */
     @BeforeAll
-    public void startService(final VertxTestContext testContext) throws IOException {
+    public void startService(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-tenants-test");
