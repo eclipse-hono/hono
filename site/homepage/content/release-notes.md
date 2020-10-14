@@ -7,6 +7,10 @@ title = "Release Notes"
 ### New Features
 
 * The CoAP adapter has been promoted from *experimental* to *fully supported*.
+* The Hono Client now supports several configuration properties that can be used
+  to limit its resource usage. In particular the AMQP connection's *max-frame-size*,
+  the AMQP session's incoming window size and the *max-message-size* of receiver
+  links can be configured (and thus limited).
 
 ### Fixes & Enhancements
 
