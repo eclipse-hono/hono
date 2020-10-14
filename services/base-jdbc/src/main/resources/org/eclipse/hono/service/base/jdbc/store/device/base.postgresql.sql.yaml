@@ -3,19 +3,22 @@ create: |
       tenant_id,
       device_id,
       version,
-      data
+      data,
+      created
    ) VALUES (
       :tenant_id,
       :device_id,
       :version,
-      :data::jsonb
+      :data::jsonb,
+      :created
    )
 
 updateRegistrationVersioned: |
    UPDATE %s
    SET
       data=:data::jsonb,
-      version=:next_version
+      version=:next_version,
+      updated_on=:updated_on
    WHERE
       tenant_id=:tenant_id
    AND

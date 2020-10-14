@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDto;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
@@ -37,6 +37,7 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.device.Filter;
@@ -145,7 +146,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .compose(ok -> tenantExists(tenantId, span))
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> {
-                    final DeviceDto deviceDto = DeviceDto.forCreation(tenantId,
+                    final DeviceDto deviceDto = DeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId,
                             deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()),
                             device, new Versioned<>(device).getVersion());
                     return processCreateDevice(
@@ -236,12 +237,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
         return findDeviceDocument(tenantId, deviceId)
                 .compose(result -> Optional.ofNullable(result)
-                        .map(ok -> DeviceDto.forRead(tenantId,
-                                deviceId,
-                                result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
-                                result.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
-                                result.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
-                                result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION)))
+                        .map(ok -> MongoDbBasedDeviceDto.forRead(tenantId, deviceId, result))
                         .map(Future::succeededFuture)
                         .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
     }
@@ -413,7 +409,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .map(devices -> devices.stream()
                         .filter(JsonObject.class::isInstance)
                         .map(JsonObject.class::cast)
-                        .map(json -> json.mapTo(DeviceDto.class))
+                        .map(json -> json.mapTo(MongoDbBasedDeviceDto.class))
                         .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getData()))
                         .collect(Collectors.toList()))
                 .orElseGet(ArrayList::new);
@@ -476,7 +472,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
-        final DeviceDto deviceDto = DeviceDto.forUpdate(tenantId, deviceId, device, new Versioned<>(device).getVersion());
+        final DeviceDto deviceDto = DeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, device, new Versioned<>(device).getVersion());
 
         mongoClient.findOneAndUpdateWithOptions(config.getCollectionName(), updateDeviceQuery,
                 MongoDbDocumentBuilder.builder().forUpdateOf(deviceDto).document(),

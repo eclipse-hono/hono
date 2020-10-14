@@ -10,25 +10,22 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry.mongodb.model;
+package org.eclipse.hono.service.management.device;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.function.Supplier;
 
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
-import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A DTO (Data Transfer Object) class to store device information in mongodb.
+ * A base class for a device DTO.
  */
-public final class DeviceDto extends BaseDto<Device> {
-
+public class DeviceDto extends BaseDto<Device> {
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
 
@@ -45,15 +42,19 @@ public final class DeviceDto extends BaseDto<Device> {
     /**
      * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
+     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      * @param device The data of the DTO.
      * @param version The version of the DTO
      *
+     * @param <P> The type of the DTO's payload.
+     * @param <T> The type of the DTO subclass.
+     *
      * @return A DTO instance for creating a new entry.
      */
-    public static DeviceDto forCreation(final String tenantId, final String deviceId, final Device device, final String version) {
-        final DeviceDto deviceDto = BaseDto.forCreation(DeviceDto::new,
+    public static <P extends Device, T extends DeviceDto> T forCreation(final Supplier<T> supplier, final String tenantId, final String deviceId, final Device device, final String version) {
+        final T deviceDto = BaseDto.forCreation(supplier,
                 withoutStatus(device),
                 version);
         deviceDto.setTenantId(tenantId);
@@ -86,15 +87,19 @@ public final class DeviceDto extends BaseDto<Device> {
     /**
      * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
      *
+     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      * @param device The data of the DTO.
      * @param version The version of the DTO
      *
+     * @param <P> The type of the DTO's payload.
+     * @param <T> The type of the DTO subclass.
+     *
      * @return A DTO instance for updating an entry.
      */
-    public static DeviceDto forUpdate(final String tenantId, final String deviceId, final Device device, final String version) {
-        final DeviceDto deviceDto = BaseDto.forUpdate(DeviceDto::new, withoutStatus(device), version);
+    public static <P extends Device, T extends DeviceDto> T forUpdate(final Supplier<T> supplier, final String tenantId, final String deviceId, final Device device, final String version) {
+        final T deviceDto = BaseDto.forUpdate(supplier, withoutStatus(device), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
 
@@ -112,14 +117,8 @@ public final class DeviceDto extends BaseDto<Device> {
      *
      * @return The copied device.
      */
-    private static Device withoutStatus(final Device device) {
+    protected static Device withoutStatus(final Device device) {
         return new Device(device).setStatus(null);
-    }
-
-    @Override
-    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
-    public Device getData() {
-        return super.getData();
     }
 
     /**
@@ -137,7 +136,7 @@ public final class DeviceDto extends BaseDto<Device> {
      * @param tenantId The tenant's identifier.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    private void setTenantId(final String tenantId) {
+    protected void setTenantId(final String tenantId) {
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
@@ -156,7 +155,7 @@ public final class DeviceDto extends BaseDto<Device> {
      * @param deviceId The identifier of the device.
      * @throws NullPointerException if the deviceId is {@code null}.
      */
-    private void setDeviceId(final String deviceId) {
+    protected void setDeviceId(final String deviceId) {
         this.deviceId = Objects.requireNonNull(deviceId);
     }
 
@@ -174,4 +173,5 @@ public final class DeviceDto extends BaseDto<Device> {
         );
         return deviceWithStatus;
     }
+
 }
