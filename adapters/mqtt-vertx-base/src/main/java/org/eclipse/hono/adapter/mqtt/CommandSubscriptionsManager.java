@@ -18,15 +18,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.util.TriTuple;
+import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -42,7 +43,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
     /**
      * Map of the current subscriptions. Key is the topic name.
      */
-    private final Map<String, TriTuple<CommandSubscription, ProtocolAdapterCommandConsumer, Object>> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, Pair<CommandSubscription, ProtocolAdapterCommandConsumer>> subscriptions = new ConcurrentHashMap<>();
     /**
      * Map of the requests waiting for an acknowledgement. Key is the command message id.
      */
@@ -123,76 +124,56 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
             final ProtocolAdapterCommandConsumer commandConsumer) {
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandConsumer);
-        subscriptions.put(subscription.getTopic(), TriTuple.of(subscription, commandConsumer, null));
+        subscriptions.put(subscription.getTopic(), Pair.of(subscription, commandConsumer));
     }
 
     /**
-     * Closes the command consumer and removes the subscription entry for the given topic.
+     * Removes the subscription entry for the given topic.
      *
      * @param topic The topic string to unsubscribe.
-     * @param onConsumerRemovedFunction The function to be invoked if not {@code null} during removal of a subscription.
-     *                                  The first parameter is the tenant id, the second parameter the device id.
-     *                                  To be returned is a future indicating the outcome of the function.
-     * @param spanContext The span context (may be {@code null}).
-     * @throws NullPointerException if topic is {@code null}.
-     * @return A future indicating the outcome of the operation.
+     * @param span The span to log to if no subscription entry is found.
+     * @return A succeeded future with the removed subscription and its associated command consumer or a failed future
+     *         if no subscription entry was found for the given topic.
+     * @throws NullPointerException if topic or span is {@code null}.
      **/
-    public Future<Void> removeSubscription(final String topic,
-            final BiFunction<String, String, Future<Void>> onConsumerRemovedFunction, final SpanContext spanContext) {
+    public Future<Pair<CommandSubscription, ProtocolAdapterCommandConsumer>> removeSubscription(final String topic,
+            final Span span) {
         Objects.requireNonNull(topic);
+        Objects.requireNonNull(span);
 
-        final TriTuple<CommandSubscription, ProtocolAdapterCommandConsumer, Object> removed = subscriptions.remove(topic);
+        final Pair<CommandSubscription, ProtocolAdapterCommandConsumer> removed = subscriptions.remove(topic);
         if (removed != null) {
-            final CommandSubscription subscription = removed.one();
-            final Future<Void> functionFuture = onConsumerRemovedFunction != null
-                    ? onConsumerRemovedFunction.apply(subscription.getTenant(), subscription.getDeviceId())
-                    : Future.succeededFuture();
-            final ProtocolAdapterCommandConsumer commandConsumer = removed.two();
-            return CompositeFuture
-                    .join(functionFuture, closeCommandConsumer(subscription, commandConsumer, spanContext)).mapEmpty();
+            return Future.succeededFuture(removed);
         } else {
-            LOG.debug("Cannot remove subscription; none registered for topic [{}]", topic);
-            return Future.failedFuture(String.format("Cannot remove subscription; none registered for topic [%s]", topic));
+            final String message = String.format("cannot remove subscription; none registered for topic [%s]", topic);
+            LOG.debug(message);
+            TracingHelper.logError(span, message);
+            return Future.failedFuture(message);
         }
     }
 
     /**
-     * Closes the command consumers and removes all the subscription entries.
+     * Removes all the subscription entries.
      *
-     * @param onConsumerRemovedFunction The function to be invoked if not {@code null} during removal of a subscription.
-     *                                  The first parameter is the tenant id, the second parameter the device id.
-     *                                  To be returned is a future indicating the outcome of the function.
-     * @param spanContext The span context (may be {@code null}).
-     * @return A future indicating the outcome of the operation.            
+     * @param onSubscriptionRemovedFunction The function to be invoked on each removed subscription and its associated
+     *            command consumer.
+     * @param span The span to track the operation.
+     * @return A composite future containing a future for each subscription entry. Each contained future tracks the
+     *         application of the given function on the removed subscription entry.
+     * @throws NullPointerException if onSubscriptionRemovedFunction or span is {@code null}.
      **/
     public CompositeFuture removeAllSubscriptions(
-            final BiFunction<String, String, Future<Void>> onConsumerRemovedFunction, final SpanContext spanContext) {
+            final Function<Pair<CommandSubscription, ProtocolAdapterCommandConsumer>, Future<Void>> onSubscriptionRemovedFunction,
+            final Span span) {
+
+        Objects.requireNonNull(onSubscriptionRemovedFunction);
+        Objects.requireNonNull(span);
+
         @SuppressWarnings("rawtypes")
         final List<Future> removalFutures = subscriptions.keySet().stream()
-                .map(topic -> removeSubscription(topic, onConsumerRemovedFunction, spanContext)).collect(Collectors.toList());
+                .map(topic -> removeSubscription(topic, span).compose(onSubscriptionRemovedFunction))
+                .collect(Collectors.toList());
         return CompositeFuture.join(removalFutures);
-    }
-
-    /**
-     * Stores the command subscription along with the command consumer.
-     *
-     * @param subscription The device's command subscription.
-     * @param commandConsumer A client for consuming messages.
-     * @param spanContext The span context (may be {@code null}).
-     * @return A future indicating the outcome of the operation.
-     */
-    private Future<Void> closeCommandConsumer(final CommandSubscription subscription,
-            final ProtocolAdapterCommandConsumer commandConsumer, final SpanContext spanContext) {
-        return commandConsumer.close(spanContext)
-                .map(v -> {
-                    LOG.trace("Command consumer closed [tenant-it: {}, device-id :{}]", subscription.getTenant(),
-                            subscription.getDeviceId());
-                    return v;
-                }).recover(thr -> {
-                    LOG.debug("Error closing command consumer [tenant-it: {}, device-id :{}]",
-                            subscription.getTenant(), subscription.getDeviceId(), thr);
-                    return Future.failedFuture(thr);
-                });
     }
 
     private Long startTimer(final Integer msgId) {

@@ -778,6 +778,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 // downstream message sent and (if ttd was set) command was received or ttd has timed out
                 final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
                         ? commandConsumerTracker.result().close(currentSpan.context())
+                                .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
                         : Future.succeededFuture();
 
                 final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
@@ -816,6 +817,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         tenantId, deviceId, endpoint.getCanonicalName(), t);
                 final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
                         ? commandConsumerTracker.result().close(currentSpan.context())
+                                .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
                         : Future.succeededFuture();
                 final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                 if (commandContext != null) {
@@ -1034,7 +1036,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     return new ProtocolAdapterCommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext ignored) {
-                            return consumer.close(waitForCommandSpan.context()).onComplete(ar -> waitForCommandSpan.finish());
+                            return consumer.close(waitForCommandSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(waitForCommandSpan, thr))
+                                    .onComplete(ar -> waitForCommandSpan.finish());
                         }
                     };
                 });

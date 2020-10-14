@@ -28,6 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -612,6 +613,63 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         verify(downstreamEventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
         assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
         assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(0);
+    }
+
+    /**
+     * Verifies that the adapter doesn't send a 'disconnectedTtdEvent' on connection loss
+     * when removal of the command consumer mapping entry fails (which would be the case
+     * when another command consumer mapping had been registered in the mean time, meaning
+     * the device has already reconnected).
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails(final VertxTestContext ctx) throws InterruptedException {
+
+        // GIVEN an AMQP adapter
+        givenAnAdapter(properties);
+        final DownstreamSender downstreamEventSender = givenAnEventSenderForAnyTenant();
+
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().onComplete(ctx.completing());
+        adapter.start(startupTracker);
+        assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
+
+        // to which a device is connected
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(server).connectHandler(connectHandler.capture());
+        connectHandler.getValue().handle(deviceConnection);
+
+        // that wants to receive commands
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
+        final String sourceAddress = getCommandEndpoint();
+        final ProtonSender sender = getSender(sourceAddress);
+
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
+
+        // WHEN the connection to the device is lost
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).closeHandler(closeHandler.capture());
+        closeHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+
+        // THEN the adapter closes the command consumer
+        verify(commandConsumer).close(any());
+        // and since closing the command consumer fails with a precon-failed exception
+        // there is only one notification sent during consumer creation, no 'disconnectedTtdEvent' event with TTD = 0
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(downstreamEventSender, times(1)).sendAndWaitForOutcome(messageCaptor.capture(), any());
+        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(-1);
     }
 
     /**

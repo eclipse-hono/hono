@@ -131,7 +131,7 @@ public final class AdapterInstanceCommandHandler {
      * @param commandHandler The command handler. The handler must invoke one of the terminal methods of the passed
      *                       in {@link CommandContext} in order to settle the command message transfer and finish
      *                       the trace span associated with the {@link CommandContext}.
-     * @return The previous handler entry or {@code null} if there was none.
+     * @return The replaced handler entry or {@code null} if there was none.
      * @throws NullPointerException If any of tenantId, deviceId or commandHandler is {@code null}.
      */
     public CommandHandlerWrapper putDeviceSpecificCommandHandler(final String tenantId, final String deviceId,
@@ -140,11 +140,25 @@ public final class AdapterInstanceCommandHandler {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
 
-        final String key = getDeviceKey(tenantId, deviceId);
+        return putDeviceSpecificCommandHandler(new CommandHandlerWrapper(tenantId, deviceId, gatewayId, commandHandler));
+    }
+
+    /**
+     * Adds a handler for commands targeted at a device that is connected either directly or via a gateway.
+     *
+     * @param commandHandlerWrapper The wrapper containing the command handler and device/gateway identifier.
+     * @return The replaced entry or {@code null} if there was none.
+     * @throws NullPointerException If commandHandlerWrapper is {@code null}.
+     */
+    public CommandHandlerWrapper putDeviceSpecificCommandHandler(final CommandHandlerWrapper commandHandlerWrapper) {
+        Objects.requireNonNull(commandHandlerWrapper);
+
+        final String key = getDeviceKey(commandHandlerWrapper);
         if (commandHandlers.containsKey(key)) {
-            LOG.debug("replacing existing command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+            LOG.debug("replacing existing command handler [tenant-id: {}, device-id: {}]",
+                    commandHandlerWrapper.getTenantId(), commandHandlerWrapper.getDeviceId());
         }
-        return commandHandlers.put(key, new CommandHandlerWrapper(tenantId, deviceId, gatewayId, commandHandler));
+        return commandHandlers.put(key, commandHandlerWrapper);
     }
 
     /**
@@ -187,6 +201,24 @@ public final class AdapterInstanceCommandHandler {
         final CommandHandlerWrapper removedHandler = commandHandlers.remove(getDeviceKey(tenantId, deviceId));
         LOG.trace("Removed handler for tenant {}, device {}: {}", tenantId, deviceId, removedHandler != null);
         return removedHandler != null;
+    }
+
+    /**
+     * Removes the given handler.
+     *
+     * @param commandHandlerWrapper The handler to remove.
+     * @return {@code true} if the handler was removed.
+     * @throws NullPointerException If commandHandlerWrapper is {@code null}.
+     */
+    public boolean removeDeviceSpecificCommandHandler(final CommandHandlerWrapper commandHandlerWrapper) {
+        Objects.requireNonNull(commandHandlerWrapper);
+        final boolean removed = commandHandlers.remove(getDeviceKey(commandHandlerWrapper), commandHandlerWrapper);
+        LOG.trace("Removed {}: {}", commandHandlerWrapper, removed);
+        return removed;
+    }
+
+    private String getDeviceKey(final CommandHandlerWrapper commandHandlerWrapper) {
+        return getDeviceKey(commandHandlerWrapper.getTenantId(), commandHandlerWrapper.getDeviceId());
     }
 
     private String getDeviceKey(final String tenantId, final String deviceId) {

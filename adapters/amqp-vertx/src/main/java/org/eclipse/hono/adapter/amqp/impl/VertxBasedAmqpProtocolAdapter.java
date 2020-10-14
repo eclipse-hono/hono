@@ -384,7 +384,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private void onConnectionLoss(final ProtonConnection con) {
-        final Span span = newSpan("handle closing of command connection", getAuthenticatedDevice(con),
+        final Span span = newSpan("handle closing of connection", getAuthenticatedDevice(con),
                 getTraceSamplingPriority(con));
         @SuppressWarnings("rawtypes")
         final List<Future> handlerResults = getConnectionLossHandlers(con).stream().map(handler -> handler.apply(span))
@@ -577,7 +577,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 Device.class);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(conn);
 
-        final Span span = newSpan("attach receiver", authenticatedDevice, traceSamplingPriority);
+        final Span span = newSpan("attach device sender link", authenticatedDevice, traceSamplingPriority);
         span.log(Map.of("snd-settle-mode", receiver.getRemoteQoS()));
 
         final String remoteTargetAddress = Optional.ofNullable(receiver.getRemoteTarget())
@@ -721,7 +721,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 Device.class);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(connection);
 
-        final Span span = newSpan("attach Command receiver", authenticatedDevice, traceSamplingPriority);
+        final Span span = newSpan("attach device command receiver link", authenticatedDevice, traceSamplingPriority);
 
         getResourceIdentifier(sender.getRemoteSource())
         .compose(address -> validateAddress(address, authenticatedDevice))
@@ -731,14 +731,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority)
                         .map(consumer -> {
                             setConnectionLossHandler(connection, validAddress.toString(), connectionLossSpan -> {
-                                // do not use the above created span for onCommandConnectionClose()
+                                // do not use the above created span for closing the command consumer
                                 // because that span will (usually) be finished long before the
                                 // connection is closed/lost
-                                final Future<ProtonDelivery> sendEventFuture = sendDisconnectedTtdEvent(validAddress.getTenantId(), 
-                                        validAddress.getResourceId(), authenticatedDevice, connectionLossSpan.context());
-                                final Future<Void> closeConsumerFuture = consumer.close(connectionLossSpan.context());
-
-                                return CompositeFuture.join(sendEventFuture, closeConsumerFuture).mapEmpty();
+                                return closeCommandConsumer(consumer, validAddress.getTenantId(),
+                                        validAddress.getResourceId(), authenticatedDevice, connectionLossSpan);
                             });
                             return consumer;
                         });
@@ -801,12 +798,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
             final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
-                final Span detachHandlerSpan = newSpan("detach Command receiver", authenticatedDevice,
-                        traceSamplingPriority);
+                final Span detachHandlerSpan = newSpan("detach device command receiver link",
+                        authenticatedDevice, traceSamplingPriority);
                 removeConnectionLossHandler(connection, address.toString());
-                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, detachHandlerSpan.context());
                 onLinkDetach(sender);
-                consumer.close(detachHandlerSpan.context())
+                closeCommandConsumer(consumer, tenantId, deviceId, authenticatedDevice, detachHandlerSpan)
                         .onComplete(v -> detachHandlerSpan.finish());
             };
             HonoProtonHelper.setCloseHandler(sender, detachHandler);
@@ -821,6 +817,29 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return consumer;
         }).recover(t -> Future.failedFuture(
                 new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer")));
+    }
+
+    private Future<Void> closeCommandConsumer(
+            final ProtocolAdapterCommandConsumer consumer,
+            final String tenantId,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final Span span) {
+
+        return consumer.close(span.context())
+                .recover(thr -> {
+                    TracingHelper.logError(span, thr);
+                    // ignore all but precon-failed errors
+                    if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
+                        log.debug("command consumer wasn't active anymore - skip sending disconnected event [tenant: {}, device-id: {}]",
+                                tenantId, deviceId);
+                        span.log("command consumer wasn't active anymore - skip sending disconnected event");
+                        return Future.failedFuture(thr);
+                    }
+                    return Future.succeededFuture();
+                })
+                .compose(v -> sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context()))
+                .mapEmpty();
     }
 
     private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
