@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
@@ -100,6 +101,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     private HttpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
     private HttpServer server;
+    private Handler<Void> startupHandler;
 
     /**
      * Sets up common fixture.
@@ -108,6 +110,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     @BeforeEach
     public void setup() {
 
+        startupHandler = mock(Handler.class);
         context = mock(Context.class);
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -162,8 +165,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     public void testStartUsesClientProvidedHttpServer(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided HTTP server
-        server = getHttpServer(false);
-        adapter = getAdapter(server, null);
+        givenAnAdapter(properties);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -184,14 +186,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testStartInvokesOnStartupSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server
-        server = getHttpServer(false);
-        final Handler<Void> startupHandler = mock(Handler.class);
-        adapter = getAdapter(server, startupHandler);
+        givenAnAdapter(properties);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -215,15 +214,17 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
         server = getHttpServer(true);
-        adapter = getAdapter(server,
-                s -> ctx.failNow(new IllegalStateException("should not invoke onStartupSuccess")));
+        adapter = getAdapter(server, properties, startupHandler);
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has not been invoked
-        startupTracker.future().onComplete(ctx.failing(t -> ctx.completeNow()));
+        startupTracker.future().onComplete(ctx.failing(t -> {
+            ctx.verify(() -> verify(startupHandler, never()).handle(any()));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -905,10 +906,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Creates a new adapter instance to be tested.
      * <p>
      * This method
+     * This method
      * <ol>
-     * <li>creates a new {@code HttpServer} using {@link #getHttpServer(boolean)}</li>
+     * <li>creates a new {@code HttpServer} by invoking {@link #getHttpServer(boolean)} with {@code false}</li>
      * <li>assigns the result to property <em>server</em></li>
-     * <li>passes the server in to {@link #getAdapter(HttpServer, Handler)}</li>
+     * <li>creates a new adapter by invoking {@link #getAdapter(HttpServer, HttpProtocolAdapterProperties, Handler)}
+     * with the server, configuration and the startupHandler</li>
      * <li>assigns the result to property <em>adapter</em></li>
      * </ol>
      *
@@ -918,7 +921,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> givenAnAdapter(
             final HttpProtocolAdapterProperties configuration) {
         this.server = getHttpServer(false);
-        this.adapter = getAdapter(this.server, null);
+        this.adapter = getAdapter(this.server, configuration, startupHandler);
         return adapter;
     }
 
@@ -945,11 +948,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Creates a protocol adapter for a given HTTP server.
      *
      * @param server The HTTP server to start.
+     * @param configuration The configuration properties to use.
      * @param onStartupSuccess The handler to invoke on successful startup.
      * @return The adapter.
      */
     private AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> getAdapter(
             final HttpServer server,
+            final HttpProtocolAdapterProperties configuration,
             final Handler<Void> onStartupSuccess) {
 
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<>() {
@@ -965,14 +970,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
             @Override
             protected void onStartupSuccess() {
-                if (onStartupSuccess != null) {
-                    onStartupSuccess.handle(null);
-                }
+                Optional.ofNullable(onStartupSuccess).ifPresent(h -> h.handle(null));
             }
         };
 
         adapter.init(vertx, context);
-        adapter.setConfig(properties);
+        adapter.setConfig(configuration);
         adapter.setMetrics(metrics);
         adapter.setInsecureHttpServer(server);
         adapter.setResourceLimitChecks(resourceLimitChecks);

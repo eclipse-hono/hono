@@ -214,8 +214,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @Test
     public void testStartup(final VertxTestContext ctx) {
 
-        server = getMqttServer(false);
-        adapter = getAdapter(server);
+        givenAnAdapter(properties);
 
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
@@ -1410,7 +1409,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
             final MqttProtocolAdapterProperties configuration) {
 
         this.server = getMqttServer(false);
-        this.adapter = getAdapter(this.server);
+        this.adapter = getAdapter(this.server, configuration);
         return adapter;
     }
 
@@ -1433,7 +1432,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         return server;
     }
 
-    private AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> getAdapter(final MqttServer server) {
+    private AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> getAdapter(
+            final MqttServer server,
+            final MqttProtocolAdapterProperties configuration) {
 
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = new AbstractVertxBasedMqttProtocolAdapter<>() {
 
@@ -1448,7 +1449,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 return uploadTelemetryMessage(ctx, topic.getTenantId(), topic.getResourceId(), ctx.message().payload());
             }
         };
-        adapter.setConfig(properties);
+        adapter.setConfig(configuration);
         adapter.setMetrics(metrics);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);
