@@ -214,7 +214,7 @@ public final class SQL {
         if (!"jdbc".equals(scheme)) {
             throw new IllegalArgumentException("URL is not a JDBC url: " + url);
         }
-        final URI subUri = URI.create(uri.getSchemeSpecificPart());
+        final URI subUri = URI.create(UrlEscapers.urlPathSegmentEscaper().escape(uri.getSchemeSpecificPart()));
         return subUri.getScheme();
     }
 
