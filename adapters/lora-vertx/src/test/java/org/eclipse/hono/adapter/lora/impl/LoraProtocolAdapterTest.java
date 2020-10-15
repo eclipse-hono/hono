@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_SELF;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,19 +41,12 @@ import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.TenantObject;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -64,9 +56,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -77,7 +67,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * Verifies behavior of {@link LoraProtocolAdapter}.
  */
-public class LoraProtocolAdapterTest {
+public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProtocolAdapterProperties, LoraProtocolAdapter> {
 
     private static final int TEST_FUNCTION_PORT = 2;
     private static final String TEST_TENANT_ID = "myTenant";
@@ -86,46 +76,10 @@ public class LoraProtocolAdapterTest {
     private static final byte[] TEST_PAYLOAD = "bumxlux".getBytes(StandardCharsets.UTF_8);
     private static final String TEST_PROVIDER = "bumlux";
 
-    private static TenantClientFactory tenantClientFactory;
-    private static RegistrationClientFactory registrationClientFactory;
-    private static DownstreamSenderFactory downstreamSenderFactory;
-
-    private LoraProtocolAdapter adapter;
     private DownstreamSender telemetrySender;
     private DownstreamSender eventSender;
     private Tracer tracer;
     private Span currentSpan;
-
-    /**
-     * Creates the client factories for the registry services.
-     */
-    @SuppressWarnings("unchecked")
-    @BeforeAll
-    public static void createServiceClientFactories() {
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(tenantClientFactory).disconnect(any(Handler.class));
-
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(registrationClientFactory).disconnect(any(Handler.class));
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(downstreamSenderFactory).disconnect(any(Handler.class));
-    }
 
     /**
      * Sets up the fixture.
@@ -133,18 +87,9 @@ public class LoraProtocolAdapterTest {
     @BeforeEach
     public void setUp() {
 
-        final TenantClient tenantClient = mock(TenantClient.class);
-        doAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        }).when(tenantClient).get(anyString(), (SpanContext) any());
-        doAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        }).when(tenantClient).get(anyString());
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
-
-        final RegistrationClient regClient = mock(RegistrationClient.class);
-        when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(new JsonObject()));
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+        this.properties = givenDefaultConfigurationProperties();
+        createClientFactories();
+        createClients();
 
         telemetrySender = mock(DownstreamSender.class);
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
@@ -167,11 +112,17 @@ public class LoraProtocolAdapterTest {
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 
         adapter = new LoraProtocolAdapter();
-        adapter.setConfig(new LoraProtocolAdapterProperties());
-        adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
+        adapter.setConfig(properties);
         adapter.setTracer(tracer);
+        setServiceClients(adapter);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected LoraProtocolAdapterProperties givenDefaultConfigurationProperties() {
+        return new LoraProtocolAdapterProperties();
     }
 
     /**

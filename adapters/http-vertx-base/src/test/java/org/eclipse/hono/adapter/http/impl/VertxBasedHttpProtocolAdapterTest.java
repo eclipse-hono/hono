@@ -30,29 +30,17 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.JsonHelper;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +59,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
@@ -92,32 +81,23 @@ import io.vertx.proton.ProtonDelivery;
 @ExtendWith(VertxExtension.class)
 @TestInstance(Lifecycle.PER_CLASS)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class VertxBasedHttpProtocolAdapterTest {
+public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProtocolAdapterProperties, VertxBasedHttpProtocolAdapter> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapterTest.class);
     private static final String HOST = "127.0.0.1";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private TenantClientFactory tenantClientFactory;
-    private CredentialsClientFactory credentialsClientFactory;
-    private DownstreamSenderFactory downstreamSenderFactory;
     private DownstreamSender telemetrySender;
     private DownstreamSender eventSender;
-    private RegistrationClientFactory registrationClientFactory;
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
-    private HttpProtocolAdapterProperties config;
-    private VertxBasedHttpProtocolAdapter httpAdapter;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private CommandResponseSender commandResponseSender;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
-    private CommandTargetMapper commandTargetMapper;
     private Vertx vertx;
     private WebClient httpClient;
 
     /**
-     * Prepare the adapter by configuring it.
-     * Since several test cases change the behavior of specific mocked clients, all is created from scratch (and not
-     * in a setup method that is invoked once in the class).
+     * Creates and deploys the adapter instance under test.
+     * <p>
+     * The service clients' behavior is newly configured per test case
+     * in {@link VertxBasedHttpProtocolAdapterTest#setUp(TestInfo)}.
      *
      * @param ctx The vert.x test context.
      */
@@ -126,87 +106,24 @@ public class VertxBasedHttpProtocolAdapterTest {
     public void deployAdapter(final VertxTestContext ctx) {
 
         vertx = Vertx.vertx();
-
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(tenantClientFactory).disconnect(any(Handler.class));
-
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(credentialsClientFactory).disconnect(any(Handler.class));
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(downstreamSenderFactory).disconnect(any(Handler.class));
-
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(registrationClientFactory).disconnect(any(Handler.class));
-
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(commandConsumerFactory).disconnect(any(Handler.class));
-
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
-
-        commandTargetMapper = mock(CommandTargetMapper.class);
-
-        commandResponseSender = mock(CommandResponseSender.class);
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
-            .thenReturn(Future.succeededFuture(commandResponseSender));
-
         usernamePasswordAuthProvider = mock(DeviceCredentialsAuthProvider.class);
 
         final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
         when(metrics.startTimer()).thenReturn(Timer.start());
 
-        config = new HttpProtocolAdapterProperties();
-        config.setInsecurePort(0);
-        config.setInsecurePortBindAddress(HOST);
-        config.setAuthenticationRequired(true);
+        this.properties = givenDefaultConfigurationProperties();
+        createClientFactories();
 
-        httpAdapter = new VertxBasedHttpProtocolAdapter();
-        httpAdapter.setConfig(config);
-        httpAdapter.setTenantClientFactory(tenantClientFactory);
-        httpAdapter.setCredentialsClientFactory(credentialsClientFactory);
-        httpAdapter.setDownstreamSenderFactory(downstreamSenderFactory);
-        httpAdapter.setRegistrationClientFactory(registrationClientFactory);
-        httpAdapter.setCommandConsumerFactory(commandConsumerFactory);
-        httpAdapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        httpAdapter.setCommandTargetMapper(commandTargetMapper);
-        httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
-        httpAdapter.setMetrics(metrics);
+        adapter = new VertxBasedHttpProtocolAdapter();
+        adapter.setConfig(properties);
+        setServiceClients(adapter);
+        adapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
+        adapter.setMetrics(metrics);
 
-        vertx.deployVerticle(httpAdapter, ctx.succeeding(deploymentId -> {
+        vertx.deployVerticle(adapter, ctx.succeeding(deploymentId -> {
             final WebClientOptions options = new WebClientOptions()
                     .setDefaultHost(HOST)
-                    .setDefaultPort(httpAdapter.getInsecurePort());
+                    .setDefaultPort(adapter.getInsecurePort());
             httpClient = WebClient.create(vertx, options);
             ctx.completeNow();
         }));
@@ -219,22 +136,11 @@ public class VertxBasedHttpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @BeforeEach
-    public void setUp(final TestInfo testInfo) {
+    public void configureServiceClients(final TestInfo testInfo) {
 
         LOG.info("running test case [{}]", testInfo.getDisplayName());
 
-        final RegistrationClient regClient = mock(RegistrationClient.class);
-        when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(new JsonObject()));
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
-
-        final TenantClient tenantClient = mock(TenantClient.class);
-        doAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        }).when(tenantClient).get(anyString(), (SpanContext) any());
-        doAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        }).when(tenantClient).get(anyString());
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        createClients();
 
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
@@ -267,6 +173,18 @@ public class VertxBasedHttpProtocolAdapterTest {
                 return UsernamePasswordCredentials.create(username, password);
             }
         }).when(usernamePasswordAuthProvider).getCredentials(any(JsonObject.class));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected HttpProtocolAdapterProperties givenDefaultConfigurationProperties() {
+        final HttpProtocolAdapterProperties result = new HttpProtocolAdapterProperties();
+        result.setInsecurePort(0);
+        result.setInsecurePortBindAddress(HOST);
+        result.setAuthenticationRequired(true);
+        return result;
     }
 
     /**
@@ -606,10 +524,10 @@ public class VertxBasedHttpProtocolAdapterTest {
     @Test
     public void testPostCmdResponseForNotExistingCommandResponseLinkResultsIn503(final VertxTestContext ctx) {
 
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        outcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+        givenACommandResponseSenderForAnyTenant(outcome);
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-
-        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(
-                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
 
         httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
@@ -629,13 +547,11 @@ public class VertxBasedHttpProtocolAdapterTest {
     @Test
     public void testPostCmdResponseForExistingCommandResponseLinkResultsInAccepted(final VertxTestContext ctx) {
 
+        givenACommandResponseSenderForAnyTenant();
         final ProtonDelivery remotelySettledDelivery = mock(ProtonDelivery.class);
         when(remotelySettledDelivery.remotelySettled()).thenReturn(Boolean.TRUE);
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-
-        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(
-                Future.succeededFuture(remotelySettledDelivery));
 
         httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")

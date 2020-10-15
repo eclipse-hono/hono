@@ -34,9 +34,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -71,7 +69,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.ParsedHeaderValues;
 import io.vertx.ext.web.Router;
@@ -93,8 +90,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     private static final String ADAPTER_TYPE = "http";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private RegistrationClient regClient;
-    private TenantClient tenantClient;
     private ProtocolAdapterCommandConsumer commandConsumer;
     private Vertx vertx;
     private Context context;
@@ -122,17 +117,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         metrics = mock(HttpAdapterMetrics.class);
 
-        regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject();
-        when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(result));
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
-
-        tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        });
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
-
+        this.properties = givenDefaultConfigurationProperties();
+        createClientFactories();
+        createClients();
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
@@ -290,7 +277,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // WHEN an unknown device that supposedly belongs to that tenant publishes a telemetry message
         // with a TTD value set
-        when(regClient.assertRegistration(eq("unknown-device"), any(), any(SpanContext.class))).thenReturn(
+        when(registrationClient.assertRegistration(eq("unknown-device"), any(), any(SpanContext.class))).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
@@ -302,7 +289,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // THEN the device gets a 404
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_NOT_FOUND);
-        verify(regClient).assertRegistration(eq("unknown-device"), any(), any(SpanContext.class));
+        verify(registrationClient).assertRegistration(eq("unknown-device"), any(), any(SpanContext.class));
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class), any(SpanContext.class));
         // and no Command consumer has been created for the device
@@ -574,7 +561,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(ctx.getAuthenticatedDevice()).thenReturn(new DeviceUser("tenant", "9999"));
 
         // but for which no registration information is available
-        when(regClient.assertRegistration((String) any(), (String) any(), (SpanContext) any()))
+        when(registrationClient.assertRegistration((String) any(), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                         "cannot publish data for device of other tenant")));
 
@@ -979,7 +966,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         adapter.setMetrics(metrics);
         adapter.setInsecureHttpServer(server);
         adapter.setResourceLimitChecks(resourceLimitChecks);
-        setCollaborators(adapter);
+        setServiceClients(adapter);
         return adapter;
     }
 

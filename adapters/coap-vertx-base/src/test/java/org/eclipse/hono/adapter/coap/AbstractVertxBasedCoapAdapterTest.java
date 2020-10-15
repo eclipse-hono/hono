@@ -56,9 +56,7 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -84,7 +82,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -101,8 +98,6 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private RegistrationClient regClient;
-    private TenantClient tenantClient;
     private ProtocolAdapterCommandConsumer commandConsumer;
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
@@ -124,18 +119,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         final SpanContext spanContext = mock(SpanContext.class);
         when(span.context()).thenReturn(spanContext);
 
-        tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        });
-
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
-
-        regClient = mock(RegistrationClient.class);
-        when(regClient.assertRegistration(anyString(), any(), any(SpanContext.class))).thenReturn(Future.succeededFuture(new JsonObject()));
-
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
-                .thenReturn(Future.succeededFuture(regClient));
+        this.properties = givenDefaultConfigurationProperties();
+        createClientFactories();
+        createClients();
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());

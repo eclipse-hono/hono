@@ -57,10 +57,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -94,7 +91,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -121,9 +117,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      */
     private static final String TEST_DEVICE = "test-device";
 
-    private RegistrationClient registrationClient;
-    private TenantClient tenantClient;
-
     private AmqpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
     private ConnectionLimitManager connectionLimitManager;    
@@ -146,22 +139,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final SpanContext spanContext = mock(SpanContext.class);
         when(span.context()).thenReturn(spanContext);
 
-        tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
-           return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        });
-
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
-
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        registrationClient = mock(RegistrationClient.class);
-        final JsonObject regAssertion = new JsonObject();
-        when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
-                .thenReturn(Future.succeededFuture(regAssertion));
-
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
-                .thenReturn(Future.succeededFuture(registrationClient));
+        this.properties = givenDefaultConfigurationProperties();
+        createClientFactories();
+        createClients();
 
         connectionLimitManager = mock(ConnectionLimitManager.class);
 
@@ -1329,7 +1309,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.setConnectionLimitManager(connectionLimitManager);
-        setCollaborators(adapter);
+        setServiceClients(adapter);
         adapter.init(vertx, context);
         return adapter;
     }

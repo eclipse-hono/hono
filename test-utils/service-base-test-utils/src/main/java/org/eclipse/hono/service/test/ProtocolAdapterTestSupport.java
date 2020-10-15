@@ -16,6 +16,7 @@ package org.eclipse.hono.service.test;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,15 +35,20 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
-import org.junit.jupiter.api.BeforeEach;
+import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -64,63 +70,135 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected DownstreamSenderFactory downstreamSenderFactory;
     protected RegistrationClient registrationClient;
     protected RegistrationClientFactory registrationClientFactory;
+    protected TenantClient tenantClient;
     protected TenantClientFactory tenantClientFactory;
 
     /**
-     * Sets up the adapter instance to be tested.
-     */
-    @BeforeEach
-    protected void setUpAdapterInstance() {
-
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
-
-        commandTargetMapper = mock(CommandTargetMapper.class);
-
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(credentialsClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(deviceConnectionClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-
-        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(downstreamSenderFactory.isConnected()).thenReturn(Future.succeededFuture());
-
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-
-        registrationClient = mock(RegistrationClient.class);
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
-
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-
-        connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
-        when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(downstreamSenderFactory);
-        when(connectionEventProducerContext.getTenantClientFactory()).thenReturn(tenantClientFactory);
-
-        properties = givenDefaultConfigurationProperties();
-    }
-
-    /**
-     * Creates default configuration for the adapter.
+     * Creates default configuration properties for the adapter.
      *
      * @return The configuration properties.
      */
     protected abstract C givenDefaultConfigurationProperties();
 
     /**
-     * Sets the (mock) collaborators on an adapter.
+     * Creates mock instances of the service client factories.
+     * <p>
+     * All factories are configured to successfully connect/disconnect to/from their peer.
+     */
+    @SuppressWarnings("unchecked")
+    protected void createClientFactories() {
+
+        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(commandConsumerFactory).disconnect(any(Handler.class));
+
+        commandTargetMapper = mock(CommandTargetMapper.class);
+
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(credentialsClientFactory.isConnected()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(credentialsClientFactory).disconnect(any(Handler.class));
+
+        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(deviceConnectionClientFactory.isConnected()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
+
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(downstreamSenderFactory.isConnected()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(downstreamSenderFactory).disconnect(any(Handler.class));
+
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(registrationClientFactory).disconnect(any(Handler.class));
+
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(tenantClientFactory).disconnect(any(Handler.class));
+
+        connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
+        when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(downstreamSenderFactory);
+        when(connectionEventProducerContext.getTenantClientFactory()).thenReturn(tenantClientFactory);
+    }
+
+    /**
+     * Creates mock instances of the service clients and
+     * configures the factories to return them.
+     * <p>
+     * This method is separate from {@link #createClientFactories()} in order to
+     * support setups where the factories are created once for all test cases but
+     * the client instances need to be (re-)set for each individual test case.
+     * <p>
+     * All clients are configured to return succeeded futures
+     * containing <em>happy-path</em> results.
+     * <p>
+     * Creates a {@link TenantClient} and a {@link RegistrationClient}.
+     *
+     * @throws IllegalStateException if any of factories for which
+     *         a mock client instance is to be created is {@code null}.
+     */
+    protected void createClients() {
+
+        if (tenantClientFactory == null
+                || registrationClientFactory == null) {
+            throw new IllegalStateException("factories are not initialized");
+        }
+
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
+        when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+
+        registrationClient = mock(RegistrationClient.class);
+        when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
+                .thenAnswer(invocation -> {
+                    final String deviceId = invocation.getArgument(0);
+                    final JsonObject regAssertion = new JsonObject()
+                            .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+                    return Future.succeededFuture(regAssertion);
+                });
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
+            .thenReturn(Future.succeededFuture(registrationClient));
+    }
+
+    /**
+     * Sets the (mock) service clients on an adapter.
      *
      * @param adapter The adapter.
      */
-    protected void setCollaborators(final T adapter) {
+    protected void setServiceClients(final T adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setCredentialsClientFactory(credentialsClientFactory);

@@ -42,8 +42,6 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -78,7 +76,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -103,8 +100,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
     private static Vertx vertx;
 
-    private RegistrationClient regClient;
-    private TenantClient tenantClient;
     private AuthHandler<MqttConnectContext> authHandler;
     private ResourceLimitChecks resourceLimitChecks;
     private MqttAdapterMetrics metrics;
@@ -140,18 +135,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         metrics = mock(MqttAdapterMetrics.class);
 
-        regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject();
-        when(regClient.assertRegistration(anyString(), (String) any(), (SpanContext) any()))
-                .thenReturn(Future.succeededFuture(result));
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
-                .thenReturn(Future.succeededFuture(regClient));
-
-        tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        });
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        this.properties = givenDefaultConfigurationProperties();
+        createClientFactories();
+        createClients();
 
         when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
                 .thenReturn(Future.succeededFuture(mock(DownstreamSender.class)));
@@ -409,7 +395,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "9999")));
         // but for which no registration information is available
-        when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
+        when(registrationClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
                         HttpURLConnection.HTTP_NOT_FOUND, "device unknown or disabled")));
 
@@ -575,7 +561,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // WHEN an unknown device publishes a telemetry message
-        when(regClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
+        when(registrationClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         final MqttEndpoint endpoint = mockEndpoint();
@@ -1453,7 +1439,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.setMetrics(metrics);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);
-        setCollaborators(adapter);
+        setServiceClients(adapter);
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);
