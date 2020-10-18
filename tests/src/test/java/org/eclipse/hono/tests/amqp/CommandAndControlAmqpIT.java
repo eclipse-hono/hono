@@ -163,7 +163,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }
         }))
         // use anonymous sender
-        .compose(con -> createProducer(null))
+        .compose(con -> createProducer(null, ProtonQoS.AT_LEAST_ONCE))
         .compose(sender -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
             .map(recv -> {
                 recv.handler(commandConsumerFactory.apply(recv, sender));

@@ -411,6 +411,42 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
+     * Verifies that the adapter rejects presettled messages with an event address.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadEventRejectsPresettledMessage(final VertxTestContext ctx) {
+
+        // GIVEN an adapter
+        givenAnAdapter(properties);
+        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant();
+
+        // with an enabled tenant
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // WHEN a device uploads an event using a presettled message
+        final Device gateway = new Device(TEST_TENANT_ID, "device");
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(true); // AT MOST ONCE
+        final String to = ResourceIdentifier.fromString(EventConstants.EVENT_ENDPOINT).toString();
+        final Buffer payload = Buffer.buffer("some payload");
+
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), span, gateway))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the adapter does not forward the event
+                    verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
+                    verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+
+                    // AND notifies the device by sending back a REJECTED disposition
+                    verify(delivery).disposition(any(Rejected.class), eq(true));
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that if a client device opens a receiver link to receive commands, then the AMQP adapter opens a link
      * for sending commands to the device and notifies the downstream application by sending an
      * <em>EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION</em> event a with TTD -1. An unauthenticated device is used in

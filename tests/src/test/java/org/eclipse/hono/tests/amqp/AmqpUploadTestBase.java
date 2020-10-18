@@ -46,7 +46,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -67,8 +66,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     private static final long DEFAULT_TEST_TIMEOUT = 15000; // ms
     private static final String DEVICE_PASSWORD = "device-password";
 
+    /**
+     * The sender link to use for uploading messages to the adapter.
+     */
     private ProtonSender sender;
-    private MessageConsumer consumer;
 
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
         ctx.verify(() -> {
@@ -127,7 +128,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      */
     @AfterEach
     public void disconnectAdapter(final VertxTestContext context) {
-        close(context);
+        closeConnectionToAdapter().onComplete(context.completing());
     }
 
     /**
@@ -146,7 +147,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        setupProtocolAdapter(tenantId, deviceId, false)
+        setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false)
             .map(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
@@ -196,7 +197,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         createConsumer(tenantId, msg -> {
             ctx.failNow(new AssertionError("should not have received message"));
         })
-        .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, false))
+        .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false))
         .onComplete(ctx.succeeding(s -> {
 
             s.detachHandler(remoteDetach -> {
@@ -254,7 +255,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
             .compose(con -> {
                 this.connection = con;
-                return createProducer(targetAddress);
+                return createProducer(targetAddress, ProtonQoS.AT_LEAST_ONCE);
             })
             .onComplete(context.failing(t -> {
                 log.info("failed to open sender", t);
@@ -277,7 +278,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
-        setupProtocolAdapter(tenantId, deviceId, false)
+        setupProtocolAdapter(tenantId, deviceId, senderQos, false)
             .onComplete(setup.succeeding(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
@@ -320,7 +321,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
             })
             .compose(ok -> connectToAdapter(deviceCert))
-            .compose(con -> createProducer(null))
+            .compose(con -> createProducer(null, senderQos))
             .onComplete(setup.succeeding(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
@@ -356,7 +357,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 assertMessageProperties(messageSending, msg);
                 callback.handle(null);
             }).map(c -> {
-                consumer = c;
                 return null;
             });
         };
@@ -486,6 +486,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      *
      * @param tenantId The tenant to register with the device registry.
      * @param deviceId The device to add to the tenant identified by tenantId.
+     * @param senderQos The delivery semantics used by the device for uploading messages.
      * @param disableTenant If true, disable the protocol adapter for the tenant.
      *
      * @return A future succeeding with the created sender.
@@ -493,6 +494,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     private Future<ProtonSender> setupProtocolAdapter(
             final String tenantId,
             final String deviceId,
+            final ProtonQoS senderQos,
             final boolean disableTenant) {
 
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
@@ -505,33 +507,16 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         return helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
                 .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
-                .compose(con -> createProducer(null))
+                .compose(con -> createProducer(null, senderQos))
                 .recover(t -> {
                     log.error("error setting up AMQP protocol adapter", t);
                     return Future.failedFuture(t);
                 });
     }
 
-    private void close(final VertxTestContext ctx) {
+    private Future<Void> closeConnectionToAdapter() {
 
         final Promise<ProtonConnection> connectionTracker = Promise.promise();
-        final Promise<ProtonSender> senderTracker = Promise.promise();
-        final Promise<Void> receiverTracker = Promise.promise();
-
-        if (sender == null || !sender.isOpen()) {
-            senderTracker.complete();
-        } else {
-            context.runOnContext(go -> {
-                sender.closeHandler(senderTracker);
-                sender.close();
-            });
-        }
-
-        if (consumer == null) {
-            receiverTracker.complete();
-        } else {
-            consumer.close(receiverTracker);
-        }
 
         if (connection == null || connection.isDisconnected()) {
             connectionTracker.complete();
@@ -542,10 +527,13 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             });
         }
 
-        CompositeFuture.join(connectionTracker.future(), senderTracker.future(), receiverTracker.future())
-        .onComplete(c -> {
-           context = null;
-           ctx.completeNow();
-        });
+        return connectionTracker.future()
+                .onComplete(con -> {
+                    log.info("connection to AMQP adapter closed");
+                    context = null;
+                    connection = null;
+                    sender = null;
+                })
+                .mapEmpty();
     }
 }

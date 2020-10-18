@@ -578,20 +578,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(conn);
 
         final Span span = newSpan("attach receiver", authenticatedDevice, traceSamplingPriority);
+        span.log(Map.of("snd-settle-mode", receiver.getRemoteQoS()));
 
-        if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
-            // the device needs to send all types of message over this link
-            // so we must make sure that it does not allow for pre-settled messages
-            // to be sent only
+        final String remoteTargetAddress = Optional.ofNullable(receiver.getRemoteTarget())
+                .map(target -> target.getAddress())
+                .orElse(null);
+        if (!Strings.isNullOrEmpty(remoteTargetAddress)) {
+            log.debug("client provided target address [{}] in open frame, closing link", remoteTargetAddress);
+            span.log(Map.of("target address", remoteTargetAddress));
             final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "unsupported snd-settle-mode: settled");
-            closeLinkWithError(receiver, ex, span);
-        } else  if (receiver.getRemoteTarget() != null && receiver.getRemoteTarget().getAddress() != null) {
-            if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
-                log.debug("closing link due to the presence of target address [{}]", receiver.getRemoteTarget().getAddress());
-            }
-            final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "this adapter supports anonymous relay mode only");
+                    "container supports anonymous terminus only");
             closeLinkWithError(receiver, ex, span);
         } else {
 
@@ -607,7 +603,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 try {
                     final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
                     final Span msgSpan = newSpan("upload message", authenticatedDevice, traceSamplingPriority, spanContext);
-                    msgSpan.log(Collections.singletonMap(Tags.MESSAGE_BUS_DESTINATION.getKey(), message));
+                    msgSpan.log(Map.of(
+                            Tags.MESSAGE_BUS_DESTINATION.getKey(), message,
+                            "settled", delivery.remotelySettled()));
 
                     final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, msgSpan, authenticatedDevice);
                     ctx.setTimer(metrics.startTimer());
@@ -681,6 +679,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     protected Future<ProtonDelivery> onMessageReceived(final AmqpContext ctx) {
 
+        log.trace("processing message [address: {}, qos: {}]", ctx.getAddress(), ctx.getRequestedQos());
         final Span msgSpan = ctx.getTracingSpan();
         return validateEndpoint(ctx)
         .compose(validatedEndpoint -> validateAddress(validatedEndpoint.getAddress(), validatedEndpoint.getAuthenticatedDevice()))
@@ -695,6 +694,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             } else {
                 ProtonHelper.released(ctx.delivery(), true);
             }
+            log.debug("failed to process message from device", t);
             TracingHelper.logError(msgSpan, t);
             return Future.failedFuture(t);
         });
@@ -1228,6 +1228,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 break;
             case EVENT:
                 if (ctx.isRemotelySettled()) {
+                    // note that the exception thrown here will not result
+                    // in the message being rejected because the message
+                    // is presettled and thus the corresponding disposition
+                    // frame with the error condition will not reach the client
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                             "event endpoint accepts unsettled messages only"));
                 } else {

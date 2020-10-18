@@ -116,10 +116,11 @@ public abstract class AmqpAdapterTestBase {
      *
      * @param target The target address to create the sender for or {@code null}
      *               if an anonymous sender should be created.
+     * @param senderQos The delivery semantics used by the device for uploading messages.
      * @return A future succeeding with the created sender.
      * @throws NullPointerException if qos is {@code null}.
      */
-    protected Future<ProtonSender> createProducer(final String target) {
+    protected Future<ProtonSender> createProducer(final String target, final ProtonQoS senderQos) {
 
         final Promise<ProtonSender> result = Promise.promise();
         if (context == null) {
@@ -127,8 +128,7 @@ public abstract class AmqpAdapterTestBase {
         } else {
             context.runOnContext(go -> {
                 final ProtonSender sender = connection.createSender(target);
-                // vertx-proton doesn't support MIXED yet
-                sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
+                sender.setQoS(senderQos);
                 sender.closeHandler(remoteClose -> {
                     if (remoteClose.failed()) {
                         log.info("peer closed sender link [exception: {}]", remoteClose.cause().getClass().getName());
@@ -215,9 +215,14 @@ public abstract class AmqpAdapterTestBase {
                     assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
                     this.context = Vertx.currentContext();
                     this.connection = unopenedConnection;
+                    log.info("connected to AMQP adapter [{}:{}]",
+                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT);
                     return con;
                 })
                 .recover(t -> {
+                    log.info("failed to connect to AMQP adapter [{}:{}]",
+                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT);
+
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
                             .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.from(condition)))
                             .orElseGet(() -> Future.failedFuture(t));
