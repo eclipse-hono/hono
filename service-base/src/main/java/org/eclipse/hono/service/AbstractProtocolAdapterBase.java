@@ -61,6 +61,7 @@ import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
@@ -80,7 +81,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -1053,13 +1054,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets an assertion for a device's registration status.
+     * Gets an assertion of a device's registration status.
      * <p>
-     * The returned JSON object may include <em>default</em>
-     * values for properties to set on messages published by the device under
-     * property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
-     * <p>
-     * Note that this method will also update the last gateway associated with the given device (if applicable).
+     * Note that this method will also update the last gateway associated with
+     * the given device (if applicable).
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
@@ -1070,10 +1068,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *            acting on behalf of the device.
      * @param context The currently active OpenTracing span that is used to
      *                trace the retrieval of the assertion.
-     * @return The assertion.
+     * @return A succeeded future containing the assertion or a future
+     *         failed with a {@link ServiceInvocationException} if the
+     *         device's registration status could not be asserted.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<JsonObject> getRegistrationAssertion(
+    protected final Future<RegistrationAssertion> getRegistrationAssertion(
             final String tenantId,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1087,15 +1087,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return gatewayId
                 .compose(gwId -> getRegistrationClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context))
-                .compose(registrationAssertion -> {
+                .map(registrationAssertion -> {
+                    try {
+                        return registrationAssertion.mapTo(RegistrationAssertion.class);
+                    } catch (final DecodeException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("registration service returned invalid response:{}{}",
+                                    System.lineSeparator(), registrationAssertion.encodePrettily());
+                        }
+                        throw new ServerErrorException(
+                                HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                "registration service returned invalid response");
+                    }
+                })
+                .onSuccess(assertion -> {
                     // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
                     // so don't wait for the outcome here
-                    updateLastGateway(registrationAssertion, tenantId, deviceId, authenticatedDevice, context)
-                            .otherwise(t -> {
+                    updateLastGateway(assertion, tenantId, deviceId, authenticatedDevice, context)
+                            .onFailure(t -> {
                                 log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
-                                return null;
                             });
-                    return Future.succeededFuture(registrationAssertion);
                 });
     }
 
@@ -1114,9 +1125,47 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param context The currently active OpenTracing span that is used to trace the operation.
      * @return The registration assertion.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     * @deprecated Use {@link #updateLastGateway(RegistrationAssertion, String, String, Device, SpanContext)}
+     *             instead.
      */
+    @Deprecated
     protected final Future<JsonObject> updateLastGateway(
             final JsonObject registrationAssertion,
+            final String tenantId,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final SpanContext context) {
+        try {
+            return updateLastGateway(
+                    registrationAssertion.mapTo(RegistrationAssertion.class),
+                    tenantId,
+                    deviceId,
+                    authenticatedDevice,
+                    context)
+                .map(registrationAssertion);
+        } catch (final DecodeException e) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e));
+        }
+    }
+
+    /**
+     * Updates the last known gateway associated with the given device.
+     *
+     * @param registrationAssertion The registration assertion JSON object as returned by
+     *            {@link #getRegistrationAssertion(String, String, Device, SpanContext)}.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to update the last known gateway for.
+     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
+     *            <p>
+     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
+     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
+     *            acting on behalf of the device.
+     * @param context The currently active OpenTracing span that is used to trace the operation.
+     * @return The registration assertion.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<RegistrationAssertion> updateLastGateway(
+            final RegistrationAssertion registrationAssertion,
             final String tenantId,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1137,9 +1186,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(registrationAssertion);
     }
 
-    private boolean isGatewaySupportedForDevice(final JsonObject registrationAssertion) {
-        final Object viaObj = registrationAssertion.getValue(RegistrationConstants.FIELD_VIA);
-        return viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty();
+    private boolean isGatewaySupportedForDevice(final RegistrationAssertion registrationAssertion) {
+        return !registrationAssertion.getAuthorizedGateways().isEmpty();
     }
 
     private Future<String> getGatewayId(
@@ -1193,7 +1241,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * order to have required Hono specific properties being set on the message automatically.
      * <p>
      * This method simply delegates to {@link #newMessage(QoS, ResourceIdentifier, String, String, Buffer, TenantObject,
-     * JsonObject, Integer, Duration)}.
+     * RegistrationAssertion, Integer, Duration)}.
      *
      * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
      *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
@@ -1223,10 +1271,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String contentType,
             final Buffer payload,
             final TenantObject tenant,
-            final JsonObject registrationInfo,
+            final RegistrationAssertion registrationInfo,
             final Integer timeUntilDisconnect) {
 
-        return newMessage(qos, target, publishAddress, contentType, payload, tenant, registrationInfo, timeUntilDisconnect,
+        return newMessage(
+                qos,
+                target,
+                publishAddress,
+                contentType,
+                payload,
+                tenant,
+                registrationInfo,
+                timeUntilDisconnect,
                 null);
     }
 
@@ -1269,7 +1325,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String contentType,
             final Buffer payload,
             final TenantObject tenant,
-            final JsonObject registrationInfo,
+            final RegistrationAssertion registrationInfo,
             final Integer timeUntilDisconnect,
             final Duration timeToLive) {
 
@@ -1282,7 +1338,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 contentType,
                 payload,
                 tenant,
-                registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS),
+                new JsonObject(registrationInfo.getDefaults()),
                 timeUntilDisconnect,
                 timeToLive,
                 getTypeName(),
@@ -1293,7 +1349,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Adds Hono specific properties to an AMQP 1.0 message.
      * <p>
-     * This method simply delegates to {@link #addProperties(Message, QoS, ResourceIdentifier, String, TenantObject, JsonObject, Integer, Duration)}.
+     * This method simply delegates to
+     * {@link #addProperties(Message, QoS, ResourceIdentifier, String, TenantObject, RegistrationAssertion, Integer, Duration)}.
      *
      * @param msg The message to add the properties to.
      * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
@@ -1324,10 +1381,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final ResourceIdentifier target,
             final String publishAddress,
             final TenantObject tenant,
-            final JsonObject registrationInfo,
+            final RegistrationAssertion registrationInfo,
             final Integer timeUntilDisconnect) {
 
-        return addProperties(msg, qos, target, publishAddress, tenant, registrationInfo, timeUntilDisconnect, null);
+        return addProperties(
+                msg,
+                qos,
+                target,
+                publishAddress,
+                tenant,
+                registrationInfo,
+                timeUntilDisconnect,
+                null);
     }
 
     /**
@@ -1368,7 +1433,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final ResourceIdentifier target,
             final String publishAddress,
             final TenantObject tenant,
-            final JsonObject registrationInfo,
+            final RegistrationAssertion registrationInfo,
             final Integer timeUntilDisconnect,
             final Duration timeToLive) {
 
@@ -1381,7 +1446,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 target,
                 publishAddress,
                 tenant,
-                registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS),
+                new JsonObject(registrationInfo.getDefaults()),
                 timeUntilDisconnect,
                 timeToLive,
                 getTypeName(),
@@ -1532,7 +1597,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ttd);
 
-        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice, context);
+        final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
+                tenant,
+                deviceId,
+                authenticatedDevice,
+                context);
         final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, context);
         final Future<DownstreamSender> senderTracker = getEventSender(tenant);
 

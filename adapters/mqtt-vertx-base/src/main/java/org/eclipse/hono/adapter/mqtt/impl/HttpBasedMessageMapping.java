@@ -24,10 +24,12 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -64,7 +66,10 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
      * @param mqttProtocolAdapterProperties The configuration properties of the mqtt protocol adapter used to look up
      *                                     mapper configurations.
      */
-    public HttpBasedMessageMapping(final WebClient webClient, final MqttProtocolAdapterProperties mqttProtocolAdapterProperties) {
+    public HttpBasedMessageMapping(
+            final WebClient webClient,
+            final MqttProtocolAdapterProperties mqttProtocolAdapterProperties) {
+
         this.webClient = Objects.requireNonNull(webClient);
         this.mqttProtocolAdapterProperties = Objects.requireNonNull(mqttProtocolAdapterProperties);
     }
@@ -73,33 +78,25 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
     public Future<MappedMessage> mapMessage(
             final MqttContext ctx,
             final ResourceIdentifier targetAddress,
-            final JsonObject registrationInfo) {
+            final RegistrationAssertion registrationInfo) {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(registrationInfo);
 
         final Promise<MappedMessage> result = Promise.promise();
-        final Object mapperObject = registrationInfo.getValue(RegistrationConstants.FIELD_MAPPER);
+        final String mapper = registrationInfo.getMapper();
 
-        if (mapperObject instanceof String) {
-
-            final String mapper = (String) mapperObject;
-
-            if (mapper.isBlank()) {
-                LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
-                result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
-            } else {
-                final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
-                if (mapperEndpoint == null) {
-                    LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, ctx.authenticatedDevice());
-                    result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
-                } else {
-                    mapMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
-                }
-            }
-        } else {
+        if (Strings.isNullOrEmpty(mapper)) {
             LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
             result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
+        } else {
+            final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
+            if (mapperEndpoint == null) {
+                LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, ctx.authenticatedDevice());
+                result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
+            } else {
+                mapMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
+            }
         }
 
         return result.future();
@@ -108,12 +105,12 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
     private void mapMessageRequest(
             final MqttContext ctx,
             final ResourceIdentifier targetAddress,
-            final JsonObject registrationInfo,
+            final RegistrationAssertion registrationInfo,
             final MapperEndpoint mapperEndpoint,
             final Handler<AsyncResult<MappedMessage>> resultHandler) {
 
         final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-        registrationInfo.forEach(property -> {
+        JsonObject.mapFrom(registrationInfo).forEach(property -> {
             final Object value = property.getValue();
             if (value instanceof String) {
                 // prevent strings from being enclosed in quotes

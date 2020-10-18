@@ -60,6 +60,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +77,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
@@ -1120,7 +1120,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .start();
 
             final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
+            final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
                     targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
             final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
@@ -1184,7 +1184,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenantObject.getTenantId(), deviceId,
+        final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(tenantObject.getTenantId(), deviceId,
                 ctx.authenticatedDevice(), currentSpan.context());
         final Future<?> tenantValidationTracker = CompositeFuture.all(
                 isAdapterEnabled(tenantObject),

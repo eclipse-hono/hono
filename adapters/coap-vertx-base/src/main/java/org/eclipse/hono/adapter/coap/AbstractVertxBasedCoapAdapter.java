@@ -67,6 +67,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -83,7 +84,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Base class for a vert.x based Hono protocol adapter that uses CoAP.
@@ -709,7 +709,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
             final Promise<Void> responseReady = Promise.promise();
 
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(
+            final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
                     tenantId,
                     deviceId,
                     context.getAuthenticatedDevice(),
@@ -1167,7 +1167,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         return CompositeFuture.all(tenantTracker, commandResponseTracker)
                 .compose(ok -> {
-                    final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
+                    final Future<RegistrationAssertion> deviceRegistrationTracker = getRegistrationAssertion(
                             device.getTenantId(),
                             device.getDeviceId(),
                             authenticatedDevice,

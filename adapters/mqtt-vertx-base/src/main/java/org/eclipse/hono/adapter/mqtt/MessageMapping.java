@@ -14,10 +14,10 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 /**
  * This component requests mapping from another server if configured properly. The
@@ -35,7 +35,7 @@ public interface MessageMapping<T extends ExecutionContext> {
      * @param ctx The context in which the message has been uploaded.
      * @param targetAddress The downstream address that the message will be forwarded to.
      * @param registrationInfo The information included in the registration assertion for
-     *                         the authenticated device that has uploaded the message.y
+     *                         the authenticated device that has uploaded the message.
      * @return A future indicating the outcome of the operation.
      *         The future will be completed with the mapped message or failed with
      *         a {@link org.eclipse.hono.client.ServiceInvocationException} if the
@@ -45,5 +45,5 @@ public interface MessageMapping<T extends ExecutionContext> {
     Future<MappedMessage> mapMessage(
             T ctx,
             ResourceIdentifier targetAddress,
-            JsonObject registrationInfo);
+            RegistrationAssertion registrationInfo);
 }

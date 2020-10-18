@@ -51,6 +51,7 @@ import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
@@ -69,7 +70,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -640,7 +640,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .start();
 
         final Promise<Void> responseReady = Promise.promise();
-        final Future<JsonObject> tokenTracker = getRegistrationAssertion(
+        final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
                 tenant,
                 deviceId,
                 authenticatedDevice,
@@ -1209,7 +1209,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final int payloadSize = Optional.ofNullable(payload).map(Buffer::length).orElse(0);
         CompositeFuture.all(tenantTracker, commandResponseTracker)
                 .compose(commandResponse -> {
-                    final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
+                    final Future<RegistrationAssertion> deviceRegistrationTracker = getRegistrationAssertion(
                             tenant,
                             deviceId,
                             authenticatedDevice,

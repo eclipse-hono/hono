@@ -71,6 +71,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
@@ -86,7 +87,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -1063,7 +1063,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         log.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
 
-        final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
+        final Future<RegistrationAssertion> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
                 context.getAuthenticatedDevice(), currentSpan.context());
         final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
                 currentSpan.context());
@@ -1155,7 +1155,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
                     currentSpan.log(items);
 
-                    final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
+                    final Future<RegistrationAssertion> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
                             resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
                     final Future<TenantObject> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),

@@ -32,7 +32,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +49,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -103,7 +102,7 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
 
-        messageMapping.mapMessage(context, targetAddress, new JsonObject())
+        messageMapping.mapMessage(context, targetAddress, new RegistrationAssertion("gateway"))
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
                     assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
@@ -129,7 +128,8 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
 
-        messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
+        messageMapping.mapMessage(context, targetAddress, assertion)
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
                     assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
@@ -172,7 +172,8 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
 
-        messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
+        messageMapping.mapMessage(context, targetAddress, assertion)
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
                     assertThat(mappedMessage.getTargetAddress().getResourceId()).isEqualTo("new-device");

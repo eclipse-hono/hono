@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.util.Map;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -59,6 +60,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
@@ -279,7 +281,14 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
-        adapter.addProperties(message, QoS.AT_MOST_ONCE, target, "/status", tenant, newRegistrationAssertionResult(), 15);
+        adapter.addProperties(
+                message,
+                QoS.AT_MOST_ONCE,
+                target,
+                "/status",
+                tenant,
+                new RegistrationAssertion("4711"),
+                15);
 
         assertThat(
                 MessageHelper.getApplicationProperty(
@@ -309,10 +318,10 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Message message = ProtonHelper.message();
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final JsonObject assertion = newRegistrationAssertionResult()
-                .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
-                    .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
-                    .put("custom-device", true));
+        final RegistrationAssertion assertion = new RegistrationAssertion("4711");
+        assertion.setDefaults(Map.of(
+                MessageHelper.SYS_HEADER_PROPERTY_TTL, 30,
+                "custom-device", true));
 
         adapter.addProperties(message, QoS.AT_LEAST_ONCE, target, null, null, assertion, null);
 
@@ -333,7 +342,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits().setMaxTtl(15L));
-        final JsonObject assertion = newRegistrationAssertionResult();
+        final RegistrationAssertion assertion = new RegistrationAssertion("4711");
 
         adapter.addProperties(message, QoS.AT_LEAST_ONCE, target, null, tenant, assertion, null);
 
@@ -350,7 +359,7 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetRegistrationAssertionSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        final JsonObject assertionResult = newRegistrationAssertionResult();
+        final JsonObject assertionResult = newRegistrationAssertionResult("device");
         when(registrationClient.assertRegistration(eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
 
         // WHEN an assertion for the device is retrieved
@@ -358,7 +367,7 @@ public class AbstractProtocolAdapterBaseTest {
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the result contains the registration assertion
-                        assertEquals(assertionResult, result);
+                        assertThat(result.getDeviceId(), is("device"));
                     });
                     ctx.completeNow();
                 }));
@@ -789,13 +798,16 @@ public class AbstractProtocolAdapterBaseTest {
         return result;
     }
 
-    private static JsonObject newRegistrationAssertionResult() {
-        return newRegistrationAssertionResult(null);
+    private static JsonObject newRegistrationAssertionResult(final String deviceId) {
+        return newRegistrationAssertionResult(deviceId, null);
     }
 
-    private static JsonObject newRegistrationAssertionResult(final String defaultContentType) {
+    private static JsonObject newRegistrationAssertionResult(
+            final String deviceId,
+            final String defaultContentType) {
 
         final JsonObject result = new JsonObject();
+        result.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         if (defaultContentType != null) {
             result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
