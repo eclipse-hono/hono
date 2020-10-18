@@ -517,10 +517,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
-            ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+            setup.verify(() -> assertThat(msg.getContentType())
+                    .as("receive TTD notification")
+                    .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
             log.debug("received notification [{}]", notification);
-            ctx.verify(() -> assertThat(notification).isNotNull());
+            setup.verify(() -> assertThat(notification).isNotNull());
             if (notification.getTtd() == -1) {
                 preconditions.flag();
             }
@@ -531,16 +533,18 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         .failNow(new IllegalStateException("should not have received command")));
                 return null;
             }))
-        .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(targetAddress))
-        .map(s -> {
-            log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
-            sender.set(s);
-            preconditions.flag();
-            return s;
-        })
-        .onComplete(setup.succeeding(v -> setupDone.flag()));
+            .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(targetAddress))
+            .map(s -> {
+                log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
+                sender.set(s);
+                preconditions.flag();
+                return s;
+            })
+            .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+            .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+            .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -594,10 +598,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
-            ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+            setup.verify(() -> assertThat(msg.getContentType())
+                    .as("receive TTD notification")
+                    .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
             log.debug("received notification [{}]", notification);
-            ctx.verify(() -> assertThat(notification).isNotNull());
+            setup.verify(() -> assertThat(notification).isNotNull());
             if (notification.getTtd() == -1) {
                 preconditions.flag();
             }
@@ -615,7 +621,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+            .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+            .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
