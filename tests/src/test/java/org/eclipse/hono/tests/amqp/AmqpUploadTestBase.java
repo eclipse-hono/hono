@@ -185,11 +185,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * exceeds the configured max payload size.
      *
      * @param ctx The Vert.x test context.
-     * @throws InterruptedException if test is interrupted while running.
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    public void testAdapterClosesLinkOnMessageExceedingMaxPayloadSize(final VertxTestContext ctx) throws InterruptedException {
+    public void testAdapterClosesLinkOnMessageExceedingMaxPayloadSize(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -200,20 +199,20 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, false))
         .onComplete(ctx.succeeding(s -> {
 
-            s.closeHandler(remoteDetach -> {
-                log.debug("received remote close");
+            s.detachHandler(remoteDetach -> {
                 ctx.verify(() -> {
                     final ErrorCondition errorCondition = s.getRemoteCondition();
                     assertThat(remoteDetach.succeeded()).isFalse();
                     assertThat(errorCondition).isNotNull();
                     assertThat((Comparable<Symbol>) errorCondition.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
                 });
+                log.info("AMQP adapter detached link as expected");
                 s.close();
                 ctx.completeNow();
             });
 
             final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-            log.debug("AMQP adapter uses max-message-size {}", maxMessageSize);
+            log.info("AMQP adapter uses max-message-size {}", maxMessageSize);
 
             ctx.verify(() -> {
                 assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
