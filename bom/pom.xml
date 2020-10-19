@@ -115,7 +115,17 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-adapter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

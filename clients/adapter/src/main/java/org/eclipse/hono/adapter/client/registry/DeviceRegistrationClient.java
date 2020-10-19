@@ -14,6 +14,8 @@
 
 package org.eclipse.hono.adapter.client.registry;
 
+import org.eclipse.hono.util.RegistrationAssertion;
+
 import io.opentracing.SpanContext;
 import io.vertx.core.Closeable;
 import io.vertx.core.Future;

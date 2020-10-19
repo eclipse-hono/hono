@@ -17,7 +17,7 @@ package org.eclipse.hono.service.amqp;
 import java.util.Objects;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.Lifecycle;
+import org.eclipse.hono.util.Lifecycle;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;

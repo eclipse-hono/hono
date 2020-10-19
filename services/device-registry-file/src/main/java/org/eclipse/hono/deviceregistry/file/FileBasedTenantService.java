@@ -28,7 +28,6 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
-import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -36,6 +35,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
