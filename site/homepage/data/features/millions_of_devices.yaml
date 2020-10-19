@@ -1,4 +1,6 @@
 weight: 10
 icon: "fas fa-infinity"
 name: "Millions of Devices"
-description: "Hono is designed for connecting large numbers of IoT devices. Its micro service based architecture and use of a reactive programming model allow for scaling out horizontally."
+description: |
+  Hono is designed for connecting large numbers of IoT devices. Its micro service based architecture and use of
+  a reactive programming model allow for scaling out horizontally.

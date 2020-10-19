@@ -1,4 +1,5 @@
 weight: 30
 icon: "fas fa-network-wired"
 name: "IoT Protocols"
-description: "Hono supports devices communicating via common IoT protocols like HTTP, MQTT and AMQP out of the box."
+description: |
+  Hono supports devices communicating via common IoT protocols like HTTP, MQTT, AMQP and CoAP out of the box.

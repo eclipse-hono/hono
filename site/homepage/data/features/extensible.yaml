@@ -1,4 +1,5 @@
 weight: 60
 icon: "fas fa-puzzle-piece"
 name: "Extensible"
-description: "Your device uses a custom protocol? Hono provides a simple mechanism to add custom protocol adapters."
+description: |
+  Your device uses a custom protocol? Hono provides a simple mechanism to add custom protocol adapters.
