@@ -187,10 +187,9 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
-                .onComplete(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
-                        assertThat(result).isTrue();
                         verify(span).finish();
                     });
                     ctx.completeNow();
@@ -342,7 +341,7 @@ public class DeviceConnectionClientImplTest {
 
     /**
      * Verifies that a client invocation of the <em>remove-cmd-handling-adapter-instance</em> operation
-     * returns a <em>Boolean.FALSE</em> value if a <em>NOT_FOUND</em> response was returned.
+     * returns a <em>Boolean.FALSE</em> value if a <em>PRECON_FAILED</em> response was returned.
      *
      * @param ctx The vert.x test context.
      */
@@ -351,10 +350,10 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
-                .onComplete(ctx.succeeding(removed -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
-                        assertThat(removed).isFalse();
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
                         verify(span).finish();
                     });
                     ctx.completeNow();
@@ -362,7 +361,7 @@ public class DeviceConnectionClientImplTest {
 
         final Message sentMessage = verifySenderSend();
         final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NOT_FOUND);
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_PRECON_FAILED);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(sentMessage.getMessageId());
         client.handleResponse(mock(ProtonDelivery.class), response);
@@ -415,8 +414,8 @@ public class DeviceConnectionClientImplTest {
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context())
                 .onComplete(ctx.failing(t -> {
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                         // and the span is finished
@@ -449,7 +448,7 @@ public class DeviceConnectionClientImplTest {
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                         // and the span is finished
@@ -481,8 +480,8 @@ public class DeviceConnectionClientImplTest {
         // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
                 .onComplete(ctx.failing(t -> {
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                         // and the span is finished
@@ -514,8 +513,8 @@ public class DeviceConnectionClientImplTest {
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
                 .onComplete(ctx.failing(t -> {
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                         // and the span is finished
@@ -547,8 +546,8 @@ public class DeviceConnectionClientImplTest {
         // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances("deviceId", Collections.emptyList(), span.context())
                 .onComplete(ctx.failing(t -> {
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                         // and the span is finished

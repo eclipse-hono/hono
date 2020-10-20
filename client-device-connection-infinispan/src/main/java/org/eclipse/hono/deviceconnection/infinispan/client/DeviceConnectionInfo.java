@@ -99,14 +99,13 @@ public interface DeviceConnectionInfo {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation, with its value indicating whether the protocol
-     *         adapter instance value was removed or not.
+     * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if there
-     *         was an error removing the value.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     *         The future will be succeeded if the entry was successfully removed.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     * @throws NullPointerException if any of the parameters except context is {@code null}.
      */
-    Future<Boolean> removeCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, Span span);
+    Future<Void> removeCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, Span span);
 
     /**
      * Gets information about the adapter instances that can handle a command for the given device.

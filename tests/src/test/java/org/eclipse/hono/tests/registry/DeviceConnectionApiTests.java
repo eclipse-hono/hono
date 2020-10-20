@@ -182,8 +182,8 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that a request to remove the command-handling adapter instance for a device succeeds with
-     * a <em>true</em> value if there was a matching adapter instance entry.
+     * Verifies that a request to remove the command-handling adapter instance for a device succeeds
+     * if there was a matching adapter instance entry.
      *
      * @param ctx The vert.x test context.
      */
@@ -201,15 +201,12 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                         .map(client))
                 // then remove it
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstance, null))
-                .onComplete(ctx.succeeding(result -> {
-                    ctx.verify(() -> assertThat(result).isTrue());
-                    ctx.completeNow();
-                }));
+                .onComplete(ctx.completing());
     }
 
     /**
-     * Verifies that a request to remove the command-handling adapter instance for a device succeeds with
-     * a <em>false</em> value if no adapter is registered for the device.
+     * Verifies that a request to remove the command-handling adapter instance for a device fails if no
+     * adapter is registered for the device.
      *
      * @param ctx The vert.x test context.
      */
@@ -219,8 +216,8 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         getClient(randomId())
             .compose(client -> client.removeCommandHandlingAdapterInstance("non-existing-device", "adapterOne", null))
-            .onComplete(ctx.succeeding(result -> {
-                ctx.verify(() -> assertThat(result).isFalse());
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_PRECON_FAILED));
                 ctx.completeNow();
             }));
     }
@@ -240,8 +237,8 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         getClient(randomId())
             .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, "adapterOne", Duration.ofMinutes(5), null).map(client))
             .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "notAdapterOne", null))
-            .onComplete(ctx.succeeding(result -> {
-                ctx.verify(() -> assertThat(result).isFalse());
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_PRECON_FAILED));
                 ctx.completeNow();
             }));
     }

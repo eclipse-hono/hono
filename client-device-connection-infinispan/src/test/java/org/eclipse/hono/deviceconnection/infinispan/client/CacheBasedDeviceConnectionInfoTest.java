@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -210,8 +209,7 @@ class CacheBasedDeviceConnectionInfoTest {
         info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(Span.class))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(ClientErrorException.class);
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
                 ctx.completeNow();
             }));
@@ -256,14 +254,11 @@ class CacheBasedDeviceConnectionInfoTest {
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
         .compose(v -> info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                 adapterInstance, span))
-        .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertThat(result).isTrue();
-            ctx.completeNow();
-        })));
+        .onComplete(ctx.completing());
     }
 
     /**
-     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation result is <em>false</em> if
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a PRECON_FAILED status if
      * no entry was registered for the device. Only an adapter instance for another device of the tenant was
      * registered.
      *
@@ -276,15 +271,15 @@ class CacheBasedDeviceConnectionInfoTest {
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice", adapterInstance, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertThat(result).isFalse();
+        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
+            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
             ctx.completeNow();
         })));
     }
 
     /**
-     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation result is <em>false</em> if
-     * the given adapter instance parameter doesn't match the one of the entry registered for the given device.
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a PRECON_FAILED status
+     * if the given adapter instance parameter doesn't match the one of the entry registered for the given device.
      *
      * @param ctx The vert.x context.
      */
@@ -295,8 +290,8 @@ class CacheBasedDeviceConnectionInfoTest {
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance", span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertThat(result).isFalse();
+        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
+            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
             ctx.completeNow();
         })));
     }
@@ -347,8 +342,7 @@ class CacheBasedDeviceConnectionInfoTest {
             });
             return instancesPromise.future();
         }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         })));
     }
@@ -365,8 +359,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = Collections.emptySet();
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
                 .onComplete(ctx.failing(t -> ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(ServiceInvocationException.class);
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     ctx.completeNow();
                 })));
     }
@@ -505,8 +498,7 @@ class CacheBasedDeviceConnectionInfoTest {
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
         }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         })));
     }
@@ -656,8 +648,7 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
         .onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         })));
     }
@@ -683,8 +674,7 @@ class CacheBasedDeviceConnectionInfoTest {
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
         }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         })));
     }
