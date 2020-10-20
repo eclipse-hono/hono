@@ -90,8 +90,7 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
     public Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
         return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
-                .map(removed -> removed ? DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT)
-                        : DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED))
+                .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 

@@ -30,7 +30,6 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction;
-import org.eclipse.hono.util.DeviceConnectionResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
 
@@ -152,40 +151,17 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
      * {@inheritDoc}
      */
     @Override
-    public Future<Boolean> removeCommandHandlingAdapterInstance(
+    public Future<Void> removeCommandHandlingAdapterInstance(
             final String deviceId,
             final String adapterInstanceId,
             final SpanContext context) {
 
-        return createRequestMessage(
+        return sendRequest(
                 DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
                         MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId),
                 null)
-                .compose(this::send)
-                .recover(thr -> {
-                            final int errorCode = ServiceInvocationException.extractStatusCode(thr);
-                            if (errorCode == HttpURLConnection.HTTP_NOT_FOUND
-                                    || errorCode == HttpURLConnection.HTTP_PRECON_FAILED) {
-                                return Future.succeededFuture(DeviceConnectionResult.from(errorCode));
-                            }
-                            return Future.failedFuture(thr);
-                }).compose(devConResult -> {
-                    final Promise<Boolean> result = Promise.promise();
-                    switch (devConResult.getStatus()) {
-                        case HttpURLConnection.HTTP_NO_CONTENT:
-                            result.complete(Boolean.TRUE);
-                            break;
-                        case HttpURLConnection.HTTP_NOT_FOUND:
-                        case HttpURLConnection.HTTP_PRECON_FAILED:
-                            result.complete(Boolean.FALSE);
-                            break;
-                        default:
-                            result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                    "unsupported response status: " + devConResult.getStatus()));
-                    }
-                    return result.future();
-                });
+                .mapEmpty();
     }
 
     /**

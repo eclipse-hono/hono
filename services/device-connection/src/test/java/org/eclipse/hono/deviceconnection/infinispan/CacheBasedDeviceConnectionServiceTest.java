@@ -184,7 +184,7 @@ public class CacheBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
         when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(Span.class)))
-                .thenReturn(Future.succeededFuture(true));
+                .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
                 .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
@@ -210,7 +210,7 @@ public class CacheBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
         when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(Span.class)))
-                .thenReturn(Future.succeededFuture(false));
+                .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
 
         givenAStartedService()
                 .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))

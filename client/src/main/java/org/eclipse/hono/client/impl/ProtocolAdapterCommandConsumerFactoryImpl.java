@@ -34,6 +34,7 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -228,26 +229,30 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId,
                         onCloseSpanContext))
                 .recover(thr -> {
-                    log.warn("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
-                            deviceId, thr);
-                    return Future.failedFuture(thr);
-                })
-                .compose(removed -> {
-                    final boolean entryNotExpired = lifespan.isNegative() || Instant.now().isBefore(lifespanStart.plus(lifespan));
-                    if (!removed && entryNotExpired) {
-                        // entry wasn't actually removed and entry hasn't expired (yet);
-                        // This case happens when 2 consecutive command subscription requests from the same device
-                        // (with no intermittent disconnect/unsubscribe - possibly because of a broken connection in between)
-                        // have reached *different* protocol adapter instances/verticles. Now calling 'removeCommandHandlingAdapterInstance'
-                        // on the 1st subscription fails because of the non-matching adapterInstanceId parameter.
-                        // Throwing an explicit exception here will enable the protocol adapter to detect this case
-                        // and skip sending an (incorrect) "disconnectedTtd" event message.
-                        log.debug("command handling adapter instance not removed - not matched or already removed [tenant: {}, device: {}]",
-                                tenantId, deviceId);
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
-                                "no matching command consumer mapping found to be removed"));
+                    if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
+                        final boolean entryMayHaveExpired = !lifespan.isNegative() && Instant.now().isAfter(lifespanStart.plus(lifespan));
+                        if (entryMayHaveExpired) {
+                            log.trace("ignoring 412 error when removing command handling adapter instance; entry may have already expired [tenant: {}, device: {}]",
+                                    tenantId, deviceId);
+                            return Future.succeededFuture();
+                        } else {
+                            // entry wasn't actually removed and entry hasn't expired (yet);
+                            // This case happens when 2 consecutive command subscription requests from the same device
+                            // (with no intermittent disconnect/unsubscribe - possibly because of a broken connection in between)
+                            // have reached *different* protocol adapter instances/verticles. Now calling 'removeCommandHandlingAdapterInstance'
+                            // on the 1st subscription fails because of the non-matching adapterInstanceId parameter.
+                            // Throwing an explicit exception here will enable the protocol adapter to detect this case
+                            // and skip sending an (incorrect) "disconnectedTtd" event message.
+                            log.debug("command handling adapter instance not removed - not matched or already removed [tenant: {}, device: {}]",
+                                    tenantId, deviceId);
+                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
+                                    "no matching command consumer mapping found to be removed"));
+                        }
+                    } else {
+                        log.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
+                                deviceId, thr);
+                        return Future.failedFuture(thr);
                     }
-                    return Future.succeededFuture((Void) null);
                 });
     }
 

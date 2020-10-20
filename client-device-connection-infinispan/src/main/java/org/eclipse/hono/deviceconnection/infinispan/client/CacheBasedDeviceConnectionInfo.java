@@ -166,7 +166,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     }
 
     @Override
-    public Future<Boolean> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
+    public Future<Void> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -182,15 +182,16 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                             tenantId, deviceId, adapterInstanceId, t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 })
-                .map(removed -> {
+                .compose(removed -> {
                     if (!removed) {
                         LOG.debug("command handling adapter instance was not removed, key not mapped or value didn't match [tenant: {}, device-id: {}, adapter-instance: {}]",
                                 tenantId, deviceId, adapterInstanceId);
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED));
                     } else {
                         LOG.debug("removed command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
                                 tenantId, deviceId, adapterInstanceId);
+                        return Future.succeededFuture();
                     }
-                    return removed;
                 });
 
     }

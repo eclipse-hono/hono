@@ -137,7 +137,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), any(), any()))
                 .thenReturn(Future.succeededFuture());
         when(devConClient.removeCommandHandlingAdapterInstance(anyString(), anyString(), any()))
-                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+                .thenReturn(Future.succeededFuture());
 
         commandConsumerFactory = new ProtocolAdapterCommandConsumerFactoryImpl(connection, SendMessageSampler.Factory.noop());
         commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
@@ -165,7 +165,9 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, null)
             .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+                ctx.verify(() -> {
+                    assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                });
                 ctx.completeNow();
             }));
     }

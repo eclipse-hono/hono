@@ -147,12 +147,14 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
     }
 
     @Override
-    public Future<Boolean> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
+    public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
             final SpanContext context) {
         final Span span = newSpan(context, SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE);
         TracingHelper.setDeviceTags(span, tenantId, deviceId);
         span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-        return finishSpan(cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span), span);
+        // skip tracing PRECON_FAILED response status as error (may have been trying to remove an expired entry)
+        return finishSpan(cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span), span,
+                HttpURLConnection.HTTP_PRECON_FAILED);
     }
 
     @Override
@@ -170,13 +172,20 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
     }
 
     private <T> Future<T> finishSpan(final Future<T> result, final Span span) {
+        return finishSpan(result, span, null);
+    }
+
+    private <T> Future<T> finishSpan(final Future<T> result, final Span span, final Integer statusToSkipErrorTraceFor) {
         return result.recover(t -> {
-            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
-            TracingHelper.logError(span, t);
+            final int statusCode = ServiceInvocationException.extractStatusCode(t);
+            Tags.HTTP_STATUS.set(span, statusCode);
+            if (statusToSkipErrorTraceFor == null || statusCode != statusToSkipErrorTraceFor) {
+                TracingHelper.logError(span, t);
+            }
             span.finish();
             return Future.failedFuture(t);
         }).map(resultValue -> {
-            Tags.HTTP_STATUS.set(span, resultValue != null ? HttpURLConnection.HTTP_OK : HttpURLConnection.HTTP_ACCEPTED);
+            Tags.HTTP_STATUS.set(span, resultValue != null ? HttpURLConnection.HTTP_OK : HttpURLConnection.HTTP_NO_CONTENT);
             span.finish();
             return resultValue;
         });

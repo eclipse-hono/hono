@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -242,7 +244,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
     }
 
     @Override
-    public Future<Boolean> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
+    public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
@@ -261,17 +263,26 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 resultTracker,
                 null,
                 currentSpan);
-        return mapResultAndFinishSpan(resultTracker.future(), result -> {
-            switch (result.getStatus()) {
-                case HttpURLConnection.HTTP_NO_CONTENT:
-                    return Boolean.TRUE;
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                case HttpURLConnection.HTTP_PRECON_FAILED:
-                    return Boolean.FALSE;
-                default:
-                    throw StatusCodeMapper.from(result);
+        // not using mapResultAndFinishSpan() in order to skip logging PRECON_FAILED result as error (may have been trying to remove an expired entry)
+        return resultTracker.future().recover(t -> {
+            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
+            TracingHelper.logError(currentSpan, t);
+            currentSpan.finish();
+            return Future.failedFuture(t);
+        }).map(resultValue -> {
+            Tags.HTTP_STATUS.set(currentSpan, resultValue.getStatus());
+            if (resultValue.isError() && resultValue.getStatus() != HttpURLConnection.HTTP_PRECON_FAILED) {
+                Tags.ERROR.set(currentSpan, Boolean.TRUE);
             }
-        }, currentSpan);
+            currentSpan.finish();
+
+            switch (resultValue.getStatus()) {
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                return null;
+            default:
+                throw StatusCodeMapper.from(resultValue);
+            }
+        });
     }
 
     @Override
