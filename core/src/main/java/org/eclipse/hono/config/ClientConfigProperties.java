@@ -41,7 +41,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     /**
      * The default number of credits issued by the receiver side of a link.
      */
-    public static final int  DEFAULT_INITIAL_CREDITS = 200;
+    public static final int DEFAULT_INITIAL_CREDITS = 200;
     /**
      * The default amount of time (milliseconds) to wait for the remote peer's <em>attach</em>
      * frame during link establishment.
@@ -272,6 +272,9 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * Gets the number of initial credits, that will be given from a receiver to a sender at link creation.
      * <p>
      * The default value of this property is {@link #DEFAULT_INITIAL_CREDITS}.
+     * <p>
+     * Note that having the credits set to {@code 0} will require the receiver to manually flow credit to
+     * the sender after receiving messages.
      *
      * @return The number of initial credits.
      */
@@ -283,6 +286,9 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * Sets the number of initial credits, that will be given from a receiver to a sender at link creation.
      * <p>
      * The default value of this property is {@link #DEFAULT_INITIAL_CREDITS}.
+     * <p>
+     * Note that having the credits set to {@code 0} will require the receiver to manually flow credit to
+     * the sender after receiving messages.
      *
      * @param initialCredits The initial credits to set.
      * @throws IllegalArgumentException if the number is negative.
