@@ -181,7 +181,7 @@ public class AbstractConfigTest {
         assertThat(newConfig.getTrustStorePath()).isEqualTo("truststore/path");
     }
 
-    private class TestConfig extends AbstractConfig {
+    private static class TestConfig extends AbstractConfig {
         private TestConfig() {
             super();
         }

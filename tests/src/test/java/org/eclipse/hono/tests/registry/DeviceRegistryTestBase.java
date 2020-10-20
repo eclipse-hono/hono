@@ -98,7 +98,6 @@ abstract class DeviceRegistryTestBase {
      * Creates a new integration test helper.
      *
      * @param vertx The vert.x instance to use for the helper.
-     * @param ctx The vert.x test context.
      */
     @BeforeEach
     public void createHelper(final Vertx vertx) {

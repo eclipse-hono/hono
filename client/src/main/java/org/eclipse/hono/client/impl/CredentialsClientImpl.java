@@ -53,7 +53,7 @@ import io.vertx.proton.ProtonSender;
  */
 public class CredentialsClientImpl extends AbstractRequestResponseClient<CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
-    private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final String TAG_AUTH_ID = "auth_id";

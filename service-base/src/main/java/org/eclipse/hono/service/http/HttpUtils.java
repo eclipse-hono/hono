@@ -286,11 +286,8 @@ public final class HttpUtils {
 
         Objects.requireNonNull(response);
         if (!response.ended() && !response.closed() && buffer != null) {
-            if (contentType == null) {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_OCTET_STREAM);
-            } else {
-                response.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
-            }
+            response.putHeader(HttpHeaders.CONTENT_TYPE,
+                    Objects.requireNonNullElse(contentType, CONTENT_TYPE_OCTET_STREAM));
             response.putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()));
             response.write(buffer);
         }

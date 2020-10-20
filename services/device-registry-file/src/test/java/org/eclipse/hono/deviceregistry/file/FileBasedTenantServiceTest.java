@@ -382,7 +382,7 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
         svc.updateTenant(
                 "tenant",
                 new Tenant(),
-                null,
+                Optional.empty(),
                 NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {

@@ -207,9 +207,10 @@ public class Application {
                 .maximumSize(Math.max(minCacheSize, maxCacheSize));
 
         return new CacheProvider() {
-            private Map<String, ExpiringValueCache<Object, Object>> caches = new HashMap<>();
+            private final Map<String, ExpiringValueCache<Object, Object>> caches = new HashMap<>();
 
             @Override
+            @SuppressWarnings("unchecked")
             public ExpiringValueCache<Object, Object> getCache(final String cacheName) {
 
                 return caches.computeIfAbsent(cacheName, name -> new CaffeineBasedExpiringValueCache<>(caffeine.build()));

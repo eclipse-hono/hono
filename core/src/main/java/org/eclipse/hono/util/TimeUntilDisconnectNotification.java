@@ -29,15 +29,15 @@ public final class TimeUntilDisconnectNotification {
      */
     private static final long MAX_EXPIRY_MILLISECONDS = (long) 60 * 60 * 24 * 10000 * 1000;
 
-    private String tenantId;
+    private final String tenantId;
 
-    private String deviceId;
+    private final String deviceId;
 
-    private Integer ttd;
+    private final Integer ttd;
 
-    private Instant readyUntil;
+    private final Instant readyUntil;
 
-    private Instant creationTime;
+    private final Instant creationTime;
 
     /**
      * Build a notification object to indicate that a device is ready to receive an upstream message.

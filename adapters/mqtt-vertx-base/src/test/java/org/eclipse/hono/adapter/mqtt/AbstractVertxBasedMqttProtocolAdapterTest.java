@@ -1432,7 +1432,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      * <ol>
      * <li>creates a new {@code MqttServer} using {@link #getMqttServer(boolean)}</li>
      * <li>assigns the result to property <em>server</em></li>
-     * <li>passes the server in to {@link #getAdapter(MqttServer)}</li>
+     * <li>passes the server in to {@link #getAdapter(MqttServer, MqttProtocolAdapterProperties)}</li>
      * <li>assigns the result to property <em>adapter</em></li>
      * </ol>
      *

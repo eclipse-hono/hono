@@ -64,7 +64,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
     private final Vertx vertx;
     private final ServerConfig config;
-    private Router router;
+    private final Router router;
     private final List<Handler<Router>> additionalResources = new ArrayList<>();
 
     /**

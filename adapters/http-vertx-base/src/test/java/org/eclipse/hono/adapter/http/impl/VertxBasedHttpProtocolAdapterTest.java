@@ -97,7 +97,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * Creates and deploys the adapter instance under test.
      * <p>
      * The service clients' behavior is newly configured per test case
-     * in {@link VertxBasedHttpProtocolAdapterTest#setUp(TestInfo)}.
+     * in {@link VertxBasedHttpProtocolAdapterTest#configureServiceClients(TestInfo)}.
      *
      * @param ctx The vert.x test context.
      */

@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
 
-    private static Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsConfigProperties.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsConfigProperties.class);
 
     /**
      * The name of the mongodb collection where devices information are stored.

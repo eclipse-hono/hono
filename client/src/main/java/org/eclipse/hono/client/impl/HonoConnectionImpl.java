@@ -814,7 +814,7 @@ public class HonoConnectionImpl implements HonoConnection {
                             // peer won't accept our (biggest) messages
                             sender.close();
                             final String msg = String.format(
-                                    "peer does not support minimum max-message-size [required: {}, supported: {}",
+                                    "peer does not support minimum max-message-size [required: %d, supported: %d",
                                     clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
                             log.debug(msg);
                             senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED, msg));
