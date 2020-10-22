@@ -79,8 +79,7 @@ class HonoEventConnectionEventProducerTest {
 
         final String tenantId = "tenant";
         final Device authenticatedDevice = new Device(tenantId, "device");
-        tenant = new TenantObject()
-                .setTenantId(tenantId)
+        tenant = new TenantObject(tenantId, true)
                 .setResourceLimits(new ResourceLimits().setMaxTtl(500));
         when(tenantClient.get(anyString())).thenReturn(Future.succeededFuture(tenant));
 

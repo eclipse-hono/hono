@@ -32,9 +32,7 @@ public class NoopTenantService implements TenantService {
 
     @Override
     public Future<TenantResult<JsonObject>> get(final String tenantId, final Span span) {
-        final TenantObject tenant = new TenantObject();
-        tenant.setTenantId(tenantId);
-        tenant.setEnabled(true);
+        final TenantObject tenant = new TenantObject(tenantId, true);
         return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), null));
     }
 

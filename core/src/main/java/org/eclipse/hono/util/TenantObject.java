@@ -56,6 +56,23 @@ public final class TenantObject extends JsonBackedValueObject {
     private Set<TrustAnchor> trustAnchors;
 
     /**
+     * Creates a new tenant.
+     *
+     * @param tenantId The tenant's identifier.
+     * @param enabled {@code true} if devices of this tenant are allowed to connect to Hono.
+     * @throws NullPointerException if identifier is {@code null}.
+     */
+    public TenantObject(
+            @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
+            final String tenantId,
+            @JsonProperty(value = TenantConstants.FIELD_ENABLED, required = true)
+            final boolean enabled) {
+        Objects.requireNonNull(tenantId);
+        setProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+        setProperty(TenantConstants.FIELD_ENABLED, enabled);
+    }
+
+    /**
      * Adds a property to this tenant.
      *
      * @param name The property name.
@@ -80,17 +97,6 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Sets this tenant's identifier.
-     *
-     * @param tenantId The identifier.
-     * @return This tenant for command chaining.
-     */
-    @JsonIgnore
-    public TenantObject setTenantId(final String tenantId) {
-        return setProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-    }
-
-    /**
      * Checks if this tenant is enabled.
      *
      * @return {@code true} if this tenant is enabled.
@@ -98,17 +104,6 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     public boolean isEnabled() {
         return getProperty(TenantConstants.FIELD_ENABLED, Boolean.class, true);
-    }
-
-    /**
-     * Sets whether this tenant is enabled.
-     *
-     * @param flag {@code true} if this tenant is enabled.
-     * @return This tenant for command chaining.
-     */
-    @JsonIgnore
-    public TenantObject setEnabled(final boolean flag) {
-        return setProperty(TenantConstants.FIELD_ENABLED, flag);
     }
 
     /**
@@ -393,38 +388,28 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
+     * Creates an enabled tenant for a tenantId.
+     *
+     * @param tenantId The tenant for which the object is constructed.
+     * @return The TenantObject.
+     * @throws NullPointerException if tenantId is {@code null}.
+     */
+    public static TenantObject from(final String tenantId) {
+
+        return new TenantObject(tenantId, true);
+    }
+
+    /**
      * Creates a TenantObject for a tenantId and the enabled property.
      *
      * @param tenantId The tenant for which the object is constructed.
      * @param enabled {@code true} if the tenant shall be enabled.
      * @return The TenantObject.
-     * @throws NullPointerException if any of tenantId or enabled is {@code null}.
+     * @throws NullPointerException if tenantId is {@code null}.
      */
-    public static TenantObject from(final String tenantId, final Boolean enabled) {
+    public static TenantObject from(final String tenantId, final boolean enabled) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(enabled);
-
-        final TenantObject result = new TenantObject();
-        result.setTenantId(tenantId);
-        result.setEnabled(enabled);
-        return result;
-    }
-
-    /**
-     * Creates a TenantObject from the enabled property.
-     *
-     * @param enabled {@code true} if the tenant shall be enabled.
-     * @return The TenantObject.
-     * @throws NullPointerException if enabled is {@code null}.
-     */
-    public static TenantObject from(final Boolean enabled) {
-
-        Objects.requireNonNull(enabled);
-
-        final TenantObject result = new TenantObject();
-        result.setEnabled(enabled);
-        return result;
+        return new TenantObject(tenantId, enabled);
     }
 
     /**

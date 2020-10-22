@@ -112,9 +112,11 @@ public class TenantObjectTest {
 
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray());
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
+        assertThat(tenant.isEnabled());
         assertThat(tenant.getTrustAnchors()).isNotNull();
         assertThat(tenant.getTrustAnchors()).isEmpty();
     }

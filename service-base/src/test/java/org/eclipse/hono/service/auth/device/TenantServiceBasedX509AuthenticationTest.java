@@ -74,7 +74,7 @@ class TenantServiceBasedX509AuthenticationTest {
     void testValidateClientCertificateContainsReadableCertificate() throws GeneralSecurityException {
 
         // GIVEN a trust anchor that is enabled for auto-provisioning
-        final TenantObject tenant = new TenantObject().addTrustAnchor(cert.getPublicKey(),
+        final TenantObject tenant = new TenantObject("tenant", true).addTrustAnchor(cert.getPublicKey(),
                 cert.getSubjectX500Principal(), true);
         when(tenantClient.get(any(X500Principal.class), any())).thenReturn(Future.succeededFuture(tenant));
 
@@ -94,7 +94,7 @@ class TenantServiceBasedX509AuthenticationTest {
     void testValidateClientCertificateContainsNoCertificate() {
 
         // GIVEN a trust anchor that is disabled for auto-provisioning
-        final TenantObject tenant = new TenantObject().addTrustAnchor(cert.getPublicKey(),
+        final TenantObject tenant = new TenantObject("tenant", true).addTrustAnchor(cert.getPublicKey(),
                 cert.getSubjectX500Principal(), false);
         when(tenantClient.get(any(X500Principal.class), any())).thenReturn(Future.succeededFuture(tenant));
 
