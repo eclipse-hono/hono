@@ -14,16 +14,13 @@
 
 package org.eclipse.hono.adapter.client.util;
 
-import org.eclipse.hono.util.Lifecycle;
-
-import io.vertx.core.Closeable;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
  * A generic client for a service API.
  *
  */
-public interface ServiceClient extends Closeable, Lifecycle {
+public interface ServiceClient {
 
     /**
      * Registers checks to perform in order to determine whether this component is ready to serve requests.
