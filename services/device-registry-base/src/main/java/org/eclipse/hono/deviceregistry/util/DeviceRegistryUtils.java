@@ -75,13 +75,13 @@ public final class DeviceRegistryUtils {
     }
 
     /**
-     * Converts tenant object of type {@link Tenant} to an object of type {@link TenantObject}.
+     * Converts a {@link Tenant} instance to a {@link TenantObject}.
      *
      * @param tenantId The identifier of the tenant.
-     * @param source   The source tenant object.
-     * @param filterAuthorities if set to true filter out CAs which are not valid at this point in time.
-     * @return The converted tenant object of type {@link TenantObject}
-     * @throws NullPointerException if the tenantId or source is null.
+     * @param source The source tenant object.
+     * @param filterAuthorities {@code true} if CAs which are not valid at this point in time should be filtered out.
+     * @return The converted tenant object.
+     * @throws NullPointerException if tenantId or source are {@code null}.
      */
     public static JsonObject convertTenant(final String tenantId, final Tenant source, final boolean filterAuthorities) {
 
@@ -95,43 +95,43 @@ public final class DeviceRegistryUtils {
         target.setTracingConfig(source.getTracing());
 
         Optional.ofNullable(source.getMinimumMessageSize())
-        .ifPresent(size -> target.setMinimumMessageSize(size));
+            .ifPresent(size -> target.setMinimumMessageSize(size));
 
         Optional.ofNullable(source.getDefaults())
-        .map(JsonObject::new)
-        .ifPresent(defaults -> target.setDefaults(defaults));
+            .map(JsonObject::new)
+            .ifPresent(defaults -> target.setDefaults(defaults));
 
         Optional.ofNullable(source.getAdapters())
-                .filter(adapters -> !adapters.isEmpty())
-                .map(adapters -> adapters.stream()
-                                .map(adapter -> JsonObject.mapFrom(adapter))
-                                .map(json -> json.mapTo(org.eclipse.hono.util.Adapter.class))
-                                .collect(Collectors.toList()))
-                .ifPresent(adapters -> target.setAdapters(adapters));
+            .filter(adapters -> !adapters.isEmpty())
+            .map(adapters -> adapters.stream()
+                            .map(adapter -> JsonObject.mapFrom(adapter))
+                            .map(json -> json.mapTo(org.eclipse.hono.util.Adapter.class))
+                            .collect(Collectors.toList()))
+            .ifPresent(adapters -> target.setAdapters(adapters));
 
         Optional.ofNullable(source.getExtensions())
-        .map(JsonObject::new)
-        .ifPresent(extensions -> target.setProperty(RegistryManagementConstants.FIELD_EXT, extensions));
+            .map(JsonObject::new)
+            .ifPresent(extensions -> target.setProperty(RegistryManagementConstants.FIELD_EXT, extensions));
 
         Optional.ofNullable(source.getTrustedCertificateAuthorities())
-        .map(list -> list.stream()
-                .filter(ca -> {
-                    if (filterAuthorities) {
-                        // filter out CAs which are not valid at this point in time
-                        return !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter());
-                    } else {
-                        return true;
-                    }
-                })
-                .map(ca -> JsonObject.mapFrom(ca))
-                .map(json -> {
-                    // validity period is not included in TenantObject
-                    json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
-                    json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER);
-                    return json;
-                })
-                .collect(JsonArray::new, JsonArray::add, JsonArray::add))
-        .ifPresent(authorities -> target.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authorities));
+            .map(list -> list.stream()
+                    .filter(ca -> {
+                        if (filterAuthorities) {
+                            // filter out CAs which are not valid at this point in time
+                            return !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter());
+                        } else {
+                            return true;
+                        }
+                    })
+                    .map(ca -> JsonObject.mapFrom(ca))
+                    .map(json -> {
+                        // validity period is not included in TenantObject
+                        json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+                        json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER);
+                        return json;
+                    })
+                    .collect(JsonArray::new, JsonArray::add, JsonArray::addAll))
+            .ifPresent(authorities -> target.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authorities));
 
         return JsonObject.mapFrom(target);
     }
