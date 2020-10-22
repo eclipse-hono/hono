@@ -51,6 +51,7 @@ public interface TelemetrySender extends ServiceClient {
      *         could not be sent. The error code contained in the exception indicates the
      *         cause of the failure.
      * @throws NullPointerException if tenant, device, qos or contentType are {@code null}.
+     * @throws IllegalArgumentException if tenant does not contain a tenantId property.
      */
     Future<Void> sendTelemetry(
             TenantObject tenant,
