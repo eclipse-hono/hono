@@ -19,6 +19,7 @@ import java.util.Optional;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
@@ -110,6 +111,9 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
                     .ifPresentOrElse(propertyBag -> {
                         result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());
                         result.propertyBag = propertyBag;
+                        // sets the content type using the corresponding value from the property bag
+                        Optional.ofNullable(propertyBag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
+                                .ifPresent(contentType -> result.contentType = contentType);
                     }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
             result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
         }

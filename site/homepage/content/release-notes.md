@@ -39,6 +39,7 @@ title = "Release Notes"
 * The authentication providers in Hono use `CredentialsObject.getCandidateSecrets` to retrieve valid secrets.
   The secrets are currently filtered based on their validity period regardless of whether the status is enabled
   or not. This has been fixed now, so that the disabled secrets are filtered out.
+* The MQTT adapter now supports specifying the content-type of a telemetry/event message via a MQTT property bag.
 
 ### API Changes
 

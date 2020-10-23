@@ -19,10 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,6 +91,23 @@ public class MqttContextTest {
         assertEquals("value1", context.propertyBag().getProperty("param1"));
         assertEquals("value2", context.propertyBag().getProperty("param2"));
         assertEquals("event/tenant/device", context.topic().toString());
+    }
+
+    /**
+     * Verifies the <em>content-type</em> value retrieved from the <em>property-bag</em> in a message's topic.
+     */
+    @Test
+    public void verifyContentType() {
+        final String contentType = "application/vnd.eclipse.ditto+json";
+        final String encodedContentType = URLEncoder.encode(contentType, StandardCharsets.UTF_8);
+        final Device device = new Device("tenant", "device");
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn(
+                String.format("event/tenant/device/?content-type=%s&param2=value2&param3=value3", encodedContentType));
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
+
+        assertNotNull(context.propertyBag());
+        assertEquals(contentType, context.propertyBag().getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
     }
 
     /**
