@@ -67,10 +67,6 @@
       <artifactId>client-device-connection-infinispan</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-base</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.yaml</groupId>
       <artifactId>snakeyaml</artifactId>
     </dependency>

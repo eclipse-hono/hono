@@ -26,14 +26,13 @@
   <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP.</description>
   <url>https://www.eclipse.org/hono</url>
 
-
-    <dependencies>
-        <dependency>
-          <groupId>org.eclipse.hono</groupId>
-          <artifactId>hono-adapter-http-vertx-base</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-    </dependencies>
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-http-vertx-base</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
 
 </project>

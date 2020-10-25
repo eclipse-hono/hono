@@ -130,8 +130,7 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-graphite</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
@@ -155,25 +154,6 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-arc</artifactId>
-      <version>${quarkus.platform.version}</version>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.slf4j</groupId>
-          <artifactId>slf4j-jboss-logging</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>io.jaegertracing</groupId>
-      <artifactId>jaeger-core</artifactId>
-      <version>${jaeger.version}</version>
-      <scope>compile</scope>
-      <optional>true</optional>
     </dependency>
   </dependencies>
 
@@ -205,46 +185,6 @@
               <includeArtifactIds>hono-demo-certs</includeArtifactIds>
               <outputDirectory>${project.build.directory}/certs</outputDirectory>
               <excludes>META-INF/**</excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!--
-        Copy legal documents from "target/classes" folder to "target/test-classes" folder
-        so that we make sure to include legal docs in test jar.
-       -->
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy resources</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/resources</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy_legal_docs_for_test_jar</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.testOutputDirectory}/META-INF</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.build.outputDirectory}/META-INF</directory>
-                </resource>
-              </resources>
             </configuration>
           </execution>
         </executions>
