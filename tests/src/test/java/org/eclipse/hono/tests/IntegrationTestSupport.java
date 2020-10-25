@@ -15,8 +15,6 @@ package org.eclipse.hono.tests;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -24,7 +22,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Base64;
@@ -45,12 +42,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -1156,16 +1153,7 @@ public final class IntegrationTestSupport {
      */
     public Future<X509Certificate> getCertificate(final String path) {
 
-        return loadFile(path).compose(buffer -> {
-            final Promise<X509Certificate> result = Promise.promise();
-            try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
-                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                result.complete((X509Certificate) factory.generateCertificate(is));
-            } catch (final Exception e) {
-                result.fail(new IllegalArgumentException("file cannot be parsed into X.509 certificate"));
-            }
-            return result.future();
-        });
+        return VertxTools.getCertificate(vertx, path);
     }
 
     /**
@@ -1178,14 +1166,6 @@ public final class IntegrationTestSupport {
 
         final KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
         return gen.generateKeyPair();
-    }
-
-    //----------------------------------< private methods >---
-    private Future<Buffer> loadFile(final String path) {
-
-        final Promise<Buffer> result = Promise.promise();
-        vertx.fileSystem().readFile(path, result);
-        return result.future();
     }
 
     /**

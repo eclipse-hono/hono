@@ -55,6 +55,22 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>core-test-utils</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -118,6 +134,35 @@
         <groupId>org.jboss.jandex</groupId>
         <artifactId>jandex-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>
+            --add-opens java.base/jdk.internal.event=ALL-UNNAMED
+          </argLine>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>jboss-logmanager</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>
+                --add-opens java.base/jdk.internal.event=ALL-UNNAMED
+                -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+              </argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

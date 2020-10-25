@@ -23,6 +23,10 @@
   <artifactId>hono-adapter-base-quarkus</artifactId>
   <packaging>pom</packaging>
 
+  <name>Hono Protocol Adapter Base (Quarkus)</name>
+  <description>Defines common dependencies for Quarkus-based protocol adapter implementations</description>
+
+
   <properties>
     <quarkus.container-image.group>${docker.image.org-name}</quarkus.container-image.group>
     <quarkus.container-image.additional-tags>latest,${docker.image.additional.tag}</quarkus.container-image.additional-tags>

@@ -28,6 +28,7 @@
   <description>Helper classes for implementing Hono's unit tests.</description>
 
   <modules>
+    <module>core-test-utils</module>
     <module>service-base-test-utils</module>
   </modules>
 

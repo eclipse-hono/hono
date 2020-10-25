@@ -83,6 +83,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>core-test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-health-check</artifactId>
     </dependency>

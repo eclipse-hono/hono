@@ -23,7 +23,7 @@
     <packaging>pom</packaging>
     <artifactId>hono-adapter-base-spring</artifactId>
 
-    <name>Spring based protocol adapters parent</name>
+    <name>Hono Protocol Adapter Base (Spring)</name>
     <description>Defines common dependencies for Spring-based protocol adapter implementations</description>
 
     <dependencies>
