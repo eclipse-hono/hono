@@ -28,7 +28,7 @@
   </root>
 
   <logger name="org.eclipse.hono" level="INFO"/>
-  <logger name="org.eclipse.hono.deviceregistry.jdbc" level="DEBUG"/>
-  <logger name="org.eclipse.hono.service.base.jdbc" level="DEBUG"/>
+  <logger name="org.eclipse.hono.deviceregistry.jdbc" level="INFO"/>
+  <logger name="org.eclipse.hono.service.base.jdbc" level="INFO"/>
 
 </configuration>
