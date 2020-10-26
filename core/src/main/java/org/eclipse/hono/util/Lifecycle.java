@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service;
+package org.eclipse.hono.util;
 
 import io.vertx.core.Future;
 

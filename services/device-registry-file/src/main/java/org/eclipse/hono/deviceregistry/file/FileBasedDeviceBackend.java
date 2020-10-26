@@ -24,7 +24,6 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -37,6 +36,7 @@ import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

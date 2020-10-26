@@ -32,7 +32,6 @@ import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationServic
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
-import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -44,6 +43,7 @@ import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;

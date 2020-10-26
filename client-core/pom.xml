@@ -1,33 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
-   
+    Copyright (c) 2020 Contributors to the Eclipse Foundation
+
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
-   
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0
-   
+
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-bom</artifactId>
     <version>1.5.0-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
+  <artifactId>hono-client-core</artifactId>
 
-  <artifactId>hono-client</artifactId>
-  <packaging>bundle</packaging>
-
-  <name>Hono Client</name>
-  <description>A library providing a Vert.x based client for accessing Hono's APIs.</description>
-  <url>https://www.eclipse.org/hono</url>
+  <name>Hono Client Core</name>
+  <description>Classes required for implementing all kinds of Hono service clients</description>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -36,28 +32,50 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-core</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-proton</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-legal</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-core</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>io.vertx</groupId>
+          <artifactId>vertx-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.vertx</groupId>
+          <artifactId>vertx-proton</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.jsonwebtoken</groupId>
+          <artifactId>jjwt-jackson</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>jaxb-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.jsonwebtoken</groupId>
+          <artifactId>jjwt-impl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.jsonwebtoken</groupId>
+          <artifactId>jjwt-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opentracing</groupId>
+          <artifactId>opentracing-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opentracing</groupId>
+          <artifactId>opentracing-noop</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.security</groupId>
+          <artifactId>spring-security-crypto</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -78,6 +96,12 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>io.vertx</groupId>
+          <artifactId>vertx-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
@@ -88,16 +112,6 @@
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-beans</artifactId>
-      <scope>provided</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing</groupId>
-      <artifactId>opentracing-noop</artifactId>
     </dependency>
   </dependencies>
 
@@ -136,40 +150,10 @@
         </executions>
       </plugin>
       <plugin>
-        <!-- 
-          Copy legal documents from "legal" module to "target/classes" folder
-          so that we make sure to include legal docs in all modules.
-         -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-        <configuration>
-          <instructions>
-            <!-- make sure that we include the legal docs in the bundle -->
-            <Include-Resource>
-              META-INF=${project.build.outputDirectory}/META-INF
-            </Include-Resource>
-            <Require-Capability>
-              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${maven.compiler.target}))"
-            </Require-Capability>
-            <Embed-Dependency>
-              hono-client-core;inline=true,
-            </Embed-Dependency>
-          </instructions>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
-      <plugin>
-        <groupId>org.jboss.jandex</groupId>
-        <artifactId>jandex-maven-plugin</artifactId>
-      </plugin>
     </plugins>
   </build>
+
 </project>

@@ -26,6 +26,8 @@ public class MessageUndeliverableException extends ClientErrorException {
      */
     public static final String MESSAGE_KEY = "CLIENT_ERROR_MESSAGE_UNDELIVERABLE";
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Creates a new MessageUndeliverableException.
      * <p>

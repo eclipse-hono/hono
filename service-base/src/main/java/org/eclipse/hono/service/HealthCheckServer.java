@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service;
 
+import org.eclipse.hono.util.Lifecycle;
+
 /**
  * Provides a server for health checks.
  */

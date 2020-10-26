@@ -16,23 +16,25 @@ package org.eclipse.hono.adapter.client.telemetry;
 
 import java.util.Map;
 
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
-import io.vertx.core.Closeable;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
 /**
  * A client for publishing telemetry data originating from devices to downstream consumers.
  */
-public interface TelemetrySender extends Closeable {
+public interface TelemetrySender extends Lifecycle {
 
     /**
      * Sends telemetry data originating from a device to downstream consumers.
      *
-     * @param tenantId The ID of the tenant that the device belongs to.
-     * @param deviceId The ID of the device that the data originates from.
+     * @param tenant The tenant that the device belongs to.
+     * @param device The registration assertion for the device that the data originates from.
      * @param qos The delivery semantics to use for sending the data.
      * @param contentType The content type of the data.
      * @param payload The data to send.
@@ -48,14 +50,15 @@ public interface TelemetrySender extends Closeable {
      *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data
      *         could not be sent. The error code contained in the exception indicates the
      *         cause of the failure.
-     * @throws NullPointerException tenant ID, device ID, qos or contentType are {@code null}.
+     * @throws NullPointerException if tenant, device, qos or contentType are {@code null}.
+     * @throws IllegalArgumentException if tenant does not contain a tenantId property.
      */
     Future<Void> sendTelemetry(
-            String tenantId,
-            String deviceId,
+            TenantObject tenant,
+            RegistrationAssertion device,
             QoS qos,
             String contentType,
             Buffer payload,
-            Map<String, ?> properties,
+            Map<String, Object> properties,
             SpanContext context);
 }

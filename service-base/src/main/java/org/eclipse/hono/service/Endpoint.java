@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service;
 
+import org.eclipse.hono.util.Lifecycle;
+
 /**
  * A message endpoint implementing a specific API.
  *
