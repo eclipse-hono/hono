@@ -426,7 +426,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 span.log("connection established");
                 metrics.reportConnectionAttempt(
                         ConnectionAttemptOutcome.SUCCEEDED,
-                        Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
+                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null));
                 return null;
             })
             .otherwise(t -> {
@@ -435,7 +435,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 TracingHelper.logError(span, t);
                 metrics.reportConnectionAttempt(
                         AbstractProtocolAdapterBase.getOutcome(t),
-                        Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
+                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null));
                 return null;
             })
             .onComplete(s -> span.finish());
@@ -573,8 +573,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     protected void handleRemoteReceiverOpen(final ProtonConnection conn, final ProtonReceiver receiver) {
 
-        final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
-                Device.class);
+        final Device authenticatedDevice = getAuthenticatedDevice(conn);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(conn);
 
         final Span span = newSpan("attach device sender link", authenticatedDevice, traceSamplingPriority);
@@ -717,8 +716,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ProtonConnection connection,
             final ProtonSender sender) {
 
-        final Device authenticatedDevice = connection.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
-                Device.class);
+        final Device authenticatedDevice = getAuthenticatedDevice(connection);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(connection);
 
         final Span span = newSpan("attach device command receiver link", authenticatedDevice, traceSamplingPriority);
@@ -1305,13 +1303,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private Future<Void> checkConnectionLimitForAdapter() {
-        final Promise<Void> result = Promise.promise();
         if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
-            result.fail(new AdapterConnectionsExceededException(null, "connection limit for the adapter exceeded", null));
-        } else {
-            result.complete();
+            return Future.failedFuture(
+                    new AdapterConnectionsExceededException(null, "connection limit for the adapter exceeded", null));
         }
-        return result.future();
+        return Future.succeededFuture();
     }
     // -------------------------------------------< AbstractServiceBase >---
 
