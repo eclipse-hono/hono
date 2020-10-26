@@ -35,6 +35,7 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
@@ -348,6 +349,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return Future.succeededFuture();
         }
         return getTenantConfiguration(tenantId, span.context())
+                .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
                 .compose(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, authId, span);

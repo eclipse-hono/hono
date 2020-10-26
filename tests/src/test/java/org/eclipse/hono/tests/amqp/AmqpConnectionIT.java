@@ -21,6 +21,7 @@ import java.security.KeyPair;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import javax.security.sasl.AuthenticationException;
 import javax.security.sasl.SaslException;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -175,9 +176,35 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
         .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
-            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+            ctx.verify(() -> assertThat(t).isInstanceOf(AuthenticationException.class));
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that the adapter rejects connection attempts from devices
+     * using credentials that contain a non-existing tenant.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectFailsForNonExistingTenant(final VertxTestContext ctx) {
+
+        // GIVEN a registered device
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final Tenant tenant = new Tenant();
+
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                // WHEN a device of a non-existing tenant tries to connect
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, "nonExistingTenant"), password))
+                .onComplete(ctx.failing(t -> {
+                    // THEN the connection is refused
+                    ctx.verify(() -> assertThat(t).isInstanceOf(AuthenticationException.class));
+                    ctx.completeNow();
+                }));
     }
 
     /**

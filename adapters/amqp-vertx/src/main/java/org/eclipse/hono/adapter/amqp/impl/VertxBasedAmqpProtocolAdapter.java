@@ -54,6 +54,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
 import org.eclipse.hono.service.AdapterDisabledException;
+import org.eclipse.hono.service.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
@@ -217,6 +218,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final String authId = credentials.getAuthId();
 
         return getTenantConfiguration(tenantId, span.context())
+                .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
                 .compose(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper.applyTraceSamplingPriority(
