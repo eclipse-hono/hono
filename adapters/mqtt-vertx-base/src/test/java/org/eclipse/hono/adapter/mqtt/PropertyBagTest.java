@@ -62,7 +62,7 @@ public class PropertyBagTest {
     public void verifyTopicWithoutPropertyBag() {
         assertEquals("event/tenant/device",
                 PropertyBag.fromTopic("event/tenant/device/?hono-ttl=30")
-                        .topicWithoutPropertyBag());
+                        .topicWithoutPropertyBag().toString());
     }
 
     /**
@@ -78,5 +78,17 @@ public class PropertyBagTest {
         assertEquals(2, tmpMap.size());
         assertEquals("30", tmpMap.get("param1"));
         assertEquals("value2", tmpMap.get("param2"));
+    }
+
+    /**
+     * Verifies that the property names are treated as case insensitive by the <em>getProperty</em> method.
+     */
+    @Test
+    public void testGetPropertyIsCaseInsensitive() {
+        final PropertyBag propertyBag = PropertyBag.fromTopic("event/tenant/device/?cONteNT-TypE=text&pARam2=value2");
+
+        assertEquals("event/tenant/device", propertyBag.topicWithoutPropertyBag().toString());
+        assertEquals("text", propertyBag.getProperty("Content-Type"));
+        assertEquals("value2", propertyBag.getProperty("param2"));
     }
 }

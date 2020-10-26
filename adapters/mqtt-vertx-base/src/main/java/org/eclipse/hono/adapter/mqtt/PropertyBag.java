@@ -12,15 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.mqtt;
 
-import java.util.AbstractMap;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+
+import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.vertx.core.MultiMap;
 
 /**
  * A collection of methods for processing <em>property-bag</em> set at the end of a topic.
@@ -28,10 +27,10 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  */
 public final class PropertyBag {
 
-    private final Map<String, List<String>> properties;
-    private final String topicWithoutPropertyBag;
+    private final MultiMap properties;
+    private final ResourceIdentifier topicWithoutPropertyBag;
 
-    private PropertyBag(final String topicWithoutPropertyBag, final Map<String, List<String>> properties) {
+    private PropertyBag(final ResourceIdentifier topicWithoutPropertyBag, final MultiMap properties) {
         this.topicWithoutPropertyBag = topicWithoutPropertyBag;
         this.properties = properties;
     }
@@ -51,24 +50,29 @@ public final class PropertyBag {
 
         final int index = topic.lastIndexOf("/?");
         if (index > 0) {
-            return new PropertyBag(
-                    topic.substring(0, index),
-                    new QueryStringDecoder(topic.substring(index)).parameters());
+            final MultiMap properties = new QueryStringDecoder(topic.substring(index))
+                    .parameters()
+                    .entrySet()
+                    .stream()
+                    .collect(MultiMap::caseInsensitiveMultiMap,
+                            (multiMap, entry) -> multiMap.add(entry.getKey(), entry.getValue()),
+                            MultiMap::addAll);
+
+            return new PropertyBag(ResourceIdentifier.fromString(topic.substring(0, index)), properties);
         }
         return null;
     }
 
     /**
      * Gets a property value from the <em>property-bag</em>.
+     * <p>
+     * The case sensitivity of the property names are ignored while fetching a property value.
      *
      * @param name The property name.
      * @return The property value or {@code null} if the property is not set.
      */
     public String getProperty(final String name) {
-        return Optional.ofNullable(properties)
-                .map(props -> props.get(name))
-                .map(values -> values.get(0))
-                .orElse(null);
+        return properties.get(name);
     }
 
     /**
@@ -77,12 +81,7 @@ public final class PropertyBag {
      * @return The properties iterator.
      */
     public Iterator<Map.Entry<String, String>> getPropertiesIterator() {
-        return Optional.ofNullable(properties)
-                .map(props -> props.entrySet().stream()
-                        .map(entry -> (Map.Entry<String, String>) new AbstractMap.SimpleEntry<>(entry.getKey(),
-                                entry.getValue() != null ? entry.getValue().get(0) : null))
-                        .iterator())
-                .orElse(Collections.emptyIterator());
+        return properties.iterator();
     }
 
     /**
@@ -90,7 +89,7 @@ public final class PropertyBag {
      *
      * @return The topic without the <em>property-bag</em>.
      */
-    public String topicWithoutPropertyBag() {
+    public ResourceIdentifier topicWithoutPropertyBag() {
         return topicWithoutPropertyBag;
     }
 }

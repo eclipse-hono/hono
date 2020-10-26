@@ -109,7 +109,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         if (!Strings.isNullOrEmpty(publishedMessage.topicName())) {
             Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
                     .ifPresentOrElse(propertyBag -> {
-                        result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());
+                        result.topic = propertyBag.topicWithoutPropertyBag();
                         result.propertyBag = propertyBag;
                         // sets the content type using the corresponding value from the property bag
                         Optional.ofNullable(propertyBag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))

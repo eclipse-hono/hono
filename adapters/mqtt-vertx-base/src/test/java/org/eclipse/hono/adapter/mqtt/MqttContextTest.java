@@ -103,7 +103,7 @@ public class MqttContextTest {
         final Device device = new Device("tenant", "device");
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn(
-                String.format("event/tenant/device/?content-type=%s&param2=value2&param3=value3", encodedContentType));
+                String.format("event/tenant/device/?Content-Type=%s&param2=value2&param3=value3", encodedContentType));
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
 
         assertNotNull(context.propertyBag());
