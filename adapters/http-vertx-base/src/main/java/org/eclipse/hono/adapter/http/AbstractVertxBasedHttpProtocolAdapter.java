@@ -61,6 +61,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -331,6 +332,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * information before the potentially expensive credentials validation is done
      * <p>
      * The default implementation updates the trace sampling priority in the execution context tracing span.
+     * It also verifies that the adapter is enabled for the tenant and that the message limit for the
+     * tenant is not exceeded by the request payload, failing the returned future if one or the other is not the case.
      * <p>
      * Subclasses should override this method in order to perform additional operations after calling this super method.
      *
@@ -342,18 +345,31 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final HttpContext executionContext) {
 
         final String tenantId = credentials.getTenantId();
-        final Span span = executionContext.getTracingSpan();
         final String authId = credentials.getAuthId();
-        if (span == null) {
+        if (executionContext.getTracingSpan() == null) {
             log.warn("handleBeforeCredentialsValidation: no span context set in httpContext");
-            return Future.succeededFuture();
         }
+        final Span span = Optional.ofNullable(executionContext.getTracingSpan()).orElse(NoopSpan.INSTANCE);
         return getTenantConfiguration(tenantId, span.context())
                 .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
-                .compose(tenantObject -> {
+                .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, authId, span);
-                    return Future.succeededFuture();
+                    return tenantObject;
+                })
+                .compose(tenantObject -> isAdapterEnabled(tenantObject))
+                .compose(tenantObject -> {
+                    if (executionContext.getRoutingContext().getBody() == null) {
+                        // body handler not invoked yet
+                        return Future.succeededFuture(null);
+                    }
+                    final long payloadSize = executionContext.getRoutingContext().getBody().length();
+                    return checkMessageLimit(tenantObject, payloadSize, span.context());
+                })
+                .map(v -> {
+                    // set a marker - needed so that the above check is done later if a derived adapter doesn't invoke handleBeforeCredentialsValidation()
+                    executionContext.setTenantMessageLimitChecked(true);
+                    return null;
                 });
     }
 
@@ -654,7 +670,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Future<TenantObject> tenantValidationTracker = tenantTracker
                 .compose(tenantObject -> CompositeFuture
                         .all(isAdapterEnabled(tenantObject),
-                                checkMessageLimit(tenantObject, payloadSize, currentSpan.context()))
+                                checkMessageLimitIfNeeded(ctx, tenantObject, payloadSize, currentSpan))
                         .map(success -> tenantObject));
 
         // we only need to consider TTD if the device and tenant are enabled and the adapter
@@ -828,6 +844,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
             return Future.failedFuture(t);
         });
+    }
+
+    private Future<Void> checkMessageLimitIfNeeded(final HttpContext ctx, final TenantObject tenantObject,
+            final int payloadSize, final Span currentSpan) {
+
+        if (ctx.isTenantMessageLimitChecked()) {
+            return Future.succeededFuture();
+        }
+        return checkMessageLimit(tenantObject, payloadSize, currentSpan.context());
     }
 
     private void logResponseGettingClosedPrematurely(final RoutingContext ctx) {
@@ -1223,8 +1248,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             currentSpan.context());
                     final Future<Void> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
-                            .map(ok -> null);
+                                    checkMessageLimitIfNeeded(ctx, tenantTracker.result(), payloadSize, currentSpan))
+                            .mapEmpty();
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
                             .compose(ok -> sendCommandResponse(tenant, commandResponseTracker.result(),

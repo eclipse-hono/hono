@@ -38,6 +38,8 @@ import io.vertx.ext.web.RoutingContext;
  */
 public final class HttpContext implements TelemetryExecutionContext {
 
+    private static final String KEY_TENANT_MESSAGE_LIMIT_CHECKED = "tenantMessageLimitChecked";
+
     private final RoutingContext routingContext;
 
     private HttpContext(final RoutingContext routingContext) {
@@ -232,5 +234,24 @@ public final class HttpContext implements TelemetryExecutionContext {
     public MetricsTags.TtdStatus getTtdStatus() {
         return Optional.ofNullable((MetricsTags.TtdStatus) routingContext.get(MetricsTags.TtdStatus.class.getName()))
                 .orElse(MetricsTags.TtdStatus.NONE);
+    }
+
+    /**
+     * Gets the flag indicating whether the message limit for the tenant has already been checked.
+     *
+     * @return {@code true} if the check has already been done.
+     */
+    public boolean isTenantMessageLimitChecked() {
+        return Optional.ofNullable((Boolean) routingContext.get(KEY_TENANT_MESSAGE_LIMIT_CHECKED))
+                .orElse(Boolean.FALSE);
+    }
+
+    /**
+     * Sets the flag indicating whether the message limit for the tenant has already been checked.
+     *
+     * @param tenantMessageLimitChecked {@code true} if the check has already been done.
+     */
+    public void setTenantMessageLimitChecked(final boolean tenantMessageLimitChecked) {
+        routingContext.put(KEY_TENANT_MESSAGE_LIMIT_CHECKED, tenantMessageLimitChecked);
     }
 }
