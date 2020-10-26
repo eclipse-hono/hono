@@ -26,6 +26,8 @@ public class MessageNotProcessedException extends ServerErrorException {
      */
     public static final String CLIENT_FACING_MESSAGE_KEY = "SERVER_ERROR_MESSAGE_NOT_PROCESSED";
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Creates a new MessageNotProcessedException.
      * <p>

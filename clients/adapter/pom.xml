@@ -25,6 +25,10 @@
   <description>Clients for Hono's APIs that are required for implementing protocol adapters</description>
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-health-check</artifactId>
       <exclusions>
@@ -77,10 +81,6 @@
           <artifactId>vertx-auth-common</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-core</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>

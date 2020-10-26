@@ -26,6 +26,8 @@ public class SendMessageTimeoutException extends ServerErrorException {
      */
     public static final String CLIENT_FACING_MESSAGE_KEY = "SERVER_ERROR_SEND_MESSAGE_TIMEOUT";
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Creates a new SendMessageTimeoutException.
      * <p>

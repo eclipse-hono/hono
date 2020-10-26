@@ -25,6 +25,8 @@ public class NoConsumerException extends ServerErrorException {
      */
     public static final String CLIENT_FACING_MESSAGE_KEY = "SERVER_ERROR_NO_CONSUMER";
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Creates a new NoConsumerException.
      * <p>
