@@ -337,12 +337,11 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 result.fail(e);
             }
         }));
-        log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
-                getMessageAddress(message), sender.getCredit(), sender.getQueued());
+        log.trace("sent AT_LEAST_ONCE message [ID: {}, address: {}], remaining credit: {}, queued messages: {}",
+                messageId, getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
         return result.future()
                 .map(delivery -> {
-                    log.trace("message [ID: {}, address: {}] accepted by peer", messageId, getMessageAddress(message));
                     Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                     currentSpan.finish();
                     return delivery;

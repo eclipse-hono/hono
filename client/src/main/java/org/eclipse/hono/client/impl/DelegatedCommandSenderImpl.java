@@ -183,7 +183,6 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
         return result.future()
                 .map(delivery -> {
-                    log.trace("message [ID: {}, address: {}] accepted by peer", messageId, getMessageAddress(message));
                     Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                     currentSpan.finish();
                     return delivery;

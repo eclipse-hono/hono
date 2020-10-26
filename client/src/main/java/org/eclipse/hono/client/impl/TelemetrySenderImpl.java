@@ -218,8 +218,8 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
             currentSpan.finish();
         });
         deliveryRef.set(delivery);
-        log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
-                getMessageAddress(message), sender.getCredit(), sender.getQueued());
+        log.trace("sent AT_MOST_ONCE message [ID: {}, address: {}], remaining credit: {}, queued messages: {}",
+                messageId, getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
         return Future.succeededFuture(delivery);
     }
