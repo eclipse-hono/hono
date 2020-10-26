@@ -35,6 +35,12 @@
       <artifactId>quarkus-arc</artifactId>
       <version>${quarkus.platform.version}</version>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.logmanager</groupId>
+          <artifactId>jboss-logmanager-embedded</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.jaegertracing</groupId>
@@ -149,6 +155,14 @@
   <profiles>
     <profile>
       <id>jboss-logmanager</id>
+      <!-- alternative until the problem with jboss-logmanager-embedded is fixed -->
+      <dependencies>
+        <dependency>
+          <groupId>org.jboss.logmanager</groupId>
+          <artifactId>jboss-logmanager</artifactId>
+          <version>2.1.17.Final</version>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <plugin>
