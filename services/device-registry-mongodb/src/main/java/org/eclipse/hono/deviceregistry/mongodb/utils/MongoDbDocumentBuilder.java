@@ -74,12 +74,11 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder forUpdateOf(final BaseDto<?> baseDto) {
         final JsonObject updates = new JsonObject();
 
-        final JavaType baseDtoJavaType = OBJECT_MAPPER.getTypeFactory().constructType(baseDto.getClass());
-        final BeanDescription beanDescription = OBJECT_MAPPER.getSerializationConfig().introspect(baseDtoJavaType);
-        final AnnotatedMethod getDataMethod = beanDescription.findMethod("getData", null);
-        final JsonProperty jsonProperty = getDataMethod.getAnnotation(JsonProperty.class);
-
         if (baseDto.getData() != null) {
+            final JavaType baseDtoJavaType = OBJECT_MAPPER.getTypeFactory().constructType(baseDto.getClass());
+            final BeanDescription beanDescription = OBJECT_MAPPER.getSerializationConfig().introspect(baseDtoJavaType);
+            final AnnotatedMethod getDataMethod = beanDescription.findMethod("getData", null);
+            final JsonProperty jsonProperty = getDataMethod.getAnnotation(JsonProperty.class);
             updates.put(jsonProperty.value(), JsonObject.mapFrom(baseDto.getData()));
         }
 

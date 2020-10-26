@@ -190,7 +190,7 @@ public class DeviceTest {
      * Tests that the status property is serialized to JSON.
      */
     @Test
-    public void testDecodeStatus() {
+    public void testEncodeStatus() {
         final var device = new Device();
         device.setStatus(new Status().setCreationTime(Instant.now()));
         final var json = JsonObject.mapFrom(device);
@@ -204,7 +204,7 @@ public class DeviceTest {
      * device management API.
      */
     @Test
-    public void testStatusIsIgnoredWhenEncoding() {
+    public void testStatusIsIgnoredWhenDecoding() {
         final String deviceJson = "{\"enabled\": true, \"status\": { \"created\": \"2020-10-05T14:58:39Z\"}}";
         final var device = Json.decodeValue(deviceJson, Device.class);
 

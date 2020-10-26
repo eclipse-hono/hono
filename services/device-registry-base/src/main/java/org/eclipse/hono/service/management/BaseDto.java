@@ -52,7 +52,7 @@ public abstract class BaseDto<T> {
     /**
      * Default constructor for serialisation/deserialization.
      */
-    public BaseDto() {
+    protected BaseDto() {
         // Explicit default constructor.
     }
 
@@ -163,7 +163,7 @@ public abstract class BaseDto<T> {
      *
      * @return The entity's creation time.
      */
-    public Instant getCreationTime() {
+    public final Instant getCreationTime() {
         return creationTime;
     }
 
@@ -172,7 +172,7 @@ public abstract class BaseDto<T> {
      *
      * @param creationTime The entity's creation time.
      */
-    protected void setCreationTime(final Instant creationTime) {
+    protected final void setCreationTime(final Instant creationTime) {
         this.creationTime = creationTime;
     }
 
@@ -189,6 +189,7 @@ public abstract class BaseDto<T> {
 
     /**
      * Sets the data object of this DTO.
+     * This method may be overridden by subclasses to include validation logic dependent on the payload type.
      *
      * @param data The data object.
      */
@@ -201,7 +202,8 @@ public abstract class BaseDto<T> {
      *
      * @return The user's name.
      */
-    public String getLastUser() {
+    public final String getLastUser() {
+        // not implemented yet
         return null;
     }
 }

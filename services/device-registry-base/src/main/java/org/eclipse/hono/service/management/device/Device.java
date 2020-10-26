@@ -289,7 +289,7 @@ public class Device {
      * @param status The status information to be set or {@code null} if there is none.
      * @return A reference to this for fluent use.
      */
-    public Device setStatus(final Status status) {
+    public final Device setStatus(final Status status) {
         this.status = status;
         return this;
     }
@@ -299,7 +299,7 @@ public class Device {
      *
      * @return The registry internal status information or {@code null} if there is none.
      */
-    public Status getStatus() {
+    public final Status getStatus() {
         return status;
     }
 }

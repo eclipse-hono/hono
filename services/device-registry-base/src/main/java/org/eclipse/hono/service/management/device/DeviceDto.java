@@ -26,10 +26,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * A base class for a device DTO.
  */
 public class DeviceDto extends BaseDto<Device> {
-    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
+    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)
     private String tenantId;
 
-    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
+    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)
     private String deviceId;
 
     /**
@@ -108,7 +108,7 @@ public class DeviceDto extends BaseDto<Device> {
 
     /**
      * Returns a new device without internal status.
-     * <br><br>
+     * <p>
      * The status should be null anyway, since it should not be deserialized in the given device value object.
      * Also it will be overwritten with the actual internal status when devices are retrieved.
      * Nevertheless this makes sure that status information will never be persisted.
@@ -126,7 +126,7 @@ public class DeviceDto extends BaseDto<Device> {
      *
      * @return The identifier of the tenant.
      */
-    public String getTenantId() {
+    public final String getTenantId() {
         return tenantId;
     }
 
@@ -136,7 +136,7 @@ public class DeviceDto extends BaseDto<Device> {
      * @param tenantId The tenant's identifier.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    protected void setTenantId(final String tenantId) {
+    protected final void setTenantId(final String tenantId) {
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
@@ -145,7 +145,7 @@ public class DeviceDto extends BaseDto<Device> {
      *
      * @return The identifier of the device.
      */
-    public String getDeviceId() {
+    public final String getDeviceId() {
         return deviceId;
     }
 
@@ -155,7 +155,7 @@ public class DeviceDto extends BaseDto<Device> {
      * @param deviceId The identifier of the device.
      * @throws NullPointerException if the deviceId is {@code null}.
      */
-    protected void setDeviceId(final String deviceId) {
+    protected final void setDeviceId(final String deviceId) {
         this.deviceId = Objects.requireNonNull(deviceId);
     }
 
