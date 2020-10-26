@@ -44,6 +44,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>org.jboss.logmanager</groupId>
+        <artifactId>jboss-logmanager-embedded</artifactId>
+        <version>1.0.6</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -67,12 +72,6 @@
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
       <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>io.jaegertracing</groupId>
-      <artifactId>jaeger-client</artifactId>
-      <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
     <dependency>

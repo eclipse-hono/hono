@@ -33,23 +33,69 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
+
+    <!--
+      Hono service names
+    -->
+    <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
+    <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
+    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
+    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
+
+    <!-- milliseconds before vert.x complains about blocking the event loop -->
+    <max.event-loop.execute-time>5000</max.event-loop.execute-time>
+
+    <!-- logging profile used by all Hono components: prod, dev or trace -->
+    <logging.profile>prod</logging.profile>
+    <!-- maximum time (milliseconds) to wait for successful startup of a single service component -->
     <service.startup.timeout>120000</service.startup.timeout>
+    <!-- color used by components of the AMQP Messaging Network for logging -->
+    <log.color.amqp-network>magenta</log.color.amqp-network>
+    <!-- color used by components of the device registry for logging -->
+    <log.color.hono-device-registry>green</log.color.hono-device-registry>
+    <!-- color used by protocol adapters for logging -->
+    <log.color.hono-protocol-adapters>red</log.color.hono-protocol-adapters>
+    <!-- color used by remaining Hono services for logging -->
+    <log.color.hono-services>yellow</log.color.hono-services>
+    <!-- color used by extra (non-Hono) services for logging -->
+    <log.color.extra-services>cyan</log.color.extra-services>
+
+    <!--
+      Properties shared by all protocol adapters
+    -->
     <link.establishment.timeout>5000</link.establishment.timeout>
     <flow.latency>1000</flow.latency>
     <request.timeout>500</request.timeout>
     <adapter.sendMessageToDeviceTimeout>1000</adapter.sendMessageToDeviceTimeout>
     <!-- use minimum cost factor in order to speed up test execution -->
     <max.bcrypt.costFactor>4</max.bcrypt.costFactor>
-    <max.event-loop.execute-time>5000</max.event-loop.execute-time>
+
+    <!--
+      Device Registry related properties
+    -->
+    <!-- should be set to false if testing against a registry that doesn't support comparing client context
+         when retrieving credentials -->
+    <hono.deviceregistry.credentials.supportsClientContext>true</hono.deviceregistry.credentials.supportsClientContext>
     <!-- should be set to false if testing against a registry that doesn't support GW mode -->
-    <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
-    <deviceregistry.credentials.supportsClientContext>true</deviceregistry.credentials.supportsClientContext>
-    <!-- should be set to true if testing against a registry that supports search devices operation -->
-    <deviceregistry.supportsSearchDevices>true</deviceregistry.supportsSearchDevices>
-    <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
-    <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
-    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
-    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
+    <hono.deviceregistry.supportsGatewayMode>true</hono.deviceregistry.supportsGatewayMode>
+    <!-- should be set to false if testing against a registry that doesn't support the "search Devices" operation -->
+    <hono.deviceregistry.supportsSearchDevices>true</hono.deviceregistry.supportsSearchDevices>
+    <hono.deviceregistry.image>hono-service-device-registry-file</hono.deviceregistry.image>
+    <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
+    <!-- Spring application profiles to activate for the registry -->
+    <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
+
+    <hono.h2.disabled>true</hono.h2.disabled>
+    <hono.mongodb.disabled>true</hono.mongodb.disabled>
+
+    <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
+    <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
+    <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
+
+    <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx</hono.mqtt-adapter.image>
+    <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
+    <hono.mqtt-adapter.useNativeTransport>true</hono.mqtt-adapter.useNativeTransport>
+
     <default.java.options>
       -XX:MinRAMPercentage=80
       -XX:MaxRAMPercentage=90
@@ -59,23 +105,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <coap.java.options></coap.java.options>
     <http.java.options></http.java.options>
     <mqtt.java.options></mqtt.java.options>
-    <deviceregistry.image>hono-service-device-registry-file</deviceregistry.image>
-    <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
-    <hono.deviceregistry.spring.profiles></hono.deviceregistry.spring.profiles>
-    <hono.h2.disabled>true</hono.h2.disabled>
-    <hono.mongodb.image.repository>mongo</hono.mongodb.image.repository>
-    <hono.mongodb.disabled>true</hono.mongodb.disabled>
-    <!-- logging profile: either prod, dev or trace -->
-    <logging.profile>prod</logging.profile>
+
     <trace.frames>0</trace.frames>
     <jaeger.disabled>true</jaeger.disabled>
     <jaeger.host>hono-jaeger.hono</jaeger.host>
     <jaeger.query.port>18080</jaeger.query.port>
-    <log.color.amqp-network>magenta</log.color.amqp-network>
-    <log.color.hono-device-registry>green</log.color.hono-device-registry>
-    <log.color.hono-protocol-adapters>red</log.color.hono-protocol-adapters>
-    <log.color.hono-services>yellow</log.color.hono-services>
-    <log.color.extra-services>cyan</log.color.extra-services>
   </properties>
 
   <dependencies>
@@ -220,7 +254,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <profile>
       <id>device-registry-jdbc</id>
       <properties>
-        <deviceregistry.image>hono-service-device-registry-jdbc</deviceregistry.image>
+        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
+        <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,${logging.profile}</hono.deviceregistry.spring.profiles>
+        <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
         <hono.h2.disabled>false</hono.h2.disabled>
         <hono.h2.host>hono-h2.hono</hono.h2.host>
         <hono.h2.port>9092</hono.h2.port>
@@ -229,9 +266,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.jdbc.h2.admin.password>admin1234</hono.jdbc.h2.admin.password>
         <hono.jdbc.h2.registry.username>registry</hono.jdbc.h2.registry.username>
         <hono.jdbc.h2.registry.password>user12</hono.jdbc.h2.registry.password>
-        <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,</hono.deviceregistry.spring.profiles>
-        <deviceregistry.credentials.supportsClientContext>false</deviceregistry.credentials.supportsClientContext>
       </properties>
     </profile>
     <profile>
@@ -243,15 +277,31 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         </property>
       </activation>
       <properties>
-        <deviceregistry.image>hono-service-device-registry-mongodb</deviceregistry.image>
+        <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
+        <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
         <hono.mongodb.disabled>false</hono.mongodb.disabled>
         <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
         <hono.mongodb.port>27017</hono.mongodb.port>
         <hono.mongodb.username>device-registry@HONO</hono.mongodb.username>
         <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
         <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
-        <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
-        <deviceregistry.supportsSearchDevices>true</deviceregistry.supportsSearchDevices>
+      </properties>
+    </profile>
+    <profile>
+      <id>protocol-adapters-quarkus</id>
+      <activation>
+        <property>
+          <name>hono.adapters.type</name>
+          <value>quarkus</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.http-adapter.config-dir>deployments/config</hono.http-adapter.config-dir>
+        <hono.http-adapter.image>hono-adapter-http-vertx-quarkus</hono.http-adapter.image>
+        <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
+        <hono.mqtt-adapter.config-dir>deployments/config</hono.mqtt-adapter.config-dir>
+        <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus</hono.mqtt-adapter.image>
+        <hono.mqtt-adapter.useNativeTransport>false</hono.mqtt-adapter.useNativeTransport>
       </properties>
     </profile>
     <profile>
@@ -371,7 +421,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <build>
                     <skip>${hono.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${hono.mongodb.image.repository}:${mongodb.version}</from>
+                    <from>mongo:${mongodb.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -551,7 +601,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <alias>device-registry</alias>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${deviceregistry.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.deviceregistry.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -595,7 +645,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
@@ -830,11 +880,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <alias>http-adapter</alias>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-adapter-http-vertx:${project.version}</from>
-                    <!--
-                    Enable to test with Quarkus adapter
-                    <from>${docker.image.org-name}/hono-adapter-http-vertx-quarkus:${project.version}</from>
-                    -->
+                    <from>${docker.repository}/${hono.http-adapter.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -852,21 +898,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/http</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>${hono.http-adapter.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
-                          <!--
-                          Enable to configure Quarkus JVM image
-                          <fileSet>
-                            <directory>${project.build.directory}/resources/http</directory>
-                            <outputDirectory>/deployments/config</outputDirectory>
-                            <includes>
-                              <include>*</include>
-                            </includes>
-                          </fileSet>
-                          -->
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
@@ -898,6 +934,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
+                      <!--
+                        disable -Xmx calculation done by the runJava.sh script
+                        used by the Quarkus based images
+                      -->
+                      <JAVA_MAX_MEM_RATIO>0</JAVA_MAX_MEM_RATIO>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -925,7 +966,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <alias>mqtt-adapter</alias>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-adapter-mqtt-vertx:${project.version}</from>
+                    <from>${docker.repository}/${hono.mqtt-adapter.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -943,7 +984,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/mqtt</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>${hono.mqtt-adapter.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
@@ -979,6 +1020,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</JDK_JAVA_OPTIONS>
+                      <!--
+                        disable -Xmx calculation done by the runJava.sh script
+                        used by the Quarkus based images
+                      -->
+                      <JAVA_MAX_MEM_RATIO>0</JAVA_MAX_MEM_RATIO>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-mqtt</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1205,9 +1251,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
-                <deviceregistry.supportsGatewayMode>${deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
-                <deviceregistry.credentials.supportsClientContext>${deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
-                <deviceregistry.supportsSearchDevices>${deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
+                <deviceregistry.supportsGatewayMode>${hono.deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
+                <deviceregistry.credentials.supportsClientContext>${hono.deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
+                <deviceregistry.supportsSearchDevices>${hono.deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
                 <adapter.coap.host>${coap.ip}</adapter.coap.host>
                 <adapter.coap.port>${coap.port}</adapter.coap.port>
                 <adapter.coaps.port>${coaps.port}</adapter.coaps.port>

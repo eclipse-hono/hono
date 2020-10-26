@@ -541,6 +541,11 @@
       </dependency>
       <dependency>
         <groupId>io.opentracing</groupId>
+        <artifactId>opentracing-util</artifactId>
+        <version>${opentracing.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opentracing</groupId>
         <artifactId>opentracing-noop</artifactId>
         <version>${opentracing.version}</version>
       </dependency>
@@ -886,6 +891,18 @@
         <artifactId>infinispan-query-dsl</artifactId>
         <version>${infinispan.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.jaegertracing</groupId>
+        <artifactId>jaeger-core</artifactId>
+        <version>${jaeger.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.jaegertracing</groupId>
+        <artifactId>jaeger-thrift</artifactId>
+        <version>${jaeger.version}</version>
+        <scope>runtime</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
