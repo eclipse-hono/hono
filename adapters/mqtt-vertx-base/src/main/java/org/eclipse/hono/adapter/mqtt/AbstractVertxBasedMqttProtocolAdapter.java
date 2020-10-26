@@ -44,6 +44,7 @@ import org.eclipse.hono.service.AuthorizationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.auth.device.ChainAuthHandler;
+import org.eclipse.hono.service.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
@@ -210,6 +211,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final String authId = credentials.getAuthId();
 
         return getTenantConfiguration(tenantId, span.context())
+                .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
                 .compose(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper.applyTraceSamplingPriority(

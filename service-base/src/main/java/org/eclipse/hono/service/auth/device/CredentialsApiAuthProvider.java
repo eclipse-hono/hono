@@ -111,14 +111,8 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
                 .start();
 
         getCredentialsForDevice(deviceCredentials, currentSpan.context())
-        .recover(t -> {
-
-                    if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND) {
-                        return Future.failedFuture(
-                                new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
-                    }
-                    return Future.failedFuture(t);
-        }).compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord, currentSpan.context()))
+        .recover(t -> Future.failedFuture(mapNotFoundToBadCredentialsException(t)))
+        .compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord, currentSpan.context()))
         .map(device -> new DeviceUser(device.getTenantId(), device.getDeviceId()))
         .onComplete(authAttempt -> {
             if (authAttempt.succeeded()) {
@@ -130,6 +124,20 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             currentSpan.finish();
             resultHandler.handle(authAttempt);
         });
+    }
+
+    /**
+     * Checks if the given exception has status code <em>HTTP_NOT_FOUND</em> and returns a <em>HTTP_UNAUTHORIZED</em>
+     * {@link ClientErrorException} with message "bad credentials" in that case.
+     * Otherwise the given exception is returned.
+     *
+     * @param throwable The exception to map.
+     * @return The mapped exception.
+     */
+    public static Throwable mapNotFoundToBadCredentialsException(final Throwable throwable) {
+        return ServiceInvocationException.extractStatusCode(throwable) == HttpURLConnection.HTTP_NOT_FOUND
+                ? new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")
+                : throwable;
     }
 
     /**

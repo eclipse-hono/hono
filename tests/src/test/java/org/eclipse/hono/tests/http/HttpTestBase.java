@@ -617,6 +617,84 @@ public abstract class HttpTestBase {
     }
 
     /**
+     * Verifies that the adapter fails to authenticate a device that is providing
+     * wrong credentials.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testUploadFailsForWrongCredentials(final VertxTestContext ctx) throws InterruptedException {
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, "wrong password"))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        // GIVEN a device
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        // WHEN a device tries to upload data and authenticate using wrong credentials
+        httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello"),
+                requestHeaders,
+                ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
+                // THEN the request fails with a 401
+                .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that the adapter fails to authenticate a device that is providing
+     * credentials that contain a non-existing tenant.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testUploadFailsForCredentialsWithNonExistingTenant(final VertxTestContext ctx) throws InterruptedException {
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth("nonExistingTenant", deviceId, PWD))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        // GIVEN a device
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        // WHEN a device tries to upload data and authenticate using wrong credentials
+        httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello"),
+                requestHeaders,
+                ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
+                // THEN the request fails with a 401
+                .onComplete(ctx.completing());
+    }
+
+    /**
      * Verifies that the HTTP adapter rejects messages from a device that belongs to a tenant for which the HTTP adapter
      * has been disabled with a 403.
      *

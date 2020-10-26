@@ -224,6 +224,32 @@ public class MqttConnectionIT extends MqttTestBase {
     }
 
     /**
+     * Verifies that the adapter rejects connection attempts from devices
+     * using credentials that contain a non-existing tenant.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectFailsForNonExistingTenant(final VertxTestContext ctx) {
+
+        // GIVEN a registered device
+        final Tenant tenant = new Tenant();
+
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                // WHEN a device of a non-existing tenant tries to connect
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, "nonExistingTenant"), "secret"))
+                .onComplete(ctx.failing(t -> {
+                    // THEN the connection is refused
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(MqttConnectionException.class);
+                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that the adapter rejects connection attempts from devices using a client certificate with an unknown
      * subject DN.
      *
