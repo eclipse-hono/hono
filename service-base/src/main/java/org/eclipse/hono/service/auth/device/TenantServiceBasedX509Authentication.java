@@ -59,7 +59,6 @@ import io.vertx.core.json.JsonObject;
  */
 public final class TenantServiceBasedX509Authentication implements X509Authentication {
 
-    private static final ClientErrorException UNAUTHORIZED = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED);
     private static final Logger log = LoggerFactory.getLogger(TenantServiceBasedX509Authentication.class);
 
     private final Tracer tracer;
@@ -161,11 +160,13 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                         final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
                         if (trustAnchors.isEmpty()) {
                             log.debug("no valid trust anchors defined for tenant [{}]", tenant.getTenantId());
-                            return Future.failedFuture(UNAUTHORIZED);
+                            return Future.failedFuture(new ClientErrorException(tenant.getTenantId(),
+                                    HttpURLConnection.HTTP_UNAUTHORIZED));
                         } else {
                             final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
                             return certPathValidator.validate(chainToValidate, trustAnchors)
-                                    .recover(t -> Future.failedFuture(UNAUTHORIZED));
+                                    .recover(t -> Future.failedFuture(new ClientErrorException(tenant.getTenantId(),
+                                            HttpURLConnection.HTTP_UNAUTHORIZED)));
                         }
                     }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
         }).map(authInfo -> {
@@ -195,7 +196,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
             } else {
                 log.info("cannot authenticate device using unsupported certificate type [{}]",
                         cert.getClass().getName());
-                return Future.failedFuture(UNAUTHORIZED);
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
             }
         }
         return Future.succeededFuture(path);
