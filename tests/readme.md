@@ -93,3 +93,12 @@ Start subsequent test runs using the running containers with the `useRunningCont
 In order to stop and remove the Docker containers started by a test run, use:
 
     $ mvn verify -PstopContainers
+
+### Running the Tests with the Quarkus based Protocol Adapters
+
+By default, the integration tests are run using the Spring Boot based protocol adapters. For some protocol adapters there are
+Quarkus based alternative implememtations. The tests can be run using these Quarkus based adapters by means of activating
+the `protocol-adapters-quarkus` maven profile:
+
+    $ mvn verify -Prun-tests,protocol-adapters-quarkus
+

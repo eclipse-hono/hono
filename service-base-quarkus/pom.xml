@@ -39,7 +39,6 @@
     <dependency>
       <groupId>io.jaegertracing</groupId>
       <artifactId>jaeger-core</artifactId>
-      <version>${jaeger.version}</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -165,4 +164,13 @@
       </build>
     </profile>
   </profiles>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.jboss.logmanager</groupId>
+        <artifactId>jboss-logmanager-embedded</artifactId>
+        <version>1.0.6</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>

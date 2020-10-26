@@ -28,7 +28,10 @@ import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.MqttContext;
+import org.eclipse.hono.adapter.mqtt.impl.HttpBasedMessageMapping;
 import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -55,6 +58,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.client.WebClient;
 
 /**
  * The Hono MQTT adapter main application class.
@@ -133,6 +137,7 @@ public class Application {
         adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        adapter.setMessageMapping(messageMapping());
         return adapter;
     }
 
@@ -194,6 +199,12 @@ public class Application {
                 metrics,
                 config.mqtt,
                 newCaffeineCache(config.tenant.getResponseCacheMinSize(), config.tenant.getResponseCacheMaxSize()));
+    }
+
+    @Produces
+    MessageMapping<MqttContext> messageMapping() {
+        final WebClient webClient = WebClient.create(vertx);
+        return new HttpBasedMessageMapping(webClient, config.mqtt);
     }
 
     /**

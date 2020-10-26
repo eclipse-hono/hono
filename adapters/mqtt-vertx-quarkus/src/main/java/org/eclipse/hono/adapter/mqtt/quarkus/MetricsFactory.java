@@ -51,7 +51,7 @@ public class MetricsFactory {
     @Produces
     @DefaultBean
     List<Handler<Router>> emptyResources() {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     @Produces
