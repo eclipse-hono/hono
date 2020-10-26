@@ -32,14 +32,16 @@ public interface MessageMapping<T extends ExecutionContext> {
     /**
      * Maps a message uploaded by a device.
      *
+     * <p>
+     * If there is no configured mapper capable of mapping the message, this method simply returns
+     * a future containing the original message.
+     *
      * @param ctx The context in which the message has been uploaded.
      * @param targetAddress The downstream address that the message will be forwarded to.
      * @param registrationInfo The information included in the registration assertion for
      *                         the authenticated device that has uploaded the message.
-     * @return A future indicating the outcome of the operation.
-     *         The future will be completed with the mapped message or failed with
-     *         a {@link org.eclipse.hono.client.ServiceInvocationException} if the
-     *         message could not be mapped.
+     * @return A successful future containing either the <em>mapped message</em> or the <em>original message</em>
+     *         if it cannot be mapped.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     Future<MappedMessage> mapMessage(
