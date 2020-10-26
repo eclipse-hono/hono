@@ -196,6 +196,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * information before the potentially expensive credentials validation is done
      * <p>
      * The default implementation updates the trace sampling priority in the execution context tracing span.
+     * It also verifies that the adapter is enabled for the determined tenant and that the connection limit for the
+     * tenant is not exceeded, failing the returned future if one or the other is not the case.
      * <p>
      * Subclasses should override this method in order to perform additional operations after calling this super method.
      *
@@ -212,12 +214,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         return getTenantConfiguration(tenantId, span.context())
                 .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
-                .compose(tenantObject -> {
+                .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper.applyTraceSamplingPriority(
                             tenantObject, authId, span);
                     executionContext.setTraceSamplingPriority(traceSamplingPriority);
-                    return Future.succeededFuture();
+                    return tenantObject;
+                })
+                .compose(tenantObj -> checkAdapterEnabledAndConnectionLimit(tenantObj, span))
+                .map(v -> {
+                    // set a marker - needed so that the above checks are done later if a derived adapter doesn't invoke handleBeforeCredentialsValidation()
+                    executionContext.setTenantConnectionChecksDone(true);
+                    return null;
                 });
     }
 
@@ -428,14 +436,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private void reportFailedConnectionAttempt(final Throwable error) {
 
-        final String tenant;
-        if (error instanceof ServiceInvocationException) {
-            tenant = ((ServiceInvocationException) error).getTenant();
-        } else {
-            tenant = null;
-        }
-        final ConnectionAttemptOutcome outcome = AbstractProtocolAdapterBase.getOutcome(error);
-        metrics.reportConnectionAttempt(outcome, tenant);
+        final String tenantId = error instanceof ServiceInvocationException
+                ? ((ServiceInvocationException) error).getTenant()
+                : null;
+        metrics.reportConnectionAttempt(AbstractProtocolAdapterBase.getOutcome(error), tenantId);
     }
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
@@ -533,28 +537,41 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Future<DeviceUser> authAttempt = authHandler.authenticateDevice(context);
         return authAttempt
-                .compose(authenticatedDevice -> CompositeFuture.all(
-                        getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
-                            .compose(tenantObj -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObj).recover(t -> Future.failedFuture(
-                                            new AdapterDisabledException(
-                                                    authenticatedDevice.getTenantId(),
-                                                    "adapter is disabled for tenant",
-                                                    t))),
-                                    checkConnectionLimit(tenantObj, currentSpan.context()))),
-                        checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
+                .compose(authenticatedDevice -> checkAdapterEnabledAndConnectionLimitIfNeeded(context, authenticatedDevice, currentSpan))
+                .compose(authenticatedDevice -> checkDeviceRegistration(authenticatedDevice, currentSpan.context())
                         .map(authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
                 .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority()))
                 .recover(t -> {
                     if (authAttempt.failed()) {
-                        log.debug("could not authenticate device", t);
+                        log.debug("device authentication or early stage checks failed", t);
                     } else {
                         log.debug("cannot establish connection with device [tenant-id: {}, device-id: {}]",
                                 authAttempt.result().getTenantId(), authAttempt.result().getDeviceId(), t);
                     }
                     return Future.failedFuture(t);
                 });
+    }
+
+    private Future<DeviceUser> checkAdapterEnabledAndConnectionLimitIfNeeded(
+            final MqttConnectContext context,
+            final DeviceUser authenticatedDevice,
+            final Span currentSpan) {
+
+        if (context.isTenantConnectionChecksDone()) {
+            return Future.succeededFuture(authenticatedDevice);
+        }
+        return getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
+                .compose(tenantObj -> checkAdapterEnabledAndConnectionLimit(tenantObj, currentSpan))
+                .map(authenticatedDevice);
+    }
+
+    private CompositeFuture checkAdapterEnabledAndConnectionLimit(final TenantObject tenantObj, final Span currentSpan) {
+        return CompositeFuture.all(
+                isAdapterEnabled(tenantObj)
+                        .recover(t -> Future.failedFuture(
+                                new AdapterDisabledException(tenantObj.getTenantId(), "adapter is disabled for tenant", t))),
+                checkConnectionLimit(tenantObj, currentSpan.context()));
     }
 
     /**

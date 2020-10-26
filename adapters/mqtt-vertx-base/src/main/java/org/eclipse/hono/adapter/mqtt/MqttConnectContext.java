@@ -28,6 +28,7 @@ public final class MqttConnectContext extends MapBasedExecutionContext {
 
     private final MqttEndpoint deviceEndpoint;
     private OptionalInt traceSamplingPriority = OptionalInt.empty();
+    private boolean tenantConnectionChecksDone;
 
     private MqttConnectContext(final Span span, final MqttEndpoint deviceEndpoint) {
         super(span);
@@ -77,5 +78,27 @@ public final class MqttConnectContext extends MapBasedExecutionContext {
      */
     public void setTraceSamplingPriority(final OptionalInt traceSamplingPriority) {
         this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
+    }
+
+    /**
+     * Gets the flag indicating whether the tenant-related checks on connection establishment have already been done.
+     * These checks verify that the adapter is enabled for the determined tenant and that the connection limit for the
+     * tenant is not exceeded
+     *
+     * @return {@code true} if the check has already been done.
+     */
+    public boolean isTenantConnectionChecksDone() {
+        return tenantConnectionChecksDone;
+    }
+
+    /**
+     * Sets the flag indicating whether the tenant-related checks on connection establishment have already been done.
+     * These checks verify that the adapter is enabled for the determined tenant and that the connection limit for the
+     * tenant is not exceeded
+     *
+     * @param tenantConnectionChecksDone {@code true} if the check has already been done.
+     */
+    public void setTenantConnectionChecksDone(final boolean tenantConnectionChecksDone) {
+        this.tenantConnectionChecksDone = tenantConnectionChecksDone;
     }
 }
