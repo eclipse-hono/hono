@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.client.telemetry;
 
 import java.util.Map;
 
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 
@@ -26,7 +27,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A client for publishing events originating from devices to downstream consumers.
  */
-public interface EventSender {
+public interface EventSender extends Lifecycle {
 
     /**
      * Sends an event originating from a device to downstream consumers.

@@ -12,14 +12,15 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.client.command;
 
+import org.eclipse.hono.util.Lifecycle;
+
 import io.opentracing.SpanContext;
-import io.vertx.core.Closeable;
 import io.vertx.core.Future;
 
 /**
  * A client for publishing a device's response to a command received from a downstream application.
  */
-public interface CommandResponseSender extends Closeable {
+public interface CommandResponseSender extends Lifecycle {
 
     /**
      * Sends a device's response to a command.
