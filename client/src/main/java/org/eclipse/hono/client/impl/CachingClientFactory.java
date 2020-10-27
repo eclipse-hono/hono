@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,7 @@ import io.vertx.core.Vertx;
  *
  * @param <T> The type of client to be created.
  */
-class CachingClientFactory<T> extends ClientFactory<T> {
+public final class CachingClientFactory<T> extends ClientFactory<T> {
 
     /**
      * The maximum number of retries for getting or creating a client while a concurrent request with the same key is
@@ -69,10 +69,12 @@ class CachingClientFactory<T> extends ClientFactory<T> {
     private final Map<String, Boolean> creationLocks = new HashMap<>();
 
     /**
+     * Creates a new factory.
+     *
      * @param vertx The Vert.x instance to use for creating a timer.
      * @param livenessCheck A predicate for checking if a cached client is usable.
      */
-    CachingClientFactory(final Vertx vertx, final Predicate<T> livenessCheck) {
+    public CachingClientFactory(final Vertx vertx, final Predicate<T> livenessCheck) {
         this.vertx = vertx;
         this.livenessCheck = Objects.requireNonNull(livenessCheck);
     }
@@ -100,7 +102,9 @@ class CachingClientFactory<T> extends ClientFactory<T> {
     }
 
     /**
-     * Clears the cache.
+     * {@inheritDoc}
+     * <p>
+     * Clears this factory's cache.
      */
     @Override
     protected void doClearState() {
