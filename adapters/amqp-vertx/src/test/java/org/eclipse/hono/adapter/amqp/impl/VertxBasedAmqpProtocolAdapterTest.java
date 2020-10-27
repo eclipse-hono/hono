@@ -57,7 +57,6 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
@@ -97,6 +96,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -120,7 +120,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
     private AmqpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
-    private ConnectionLimitManager connectionLimitManager;    
+    private ConnectionLimitManager connectionLimitManager;
     private Vertx vertx;
     private Context context;
     private Span span;
@@ -250,8 +250,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryWithAtMostOnceDeliverySemantics(final VertxTestContext ctx) {
         // GIVEN an AMQP adapter with a configured server
         givenAnAdapter(properties);
-        final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
-        when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        // sending of downstream telemetry message succeeds
+        givenATelemetrySenderForAnyTenant();
 
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -266,7 +266,11 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             .onComplete(ctx.succeeding(d -> {
                 ctx.verify(() -> {
                     // THEN the adapter has forwarded the message downstream
-                    verify(telemetrySender).send(any(Message.class), (SpanContext) any());
+                    assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_MOST_ONCE,
+                            TEST_TENANT_ID,
+                            TEST_DEVICE,
+                            "text/plain");
                     // and acknowledged the message to the device
                     verify(delivery).disposition(any(Accepted.class), eq(true));
                     // and has reported the telemetry message
@@ -291,10 +295,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryWithAtLeastOnceDeliverySemantics() {
         // GIVEN an adapter configured to use a user-define server.
         givenAnAdapter(properties);
-        final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
-        final Promise<ProtonDelivery> downstreamDelivery = Promise.promise();
-        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any()))
-        .thenReturn(downstreamDelivery.future());
+        final Promise<ProtonDelivery> sendResult = Promise.promise();
+        givenATelemetrySenderForAnyTenant(sendResult);
 
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -309,13 +311,15 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, mockMessage, span, null));
 
         // THEN the sender sends the message
-        verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
-        // using the canonical endpoint name
-        verify(mockMessage).setAddress(TelemetryConstants.TELEMETRY_ENDPOINT + "/" + TEST_TENANT_ID);
+        assertTelemetryMessageHasBeenSentDownstream(
+                QoS.AT_LEAST_ONCE,
+                TEST_TENANT_ID,
+                TEST_DEVICE,
+                "text/plain");
         //  and waits for the outcome from the downstream peer
         verify(delivery, never()).disposition(any(DeliveryState.class), anyBoolean());
         // until the transfer is settled
-        downstreamDelivery.complete(mock(ProtonDelivery.class));
+        sendResult.complete(mock(ProtonDelivery.class));
         verify(delivery).disposition(any(Accepted.class), eq(true));
         // and has reported the telemetry message
         verify(metrics).reportTelemetry(
@@ -339,7 +343,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter configured to use a user-define server.
         givenAnAdapter(properties);
-        final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
+        givenATelemetrySenderForAnyTenant();
 
         // AND given a tenant for which the AMQP Adapter is disabled
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, false);
@@ -354,8 +358,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the adapter does not send the message (regardless of the delivery mode).
-                    verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
-                    verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                    assertNoTelemetryMessageHasBeenSentDownstream();
 
                     // AND notifies the device by sending back a REJECTED disposition
                     verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -385,7 +388,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter
         givenAnAdapter(properties);
-        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         // with an enabled tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -401,8 +404,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the adapter does not send the event
-                    verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
-                    verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                    assertNoEventHasBeenSentDownstream();
 
                     // AND notifies the device by sending back a REJECTED disposition
                     verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -421,7 +423,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter
         givenAnAdapter(properties);
-        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         // with an enabled tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -437,8 +439,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the adapter does not forward the event
-                    verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
-                    verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                    assertNoEventHasBeenSentDownstream();
 
                     // AND notifies the device by sending back a REJECTED disposition
                     verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -458,8 +459,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testAdapterOpensSenderLinkAndNotifyDownstreamApplication() {
         // GIVEN an AMQP adapter configured to use a user-defined server
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant(outcome);
+        givenAnEventSenderForAnyTenant();
 
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
@@ -475,10 +475,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         verify(sender).open();
 
         // AND sends an empty notification downstream (with a TTD of -1)
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(eventSender).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(-1);
+        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, -1);
     }
 
     /**
@@ -492,8 +489,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant(outcome);
+        givenAnEventSenderForAnyTenant();
 
         // and a device that wants to receive commands
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
@@ -518,10 +514,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         verify(commandConsumer).close(any());
 
         // AND sends an empty notification downstream
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(eventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(0);
+        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
     }
 
     /**
@@ -576,7 +569,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
-        final DownstreamSender downstreamEventSender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         final Promise<Void> startupTracker = Promise.promise();
         startupTracker.future().onComplete(ctx.completing());
@@ -609,10 +602,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // THEN the adapter closes the command consumer
         verify(commandConsumer).close(any());
         // and sends an empty event with TTD = 0 downstream
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(downstreamEventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(0);
+        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
     }
 
     /**
@@ -630,7 +620,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
-        final DownstreamSender downstreamEventSender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         final Promise<Void> startupTracker = Promise.promise();
         startupTracker.future().onComplete(ctx.completing());
@@ -665,11 +655,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // THEN the adapter closes the command consumer
         verify(commandConsumer).close(any());
         // and since closing the command consumer fails with a precon-failed exception
-        // there is only one notification sent during consumer creation, no 'disconnectedTtdEvent' event with TTD = 0
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(downstreamEventSender, times(1)).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(-1);
+        // there is only one notification sent during consumer creation,
+        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, -1);
+        //  no 'disconnectedTtdEvent' event with TTD = 0
+        assertEmptyNotificationHasNotBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
     }
 
     /**
@@ -697,8 +686,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ApplicationProperties props = new ApplicationProperties(propertyMap);
         final Buffer payload = Buffer.buffer("some payload");
         final Message message = getFakeMessage(replyToAddress, payload);
-        when(message.getCorrelationId()).thenReturn("correlation-id");
-        when(message.getApplicationProperties()).thenReturn(props);
+        message.setCorrelationId("correlation-id");
+        message.setApplicationProperties(props);
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
@@ -742,8 +731,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
         final ApplicationProperties props = new ApplicationProperties(propertyMap);
         final Message message = getFakeMessage(replyToAddress, null);
-        when(message.getCorrelationId()).thenReturn("correlation-id");
-        when(message.getApplicationProperties()).thenReturn(props);
+        message.setCorrelationId("correlation-id");
+        message.setApplicationProperties(props);
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
@@ -987,7 +976,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
-        final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
+        givenATelemetrySenderForAnyTenant();
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
@@ -1004,8 +993,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the adapter does not send the message (regardless of the delivery mode).
-                        verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
-                        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                        assertNoTelemetryMessageHasBeenSentDownstream();
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND notifies the device by sending back a REJECTED disposition
@@ -1034,7 +1022,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
-        final DownstreamSender eventSender = givenAnEventSenderForAnyTenant(Promise.promise());
+        givenAnEventSenderForAnyTenant();
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
@@ -1051,8 +1039,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the adapter does not send the message (regardless of the delivery mode).
-                        verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
-                        verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                        assertNoEventHasBeenSentDownstream();
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND notifies the device by sending back a REJECTED disposition
@@ -1093,11 +1080,11 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
         final Buffer payload = Buffer.buffer("payload");
         final Message message = getFakeMessage(replyToAddress, payload);
-        when(message.getCorrelationId()).thenReturn("correlation-id");
+        message.setCorrelationId("correlation-id");
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
         final ApplicationProperties props = new ApplicationProperties(propertyMap);
-        when(message.getApplicationProperties()).thenReturn(props);
+        message.setApplicationProperties(props);
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null))
                 .onComplete(ctx.failing(t -> {
@@ -1349,15 +1336,15 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
     private Message getFakeMessage(final String to, final Buffer payload, final String subject) {
 
-        final Message message = mock(Message.class);
-        when(message.getMessageId()).thenReturn("the-message-id");
-        when(message.getSubject()).thenReturn(subject);
-        when(message.getAddress()).thenReturn(to);
+        final Message message = ProtonHelper.message();
+        message.setMessageId("the-message-id");
+        message.setSubject(subject);
+        message.setAddress(to);
 
         if (payload != null) {
+            message.setContentType("text/plain");
             final Data data = new Data(new Binary(payload.getBytes()));
-            when(message.getContentType()).thenReturn("text/plain");
-            when(message.getBody()).thenReturn(data);
+            message.setBody(data);
         }
 
         return message;

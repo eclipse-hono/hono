@@ -53,7 +53,6 @@ import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
@@ -476,7 +475,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // GIVEN an adapter
         properties.setAuthenticationRequired(false);
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenATelemetrySenderForAnyTenant();
 
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -495,7 +494,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // THEN the device gets disconnected
         verify(endpoint).close();
         // and the message is not forwarded downstream
-        verify(sender, never()).send(any(Message.class), any());
+        assertNoTelemetryMessageHasBeenSentDownstream();
         // and the message has not been reported as processed
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
@@ -517,7 +516,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // GIVEN an adapter
         properties.setAuthenticationRequired(false);
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenATelemetrySenderForAnyTenant();
 
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
@@ -536,7 +535,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // THEN the device gets disconnected
         verify(endpoint).close();
         // and the message is not forwarded downstream
-        verify(sender, never()).send(any(Message.class), any());
+        assertNoTelemetryMessageHasBeenSentDownstream();
         // and the message has not been reported as processed
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
@@ -558,7 +557,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // GIVEN an adapter
         properties.setAuthenticationRequired(false);
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN an unknown device publishes a telemetry message
         when(registrationClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
@@ -578,7 +577,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         messageHandler.getValue().handle(msg);
 
         // THEN the message has not been sent downstream
-        verify(sender, never()).send(any(Message.class), any());
+        assertNoTelemetryMessageHasBeenSentDownstream();
         // and the message has not been reported as processed
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
@@ -602,11 +601,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // GIVEN an adapter
         properties.setAuthenticationRequired(false);
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
 
         // WHEN a device of "my-tenant" publishes a telemetry message
         final MqttEndpoint endpoint = mockEndpoint();
@@ -623,7 +622,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         messageHandler.getValue().handle(msg);
 
         // THEN the message has not been sent downstream
-        verify(sender, never()).send(any(Message.class), any());
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
@@ -767,7 +766,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     }
 
     /**
-     * Verifies that the adapter does not send a PUBACK package to the device if an event message has not been accepted
+     * Verifies that the adapter does not send a PUBACK packet to the device if an event message has not been accepted
      * by the peer.
      *
      * @param ctx The vert.x test context.
@@ -776,9 +775,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void testOnUnauthenticatedMessageDoesNotSendPubAckOnFailure(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a downstream event consumer
+        givenAnAdapter(properties);
         final Promise<ProtonDelivery> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
-        givenAnAdapter(properties);
 
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
@@ -787,11 +786,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
-        when(messageFromDevice.topicName()).thenReturn("e/tenant/device");
+        when(messageFromDevice.topicName()).thenReturn("e/my-tenant/4712");
         final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
         adapter.uploadEventMessage(context, "my-tenant", "4712", payload).onComplete(ctx.failing());
-
+        assertEventHasBeenSentDownstream("my-tenant", "4712", null);
         // and the peer rejects the message
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
 
@@ -822,8 +821,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void testUploadTelemetryMessageIncludesRetainAnnotation(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a downstream telemetry consumer
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN a device publishes a message with its retain flag set
         final MqttEndpoint endpoint = mockEndpoint();
@@ -844,7 +843,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 verify(endpoint).publishAcknowledge(5555555);
                 // and the message has been sent downstream
                 final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-                verify(sender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
+                verify(downstreamSender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
                 // including the "retain" annotation
                 assertThat(MessageHelper.getAnnotation(msgCaptor.getValue(), MessageHelper.ANNOTATION_X_OPT_RETAIN,
                         Boolean.class)).isTrue();
@@ -883,8 +882,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     private void testOnSubscribeRegistersAndClosesConnection(final MqttQoS qos) {
 
         // GIVEN a device connected to an adapter
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
         givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
@@ -913,10 +912,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         closeHookCaptor.getValue().handle(null);
         verify(commandConsumer).close(any());
         // and sends an empty notification downstream with TTD 0
-        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender, times(2)).sendAndWaitForOutcome(msgCaptor.capture(), any());
-        assertThat(msgCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue())).isEqualTo(0);
+        assertEmptyNotificationHasBeenSentDownstream("tenant", "deviceId", 0);
     }
 
     /**
@@ -930,8 +926,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails() {
 
         // GIVEN a device connected to an adapter
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
         givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
@@ -960,11 +956,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         closeHookCaptor.getValue().handle(null);
         verify(commandConsumer).close(any());
         // and since closing the command consumer fails with a precon-failed exception
-        // there is only one notification sent during consumer creation, no 'disconnectedTtdEvent' event with TTD = 0
-        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender, times(1)).sendAndWaitForOutcome(msgCaptor.capture(), any());
-        assertThat(msgCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue())).isEqualTo(-1);
+        // there is only one notification sent during consumer creation,
+        assertEmptyNotificationHasBeenSentDownstream("tenant", "deviceId", -1);
+        //no 'disconnectedTtdEvent' event with TTD = 0
+        assertEmptyNotificationHasNotBeenSentDownstream("tenant", "deviceId", 0);
     }
 
     /**
@@ -975,8 +970,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void testOnSubscribeIncludesStatusCodeForEachFilter() {
 
         // GIVEN a device connected to an adapter
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
         givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(true);
 
@@ -1010,12 +1005,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         assertThat(codeCaptor.getValue().get(2)).isEqualTo(MqttQoS.FAILURE);
         assertThat(codeCaptor.getValue().get(3)).isEqualTo(MqttQoS.AT_MOST_ONCE);
         // and sends an empty notification downstream with TTD -1
-        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).sendAndWaitForOutcome(msgCaptor.capture(), any());
-        assertThat(MessageHelper.getDeviceId(msgCaptor.getValue())).isEqualTo("device-A");
-        assertThat(msgCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue())).isEqualTo(-1);
-
+        assertEmptyNotificationHasBeenSentDownstream("tenant-1", "device-A", -1);
     }
 
     private static MqttTopicSubscription newMockTopicSubscription(final String filter, final MqttQoS qos) {
@@ -1204,7 +1194,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // GIVEN an adapter
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenATelemetrySenderForAnyTenant();
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
 
@@ -1220,7 +1210,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the message has not been sent downstream
-                        verify(sender, never()).send(any(Message.class));
+                        assertNoTelemetryMessageHasBeenSentDownstream();
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
@@ -1250,7 +1240,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // GIVEN an adapter
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -1267,7 +1257,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the message has not been sent downstream
-                        verify(sender, never()).send(any(Message.class));
+                        assertNoEventHasBeenSentDownstream();
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
@@ -1344,7 +1334,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void verifyEventMessageUsesTtlValueGivenInPropertyBag(final VertxTestContext ctx) {
         // Given an adapter
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         // WHEN a "device" of "tenant" publishes an event message with a TTL value of 30 seconds.
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -1356,11 +1346,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 "device",
                 Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
-                        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-                        verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), (SpanContext) any());
-
-                        // THEN the TTL value of the amqp message is 10 seconds.
-                        assertThat(messageCaptor.getValue().getTtl()).isEqualTo(30 * 1000);
+                        // THEN the TTL value of the amqp message is 30 seconds.
+                        assertEventHasBeenSentDownstream("tenant", "device", null, 30_000L);
                     });
                     ctx.completeNow();
                 }));
@@ -1380,7 +1367,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         // Given an adapter
         givenAnAdapter(properties);
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant();
+        givenAnEventSenderForAnyTenant();
 
         // WHEN a device publishes an event message with a TTL value of 30 seconds.
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -1392,12 +1379,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 "device",
                 Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
-                        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-
-                        verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), (SpanContext) any());
-
                         // THEN the TTL value of the amqp message is 10 seconds.
-                        assertThat(messageCaptor.getValue().getTtl()).isEqualTo(10 * 1000);
+                        assertEventHasBeenSentDownstream("tenant", "device", null, 10_000L);
                     });
                     ctx.completeNow();
                 }));

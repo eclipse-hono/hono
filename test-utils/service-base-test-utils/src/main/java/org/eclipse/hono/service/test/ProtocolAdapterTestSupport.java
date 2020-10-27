@@ -16,11 +16,15 @@ package org.eclipse.hono.service.test;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandResponse;
@@ -39,8 +43,13 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
@@ -67,6 +76,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected ConnectionEventProducer.Context connectionEventProducerContext;
     protected CredentialsClientFactory credentialsClientFactory;
     protected DeviceConnectionClientFactory deviceConnectionClientFactory;
+    protected DownstreamSender downstreamSender;
     protected DownstreamSenderFactory downstreamSenderFactory;
     protected RegistrationClient registrationClient;
     protected RegistrationClientFactory registrationClientFactory;
@@ -233,14 +243,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * @return The sender that the factory will create.
      */
     protected DownstreamSender givenATelemetrySenderForAnyTenant(final Promise<ProtonDelivery> outcome) {
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.send(any(Message.class), any(SpanContext.class)))
+        this.downstreamSender = mock(DownstreamSender.class);
+        when(this.downstreamSender.send(any(Message.class), any(SpanContext.class)))
             .thenReturn(outcome.future());
-        when(sender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)))
+        when(this.downstreamSender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)))
             .thenReturn(outcome.future());
 
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(this.downstreamSender));
+        return this.downstreamSender;
     }
 
     /**
@@ -269,11 +279,11 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * @return The sender that the factory will create.
      */
     protected DownstreamSender givenAnEventSenderForAnyTenant(final Promise<ProtonDelivery> outcome) {
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
+        this.downstreamSender = mock(DownstreamSender.class);
+        when(this.downstreamSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
 
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
-        return sender;
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(this.downstreamSender));
+        return this.downstreamSender;
     }
 
     /**
@@ -326,5 +336,193 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(deviceConnectionClientFactory.isConnected())
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+    }
+
+    private boolean hasMatchingProperties(
+            final Message msg,
+            final String endpoint,
+            final String tenant,
+            final String deviceId,
+            final String contentType) {
+
+        final ResourceIdentifier address = ResourceIdentifier.fromString(msg.getAddress());
+        final boolean endpointMatches = endpoint.equals(address.getEndpoint());
+        final boolean tenantMatches = Optional.ofNullable(tenant)
+                .map(id -> id.equals(address.getTenantId()))
+                .orElse(true);
+        final boolean deviceMatches = Optional.ofNullable(deviceId)
+            .map(id -> id.equals(MessageHelper.getDeviceIdAnnotation(msg)))
+            .orElse(true);
+        final boolean contentTypeMatches = Optional.ofNullable(contentType)
+                .map(ct -> ct.equals(msg.getContentType()))
+                .orElse(true);
+        return endpointMatches && tenantMatches && deviceMatches && contentTypeMatches;
+    }
+
+    /**
+     * Asserts that a telemetry message has been sent downstream.
+     *
+     * @param qos The delivery semantics used for sending the message.
+     * @param tenant The tenant to check the message against or {@code null} if the
+     *               message's tenant should not be checked.
+     * @param deviceId The device to check the message against or {@code null} if the
+     *                 message's device ID should not be checked.
+     * @param contentType The content type value to check the message against or {@code null}
+     *                    if the message's content-type property should not be checked.
+     * @throws AssertionError if no message matching the given parameters has been sent.
+     */
+    protected void assertTelemetryMessageHasBeenSentDownstream(
+            final QoS qos,
+            final String tenant,
+            final String deviceId,
+            final String contentType) {
+
+        if (QoS.AT_MOST_ONCE == qos) {
+            verify(downstreamSender).send(
+                    argThat(msg -> hasMatchingProperties(
+                            msg,
+                            TelemetryConstants.TELEMETRY_ENDPOINT,
+                            tenant,
+                            deviceId,
+                            contentType)),
+                    (SpanContext) any());
+        } else {
+            verify(downstreamSender).sendAndWaitForOutcome(
+                    argThat(msg -> hasMatchingProperties(
+                            msg,
+                            TelemetryConstants.TELEMETRY_ENDPOINT,
+                            tenant,
+                            deviceId,
+                            contentType)),
+                    (SpanContext) any());
+        }
+    }
+
+    /**
+     * Asserts that an empty notification has been sent downstream.
+     *
+     * @param tenant The tenant to check the message against or {@code null} if the
+     *               message's tenant should not be checked.
+     * @param deviceId The device to check the message against or {@code null} if the
+     *                 message's device ID should not be checked.
+     * @param ttd The time-until-disconnect value to check the message against.
+     * @throws AssertionError if no empty notification matching the given parameters has been sent.
+     */
+    protected void assertEmptyNotificationHasBeenSentDownstream(
+            final String tenant,
+            final String deviceId,
+            final int ttd) {
+        verify(downstreamSender).sendAndWaitForOutcome(
+                argThat(msg -> {
+                    final boolean propsMatch = hasMatchingProperties(
+                        msg,
+                        EventConstants.EVENT_ENDPOINT,
+                        tenant,
+                        deviceId,
+                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+                    final boolean ttdMatches = MessageHelper.getTimeUntilDisconnect(msg) == ttd;
+                    return propsMatch && ttdMatches;
+                }),
+                (SpanContext) any());
+    }
+
+    /**
+     * Asserts that an empty notification has not been sent downstream.
+     *
+     * @param tenant The tenant to check the message against or {@code null} if the
+     *               message's tenant should not be checked.
+     * @param deviceId The device to check the message against or {@code null} if the
+     *                 message's device ID should not be checked.
+     * @param ttd The time-until-disconnect value to check the message against.
+     * @throws AssertionError if an empty notification matching the given parameters has been sent.
+     */
+    protected void assertEmptyNotificationHasNotBeenSentDownstream(
+            final String tenant,
+            final String deviceId,
+            final int ttd) {
+        verify(downstreamSender, never()).sendAndWaitForOutcome(
+                argThat(msg -> {
+                    final boolean propsMatch = hasMatchingProperties(
+                        msg,
+                        EventConstants.EVENT_ENDPOINT,
+                        tenant,
+                        deviceId,
+                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+                    final boolean ttdMatches = MessageHelper.getTimeUntilDisconnect(msg) == ttd;
+                    return propsMatch && ttdMatches;
+                }),
+                (SpanContext) any());
+    }
+
+    /**
+     * Asserts that an event has been sent downstream.
+     *
+     * @param tenant The tenant to check the message against or {@code null} if the
+     *               message's tenant should not be checked.
+     * @param deviceId The device to check the message against or {@code null} if the
+     *                 message's device ID should not be checked.
+     * @param contentType The content type value to check the message against or {@code null}
+     *                    if the message's content-type property should not be checked.
+     * @throws AssertionError if no message matching the given parameters has been sent.
+     */
+    protected void assertEventHasBeenSentDownstream(
+            final String tenant,
+            final String deviceId,
+            final String contentType) {
+        assertEventHasBeenSentDownstream(tenant, deviceId, contentType, null);
+    }
+
+    /**
+     * Asserts that an event has been sent downstream.
+     *
+     * @param tenant The tenant to check the message against or {@code null} if the
+     *               message's tenant should not be checked.
+     * @param deviceId The device to check the message against or {@code null} if the
+     *                 message's device ID should not be checked.
+     * @param contentType The content type value to check the message against or {@code null}
+     *                    if the message's content-type property should not be checked.
+     * @param ttl The time-to-live (milliseconds) value to check the message against or {@code null}
+     *                    if the message's ttl property should not be checked.
+     * @throws AssertionError if no message matching the given parameters has been sent.
+     */
+    protected void assertEventHasBeenSentDownstream(
+            final String tenant,
+            final String deviceId,
+            final String contentType,
+            final Long ttl) {
+
+        verify(downstreamSender).sendAndWaitForOutcome(
+                argThat(msg -> {
+                    final boolean propsMatch = hasMatchingProperties(
+                        msg,
+                        EventConstants.EVENT_ENDPOINT,
+                        tenant,
+                        deviceId,
+                        contentType);
+                    final boolean ttlMatches = Optional.ofNullable(ttl)
+                            .map(v -> v.longValue() == msg.getTtl())
+                            .orElse(true);
+                    return propsMatch && ttlMatches;
+                }),
+                (SpanContext) any());
+    }
+
+    /**
+     * Asserts that no message has been sent using the telemetry sender.
+     *
+     * @throws AssertionError if a message has been sent.
+     */
+    protected void assertNoTelemetryMessageHasBeenSentDownstream() {
+        verify(downstreamSender, never()).send(any(Message.class), any());
+        verify(downstreamSender, never()).sendAndWaitForOutcome(any(Message.class), any());
+    }
+
+    /**
+     * Asserts that no message has been sent using the event sender.
+     *
+     * @throws AssertionError if a message has been sent.
+     */
+    protected void assertNoEventHasBeenSentDownstream() {
+        verify(downstreamSender, never()).sendAndWaitForOutcome(any(Message.class), any());
     }
 }

@@ -21,7 +21,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -76,8 +75,6 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
     private static final byte[] TEST_PAYLOAD = "bumxlux".getBytes(StandardCharsets.UTF_8);
     private static final String TEST_PROVIDER = "bumlux";
 
-    private DownstreamSender telemetrySender;
-    private DownstreamSender eventSender;
     private Tracer tracer;
     private Span currentSpan;
 
@@ -91,16 +88,11 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         createClientFactories();
         createClients();
 
-        telemetrySender = mock(DownstreamSender.class);
-        when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
-                Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
-
-        eventSender = mock(DownstreamSender.class);
-        when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
-        when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
+        downstreamSender = mock(DownstreamSender.class);
+        when(downstreamSender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(downstreamSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
 
         currentSpan = mock(Span.class);
         when(currentSpan.context()).thenReturn(mock(SpanContext.class));
@@ -142,7 +134,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
 
         final ArgumentCaptor<Message> message = ArgumentCaptor.forClass(Message.class);
-        verify(telemetrySender).send(message.capture(), any(SpanContext.class));
+        verify(downstreamSender).send(message.capture(), any(SpanContext.class));
         assertThat(MessageHelper.getPayload(message.getValue())).isEqualTo(Buffer.buffer(TEST_PAYLOAD));
         assertThat(message.getValue().getContentType()).isEqualTo(LoraConstants.CONTENT_TYPE_LORA_BASE + providerMock.getProviderName());
         final ApplicationProperties props = message.getValue().getApplicationProperties();
@@ -182,8 +174,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(httpContext.getRoutingContext().response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
         verify(currentSpan).finish();
     }
@@ -201,8 +192,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(httpContext.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
         verify(currentSpan).finish();
     }
@@ -220,8 +210,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(httpContext.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
         verify(currentSpan).finish();
     }
@@ -238,8 +227,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verifyUnauthorized(httpContext.getRoutingContext());
         verify(currentSpan).finish();
     }
@@ -258,8 +246,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verifyBadRequest(httpContext.getRoutingContext());
         verify(currentSpan).finish();
     }

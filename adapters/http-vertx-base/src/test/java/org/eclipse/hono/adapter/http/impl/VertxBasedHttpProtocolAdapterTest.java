@@ -37,6 +37,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -87,8 +88,6 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     private static final String HOST = "127.0.0.1";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private DownstreamSender telemetrySender;
-    private DownstreamSender eventSender;
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private Vertx vertx;
     private WebClient httpClient;
@@ -147,16 +146,11 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
-        telemetrySender = mock(DownstreamSender.class);
-        when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
-                Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
-
-        eventSender = mock(DownstreamSender.class);
-        when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
-        when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
+        downstreamSender = mock(DownstreamSender.class);
+        when(downstreamSender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(downstreamSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
@@ -333,7 +327,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
-                    ctx.verify(() -> verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)));
+                    ctx.verify(() -> assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_LEAST_ONCE, "DEFAULT_TENANT", "device_1", "application/json"));
                     ctx.completeNow();
                 }));
     }
@@ -376,7 +371,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
-                    ctx.verify(() -> verify(telemetrySender).send(any(Message.class), any(SpanContext.class)));
+                    ctx.verify(() -> assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_MOST_ONCE, "DEFAULT_TENANT", "device_1", "application/json"));
                     ctx.completeNow();
                 }));
     }
@@ -398,7 +394,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
-                    ctx.verify(() -> verify(eventSender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)));
+                    ctx.verify(() -> assertEventHasBeenSentDownstream(
+                            "DEFAULT_TENANT", "device_1", "application/json"));
                     ctx.completeNow();
                 }));
     }

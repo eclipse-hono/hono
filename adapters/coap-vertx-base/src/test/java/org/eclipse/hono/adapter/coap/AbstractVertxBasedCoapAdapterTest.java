@@ -54,12 +54,12 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
@@ -306,12 +306,12 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryFailsForDisabledTenant() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
+        givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), any(SpanContext.class))).thenReturn(Future.succeededFuture(myTenantConfig));
-        givenAnAdapter(properties);
 
         // WHEN a device that belongs to "my-tenant" publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -325,7 +325,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.FORBIDDEN.equals(res.getCode())));
 
         // and the message has not been forwarded downstream
-        verify(sender, never()).send(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("my-tenant"),
@@ -345,8 +345,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryFailsForMissingContentFormat() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN a device publishes a non-empty message that lacks a content-format option
         final Buffer payload = Buffer.buffer("some payload");
@@ -360,7 +360,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.BAD_REQUEST.equals(res.getCode())));
 
         // and the message has not been forwarded downstream
-        verify(sender, never()).send(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
@@ -380,8 +380,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryFailsForEmptyBody() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN a device publishes an empty message that doesn't contain
         // a URI-query option
@@ -395,7 +395,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.BAD_REQUEST.equals(res.getCode())));
 
         // and the message has not been forwarded downstream
-        verify(sender, never()).send(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
@@ -414,8 +414,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadEmptyNotificationSucceeds() {
 
         // GIVEN an adapter
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN a device publishes an empty message that is marked as an empty notification
         final OptionSet options = new OptionSet();
@@ -429,7 +429,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         // and the message has been forwarded downstream
-        verify(sender).send(argThat(msg -> EventConstants.isEmptyNotificationType(msg.getContentType())), any(SpanContext.class));
+        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_MOST_ONCE, "my-tenant", "the-device", EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("my-tenant"),
@@ -449,8 +449,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryWithQoS0() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN a device publishes an telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -463,7 +463,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         // and the message has been forwarded downstream
-        verify(sender).send(any(Message.class), any(SpanContext.class));
+        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_MOST_ONCE, "tenant", "device", "text/plain");
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
@@ -484,9 +484,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryWithQoS1() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant(outcome);
         givenAnAdapter(properties);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenATelemetrySenderForAnyTenant(outcome);
 
         // WHEN a device publishes an telemetry message with QoS 1
         final Buffer payload = Buffer.buffer("some payload");
@@ -497,7 +497,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadTelemetryMessage(context);
 
         // THEN the message is being forwarded downstream
-        verify(sender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_LEAST_ONCE, "tenant", "device", "text/plain");
         // and the device does not get a response
         verify(coapExchange, never()).respond(any(Response.class));
         // until the telemetry message has been accepted
@@ -523,9 +523,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadEventWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
@@ -536,7 +536,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadEventMessage(context);
 
         // THEN the message is being forwarded downstream
-        verify(sender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
         // but the device does not get a response
         verify(coapExchange, never()).respond(any(Response.class));
 
@@ -563,9 +563,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadEventFailsForRejectedOutcome() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
@@ -574,7 +574,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         final CoapContext ctx = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         adapter.uploadEventMessage(ctx);
-        verify(sender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+
+        assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
 
         // THEN the device gets a 4.00
@@ -599,9 +600,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryWithFailedDeliveryReleasesCommand() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Promise<ProtonDelivery> sendTelemetryOutcome = Promise.promise();
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
         givenAnAdapter(properties);
+        final Promise<ProtonDelivery> sendTelemetryOutcome = Promise.promise();
+        givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
         final Message commandMessage = newMockedCommandMessage("tenant", "device", "doThis");
@@ -627,7 +628,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadTelemetryMessage(context);
 
         // THEN the message is being forwarded downstream
-        verify(sender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_LEAST_ONCE, "tenant", "device", "text/plain");
         // with no response being sent to the device yet
         verify(coapExchange, never()).respond(any(Response.class));
 
@@ -657,9 +658,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadCommandResponseWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream application attached
+        givenAnAdapter(properties);
         final Promise<ProtonDelivery> outcome = Promise.promise();
         final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
-        givenAnAdapter(properties);
 
         // WHEN a device publishes an command response
         final String reqId = Command.getRequestId("correlation", "replyToId", "device");
@@ -791,8 +792,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testMessageLimitExceededForATelemetryMessage() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final DownstreamSender sender = givenATelemetrySenderForAnyTenant();
         givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
 
         // WHEN a device that belongs to a tenant for which the message limit is exceeded
         // publishes a telemetry message
@@ -805,7 +806,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadTelemetryMessage(ctx);
 
         // THEN the message is not being forwarded downstream
-        verify(sender, never()).send(any(Message.class), any(SpanContext.class));
+        assertNoTelemetryMessageHasBeenSentDownstream();
         // and the device gets a 4.29
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.TOO_MANY_REQUESTS.equals(res.getCode())));
         verify(metrics).reportTelemetry(
@@ -827,9 +828,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testMessageLimitExceededForAnEventMessage() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
-        final DownstreamSender sender = givenAnEventSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -843,7 +843,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadEventMessage(ctx);
 
         // THEN the message is not being forwarded downstream
-        verify(sender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+        assertNoEventHasBeenSentDownstream();
         // and the device gets a 4.29
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
