@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.qpid.proton.amqp.Binary;
@@ -304,7 +305,7 @@ public class MessageHelperTest {
     public void testNewMessageUsesGivenTtlValue() {
 
         final Duration timeToLive = Duration.ofSeconds(10);
-        final Map<String, Object> props = Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.toSeconds());
+        final Map<String, Object> props = Collections.singletonMap(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.getSeconds());
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
                 Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
@@ -333,7 +334,7 @@ public class MessageHelperTest {
     public void testNewMessageLimitsTtlToMaxValue() {
 
         final Duration timeToLive = Duration.ofSeconds(50);
-        final Map<String, Object> props = Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.toSeconds());
+        final Map<String, Object> props = Collections.singletonMap(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.getSeconds());
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
                 Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);

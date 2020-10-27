@@ -946,7 +946,7 @@ public final class MessageHelper {
      * @deprecated Use {@link #newMessage(ResourceIdentifier, String, Buffer, TenantObject, Map, Map, boolean, boolean)}
      *             instead.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public static Message newMessage(
             final QoS qos,
             final ResourceIdentifier target,
@@ -956,22 +956,17 @@ public final class MessageHelper {
             final Duration timeToLive,
             final String adapterTypeName) {
 
-        Objects.requireNonNull(target);
-        Objects.requireNonNull(adapterTypeName);
-
-        final Map<String, Object> props = new HashMap<>();
-        props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
-        if (qos != null) {
-            props.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
-        }
-
-        return MessageHelper.newMessage(
+        return newMessage(
+                qos,
                 target,
+                null,
                 contentType,
                 payload,
                 tenant,
-                props,
                 null,
+                null,
+                timeToLive,
+                adapterTypeName,
                 false,
                 false);
     }
@@ -1020,7 +1015,7 @@ public final class MessageHelper {
      * @throws NullPointerException if target or adapterTypeName is {@code null}.
      * @deprecated Use {@link #newMessage(ResourceIdentifier, String, Buffer, TenantObject, Map, Map, boolean, boolean)} instead.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public static Message newMessage(
             final QoS qos,
             final ResourceIdentifier target,
@@ -1183,7 +1178,7 @@ public final class MessageHelper {
      * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
      * @deprecated Use {@link #addProperties(Message, ResourceIdentifier, TenantObject, Map, Map, boolean, boolean)} instead.
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     public static Message addProperties(
             final Message msg,
             final QoS qos,
