@@ -99,11 +99,6 @@ public final class Constants {
     public static final String HEADER_QOS_LEVEL = "QoS-Level";
 
     /**
-     * The AMQP capability indicating support for validating registration assertions
-     * issued by a Device Registration service.
-     */
-    public static final Symbol CAP_REG_ASSERTION_VALIDATION = Symbol.valueOf("hono-reg-assertion");
-    /**
      * The AMQP capability indicating support for routing messages as defined by
      * <a href="http://docs.oasis-open.org/amqp/anonterm/v1.0/anonterm-v1.0.html">
      * Anonymous Terminus for Message Routing</a>.
@@ -120,11 +115,6 @@ public final class Constants {
      * and/or {@code ProtonLink}'s attachments.
      */
     public static final String KEY_CONNECTION_ID = "CONNECTION_ID";
-
-    /**
-     * The address that the ID of a connection that has been closed by a client is published to.
-     */
-    public static final String EVENT_BUS_ADDRESS_CONNECTION_CLOSED = "hono.connection.closed";
 
     /**
      * The vert.x event bus address that the ID of a tenant that timed out is published to.
@@ -153,10 +143,6 @@ public final class Constants {
      * The qualifier to use for referring to AMQP based components.
      */
     public static final String QUALIFIER_AMQP = "amqp";
-    /**
-     * The qualifier to use for referring to components scoped to the AMQP 1.0 messaging network.
-     */
-    public static final String QUALIFIER_DOWNSTREAM = "downstream";
     /**
      * The qualifier to use for referring to HTTP based components.
      */
@@ -310,17 +296,6 @@ public final class Constants {
     }
 
     /**
-     * Gets the (surrogate) identifier of the AMQP connection that a link is part of.
-     *
-     * @param link The link to determine the connection id for.
-     * @return The identifier retrieved from the link's <em>attachment</em> using key {@link #KEY_CONNECTION_ID}
-     *         or {@code null} if the attachments do not contain a value for that a key.
-     */
-    public static String getConnectionId(final ProtonLink<?> link) {
-        return link.attachments().get(KEY_CONNECTION_ID, String.class);
-    }
-
-    /**
      * Gets the (surrogate) identifier of an AMQP connection.
      *
      * @param connection The connection to determine the connection id for.
@@ -331,28 +306,4 @@ public final class Constants {
         return connection.attachments().get(KEY_CONNECTION_ID, String.class);
     }
 
-    /**
-     * Sets the (surrogate) identifier of an AMQP connection.
-     * <p>
-     * The identifier will be added to the connection's <em>attachments</em> under key
-     * {@link #KEY_CONNECTION_ID}.
-     *
-     * @param connection The connection to set id for.
-     * @param id The identifier to set.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public static void setConnectionId(final ProtonConnection connection, final String id) {
-        Objects.requireNonNull(connection).attachments().set(Constants.KEY_CONNECTION_ID, String.class, Objects.requireNonNull(id));
-
-    }
-
-    /**
-     * Checks if a given tenant identifier is the {@code DEFAULT_TENANT}.
-     *
-     * @param tenantId The identifier to check.
-     * @return {@code true} if the given identifier is equal to {@link #DEFAULT_TENANT}.
-     */
-    public static boolean isDefaultTenant(final String tenantId) {
-        return DEFAULT_TENANT.equals(tenantId);
-    }
 }
