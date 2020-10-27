@@ -16,6 +16,7 @@ package org.eclipse.hono.service.management.device;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.util.ArrayList;
 
 import org.junit.jupiter.api.Assertions;
@@ -92,8 +93,7 @@ public class DeviceTest {
         assertThat(json).isNotNull();
         assertThat(json.getBoolean("enabled")).isNull();
         assertThat(json.getJsonObject("ext")).isNull();
-        assertThat(json.getJsonObject("status")).isNotNull();
-        assertThat(json).isNotEmpty();
+        assertThat(json).isEmpty();
     }
 
     /**
@@ -184,5 +184,31 @@ public class DeviceTest {
         final var json = JsonObject.mapFrom(device);
         assertThat(json).isNotNull();
         assertThat(json.getString("mapper")).isEqualTo("test");
+    }
+
+    /**
+     * Tests that the status property is serialized to JSON.
+     */
+    @Test
+    public void testEncodeStatus() {
+        final var device = new Device();
+        device.setStatus(new Status().setCreationTime(Instant.now()));
+        final var json = JsonObject.mapFrom(device);
+        assertThat(json).isNotNull();
+        assertThat(json.getJsonObject("status")).isNotNull();
+        assertThat(json.getJsonObject("status").getString("created")).isNotEmpty();
+    }
+
+    /**
+     * Tests that the status property is ignored on deserialization, since it should not be editable by a user of the
+     * device management API.
+     */
+    @Test
+    public void testStatusIsIgnoredWhenDecoding() {
+        final String deviceJson = "{\"enabled\": true, \"status\": { \"created\": \"2020-10-05T14:58:39Z\"}}";
+        final var device = Json.decodeValue(deviceJson, Device.class);
+
+        assertThat(device).isNotNull();
+        assertThat(device.getStatus()).isNull();
     }
 }

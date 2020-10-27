@@ -33,10 +33,12 @@ import org.eclipse.hono.service.base.jdbc.store.OptimisticLockingException;
 import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
+import org.eclipse.hono.service.base.jdbc.store.model.JdbcBasedDeviceDto;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CommonCredentials;
 import org.eclipse.hono.service.management.credentials.CommonSecret;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,7 +97,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                         "tenant_id",
                         "device_id",
                         "version",
-                        "data");
+                        "data",
+                        "created");
 
         this.createMemberOfStatement = cfg
                 .getRequiredStatement("createMemberOf")
@@ -117,7 +120,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                         "device_id",
                         "next_version",
                         "data",
-                        "expected_version");
+                        "expected_version",
+                        "updated_on");
 
         this.deleteStatement = cfg
                 .getRequiredStatement("delete")
@@ -208,24 +212,22 @@ public class TableManagementStore extends AbstractDeviceStore {
      */
     public Future<Versioned<Void>> createDevice(final DeviceKey key, final Device device, final SpanContext spanContext) {
 
-        final String json = Json.encode(device);
-
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "create device", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        final var version = UUID.randomUUID().toString();
-
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(key, device);
         return SQL
 
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) -> {
 
                     final var expanded = this.createStatement.expand(params -> {
-                        params.put("tenant_id", key.getTenantId());
-                        params.put("device_id", key.getDeviceId());
-                        params.put("version", version);
-                        params.put("data", json);
+                        params.put("tenant_id", deviceDto.getTenantId());
+                        params.put("device_id", deviceDto.getDeviceId());
+                        params.put("version", deviceDto.getVersion());
+                        params.put("data", deviceDto.getDeviceJson());
+                        params.put("created", deviceDto.getCreationTime());
                     });
 
                     log.debug("createDevice - statement: {}", expanded);
@@ -240,7 +242,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
                 })
 
-                .map(new Versioned<Void>(version, null))
+                .map(new Versioned<Void>(deviceDto.getVersion(), null))
                 .onComplete(x -> span.finish());
 
     }
@@ -354,20 +356,18 @@ public class TableManagementStore extends AbstractDeviceStore {
      */
     public Future<Versioned<Void>> updateDevice(final DeviceKey key, final Device device, final Optional<String> resourceVersion, final SpanContext spanContext) {
 
-        final String json = Json.encode(device);
-
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "update device", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        final var nextVersion = UUID.randomUUID().toString();
         resourceVersion.ifPresent(version -> span.setTag("version", version));
 
         final var memberOf = Optional.ofNullable(device.getMemberOf())
                 .<Set<String>>map(HashSet::new)
                 .orElse(Collections.emptySet());
 
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(key, device);
         return SQL
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) ->
 
@@ -386,11 +386,12 @@ public class TableManagementStore extends AbstractDeviceStore {
                                 // update the version, this will release the lock
                                 .flatMap(version -> this.updateRegistrationVersionedStatement
                                         .expand(map -> {
-                                            map.put("tenant_id", key.getTenantId());
-                                            map.put("device_id", key.getDeviceId());
-                                            map.put("data", json);
+                                            map.put("tenant_id", deviceDto.getTenantId());
+                                            map.put("device_id", deviceDto.getDeviceId());
+                                            map.put("data", deviceDto.getDeviceJson());
                                             map.put("expected_version", version);
-                                            map.put("next_version", nextVersion);
+                                            map.put("next_version", deviceDto.getVersion());
+                                            map.put("updated_on", deviceDto.getUpdatedOn());
                                         })
                                         .trace(this.tracer, span.context()).update(connection)
 
@@ -402,7 +403,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
                 )
 
-                .map(x -> new Versioned<Void>(nextVersion, null))
+                .map(x -> new Versioned<Void>(deviceDto.getVersion(), null))
                 .onComplete(x -> span.finish());
 
     }
@@ -440,9 +441,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                             return Future.succeededFuture((Optional.empty()));
                         case 1:
                             final var entry = entries.get(0);
-                            final var device = Json.decodeValue(entry.getString("data"), Device.class);
-                            final var version = Optional.ofNullable(entry.getString("version"));
-                            return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));
+                            final DeviceDto deviceDto = JdbcBasedDeviceDto.forRead(key.getTenantId(), key.getDeviceId(), entry);
+                            return Future.succeededFuture(Optional.of(new DeviceReadResult(deviceDto.getDeviceWithStatus(), Optional.of(deviceDto.getVersion()))));
                         default:
                             return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
                     }

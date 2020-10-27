@@ -25,6 +25,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,6 +34,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Device Information.
  */
 @JsonInclude(value = Include.NON_NULL)
+@JsonIgnoreProperties(value = { RegistryManagementConstants.FIELD_STATUS }, allowGetters = true)
 public class Device {
 
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
@@ -63,7 +65,7 @@ public class Device {
 
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS)
     @JsonInclude(value = Include.NON_EMPTY)
-    private Status status = new Status();
+    private Status status;
 
     @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
@@ -99,6 +101,7 @@ public class Device {
             this.memberOf = new ArrayList<>(other.memberOf);
         }
         this.mapper = other.mapper;
+        this.status = other.status;
     }
 
     /**
@@ -280,4 +283,23 @@ public class Device {
         return mapper;
     }
 
+    /**
+     * Sets the registry internal status information of this device.
+     *
+     * @param status The status information to be set or {@code null} if there is none.
+     * @return A reference to this for fluent use.
+     */
+    public final Device setStatus(final Status status) {
+        this.status = status;
+        return this;
+    }
+
+    /**
+     * Gets the registry internal status information of this device.
+     *
+     * @return The registry internal status information or {@code null} if there is none.
+     */
+    public final Status getStatus() {
+        return status;
+    }
 }

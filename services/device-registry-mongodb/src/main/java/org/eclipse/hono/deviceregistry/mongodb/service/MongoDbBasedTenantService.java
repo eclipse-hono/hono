@@ -34,6 +34,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantResult;
@@ -151,8 +152,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                 .document();
 
         final Promise<JsonObject> updateTenantPromise = Promise.promise();
-        final TenantDto newTenantDto = new TenantDto(tenantId, newTenant,
-                new Versioned<>(newTenant).getVersion());
+        final TenantDto newTenantDto = TenantDto.forUpdate(tenantId, newTenant, new Versioned<>(newTenant).getVersion());
         mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(), updateTenantQuery,
                 JsonObject.mapFrom(newTenantDto), new FindOptions(), new UpdateOptions().setReturningNewDocument(true),
                 updateTenantPromise);
@@ -254,7 +254,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                 .compose(tenantDtoResult -> Future.succeededFuture(TenantResult.from(
                         HttpURLConnection.HTTP_OK,
                         DeviceRegistryUtils.convertTenant(tenantDtoResult.getTenantId(),
-                                                          tenantDtoResult.getTenant(), true),
+                                                          tenantDtoResult.getData(), true),
                         DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()))))
                 .recover(error -> {
                     TracingHelper.logError(span, "no tenant found for subject DN", error);
@@ -276,7 +276,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         return findTenant(tenantId)
                 .compose(tenantDtoResult -> Future.succeededFuture(OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
-                        tenantDtoResult.getTenant(),
+                        tenantDtoResult.getData(),
                         Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                         Optional.ofNullable(tenantDtoResult.getVersion()))));
 
@@ -339,7 +339,11 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         mongoClient.findOne(config.getCollectionName(), findQuery, new JsonObject(), findTenantPromise);
         return findTenantPromise.future()
                 .compose(tenantJsonResult -> Optional.ofNullable(tenantJsonResult)
-                        .map(tenantJson -> Future.succeededFuture(tenantJson.mapTo(TenantDto.class)))
+                        .map(tenantJson -> Future.succeededFuture(TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
+                                tenantJsonResult.getJsonObject(RegistryManagementConstants.FIELD_TENANT).mapTo(Tenant.class),
+                                tenantJsonResult.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
+                                tenantJsonResult.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
+                                tenantJsonResult.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))))
                         .orElseGet(
                                 () -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
     }
@@ -364,8 +368,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     private Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantObj,
             final Span span) {
 
-        final TenantDto newTenantDto = new TenantDto(tenantId, tenantObj,
-                new Versioned<>(tenantObj).getVersion());
+        final TenantDto newTenantDto = TenantDto.forCreation(tenantId, tenantObj, new Versioned<>(tenantObj).getVersion());
 
         // the tenantId is either the device ID provided by the client
         // or a newly created random ID

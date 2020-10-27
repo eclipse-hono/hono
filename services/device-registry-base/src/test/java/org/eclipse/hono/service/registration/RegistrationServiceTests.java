@@ -15,6 +15,7 @@ package org.eclipse.hono.service.registration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -684,6 +686,96 @@ public interface RegistrationServiceTests {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                         assertThat(response.getResourceVersion().get()).isNotEqualTo(resourceVersion.get());
+                    });
+                    register.flag();
+                }));
+    }
+
+    /**
+     * Verifies that updating a device preserves present status properties which should not be overwritten by the update.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateDevicePreservesStatusProperties(final VertxTestContext ctx) {
+        final String deviceId = randomDeviceId();
+        final Checkpoint register = ctx.checkpoint(3);
+        final AtomicReference<String> resourceVersion = new AtomicReference<>();
+        final AtomicReference<Instant> creationTime = new AtomicReference<>();
+
+        getDeviceManagementService()
+                .createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+                .map(createResponse -> {
+                    ctx.verify(() -> assertThat(createResponse.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                    resourceVersion.set(createResponse.getResourceVersion().get());
+                    register.flag();
+                    return createResponse;
+                })
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .map(readResponse -> {
+                    final Device device = readResponse.getPayload();
+                    creationTime.set(device.getStatus().getCreationTime());
+                    register.flag();
+                    return readResponse;
+                })
+                .compose(rr -> getDeviceManagementService().updateDevice(
+                    TENANT,
+                    deviceId,
+                    new Device(),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE)
+                )
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(readResponse -> {
+                    ctx.verify(() -> {
+                        final Device actualDevice = readResponse.getPayload();
+                        assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
+                        assertThat(actualDevice.getStatus().getLastUpdate()).isNotNull();
+                        assertThat(actualDevice.getStatus().getCreationTime()).isNotEqualTo(actualDevice.getStatus().getLastUpdate());
+                    });
+                    register.flag();
+                }));
+    }
+
+    /**
+     * Verifies that updating a device status is not updateable by clients.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateIgnoresGivenUpdatesOfStatusProperties(final VertxTestContext ctx) {
+        final String deviceId = randomDeviceId();
+        final Checkpoint register = ctx.checkpoint(3);
+        final AtomicReference<String> resourceVersion = new AtomicReference<>();
+        final AtomicReference<Instant> creationTime = new AtomicReference<>();
+
+        getDeviceManagementService()
+                .createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+                .map(createResponse -> {
+                    ctx.verify(() -> assertThat(createResponse.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                    resourceVersion.set(createResponse.getResourceVersion().get());
+                    register.flag();
+                    return createResponse;
+                })
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .map(readResponse -> {
+                    final Device device = readResponse.getPayload();
+                    creationTime.set(device.getStatus().getCreationTime());
+                    register.flag();
+                    return readResponse;
+                })
+                .compose(rr -> getDeviceManagementService().updateDevice(
+                        TENANT,
+                        deviceId,
+                        new Device().setStatus(new Status().setCreationTime(Instant.parse("2000-01-01T00:00:00.000000Z"))),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE)
+                )
+                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(readResponse -> {
+                    ctx.verify(() -> {
+                        final Device actualDevice = readResponse.getPayload();
+                        assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
                     });
                     register.flag();
                 }));

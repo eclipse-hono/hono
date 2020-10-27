@@ -20,7 +20,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.mongodb.config.AbstractMongoDbBasedRegistryConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.model.BaseDto;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -46,6 +46,10 @@ public final class MongoDbDeviceRegistryUtils {
      * The name of the JSON property containing the device data.
      */
     public static final String FIELD_DEVICE = "device";
+    /**
+     * The name of the JSON property containing time when the object was created.
+     */
+    public static final String FIELD_CREATED = "created";
     /**
      * The name of the JSON property containing the last modification date and time.
      */
