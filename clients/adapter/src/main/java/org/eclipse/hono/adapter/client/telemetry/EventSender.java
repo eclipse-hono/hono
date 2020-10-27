@@ -48,7 +48,6 @@ public interface EventSender extends Lifecycle {
      *         could not be sent. The error code contained in the exception indicates the
      *         cause of the failure.
      * @throws NullPointerException if tenant ID, device ID or contentType are {@code null}.
-     * @throws IllegalArgumentException if tenant does not contain a tenantId property.
      */
     Future<Void> sendEvent(
             TenantObject tenant,

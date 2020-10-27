@@ -68,7 +68,6 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     private void handleTenantTimeout(final Message<String> msg) {
         List.of(AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, msg.body(), null, connection.getConfig()),
                 AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, msg.body(), null, connection.getConfig()))
-            .stream()
             .forEach(key -> Optional.ofNullable(clientFactory.getClient(key)).ifPresent(client -> client.close(v -> clientFactory.removeClient(key))));
     }
 
