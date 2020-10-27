@@ -447,16 +447,19 @@ The same functionality can also be used to transform the payload of messages upl
 transform binary encoded data into a JSON document which can be consumed more easily by downstream consumers.
 
 The mechanism works as follows:
+
 1. A client uploads a message to the MQTT adapter.
 1. The adapter invokes the Device Registration service's *assert Registration* operation using either
    the authenticated device's identifier, if the topic does not contain a device ID, or the device ID from the
    topic.
 1. If the assertion succeeds, the adapter creates the downstream message using the original message's payload and
    the asserted device ID as the origin device.
-1. If the response payload contains a value for the *mapper* property, the adapter tries to find a *mapper endpoint* configuration
-   for the given value. If a mapper endpoint with a matching name has been configured for the adapter,
+1. If the *assert Registration* response payload contains a value for the *mapper* property, the adapter tries to
+   find a *mapper endpoint* configuration for the given value. If a mapper endpoint with a matching name has been
+   configured for the adapter,
+   
    1. the adapter sends an HTTP request to the endpoint which contains the original message's payload in the request body.
-   1. If the response body is not empty, it is used as the downstream message's payload.
+   1. If the response body is not empty, it is used as the downstream message's payload, replacing the original payload.
    1. If the response contains a *device_id* header and its value is different from the original device ID, then the adapter
       invokes the *assert Registration* operation again, this time using the mapped device ID instead of the original device ID.
       If the assertion succeeds, the adapter uses the asserted (mapped) device ID for the downstream message.
