@@ -333,7 +333,7 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Checks if a given protocol adapter is enabled for this tenant.
+     * Checks if this tenant is enabled and if a given protocol adapter is enabled for this tenant.
      *
      * @param typeName The type name of the adapter.
      * @return {@code true} if this tenant and the given adapter are enabled.

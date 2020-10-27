@@ -40,13 +40,19 @@ public final class AuthHandlerTools {
      * This method checks if the given exception is an {@code HttpStatusException}
      * and if so, tries to extract the root cause of the problem from its
      * <em>cause</em> field. If the root cause is a {@link ServiceInvocationException}
-     * then its error code is used to fail the routing context, otherwise the status
-     * code from the {@code HttpStatusException} is used. In all other cases, the
-     * context is failed with a 500 error code.
+     * the routing context is failed with that exception (provided the status code
+     * isn't 302, in which case the context is ended with a <em>Location</em> header).
+     * <p>
+     * In all other cases, the routing context is failed with the given exception.
+     * <p>
+     * Note that the routing context is failed with just the exception, no status
+     * code. Setting the status code on the response corresponding to the exception
+     * is to be done in the failure handler, e.g. as implemented in the {@link DefaultFailureHandler}.
      *
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      * @param authenticateHeader The value to return in the HTTP Authenticate header.
+     * @see io.vertx.ext.web.handler.impl.AuthHandlerImpl#processException(RoutingContext, Throwable)
      */
     public static void processException(
             final RoutingContext ctx,
@@ -89,16 +95,14 @@ public final class AuthHandlerTools {
                     ctx.response()
                             .putHeader("WWW-Authenticate", authenticateHeader);
                 }
-                ctx.fail(failure);
-                return;
-            default:
-                ctx.fail(failure);
-                return;
             }
+            // rely on DefaultFailureHandler to extract/apply the status code
+            ctx.fail(failure);
+
+        } else {
+            ctx.fail(exception);
         }
 
-        // fallback 500
-        ctx.fail(exception);
     }
 
 }
