@@ -196,6 +196,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * information before the potentially expensive credentials validation is done
      * <p>
      * The default implementation updates the trace sampling priority in the execution context tracing span.
+     * It also verifies that the tenant provided via the credentials is enabled and that the adapter is enabled for
+     * that tenant, failing the returned future if either is not the case.
      * <p>
      * Subclasses should override this method in order to perform additional operations after calling this super method.
      *
@@ -212,13 +214,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         return getTenantConfiguration(tenantId, span.context())
                 .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
-                .compose(tenantObject -> {
+                .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper.applyTraceSamplingPriority(
                             tenantObject, authId, span);
                     executionContext.setTraceSamplingPriority(traceSamplingPriority);
-                    return Future.succeededFuture();
-                });
+                    return tenantObject;
+                })
+                .compose(tenantObject -> isAdapterEnabled(tenantObject))
+                .mapEmpty();
     }
 
     /**
@@ -428,14 +432,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private void reportFailedConnectionAttempt(final Throwable error) {
 
-        final String tenant;
-        if (error instanceof ServiceInvocationException) {
-            tenant = ((ServiceInvocationException) error).getTenant();
-        } else {
-            tenant = null;
-        }
-        final ConnectionAttemptOutcome outcome = AbstractProtocolAdapterBase.getOutcome(error);
-        metrics.reportConnectionAttempt(outcome, tenant);
+        final String tenantId = error instanceof ServiceInvocationException
+                ? ((ServiceInvocationException) error).getTenant()
+                : null;
+        metrics.reportConnectionAttempt(AbstractProtocolAdapterBase.getOutcome(error), tenantId);
     }
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
@@ -548,7 +548,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority()))
                 .recover(t -> {
                     if (authAttempt.failed()) {
-                        log.debug("could not authenticate device", t);
+                        log.debug("device authentication or early stage checks failed", t);
                     } else {
                         log.debug("cannot establish connection with device [tenant-id: {}, device-id: {}]",
                                 authAttempt.result().getTenantId(), authAttempt.result().getDeviceId(), t);

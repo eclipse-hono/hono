@@ -61,6 +61,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -331,6 +332,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * information before the potentially expensive credentials validation is done
      * <p>
      * The default implementation updates the trace sampling priority in the execution context tracing span.
+     * It also verifies that the tenant provided via the credentials is enabled and that the adapter is enabled for
+     * that tenant, failing the returned future if either is not the case.
      * <p>
      * Subclasses should override this method in order to perform additional operations after calling this super method.
      *
@@ -342,19 +345,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final HttpContext executionContext) {
 
         final String tenantId = credentials.getTenantId();
-        final Span span = executionContext.getTracingSpan();
         final String authId = credentials.getAuthId();
-        if (span == null) {
+        if (executionContext.getTracingSpan() == null) {
             log.warn("handleBeforeCredentialsValidation: no span context set in httpContext");
-            return Future.succeededFuture();
         }
+        final Span span = Optional.ofNullable(executionContext.getTracingSpan()).orElse(NoopSpan.INSTANCE);
         return getTenantConfiguration(tenantId, span.context())
                 .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
-                .compose(tenantObject -> {
+                .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantId, null, authId);
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, authId, span);
-                    return Future.succeededFuture();
-                });
+                    return tenantObject;
+                })
+                .compose(tenantObject -> isAdapterEnabled(tenantObject))
+                .mapEmpty();
     }
 
     /**
