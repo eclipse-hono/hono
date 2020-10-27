@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -152,8 +153,9 @@ public class MessageHelperTest {
 
         final Message message = ProtonHelper.message();
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final JsonObject defaults = new JsonObject()
-                .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/hono");
+        final Map<String, Object> defaults = new JsonObject()
+                .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/hono")
+                .getMap();
         MessageHelper.addDefaults(message, target, defaults, TenantConstants.UNLIMITED_TTL);
 
         assertThat(message.getContentType()).isEqualTo("application/hono");
@@ -169,8 +171,9 @@ public class MessageHelperTest {
         final Message message = ProtonHelper.message();
         message.setContentType("application/existing");
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final JsonObject defaults = new JsonObject()
-                .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/hono");
+        final Map<String, Object> defaults = new JsonObject()
+                .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/hono")
+                .getMap();
 
         MessageHelper.addDefaults(message, target, defaults, TenantConstants.UNLIMITED_TTL);
 
@@ -188,14 +191,10 @@ public class MessageHelperTest {
         message.setAddress("telemetry/DEFAULT_TENANT/4711");
         MessageHelper.addProperties(
                 message,
-                QoS.AT_MOST_ONCE,
                 null,
                 null,
                 null,
                 null,
-                null,
-                null,
-                "custom",
                 true,
                 false);
 
@@ -203,21 +202,21 @@ public class MessageHelperTest {
     }
 
     /**
-     * Verifies that a TTL set on a message is preserved if it does not exceed the
+     * Verifies that a TTL set on a device's message is preserved if it does not exceed the
      * <em>max-ttl</em> specified for a tenant.
      */
     @Test
     public void testAddPropertiesDoesNotOverrideValidMessageTtl() {
 
-        final Message message = ProtonHelper.message();
-        message.setTtl(10000L);
+        final Message downstreamMessage = ProtonHelper.message();
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final JsonObject defaults = new JsonObject()
-                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30);
+        final Map<String, Object> props = new JsonObject()
+                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 10)
+                .getMap();
 
-        MessageHelper.addDefaults(message, target, defaults, 45L);
+        MessageHelper.addDefaults(downstreamMessage, target, props, 45L);
 
-        assertThat(message.getTtl()).isEqualTo(10000L);
+        assertThat(downstreamMessage.getTtl()).isEqualTo(10000L);
     }
 
     /**
@@ -240,14 +239,10 @@ public class MessageHelperTest {
 
         MessageHelper.addProperties(
                 message,
-                QoS.AT_LEAST_ONCE,
                 target,
-                null,
                 tenant,
-                deviceLevelDefaults,
                 null,
-                null,
-                "custom",
+                deviceLevelDefaults.getMap(),
                 true,
                 false);
 
@@ -267,13 +262,39 @@ public class MessageHelperTest {
 
         final Message message = ProtonHelper.message();
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final JsonObject defaults = new JsonObject()
-                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30);
+        final Map<String, Object> defaults = new JsonObject()
+                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
+                .getMap();
 
         MessageHelper.addDefaults(message, target, defaults, 15L);
 
         assertThat(message.getTtl()).isEqualTo(15000L);
     }
+
+    /**
+     * Verifies that the TTL for an event is set to the <em>max-ttl</em> specified for
+     * a tenant, if no default is set explicitly.
+     */
+    @Test
+    public void testAddPropertiesUsesMaxTtlByDefault() {
+
+        final Message message = ProtonHelper.message();
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits().setMaxTtl(15L));
+
+        MessageHelper.addProperties(
+                message,
+                target,
+                tenant,
+                null,
+                null,
+                true,
+                false);
+
+        assertThat(message.getTtl()).isEqualTo(15000L);
+    }
+
 
     /**
      * Verifies that the TTL of a newly created event message
@@ -283,6 +304,7 @@ public class MessageHelperTest {
     public void testNewMessageUsesGivenTtlValue() {
 
         final Duration timeToLive = Duration.ofSeconds(10);
+        final Map<String, Object> props = Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.toSeconds());
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
                 Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
@@ -290,18 +312,14 @@ public class MessageHelperTest {
         final JsonObject defaults = new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15);
 
         final Message message = MessageHelper.newMessage(
-                QoS.AT_LEAST_ONCE,
                 target,
-                null,
                 "application/text",
                 Buffer.buffer("test"),
                 tenant,
-                defaults,
-                null,
-                timeToLive,
-                "custom",
+                props,
+                defaults.getMap(),
                 true,
-                true);
+                false);
 
         assertThat(message.getTtl()).isEqualTo(timeToLive.toMillis());
     }
@@ -315,24 +333,21 @@ public class MessageHelperTest {
     public void testNewMessageLimitsTtlToMaxValue() {
 
         final Duration timeToLive = Duration.ofSeconds(50);
+        final Map<String, Object> props = Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.toSeconds());
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
                 Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenant.setResourceLimits(new ResourceLimits().setMaxTtl(15));
 
         final Message message = MessageHelper.newMessage(
-                QoS.AT_LEAST_ONCE,
                 target,
-                null,
                 "application/text",
                 Buffer.buffer("test"),
                 tenant,
+                props,
                 null,
-                null,
-                timeToLive,
-                "custom",
                 true,
-                true);
+                false);
 
         assertThat(message.getTtl()).isEqualTo(15000L);
     }
@@ -349,18 +364,40 @@ public class MessageHelperTest {
 
         MessageHelper.addProperties(
                 message,
-                QoS.AT_MOST_ONCE,
                 ResourceIdentifier.fromString("telemetry/DEFAULT_TENANT/4711"),
                 null,
                 null,
                 null,
-                null,
-                null,
-                "custom-adapter",
                 true,
-                true);
+                false);
 
         assertThat(message.getCreationTime()).isGreaterThan(0);
     }
 
+    /**
+     * Verifies that the adapter does not add default properties to downstream messages
+     * if disabled for the adapter.
+     */
+    @Test
+    public void testAddPropertiesIgnoresDefaultsIfDisabled() {
+
+        final Message message = ProtonHelper.message();
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final JsonObject defaults = new JsonObject()
+                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
+                .put("custom-device", true);
+
+        MessageHelper.addProperties(
+                message,
+                target,
+                null,
+                null,
+                defaults.getMap(),
+                false,
+                false);
+
+        assertThat(MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class))
+            .isNull();
+        assertThat(message.getTtl()).isEqualTo(0L);
+    }
 }

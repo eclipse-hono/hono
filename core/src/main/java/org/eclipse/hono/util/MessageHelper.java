@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -33,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -393,7 +393,7 @@ public final class MessageHelper {
      * @return The message body parsed into a JSON object or {@code null} if the message does not have a <em>Data</em>
      *         nor an <em>AmqpValue</em> section or if the body section is empty.
      * @throws NullPointerException if the message is {@code null}.
-     * @throws DecodeException if the payload cannot be parsed into a JSON object.
+     * @throws io.vertx.core.json.DecodeException if the payload cannot be parsed into a JSON object.
      */
     public static JsonObject getJsonPayload(final Message msg) {
 
@@ -943,7 +943,10 @@ public final class MessageHelper {
      * @param adapterTypeName  The type name of the protocol adapter that the message has been published to.
      * @return The AMQP 1.0 message.
      * @throws NullPointerException if target or adapterTypeName is {@code null}.
+     * @deprecated Use {@link #newMessage(ResourceIdentifier, String, Buffer, TenantObject, Map, Map, boolean, boolean)}
+     *             instead.
      */
+    @Deprecated(forRemoval = true)
     public static Message newMessage(
             final QoS qos,
             final ResourceIdentifier target,
@@ -953,9 +956,26 @@ public final class MessageHelper {
             final Duration timeToLive,
             final String adapterTypeName) {
 
-        return MessageHelper.newMessage(qos, target, null, contentType, payload, tenant, null, null, timeToLive,
-                adapterTypeName, false, false);
+        Objects.requireNonNull(target);
+        Objects.requireNonNull(adapterTypeName);
+
+        final Map<String, Object> props = new HashMap<>();
+        props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
+        if (qos != null) {
+            props.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
+        }
+
+        return MessageHelper.newMessage(
+                target,
+                contentType,
+                payload,
+                tenant,
+                props,
+                null,
+                false,
+                false);
     }
+
     /**
      * Creates a new AMQP 1.0 message.
      * <p>
@@ -998,7 +1018,9 @@ public final class MessageHelper {
 
      * @return The newly created message.
      * @throws NullPointerException if target or adapterTypeName is {@code null}.
+     * @deprecated Use {@link #newMessage(ResourceIdentifier, String, Buffer, TenantObject, Map, Map, boolean, boolean)} instead.
      */
+    @Deprecated(forRemoval = true)
     public static Message newMessage(
             final QoS qos,
             final ResourceIdentifier target,
@@ -1016,20 +1038,86 @@ public final class MessageHelper {
         Objects.requireNonNull(target);
         Objects.requireNonNull(adapterTypeName);
 
+        final Map<String, Object> props = new HashMap<>();
+
+        props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
+        if (qos != null) {
+            props.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
+        }
+        if (publishAddress != null) {
+            props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
+        }
+        if (timeUntilDisconnect != null) {
+            props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
+        }
+        if (timeToLive != null) {
+            props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.getSeconds());
+        }
+
+        return newMessage(
+                target,
+                contentType,
+                payload,
+                tenant,
+                props,
+                Optional.ofNullable(deviceDefaultProperties).map(JsonObject::getMap).orElse(null),
+                addDefaults,
+                addJmsVendorProps);
+    }
+
+    /**
+     * Creates a new AMQP 1.0 message.
+     * <p>
+     * This method creates a new {@code Message} and sets
+     * <ul>
+     * <li>its <em>creation-time</em> to the current system time,</li>
+     * <li>its <em>content-type</em> to the given value,</li>
+     * <li>its payload as an AMQP <em>Data</em> section</li>
+     * </ul>
+     * The message is then passed to {@link #addProperties(Message, ResourceIdentifier, TenantObject, Map, Map, boolean, boolean)}.
+     *
+     * @param target The target address of the message. The target address is used to determine if the message
+     *               represents an event or not.
+     * @param contentType The content type describing the message's payload or {@code null} if no content type
+     *                    should be set.
+     * @param payload The message payload or {@code null} if the message has no payload.
+     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
+     *               if no information about the tenant is available.
+     * @param properties Additional message properties or {@code null} if the message has no additional properties.
+     * @param deviceDefaultProperties The device's default properties registered at the device level or {@code null}
+     *                                if no default properties are registered for the device.
+     * @param addDefaults {@code true} if the default properties registered for the device should be added
+     *                    to the message. The properties to add are determined by merging the properties returned
+     *                    by {@link TenantObject#getDefaults()} with the given device level default properties.
+     * @param addJmsVendorProps {@code true} if
+     *                          <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
+     *                          JMS Vendor Properties</a> should be added to the message.
+
+     * @return The newly created message.
+     * @throws NullPointerException if target is {@code null}.
+     */
+    public static Message newMessage(
+            final ResourceIdentifier target,
+            final String contentType,
+            final Buffer payload,
+            final TenantObject tenant,
+            final Map<String, Object> properties,
+            final Map<String, Object> deviceDefaultProperties,
+            final boolean addDefaults,
+            final boolean addJmsVendorProps) {
+
+        Objects.requireNonNull(target);
+
         final Message msg = ProtonHelper.message();
         msg.setContentType(contentType);
         setPayload(msg, contentType, payload);
 
         return addProperties(
                 msg,
-                qos,
                 target,
-                publishAddress,
                 tenant,
+                properties,
                 deviceDefaultProperties,
-                timeUntilDisconnect,
-                timeToLive,
-                adapterTypeName,
                 addDefaults,
                 addJmsVendorProps);
     }
@@ -1093,7 +1181,9 @@ public final class MessageHelper {
      * @return The message with its properties set.
      * @throws NullPointerException if message or adapterTypeName are {@code null}.
      * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
+     * @deprecated Use {@link #addProperties(Message, ResourceIdentifier, TenantObject, Map, Map, boolean, boolean)} instead.
      */
+    @Deprecated(forRemoval = true)
     public static Message addProperties(
             final Message msg,
             final QoS qos,
@@ -1109,93 +1199,146 @@ public final class MessageHelper {
 
         Objects.requireNonNull(msg);
         Objects.requireNonNull(adapterTypeName);
-        if (target == null && Strings.isNullOrEmpty(msg.getAddress())) {
+
+        final Map<String, Object> props = new HashMap<>();
+
+        props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
+        if (qos != null) {
+            props.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
+        }
+        if (publishAddress != null) {
+            props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
+        }
+        if (timeUntilDisconnect != null) {
+            props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
+        }
+        if (timeToLive != null) {
+            props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive.getSeconds());
+        }
+
+        return addProperties(
+                msg,
+                target,
+                tenant,
+                props,
+                Optional.ofNullable(deviceDefaultProperties).map(JsonObject::getMap).orElse(null),
+                addDefaults,
+                addJmsVendorProps);
+    }
+
+    /**
+     * Sets Hono specific properties on an AMQP 1.0 message.
+     * <p>
+     * The following properties are set:
+     * <ul>
+     * <li><em>to</em> will be set to the address consisting of the target's endpoint and tenant</li>
+     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z
+     * if not set already</li>
+     * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
+     * </ul>
+     *
+     * In addition, this method
+     * <ul>
+     * <li>augments the message with the given properties.</li>
+     * <li>optionally augments the message with missing (application) properties corresponding to the default properties
+     * registered at the tenant and device level. Default properties defined at
+     * the device level take precedence over properties with the same name defined at the tenant level.</li>
+     * <li>optionally adds JMS vendor properties.</li>
+     * <li>sets the message's <em>content-type</em> to the {@linkplain #CONTENT_TYPE_OCTET_STREAM fall back content
+     * type}, if the default properties do not contain a content type and the message has no content type set yet.</li>
+     * <li>sets the message's <em>ttl</em> header field based on the (device provided) <em>time-to-live</em> duration
+     * as specified by the <a href="https://www.eclipse.org/hono/docs/api/tenant/#resource-limits-configuration-format">
+     * Tenant API</a>.</li>
+     * </ul>
+     *
+     * @param message The message to add the properties to.
+     * @param target The target address of the message or {@code null} if the message's
+     *               <em>to</em> property contains the target address. The target
+     *               address is used to determine if the message represents an event or not.
+     *               Determining this information from the <em>to</em> property
+     *               requires additional parsing which can be prevented by passing in the
+     *               target address as a {@code ResourceIdentifier} instead.
+     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
+     *               if no information about the tenant is available.
+     * @param properties Additional message properties or {@code null} if the message has no additional properties.
+     * @param deviceDefaultProperties The device's default properties registered at the device level or {@code null}
+     *                                if no default properties are registered for the device.
+     * @param addDefaults {@code true} if the default properties registered for the device should be added
+     *                    to the message. The properties to add are determined by merging the properties returned
+     *                    by {@link TenantObject#getDefaults()} with the given device level default properties.
+     * @param addJmsVendorProps {@code true} if
+     *                          <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
+     *                          JMS Vendor Properties</a> should be added to the message.
+     * @return The message with its properties set.
+     * @throws NullPointerException if message is {@code null}.
+     * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
+     */
+    public static Message addProperties(
+            final Message message,
+            final ResourceIdentifier target,
+            final TenantObject tenant,
+            final Map<String, Object> properties,
+            final Map<String, Object> deviceDefaultProperties,
+            final boolean addDefaults,
+            final boolean addJmsVendorProps) {
+
+        Objects.requireNonNull(message);
+
+        if (target == null && Strings.isNullOrEmpty(message.getAddress())) {
             throw new IllegalArgumentException("message must have an address set");
         }
 
         final ResourceIdentifier ri = Optional.ofNullable(target)
-                .orElseGet(() -> ResourceIdentifier.fromString(msg.getAddress()));
+                .orElseGet(() -> ResourceIdentifier.fromString(message.getAddress()));
 
-        setCreationTime(msg);
-        msg.setAddress(ri.getBasePath());
-        addDeviceId(msg, ri.getResourceId());
-        addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
-        if (qos != null) {
-            addProperty(msg, MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
-        }
-        annotate(msg, ri);
-        if (publishAddress != null) {
-            addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
-        }
-        if (timeUntilDisconnect != null) {
-            addTimeUntilDisconnect(msg, timeUntilDisconnect);
-        }
-        if (timeToLive != null) {
-            setTimeToLive(msg, timeToLive);
-        }
+        setCreationTime(message);
+        message.setAddress(ri.getBasePath());
+        annotate(message, ri);
 
-        addProperties(
-                msg,
-                ri,
-                tenant,
-                deviceDefaultProperties,
-                addDefaults,
-                addJmsVendorProps);
-        return msg;
-    }
+        final Map<String, Object> props = new HashMap<>();
 
-    private static Message addProperties(
-            final Message message,
-            final ResourceIdentifier target,
-            final TenantObject tenant,
-            final JsonObject deviceDefaultProperties,
-            final boolean useDefaults,
-            final boolean useJmsVendorProps) {
+        if (addDefaults) {
+            Optional.ofNullable(tenant)
+                .map(t -> t.getDefaults().copy().getMap())
+                .ifPresent(props::putAll);
+            Optional.ofNullable(deviceDefaultProperties)
+                .ifPresent(props::putAll);
+        }
+        Optional.ofNullable(properties).ifPresent(props::putAll);
+        props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, ri.getResourceId());
 
         final long maxTtl = Optional.ofNullable(tenant)
-                .map(t -> Optional.ofNullable(t.getResourceLimits())
-                    .map(limits -> limits.getMaxTtl())
-                    .orElse(TenantConstants.UNLIMITED_TTL))
+                .flatMap(t -> Optional.ofNullable(t.getResourceLimits()))
+                .map(limits -> limits.getMaxTtl())
                 .orElse(TenantConstants.UNLIMITED_TTL);
 
-        if (useDefaults) {
-            final JsonObject defaults = Optional.ofNullable(tenant)
-                    .map(t -> t.getDefaults().copy())
-                    .orElseGet(() -> new JsonObject());
-            if (deviceDefaultProperties != null) {
-                defaults.mergeIn(deviceDefaultProperties);
-            }
+        addDefaults(message, target, props, maxTtl);
 
-            if (!defaults.isEmpty()) {
-                addDefaults(message, target, defaults, maxTtl);
-            }
-        }
         if (Strings.isNullOrEmpty(message.getContentType())) {
             // set default content type if none has been specified when creating the
             // message nor a default content type is available
             message.setContentType(CONTENT_TYPE_OCTET_STREAM);
         }
-        if (useJmsVendorProps) {
+        if (addJmsVendorProps) {
             addJmsVendorProperties(message);
         }
 
         // make sure that device provided TTL is capped at max TTL (if set)
         // AMQP spec defines TTL as milliseconds
-        final long maxTtlMillis = maxTtl * 1000L;
-        if (target.hasEventEndpoint() && maxTtl != TenantConstants.UNLIMITED_TTL) {
+        if (ri.hasEventEndpoint() && maxTtl != TenantConstants.UNLIMITED_TTL) {
+            final long maxTtlMillis = maxTtl * 1000L;
             if (message.getTtl() == 0) {
                 LOG.debug("setting event's TTL to tenant's max TTL [{}ms]", maxTtlMillis);
-                setTimeToLive(message, Duration.ofSeconds(maxTtl));
+                message.setTtl(maxTtlMillis);
             } else if (message.getTtl() > maxTtlMillis) {
                 LOG.debug("limiting device provided TTL [{}ms] to max TTL [{}ms]", message.getTtl(), maxTtlMillis);
-                setTimeToLive(message, Duration.ofSeconds(maxTtl));
+                message.setTtl(maxTtlMillis);
             } else {
                 LOG.trace("keeping event's TTL [0 < {}ms <= max TTL ({}ms)]", message.getTtl(), maxTtlMillis);
             }
         }
         return message;
     }
-
 
     /**
      * Adds default properties to an AMQP message.
@@ -1220,7 +1363,7 @@ public final class MessageHelper {
     public static Message addDefaults(
             final Message message,
             final ResourceIdentifier target,
-            final JsonObject defaults,
+            final Map<String, Object> defaults,
             final long maxTtl) {
 
         Objects.requireNonNull(message);
@@ -1234,11 +1377,14 @@ public final class MessageHelper {
         final ResourceIdentifier ri = Optional.ofNullable(target)
                 .orElseGet(() -> ResourceIdentifier.fromString(message.getAddress()));
 
-        defaults.forEach(prop -> {
+        defaults.entrySet().forEach(prop -> {
 
             switch (prop.getKey()) {
+            case MessageHelper.ANNOTATION_X_OPT_RETAIN:
+                MessageHelper.addAnnotation(message, prop.getKey(), prop.getValue());
+                break;
             case MessageHelper.SYS_HEADER_PROPERTY_TTL:
-                if (ri.hasEventEndpoint() && message.getTtl() == 0 && Number.class.isInstance(prop.getValue())) {
+                if (ri.hasEventEndpoint() && Number.class.isInstance(prop.getValue())) {
                     final long defaultTtl = ((Number) prop.getValue()).longValue();
                     if (maxTtl != TenantConstants.UNLIMITED_TTL && defaultTtl > maxTtl) {
                         MessageHelper.setTimeToLive(message, Duration.ofSeconds(maxTtl));
