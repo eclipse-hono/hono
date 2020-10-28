@@ -41,7 +41,6 @@ import io.vertx.proton.ProtonReceiver;
  */
 public class AmqpServiceBaseTest {
 
-    private static final String CON_ID = "connection-id";
     private static final String ENDPOINT = "anEndpoint";
 
     private Vertx vertx;
@@ -174,7 +173,6 @@ public class AmqpServiceBaseTest {
 
     private static ProtonConnection newConnection(final HonoUser user) {
         final Record attachments = new RecordImpl();
-        attachments.set(Constants.KEY_CONNECTION_ID, String.class, CON_ID);
         attachments.set(Constants.KEY_CLIENT_PRINCIPAL, HonoUser.class, user);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.attachments()).thenReturn(attachments);

@@ -24,7 +24,6 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonLink;
 
 /**
  * Constants used throughout Hono.
@@ -110,11 +109,6 @@ public final class Constants {
      * attachments.
      */
     public static final String KEY_CLIENT_PRINCIPAL = "CLIENT_PRINCIPAL";
-    /**
-     * The key that the (surrogate) ID of a connection is stored under in a {@code ProtonConnection}'s
-     * and/or {@code ProtonLink}'s attachments.
-     */
-    public static final String KEY_CONNECTION_ID = "CONNECTION_ID";
 
     /**
      * The vert.x event bus address that the ID of a tenant that timed out is published to.
@@ -276,34 +270,6 @@ public final class Constants {
         Objects.requireNonNull(principal);
         final Record attachments = Objects.requireNonNull(con).attachments();
         attachments.set(KEY_CLIENT_PRINCIPAL, HonoUser.class, principal);
-    }
-
-    /**
-     * Copies properties from a connection's attachments to a link's attachments.
-     * <p>
-     * The properties copied are
-     * <ul>
-     * <li>{@link #KEY_CONNECTION_ID}</li>
-     * </ul>
-     *
-     * @param source The connection.
-     * @param target The link.
-     */
-    public static void copyProperties(final ProtonConnection source, final ProtonLink<?> target) {
-        Objects.requireNonNull(source);
-        Objects.requireNonNull(target);
-        target.attachments().set(Constants.KEY_CONNECTION_ID, String.class, getConnectionId(source));
-    }
-
-    /**
-     * Gets the (surrogate) identifier of an AMQP connection.
-     *
-     * @param connection The connection to determine the connection id for.
-     * @return The identifier retrieved from the connection's <em>attachments</em> using key {@link #KEY_CONNECTION_ID}
-     *         or {@code null} if the attachments do not contain a value for that a key.
-     */
-    public static String getConnectionId(final ProtonConnection connection) {
-        return connection.attachments().get(KEY_CONNECTION_ID, String.class);
     }
 
 }
