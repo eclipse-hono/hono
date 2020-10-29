@@ -21,7 +21,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TelemetryExecutionContext;
@@ -34,14 +34,51 @@ import io.vertx.ext.web.RoutingContext;
 
 /**
  * Represents the context for the handling of a Vert.x HTTP request, wrapping the Vert.x {@link RoutingContext} as well
- * as implementing the {@link ExecutionContext} interface.
+ * as implementing the {@link org.eclipse.hono.util.ExecutionContext} interface.
  */
 public final class HttpContext implements TelemetryExecutionContext {
 
+    private static final String URI_PREFIX_EVENT = "/" + EventConstants.EVENT_ENDPOINT;
+    private static final String URI_PREFIX_EVENT_SHORT = "/" + EventConstants.EVENT_ENDPOINT_SHORT;
+
     private final RoutingContext routingContext;
+    private final boolean eventEndpoint;
+    private final QoS requestedQos;
 
     private HttpContext(final RoutingContext routingContext) {
         this.routingContext = Objects.requireNonNull(routingContext);
+        this.eventEndpoint = Optional.ofNullable(routingContext.request().uri())
+                .map(uri -> uri.startsWith(URI_PREFIX_EVENT) || uri.startsWith(URI_PREFIX_EVENT_SHORT))
+                .orElse(false);
+        this.requestedQos = determineRequestedQos(routingContext);
+    }
+
+    private QoS determineRequestedQos(final RoutingContext context) {
+        final String qos = context.request().getHeader(Constants.HEADER_QOS_LEVEL);
+
+        if (Strings.isNullOrEmpty(qos)) {
+            if (isEventEndpoint()) {
+                return QoS.AT_LEAST_ONCE;
+            } else {
+                return QoS.AT_MOST_ONCE;
+            }
+        }
+
+        final int qosLevel;
+        try {
+            qosLevel = Integer.parseInt(qos);
+        } catch (final NumberFormatException e) {
+            return null;
+        }
+
+        switch (qosLevel) {
+            case 0:
+                return QoS.AT_MOST_ONCE;
+            case 1:
+                return QoS.AT_LEAST_ONCE;
+            default:
+                return null;
+        }
     }
 
     /**
@@ -94,26 +131,19 @@ public final class HttpContext implements TelemetryExecutionContext {
 
     @Override
     public QoS getRequestedQos() {
-        final String qos = routingContext.request().getHeader(Constants.HEADER_QOS_LEVEL);
+        return requestedQos;
+    }
 
-        if (Strings.isNullOrEmpty(qos)) {
-            return QoS.AT_MOST_ONCE;
-        }
-
-        final int qosLevel;
-        try {
-            qosLevel = Integer.parseInt(qos);
-        } catch (final NumberFormatException e) {
-            return null;
-        }
-
-        switch (qosLevel) {
-            case 0:
-                return QoS.AT_MOST_ONCE;
-            case 1:
-                return QoS.AT_LEAST_ONCE;
-            default:
-                return null;
+    /**
+     * Checks if the requested QoS is acceptable for this message's type.
+     *
+     * @return {@code true} if the requested QoS is acceptable.
+     */
+    public boolean hasValidQoS() {
+        if (isEventEndpoint()) {
+            return requestedQos == QoS.AT_LEAST_ONCE;
+        } else {
+            return requestedQos != null;
         }
     }
 
@@ -155,29 +185,38 @@ public final class HttpContext implements TelemetryExecutionContext {
         return routingContext.parsedHeaders().contentType().value();
     }
 
+    private boolean isEventEndpoint() {
+        return eventEndpoint;
+    }
+
     /**
-     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} HTTP header for a request.
-     * If no such header can be found, the query is searched for containing a query parameter with the same key.
+     * {@inheritDoc}
      *
-     * @return The <em>time-to-live</em> duration or {@code null} if
+     * @return An optional containing the <em>time-to-live</em> duration or an empty optional if
      * <ul>
      *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} header
      *     or query parameter.</li>
      *     <li>the contained value cannot be parsed as a Long</li>
      * </ul>
      */
-    public Duration getTimeToLive() {
+    @Override
+    public Optional<Duration> getTimeToLive() {
+
+        if (!isEventEndpoint()) {
+            return Optional.empty();
+        }
 
         try {
-            return Optional.ofNullable(routingContext.request().getHeader(Constants.HEADER_TIME_TO_LIVE))
+            final Duration ttl = Optional.ofNullable(routingContext.request().getHeader(Constants.HEADER_TIME_TO_LIVE))
                     .map(Long::parseLong)
                     .map(Duration::ofSeconds)
                     .orElseGet(() -> Optional.ofNullable(routingContext.request().getParam(Constants.HEADER_TIME_TO_LIVE))
                             .map(Long::parseLong)
                             .map(Duration::ofSeconds)
                             .orElse(null));
+            return Optional.ofNullable(ttl);
         } catch (final NumberFormatException e) {
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -232,5 +271,15 @@ public final class HttpContext implements TelemetryExecutionContext {
     public MetricsTags.TtdStatus getTtdStatus() {
         return Optional.ofNullable((MetricsTags.TtdStatus) routingContext.get(MetricsTags.TtdStatus.class.getName()))
                 .orElse(MetricsTags.TtdStatus.NONE);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The request URI.
+     */
+    @Override
+    public String getOrigAddress() {
+        return routingContext.request().uri();
     }
 }

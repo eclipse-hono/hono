@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessage;
@@ -45,7 +44,6 @@ import org.eclipse.hono.service.http.X509AuthHandler;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -161,23 +159,24 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     @Override
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final HttpContext ctx) {
+    protected void customizeDownstreamMessageProperties(final Map<String, Object> properties, final HttpContext ctx) {
 
-        MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
+        properties.put(
+                LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
 
         Optional.ofNullable(ctx.get(LoraConstants.APP_PROPERTY_META_DATA))
             .map(LoraMetaData.class::cast)
             .ifPresent(metaData -> {
                 Optional.ofNullable(metaData.getFunctionPort())
-                    .ifPresent(port -> MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_FUNCTION_PORT, port));
+                    .ifPresent(port -> properties.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, port));
                 final String json = Json.encode(metaData);
-                MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_META_DATA, json);
+                properties.put(LoraConstants.APP_PROPERTY_META_DATA, json);
             });
 
         Optional.ofNullable(ctx.get(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA))
             .map(JsonObject.class::cast)
-            .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, data.encode()));
+            .ifPresent(data -> properties.put(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, data.encode()));
     }
 
     void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {

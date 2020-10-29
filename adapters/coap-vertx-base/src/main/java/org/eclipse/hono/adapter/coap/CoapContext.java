@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -415,5 +416,27 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     @Override
     public QoS getRequestedQos() {
         return isConfirmable() ? QoS.AT_LEAST_ONCE : QoS.AT_MOST_ONCE;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return An empty optional.
+     */
+    @Override
+    public Optional<Duration> getTimeToLive() {
+        return Optional.empty();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The <em>Uri-Path</em> request option prefixed with a <em>/</em> character.
+     */
+    @Override
+    public String getOrigAddress() {
+        return Optional.ofNullable(exchange.getRequestOptions().getUriPathString())
+                .map(address -> "/" + address)
+                .orElse(null);
     }
 }

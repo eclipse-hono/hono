@@ -16,7 +16,6 @@ package org.eclipse.hono.service;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.qpid.proton.message.Message;
@@ -59,12 +59,11 @@ import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +80,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.proton.ProtonHelper;
 
 
 /**
@@ -275,78 +273,13 @@ public class AbstractProtocolAdapterBaseTest {
      * Verifies that the adapter's name is set on a downstream message.
      */
     @Test
-    public void testAddPropertiesAddsStandardProperties() {
+    public void testGetDownstreamPropertiesAddsStandardProperties() {
 
-        final Message message = ProtonHelper.message();
-        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final TelemetryExecutionContext context = mock(TelemetryExecutionContext.class);
+        when(context.getDownstreamMessageProperties()).thenReturn(new HashMap<>());
 
-        adapter.addProperties(
-                message,
-                QoS.AT_MOST_ONCE,
-                target,
-                "/status",
-                tenant,
-                new RegistrationAssertion("4711"),
-                15);
-
-        assertThat(
-                MessageHelper.getApplicationProperty(
-                        message.getApplicationProperties(),
-                        MessageHelper.APP_PROPERTY_ORIG_ADDRESS,
-                        String.class),
-                is("/status"));
-        assertThat(
-                MessageHelper.getApplicationProperty(
-                        message.getApplicationProperties(),
-                        MessageHelper.APP_PROPERTY_ORIG_ADAPTER,
-                        String.class),
-                is(ADAPTER_NAME));
-        assertThat(MessageHelper.getDeviceId(message), is("4711"));
-        assertThat(MessageHelper.getTimeUntilDisconnect(message), is(15));
-        assertThat(message.getTtl(), is(0L));
-    }
-
-    /**
-     * Verifies that the adapter does not add default properties to downstream messages
-     * if disabled for the adapter.
-     */
-    @Test
-    public void testAddPropertiesIgnoresDefaultsIfDisabled() {
-
-        properties.setDefaultsEnabled(false);
-
-        final Message message = ProtonHelper.message();
-        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final RegistrationAssertion assertion = new RegistrationAssertion("4711");
-        assertion.setDefaults(Map.of(
-                MessageHelper.SYS_HEADER_PROPERTY_TTL, 30,
-                "custom-device", true));
-
-        adapter.addProperties(message, QoS.AT_LEAST_ONCE, target, null, null, assertion, null);
-
-        assertThat(
-                MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class),
-                is(nullValue()));
-        assertThat(message.getTtl(), is(0L));
-    }
-
-    /**
-     * Verifies that the TTL for a downstream event is set to the <em>max-ttl</em> specified for
-     * a tenant, if no default is set explicitly.
-     */
-    @Test
-    public void testAddPropertiesUsesMaxTtlByDefault() {
-
-        final Message message = ProtonHelper.message();
-        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
-                .setResourceLimits(new ResourceLimits().setMaxTtl(15L));
-        final RegistrationAssertion assertion = new RegistrationAssertion("4711");
-
-        adapter.addProperties(message, QoS.AT_LEAST_ONCE, target, null, tenant, assertion, null);
-
-        assertThat(message.getTtl(), is(15000L));
+        final Map<String, Object> props = adapter.getDownstreamMessageProperties(context);
+        assertThat(props.get(MessageHelper.APP_PROPERTY_ORIG_ADAPTER), is(ADAPTER_NAME));
     }
 
     /**

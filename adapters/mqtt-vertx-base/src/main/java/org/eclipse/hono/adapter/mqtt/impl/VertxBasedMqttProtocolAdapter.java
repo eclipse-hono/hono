@@ -17,7 +17,6 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MappedMessage;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
@@ -26,7 +25,6 @@ import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -115,7 +113,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final MqttContext ctx) {
+    protected void customizeDownstreamMessageProperties(final Map<String, Object> props, final MqttContext ctx) {
 
         final Object additionalProperties = ctx.get(MAPPER_DATA);
         if (additionalProperties instanceof Map) {
@@ -126,9 +124,9 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                     final Object value = entry.getValue();
                     if (value instanceof String) {
                         // prevent quotes around strings
-                        MessageHelper.addProperty(downstreamMessage, key, value);
+                        props.put(key, value);
                     } else {
-                        MessageHelper.addProperty(downstreamMessage, key, Json.encode(value));
+                        props.put(key, Json.encode(value));
                     }
                 });
         }

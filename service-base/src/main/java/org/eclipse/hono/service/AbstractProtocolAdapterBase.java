@@ -13,9 +13,10 @@
 package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -65,6 +66,7 @@ import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1235,223 +1237,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Creates a new AMQP 1.0 message.
+     * Gets default properties for downstream telemetry and event messages.
      * <p>
-     * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
-     * order to have required Hono specific properties being set on the message automatically.
-     * <p>
-     * This method simply delegates to {@link #newMessage(QoS, ResourceIdentifier, String, String, Buffer, TenantObject,
-     * RegistrationAssertion, Integer, Duration)}.
+     * The returned properties are the properties returned by
+     * {@link TelemetryExecutionContext#getDownstreamMessageProperties()} plus
+     * this {@linkplain #getTypeName() adapter's type name}.
      *
-     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
-     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message. The target address is used to determine if the message
-     *               represents an event or not.
-     * @param publishAddress The address that the message has been published to originally by the device or
-     *            {@code null} if unknown.
-     *            <p>
-     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
-     *            here whereas an MQTT based adapter might use the MQTT message's topic.
-     * @param contentType The content type describing the message's payload or {@code null} if no content type
-     *                    should be set.
-     * @param payload The message payload or {@code null} if the message has no payload.
-     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
-     *               if no information about the tenant is available.
-     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
-     *            service's <em>assert Device Registration</em> operation.
-     * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
-     *            from the protocol adapter or {@code null} if unknown.
-     * @return The newly created message.
-     * @throws NullPointerException if target or registration info is {@code null}.
+     * @param context The execution context for processing the downstream message.
+     * @return The properties.
      */
-    protected final Message newMessage(
-            final QoS qos,
-            final ResourceIdentifier target,
-            final String publishAddress,
-            final String contentType,
-            final Buffer payload,
-            final TenantObject tenant,
-            final RegistrationAssertion registrationInfo,
-            final Integer timeUntilDisconnect) {
-
-        return newMessage(
-                qos,
-                target,
-                publishAddress,
-                contentType,
-                payload,
-                tenant,
-                registrationInfo,
-                timeUntilDisconnect,
-                null);
-    }
-
-    /**
-     * Creates a new AMQP 1.0 message.
-     * <p>
-     * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
-     * order to have required Hono specific properties being set on the message automatically.
-     * <p>
-     * This method simply delegates to {@link MessageHelper#newMessage(QoS, ResourceIdentifier, String, String, Buffer,
-     * TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}.
-     *
-     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
-     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message. The target address is used to determine if the message
-     *               represents an event or not.
-     * @param publishAddress The address that the message has been published to originally by the device or
-     *            {@code null} if unknown.
-     *            <p>
-     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
-     *            here whereas an MQTT based adapter might use the MQTT message's topic.
-     * @param contentType The content type describing the message's payload or {@code null} if no content type
-     *                    should be set.
-     * @param payload The message payload or {@code null} if the message has no payload.
-     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
-     *               if no information about the tenant is available.
-     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
-     *            service's <em>assert Device Registration</em> operation.
-     * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
-     *            from the protocol adapter or {@code null} if unknown.
-     * @param timeToLive The message's <em>time-to-live</em> as provided by the device or {@code null} if the
-     *                   device did not provide any TTL.
-     * @return The newly created message.
-     * @throws NullPointerException if target or registration info is {@code null}.
-     */
-    protected final Message newMessage(
-            final QoS qos,
-            final ResourceIdentifier target,
-            final String publishAddress,
-            final String contentType,
-            final Buffer payload,
-            final TenantObject tenant,
-            final RegistrationAssertion registrationInfo,
-            final Integer timeUntilDisconnect,
-            final Duration timeToLive) {
-
-        Objects.requireNonNull(registrationInfo);
-
-        return MessageHelper.newMessage(
-                qos,
-                target,
-                publishAddress,
-                contentType,
-                payload,
-                tenant,
-                new JsonObject(registrationInfo.getDefaults()),
-                timeUntilDisconnect,
-                timeToLive,
-                getTypeName(),
-                getConfig().isDefaultsEnabled(),
-                getConfig().isJmsVendorPropsEnabled());
-    }
-
-    /**
-     * Adds Hono specific properties to an AMQP 1.0 message.
-     * <p>
-     * This method simply delegates to
-     * {@link #addProperties(Message, QoS, ResourceIdentifier, String, TenantObject, RegistrationAssertion, Integer, Duration)}.
-     *
-     * @param msg The message to add the properties to.
-     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
-     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message or {@code null} if the message's
-     *               <em>to</em> property contains the target address. The target
-     *               address is used to determine if the message represents an event or not.
-     *               Determining this information from the <em>to</em> property
-     *               requires additional parsing which can be prevented by passing in the
-     *               target address as a {@code ResourceIdentifier} instead.
-     * @param publishAddress The address that the message has been published to originally by the device or
-     *            {@code null} if unknown.
-     *            <p>
-     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
-     *            here whereas an MQTT based adapter might use the MQTT message's topic.
-     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
-     *               if no information about the tenant is available.
-     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
-     *            service's <em>assert Device Registration</em> operation.
-     * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
-     *            from the protocol adapter or {@code null} if unknown.
-     * @return The message with its properties set.
-     * @throws NullPointerException if message or registration info are {@code null}.
-     */
-    protected final Message addProperties(
-            final Message msg,
-            final QoS qos,
-            final ResourceIdentifier target,
-            final String publishAddress,
-            final TenantObject tenant,
-            final RegistrationAssertion registrationInfo,
-            final Integer timeUntilDisconnect) {
-
-        return addProperties(
-                msg,
-                qos,
-                target,
-                publishAddress,
-                tenant,
-                registrationInfo,
-                timeUntilDisconnect,
-                null);
-    }
-
-    /**
-     * Adds Hono specific properties to an AMQP 1.0 message.
-     * <p>
-     * This method simply delegates to {@link MessageHelper#addProperties(Message, QoS, ResourceIdentifier,
-     * String, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}.
-     *
-     * @param msg The message to add the properties to.
-     * @param qos The QoS level with which the device sent the message to the protocol adapter or {@code null}
-     *            if the corresponding <em>qos</em> application property in the AMQP message should not be set.
-     * @param target The target address of the message or {@code null} if the message's
-     *               <em>to</em> property contains the target address. The target
-     *               address is used to determine if the message represents an event or not.
-     *               Determining this information from the <em>to</em> property
-     *               requires additional parsing which can be prevented by passing in the
-     *               target address as a {@code ResourceIdentifier} instead.
-     * @param publishAddress The address that the message has been published to originally by the device or
-     *            {@code null} if unknown.
-     *            <p>
-     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
-     *            here whereas an MQTT based adapter might use the MQTT message's topic.
-     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
-     *               if no information about the tenant is available.
-     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
-     *            service's <em>assert Device Registration</em> operation.
-     * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
-     *            from the protocol adapter or {@code null} if unknown.
-     * @param timeToLive The message's <em>time-to-live</em> as provided by the device or {@code null} if the
-     *                   device did not provide any TTL.
-     * @return The message with its properties set.
-     * @throws NullPointerException if message or registration info are {@code null}.
-     * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
-     */
-    protected final Message addProperties(
-            final Message msg,
-            final QoS qos,
-            final ResourceIdentifier target,
-            final String publishAddress,
-            final TenantObject tenant,
-            final RegistrationAssertion registrationInfo,
-            final Integer timeUntilDisconnect,
-            final Duration timeToLive) {
-
-        Objects.requireNonNull(msg);
-        Objects.requireNonNull(registrationInfo);
-
-        return MessageHelper.addProperties(
-                msg,
-                qos,
-                target,
-                publishAddress,
-                tenant,
-                new JsonObject(registrationInfo.getDefaults()),
-                timeUntilDisconnect,
-                timeToLive,
-                getTypeName(),
-                getConfig().isDefaultsEnabled(),
-                getConfig().isJmsVendorPropsEnabled());
+    protected final Map<String, Object> getDownstreamMessageProperties(final TelemetryExecutionContext context) {
+        final Map<String, Object> props = Objects.requireNonNull(context).getDownstreamMessageProperties();
+        props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
+        return props;
     }
 
     /**
@@ -1608,15 +1406,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
             if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                 final DownstreamSender sender = senderTracker.result();
-                final Message msg = newMessage(
-                        QoS.AT_LEAST_ONCE,
+                final Map<String, Object> props = new HashMap<>();
+                props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
+                props.put(MessageHelper.APP_PROPERTY_QOS, QoS.AT_LEAST_ONCE.ordinal());
+                props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd);
+                final Message msg = MessageHelper.newMessage(
                         ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
-                        EventConstants.EVENT_ENDPOINT,
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
                         null,
                         tenantConfigTracker.result(),
-                        tokenTracker.result(),
-                        ttd);
+                        props,
+                        tokenTracker.result().getDefaults(),
+                        getConfig().isDefaultsEnabled(),
+                        getConfig().isJmsVendorPropsEnabled());
+
                 return sender.sendAndWaitForOutcome(msg, context);
             } else {
                 // this adapter is not enabled for the tenant

@@ -13,11 +13,14 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -27,6 +30,7 @@ import org.eclipse.hono.util.Strings;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -152,11 +156,22 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * Gets the content type of the message payload.
+     * <p>
+     * The type is the value set via {@link #setContentType(String)}.
+     * Otherwise, the type is determined from the message topic's property
+     * bag, if if contains a content type.
+     * Otherwise, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
+     * content type} is used.
      *
-     * @return The type or {@code null} if the content type is unknown.
+     * @return The type of the message payload.
      */
     public String contentType() {
-        return contentType;
+        if (contentType != null) {
+            return contentType;
+        }
+        return Optional.ofNullable(propertyBag)
+                .flatMap(bag -> Optional.ofNullable((String) bag.getProperty(HttpHeaders.CONTENT_TYPE.toString())))
+                .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
     }
 
     /**
@@ -262,5 +277,44 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      */
     public Sample getTimer() {
         return timer;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The message topic.
+     */
+    @Override
+    public String getOrigAddress() {
+        return message.topicName();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return An optional containing the <em>time-to-live</em> duration or an empty optional if
+     * <ul>
+     *     <li>the topic has no property bag</li>
+     *     <li>the property bag does not contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} property</li>
+     *     <li>the contained value cannot be parsed as a positive long</li>
+     * </ul>
+     */
+    @Override
+    public Optional<Duration> getTimeToLive() {
+
+        if (endpoint != EndpointType.EVENT) {
+            return Optional.empty();
+        }
+
+        try {
+            final Duration timeToLive = Optional.ofNullable(propertyBag)
+                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
+                    .map(Long::parseLong)
+                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
+                    .orElse(null);
+            return Optional.ofNullable(timeToLive);
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
+        }
     }
 }

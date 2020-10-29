@@ -1082,8 +1082,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         log.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
 
-        final Future<RegistrationAssertion> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
-                context.getAuthenticatedDevice(), currentSpan.context());
+        final Future<RegistrationAssertion> tokenFuture = getRegistrationAssertion(
+                resource.getTenantId(),
+                resource.getResourceId(),
+                context.getAuthenticatedDevice(),
+                currentSpan.context());
         final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
                 currentSpan.context());
         final Future<TenantObject> tenantValidationTracker = tenantTracker
@@ -1094,16 +1097,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         return CompositeFuture.all(tenantValidationTracker, tokenFuture, senderFuture)
                 .compose(ok -> {
+                    final Map<String, Object> props = getDownstreamMessageProperties(context);
+                    props.put(MessageHelper.APP_PROPERTY_QOS, context.getRequestedQos().ordinal());
+                    final Message downstreamMessage = MessageHelper.newMessage(
+                            ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
+                            context.getMessage().getContentType(),
+                            context.getMessagePayload(),
+                            tenantValidationTracker.result(),
+                            props,
+                            tokenFuture.result().getDefaults(),
+                            getConfig().isDefaultsEnabled(),
+                            getConfig().isJmsVendorPropsEnabled());
 
                     final DownstreamSender sender = senderFuture.result();
-                    final Message downstreamMessage = addProperties(
-                            context.getMessage(),
-                            context.getRequestedQos(),
-                            ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
-                            context.getAddress().toString(),
-                            tenantValidationTracker.result(),
-                            tokenFuture.result(),
-                            null); // no TTD
 
                     if (context.isRemotelySettled()) {
                         // client uses AT_MOST_ONCE delivery semantics -> fire and forget

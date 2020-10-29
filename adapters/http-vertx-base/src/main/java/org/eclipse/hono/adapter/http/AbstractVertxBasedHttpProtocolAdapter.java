@@ -407,13 +407,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Invoked before the message is sent to the downstream peer.
      * <p>
-     * Subclasses may override this method in order to customize the message
-     * before it is sent, e.g. adding custom properties.
+     * Subclasses may override this method in order to customize the
+     * properties used for sending the message, e.g. adding custom properties.
      *
-     * @param downstreamMessage The message that will be sent downstream.
+     * @param messageProperties The properties that are being added to the
+     *                          downstream message.
      * @param ctx The routing context.
      */
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final HttpContext ctx) {
+    protected void customizeDownstreamMessageProperties(final Map<String, Object> messageProperties, final HttpContext ctx) {
         // this default implementation does nothing
     }
 
@@ -616,8 +617,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
-        final org.eclipse.hono.util.QoS requestedQos = ctx.getRequestedQos();
-        if (requestedQos == null) {
+        if (!ctx.hasValidQoS()) {
             HttpUtils.badRequest(ctx.getRoutingContext(), "unsupported QoS-Level header value");
             return;
         }
@@ -626,7 +626,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return;
         }
 
-        final MetricsTags.QoS qos = getQoSLevel(endpoint, requestedQos);
+        final MetricsTags.QoS qos = getQoSLevel(endpoint, ctx.getRequestedQos());
         final Device authenticatedDevice = ctx.getAuthenticatedDevice();
         final String gatewayId = authenticatedDevice != null && !deviceId.equals(authenticatedDevice.getDeviceId())
                 ? authenticatedDevice.getDeviceId()
@@ -684,22 +684,24 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         CompositeFuture.join(senderTracker, commandConsumerTracker)
         .compose(ok -> {
 
-            final DownstreamSender sender = senderTracker.result();
-
-            final Integer ttd = Optional.ofNullable(commandConsumerTracker.result())
+            final Map<String, Object> props = getDownstreamMessageProperties(ctx);
+            Optional.ofNullable(commandConsumerTracker.result())
                     .map(c -> ttdTracker.result())
-                    .orElse(null);
-            final Message downstreamMessage = newMessage(
-                    requestedQos,
+                    .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
+            props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
+
+            customizeDownstreamMessageProperties(props, ctx);
+            final Message downstreamMessage = MessageHelper.newMessage(
                     ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                    ctx.request().uri(),
                     contentType,
                     payload,
                     tenantTracker.result(),
-                    tokenTracker.result(),
-                    ttd,
-                    EndpointType.EVENT.equals(endpoint) ? ctx.getTimeToLive() : null);
-            customizeDownstreamMessage(downstreamMessage, ctx);
+                    props,
+                    tokenTracker.result().getDefaults(),
+                    getConfig().isDefaultsEnabled(),
+                    getConfig().isJmsVendorPropsEnabled());
+
+            final DownstreamSender sender = senderTracker.result();
 
             setTtdRequestConnectionCloseHandler(ctx.getRoutingContext(), commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 

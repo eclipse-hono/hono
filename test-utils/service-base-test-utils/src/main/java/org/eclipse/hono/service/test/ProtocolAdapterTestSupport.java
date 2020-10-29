@@ -14,9 +14,11 @@
 
 package org.eclipse.hono.service.test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -52,6 +54,7 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
@@ -339,7 +342,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
     }
 
-    private boolean hasMatchingProperties(
+    private void assertMessageProperties(
             final Message msg,
             final String endpoint,
             final String tenant,
@@ -347,17 +350,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             final String contentType) {
 
         final ResourceIdentifier address = ResourceIdentifier.fromString(msg.getAddress());
-        final boolean endpointMatches = endpoint.equals(address.getEndpoint());
-        final boolean tenantMatches = Optional.ofNullable(tenant)
-                .map(id -> id.equals(address.getTenantId()))
-                .orElse(true);
-        final boolean deviceMatches = Optional.ofNullable(deviceId)
-            .map(id -> id.equals(MessageHelper.getDeviceIdAnnotation(msg)))
-            .orElse(true);
-        final boolean contentTypeMatches = Optional.ofNullable(contentType)
-                .map(ct -> ct.equals(msg.getContentType()))
-                .orElse(true);
-        return endpointMatches && tenantMatches && deviceMatches && contentTypeMatches;
+        assertThat(address.getEndpoint()).isEqualTo(endpoint);
+        Optional.ofNullable(tenant)
+            .ifPresent(v -> assertThat(address.getTenantId()).isEqualTo(v));
+        Optional.ofNullable(deviceId)
+            .ifPresent(id -> assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isEqualTo(id));
+        Optional.ofNullable(contentType)
+            .ifPresent(ct -> assertThat(msg.getContentType()).isEqualTo(ct));
     }
 
     /**
@@ -381,25 +380,28 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
         Objects.requireNonNull(qos);
 
+        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+
         if (QoS.AT_MOST_ONCE == qos) {
             verify(downstreamSender).send(
-                    argThat(msg -> hasMatchingProperties(
-                            msg,
-                            TelemetryConstants.TELEMETRY_ENDPOINT,
-                            tenant,
-                            deviceId,
-                            contentType)),
+                    msgCaptor.capture(),
                     (SpanContext) any());
         } else {
             verify(downstreamSender).sendAndWaitForOutcome(
-                    argThat(msg -> hasMatchingProperties(
-                            msg,
-                            TelemetryConstants.TELEMETRY_ENDPOINT,
-                            tenant,
-                            deviceId,
-                            contentType)),
+                    msgCaptor.capture(),
                     (SpanContext) any());
         }
+        assertThat(MessageHelper.getApplicationProperty(
+                msgCaptor.getValue().getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_QOS,
+                Integer.class))
+            .isEqualTo(qos.ordinal());
+        assertMessageProperties(
+                msgCaptor.getValue(),
+                TelemetryConstants.TELEMETRY_ENDPOINT,
+                tenant,
+                deviceId,
+                contentType);
     }
 
     /**
@@ -420,18 +422,19 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ttd);
 
-        verify(downstreamSender).sendAndWaitForOutcome(
-                argThat(msg -> {
-                    final boolean propsMatch = hasMatchingProperties(
-                        msg,
-                        EventConstants.EVENT_ENDPOINT,
-                        tenant,
-                        deviceId,
-                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-                    final boolean ttdMatches = MessageHelper.getTimeUntilDisconnect(msg) == ttd;
-                    return propsMatch && ttdMatches;
-                }),
+        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+
+        verify(downstreamSender, atLeastOnce()).sendAndWaitForOutcome(
+                msgCaptor.capture(),
                 (SpanContext) any());
+
+        assertMessageProperties(
+                msgCaptor.getValue(),
+                EventConstants.EVENT_ENDPOINT,
+                tenant,
+                deviceId,
+                EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue())).isEqualTo(ttd);
     }
 
     /**
@@ -453,16 +456,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         Objects.requireNonNull(ttd);
 
         verify(downstreamSender, never()).sendAndWaitForOutcome(
-                argThat(msg -> {
-                    final boolean propsMatch = hasMatchingProperties(
-                        msg,
-                        EventConstants.EVENT_ENDPOINT,
-                        tenant,
-                        deviceId,
-                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-                    final boolean ttdMatches = MessageHelper.getTimeUntilDisconnect(msg) == ttd;
-                    return propsMatch && ttdMatches;
-                }),
+                argThat(msg -> ttd.equals(MessageHelper.getTimeUntilDisconnect(msg))),
                 (SpanContext) any());
     }
 
@@ -503,20 +497,25 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             final String contentType,
             final Long ttl) {
 
+        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+
         verify(downstreamSender).sendAndWaitForOutcome(
-                argThat(msg -> {
-                    final boolean propsMatch = hasMatchingProperties(
-                        msg,
-                        EventConstants.EVENT_ENDPOINT,
-                        tenant,
-                        deviceId,
-                        contentType);
-                    final boolean ttlMatches = Optional.ofNullable(ttl)
-                            .map(v -> v.longValue() == msg.getTtl())
-                            .orElse(true);
-                    return propsMatch && ttlMatches;
-                }),
+                msgCaptor.capture(),
                 (SpanContext) any());
+
+        assertMessageProperties(
+                msgCaptor.getValue(),
+                EventConstants.EVENT_ENDPOINT,
+                tenant,
+                deviceId,
+                contentType);
+        assertThat(MessageHelper.getApplicationProperty(
+                msgCaptor.getValue().getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_QOS,
+                Integer.class))
+            .isEqualTo(QoS.AT_LEAST_ONCE.ordinal());
+        Optional.ofNullable(ttl)
+            .ifPresent(v -> assertThat(msgCaptor.getValue().getTtl()).isEqualTo(v));
     }
 
     /**

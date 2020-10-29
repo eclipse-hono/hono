@@ -47,6 +47,7 @@ import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantConstants;
@@ -322,7 +323,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpContext ctx = newHttpContext(payload, "application/text", mock(HttpServerRequest.class), response);
+        final HttpContext ctx = newHttpContext(payload, "application/text", newEventRequest(), response);
         when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -373,7 +374,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
-        final HttpContext ctx = newHttpContext(payload);
+        final HttpContext ctx = newHttpContext(payload, newEventRequest(), mock(HttpServerResponse.class));
 
         adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
         assertEventHasBeenSentDownstream("tenant", "device", "application/text");
@@ -408,6 +409,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.uri()).thenReturn("/" + EventConstants.EVENT_ENDPOINT);
         when(request.getHeader(eq(Constants.HEADER_TIME_TO_LIVE))).thenReturn("10");
         final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
         when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
@@ -845,6 +847,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(payload.length()),
                 any());
+    }
+
+    private HttpServerRequest newEventRequest() {
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.uri()).thenReturn("/event");
+        return request;
     }
 
     private HttpContext newHttpContext(final Buffer payload) {
