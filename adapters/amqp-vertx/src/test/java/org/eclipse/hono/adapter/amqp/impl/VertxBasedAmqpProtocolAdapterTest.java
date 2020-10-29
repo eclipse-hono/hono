@@ -60,11 +60,11 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
-import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
@@ -73,6 +73,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -135,6 +136,11 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         metrics = mock(AmqpAdapterMetrics.class);
         vertx = mock(Vertx.class);
         context = mock(Context.class);
+        doAnswer(invocation -> {
+            final Handler<Void> codeToRun = invocation.getArgument(0);
+            codeToRun.handle(null);
+            return null;
+        }).when(context).runOnContext(any());
 
         span = mock(Span.class);
         final SpanContext spanContext = mock(SpanContext.class);
@@ -279,7 +285,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                             eq(TEST_TENANT_ID),
                             eq(tenantObject),
                             eq(ProcessingOutcome.FORWARDED),
-                            eq(QoS.AT_MOST_ONCE),
+                            eq(MetricsTags.QoS.AT_MOST_ONCE),
                             eq(payload.length()),
                             any());
                 });
@@ -327,7 +333,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 eq(TEST_TENANT_ID),
                 eq(tenantObject),
                 eq(ProcessingOutcome.FORWARDED),
-                eq(QoS.AT_LEAST_ONCE),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
                 any());
     }
@@ -369,7 +375,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                             eq(TEST_TENANT_ID),
                             eq(tenantObject),
                             eq(ProcessingOutcome.UNPROCESSABLE),
-                            eq(QoS.AT_LEAST_ONCE),
+                            eq(MetricsTags.QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
                             any());
                 });
@@ -824,7 +830,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
         final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final Buffer payload = Buffer.buffer("payload");
-        final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
+        final Message message = getFakeMessage(commandAddress, payload, "text/plain", "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
@@ -1004,7 +1010,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                                 eq(TEST_TENANT_ID),
                                 eq(tenantObject),
                                 eq(ProcessingOutcome.UNPROCESSABLE),
-                                eq(QoS.AT_LEAST_ONCE),
+                                eq(MetricsTags.QoS.AT_LEAST_ONCE),
                                 eq(payload.length()),
                                 any());
                     });
@@ -1050,7 +1056,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                                 eq(TEST_TENANT_ID),
                                 eq(tenantObject),
                                 eq(ProcessingOutcome.UNPROCESSABLE),
-                                eq(QoS.AT_LEAST_ONCE),
+                                eq(MetricsTags.QoS.AT_LEAST_ONCE),
                                 eq(payload.length()),
                                 any());
                     });
@@ -1128,7 +1134,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
         final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final Buffer payload = Buffer.buffer("payload");
-        final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
+        final Message message = getFakeMessage(commandAddress, payload, "text/plain", "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
@@ -1331,10 +1337,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     private Message getFakeMessage(final String to, final Buffer payload) {
-        return getFakeMessage(to, payload, "hello");
+        return getFakeMessage(to, payload, "text/plain", "hello");
     }
 
-    private Message getFakeMessage(final String to, final Buffer payload, final String subject) {
+    private Message getFakeMessage(final String to, final Buffer payload, final String contentType, final String subject) {
 
         final Message message = ProtonHelper.message();
         message.setMessageId("the-message-id");
@@ -1342,7 +1348,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         message.setAddress(to);
 
         if (payload != null) {
-            message.setContentType("text/plain");
+            message.setContentType(contentType);
             final Data data = new Data(new Binary(payload.getBytes()));
             message.setBody(data);
         }

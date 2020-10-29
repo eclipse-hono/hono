@@ -645,6 +645,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void testUploadEventMessageSendsPubAckOnSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a downstream event consumer
+        givenAnAdapter(properties);
         final Promise<ProtonDelivery> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
         testUploadQoS1MessageSendsPubAckOnSuccess(
@@ -666,6 +667,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     public void testUploadTelemetryMessageSendsPubAckOnSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a downstream telemetry consumer
+        givenAnAdapter(properties);
         final Promise<ProtonDelivery> outcome = Promise.promise();
         givenATelemetrySenderForAnyTenant(outcome);
 
@@ -677,6 +679,48 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                     adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
                             .onComplete(ctx.completing());
                 });
+    }
+
+    private void testUploadQoS1MessageSendsPubAckOnSuccess(
+            final Promise<ProtonDelivery> outcome,
+            final EndpointType type,
+            final BiConsumer<AbstractVertxBasedMqttProtocolAdapter<?>, MqttContext> upload) {
+
+        // WHEN a device publishes a message using QoS 1
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        final Buffer payload = Buffer.buffer("some payload");
+        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
+        when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        when(messageFromDevice.messageId()).thenReturn(5555555);
+        when(messageFromDevice.payload()).thenReturn(payload);
+        when(messageFromDevice.topicName()).thenReturn(String.format("%s/my-tenant/4712", type.getCanonicalName()));
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
+        upload.accept(adapter, context);
+
+        // THEN the device does not receive a PUBACK
+        verify(endpoint, never()).publishAcknowledge(anyInt());
+        // and the message has not been reported as forwarded
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any());
+
+        // until the message has been settled and accepted
+        outcome.complete(mock(ProtonDelivery.class));
+        verify(endpoint).publishAcknowledge(5555555);
+        verify(metrics).reportTelemetry(
+                eq(type),
+                eq("my-tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -719,50 +763,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                         ctx.completeNow();
                     });
                 }));
-    }
-
-    private void testUploadQoS1MessageSendsPubAckOnSuccess(
-            final Promise<ProtonDelivery> outcome,
-            final EndpointType type,
-            final BiConsumer<AbstractVertxBasedMqttProtocolAdapter<?>, MqttContext> upload) {
-
-        givenAnAdapter(properties);
-
-        // WHEN a device publishes a message using QoS 1
-        final MqttEndpoint endpoint = mockEndpoint();
-        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
-        final Buffer payload = Buffer.buffer("some payload");
-        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
-        when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        when(messageFromDevice.messageId()).thenReturn(5555555);
-        when(messageFromDevice.payload()).thenReturn(payload);
-        when(messageFromDevice.topicName()).thenReturn(String.format("%s/my-tenant/4712", type.getCanonicalName()));
-        final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
-        upload.accept(adapter, context);
-
-        // THEN the device does not receive a PUBACK
-        verify(endpoint, never()).publishAcknowledge(anyInt());
-        // and the message has not been reported as forwarded
-        verify(metrics, never()).reportTelemetry(
-                any(MetricsTags.EndpointType.class),
-                anyString(),
-                any(),
-                eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                any(MetricsTags.QoS.class),
-                anyInt(),
-                any());
-
-        // until the message has been settled and accepted
-        outcome.complete(mock(ProtonDelivery.class));
-        verify(endpoint).publishAcknowledge(5555555);
-        verify(metrics).reportTelemetry(
-                eq(type),
-                eq("my-tenant"),
-                any(),
-                eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                eq(payload.length()),
-                any());
     }
 
     /**
@@ -836,28 +836,29 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(messageFromDevice.payload()).thenReturn(payload);
         final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
-        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload).onComplete(ctx.succeeding(ok -> {
+        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload)
+            .onComplete(ctx.succeeding(ok -> {
 
-            ctx.verify(() -> {
-                // THEN the device has received a PUBACK
-                verify(endpoint).publishAcknowledge(5555555);
-                // and the message has been sent downstream
-                final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-                verify(downstreamSender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
-                // including the "retain" annotation
-                assertThat(MessageHelper.getAnnotation(msgCaptor.getValue(), MessageHelper.ANNOTATION_X_OPT_RETAIN,
-                        Boolean.class)).isTrue();
-                verify(metrics).reportTelemetry(
-                        eq(MetricsTags.EndpointType.TELEMETRY),
-                        eq("my-tenant"),
-                        any(),
-                        eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                        eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                        eq(payload.length()),
-                        any());
-            });
-            ctx.completeNow();
-        }));
+                ctx.verify(() -> {
+                    // THEN the device has received a PUBACK
+                    verify(endpoint).publishAcknowledge(5555555);
+                    // and the message has been sent downstream
+                    final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+                    verify(downstreamSender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
+                    // including the "retain" annotation
+                    assertThat(MessageHelper.getAnnotation(msgCaptor.getValue(), MessageHelper.ANNOTATION_X_OPT_RETAIN,
+                            Boolean.class)).isTrue();
+                    verify(metrics).reportTelemetry(
+                            eq(MetricsTags.EndpointType.TELEMETRY),
+                            eq("my-tenant"),
+                            any(),
+                            eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                            eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                            eq(payload.length()),
+                            any());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

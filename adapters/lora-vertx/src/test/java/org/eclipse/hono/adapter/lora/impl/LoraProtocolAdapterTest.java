@@ -39,7 +39,6 @@ import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
@@ -55,13 +54,11 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link LoraProtocolAdapter}.
@@ -87,12 +84,6 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
         createClients();
-
-        downstreamSender = mock(DownstreamSender.class);
-        when(downstreamSender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
 
         currentSpan = mock(Span.class);
         when(currentSpan.context()).thenReturn(mock(SpanContext.class));
@@ -122,6 +113,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      */
     @Test
     public void handleProviderRouteSuccessfullyForUplinkMessage() {
+
+        givenATelemetrySenderForAnyTenant();
 
         final LoraProvider providerMock = getLoraProviderMock();
         final HttpContext httpContext = newHttpContext();
@@ -166,6 +159,9 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      */
     @Test
     public void handleProviderRouteDiscardsJoinMessages() {
+
+        givenATelemetrySenderForAnyTenant();
+
         final LoraMessage message = mock(LoraMessage.class);
         when(message.getType()).thenReturn(LoraMessageType.JOIN);
         final LoraProvider providerMock = getLoraProviderMock(message);
@@ -184,6 +180,9 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      */
     @Test
     public void handleProviderRouteDiscardsDownlinkMessages() {
+
+        givenATelemetrySenderForAnyTenant();
+
         final LoraMessage message = mock(LoraMessage.class);
         when(message.getType()).thenReturn(LoraMessageType.DOWNLINK);
         final LoraProvider providerMock = getLoraProviderMock(message);
@@ -202,6 +201,9 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      */
     @Test
     public void handleProviderRouteDiscardsOtherMessages() {
+
+        givenATelemetrySenderForAnyTenant();
+
         final LoraMessage message = mock(LoraMessage.class);
         when(message.getType()).thenReturn(LoraMessageType.UNKNOWN);
         final LoraProvider providerMock = getLoraProviderMock(message);
@@ -220,6 +222,9 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      */
     @Test
     public void handleProviderRouteCausesUnauthorizedForInvalidGatewayCredentials() {
+
+        givenATelemetrySenderForAnyTenant();
+
         final LoraProvider providerMock = getLoraProviderMock();
         final HttpContext httpContext = newHttpContext();
         when(httpContext.getRoutingContext().user()).thenReturn(null);
@@ -239,6 +244,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
     @Test
     public void handleProviderRouteCausesBadRequestForFailureToParseBody() {
 
+        givenATelemetrySenderForAnyTenant();
+
         final LoraProvider providerMock = getLoraProviderMock();
         when(providerMock.getMessage(any(RoutingContext.class))).thenThrow(new LoraProviderMalformedPayloadException("no device ID"));
         final HttpContext httpContext = newHttpContext();
@@ -256,6 +263,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      */
     @Test
     public void customizeDownstreamMessageAddsProviderNameToMessage() {
+
         final HttpContext httpContext = newHttpContext();
         final Message messageMock = mock(Message.class);
 

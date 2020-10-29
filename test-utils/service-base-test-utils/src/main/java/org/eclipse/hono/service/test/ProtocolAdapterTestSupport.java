@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
@@ -43,10 +44,10 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -369,6 +370,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      *                 message's device ID should not be checked.
      * @param contentType The content type value to check the message against or {@code null}
      *                    if the message's content-type property should not be checked.
+     * @throws NullPointerException if qos is {@code null}.
      * @throws AssertionError if no message matching the given parameters has been sent.
      */
     protected void assertTelemetryMessageHasBeenSentDownstream(
@@ -376,6 +378,8 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             final String tenant,
             final String deviceId,
             final String contentType) {
+
+        Objects.requireNonNull(qos);
 
         if (QoS.AT_MOST_ONCE == qos) {
             verify(downstreamSender).send(
@@ -401,17 +405,21 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     /**
      * Asserts that an empty notification has been sent downstream.
      *
-     * @param tenant The tenant to check the message against or {@code null} if the
-     *               message's tenant should not be checked.
-     * @param deviceId The device to check the message against or {@code null} if the
-     *                 message's device ID should not be checked.
+     * @param tenant The tenant to check the message against.
+     * @param deviceId The device to check the message against.
      * @param ttd The time-until-disconnect value to check the message against.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws AssertionError if no empty notification matching the given parameters has been sent.
      */
     protected void assertEmptyNotificationHasBeenSentDownstream(
             final String tenant,
             final String deviceId,
-            final int ttd) {
+            final Integer ttd) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(ttd);
+
         verify(downstreamSender).sendAndWaitForOutcome(
                 argThat(msg -> {
                     final boolean propsMatch = hasMatchingProperties(
@@ -429,17 +437,21 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     /**
      * Asserts that an empty notification has not been sent downstream.
      *
-     * @param tenant The tenant to check the message against or {@code null} if the
-     *               message's tenant should not be checked.
-     * @param deviceId The device to check the message against or {@code null} if the
-     *                 message's device ID should not be checked.
+     * @param tenant The tenant to check the message against.
+     * @param deviceId The device to check the message against.
      * @param ttd The time-until-disconnect value to check the message against.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws AssertionError if an empty notification matching the given parameters has been sent.
      */
     protected void assertEmptyNotificationHasNotBeenSentDownstream(
             final String tenant,
             final String deviceId,
-            final int ttd) {
+            final Integer ttd) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(ttd);
+
         verify(downstreamSender, never()).sendAndWaitForOutcome(
                 argThat(msg -> {
                     final boolean propsMatch = hasMatchingProperties(

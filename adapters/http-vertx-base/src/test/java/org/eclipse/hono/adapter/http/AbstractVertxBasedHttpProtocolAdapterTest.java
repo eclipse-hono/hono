@@ -42,13 +42,13 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
-import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -409,7 +409,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.getHeader(eq(Constants.HEADER_TIME_TO_LIVE))).thenReturn("10");
-        final HttpContext ctx = newHttpContext(payload, "application/text", request, response);
+        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
         when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -419,7 +419,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         adapter.uploadEventMessage(ctx, "tenant", "device");
 
         // verifies that the downstream message contains the time to live value
-        assertEventHasBeenSentDownstream("tenant", "device", "application/text", 10_000L);
+        assertEventHasBeenSentDownstream("tenant", "device", "text/plain", 10_000L);
     }
 
     /**
@@ -692,7 +692,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq("tenant"),
                 any(),
                 eq(ProcessingOutcome.UNDELIVERABLE),
-                eq(QoS.AT_MOST_ONCE),
+                eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
                 any());
@@ -713,17 +713,18 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // WHEN a device publishes a telemetry message that belongs to a tenant with
         // a max TTD of 20 secs
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.TRUE)
+                        .setExtensions(Map.of(TenantConstants.FIELD_MAX_TTD, 20)));
         when(tenantClient.get(eq("tenant"), any())).thenReturn(
-                Future.succeededFuture(TenantObject.from("tenant", true)
-                        .addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.TRUE)
-                                .setExtensions(Map.of(TenantConstants.FIELD_MAX_TTD, 20)))));
+                Future.succeededFuture(tenant));
 
         // and includes a TTD value of 40 in its request
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("40");
-        final HttpContext ctx = newHttpContext(payload, "application/text", request, response);
+        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device");
 
@@ -765,7 +766,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq("my-tenant"),
                 any(),
                 eq(ProcessingOutcome.UNPROCESSABLE),
-                eq(QoS.AT_MOST_ONCE),
+                eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
                 any());
@@ -779,8 +780,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     public void testMessageLimitExceededForAnEventMessage() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        givenAnEventSenderForAnyTenant();
         givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
 
         final Buffer payload = Buffer.buffer("some payload");
         final HttpContext routingContext = newHttpContext(payload);
@@ -800,7 +801,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq("my-tenant"),
                 any(),
                 eq(ProcessingOutcome.UNPROCESSABLE),
-                eq(QoS.AT_LEAST_ONCE),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
                 any());

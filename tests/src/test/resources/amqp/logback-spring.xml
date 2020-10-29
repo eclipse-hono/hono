@@ -30,6 +30,8 @@
 
   <springProfile name="trace">
     <logger name="org.eclipse.hono.adapter" level="TRACE"/>
+    <logger name="org.eclipse.hono.client" level="TRACE"/>
+    <logger name="org.eclipse.hono.client.impl" level="TRACE"/>
   </springProfile>
 
   <springProfile name="dev">

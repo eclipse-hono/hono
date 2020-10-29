@@ -59,7 +59,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
-import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
@@ -67,6 +66,7 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -429,7 +429,11 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         // and the message has been forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_MOST_ONCE, "my-tenant", "the-device", EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertTelemetryMessageHasBeenSentDownstream(
+                QoS.AT_MOST_ONCE,
+                "my-tenant",
+                "the-device",
+                EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("my-tenant"),
@@ -463,7 +467,11 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         // and the message has been forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_MOST_ONCE, "tenant", "device", "text/plain");
+        assertTelemetryMessageHasBeenSentDownstream(
+                QoS.AT_MOST_ONCE,
+                "tenant",
+                "device",
+                "text/plain");
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
@@ -497,7 +505,11 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadTelemetryMessage(context);
 
         // THEN the message is being forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_LEAST_ONCE, "tenant", "device", "text/plain");
+        assertTelemetryMessageHasBeenSentDownstream(
+                QoS.AT_LEAST_ONCE,
+                "tenant",
+                "device",
+                "text/plain");
         // and the device does not get a response
         verify(coapExchange, never()).respond(any(Response.class));
         // until the telemetry message has been accepted
@@ -628,7 +640,11 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.uploadTelemetryMessage(context);
 
         // THEN the message is being forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_LEAST_ONCE, "tenant", "device", "text/plain");
+        assertTelemetryMessageHasBeenSentDownstream(
+                QoS.AT_LEAST_ONCE,
+                "tenant",
+                "device",
+                "text/plain");
         // with no response being sent to the device yet
         verify(coapExchange, never()).respond(any(Response.class));
 

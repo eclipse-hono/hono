@@ -30,18 +30,17 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.JsonHelper;
+import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +54,6 @@ import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -145,12 +143,6 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
-
-        downstreamSender = mock(DownstreamSender.class);
-        when(downstreamSender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(downstreamSender));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
@@ -277,6 +269,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPutTelemetrySucceedsForValidCredentials(final VertxTestContext ctx) {
 
+        givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
         httpClient.put("/telemetry/DEFAULT_TENANT/device_1")
@@ -285,7 +278,16 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                    ctx.verify(() -> {
+                        assertTelemetryMessageHasBeenSentDownstream(
+                                QoS.AT_MOST_ONCE,
+                                "DEFAULT_TENANT",
+                                "device_1",
+                                "application/json");
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -317,6 +319,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPostTelemetrySucceedsForQoS1(final VertxTestContext ctx) {
 
+        givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
         httpClient.post("/telemetry")
@@ -343,6 +346,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPutEventSucceedsForValidCredentials(final VertxTestContext ctx) {
 
+        givenAnEventSenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
         httpClient.put("/event/DEFAULT_TENANT/device_1")
@@ -351,7 +355,12 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                    ctx.verify(() -> {
+                        assertEventHasBeenSentDownstream("DEFAULT_TENANT", "device_1", "application/json");
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -362,6 +371,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPostTelemetrySendsMessageDownstream(final VertxTestContext ctx) {
 
+        givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
         httpClient.post("/telemetry")
@@ -385,6 +395,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPostEventSendsMessageDownstream(final VertxTestContext ctx) {
 
+        givenAnEventSenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
         httpClient.post("/event")
