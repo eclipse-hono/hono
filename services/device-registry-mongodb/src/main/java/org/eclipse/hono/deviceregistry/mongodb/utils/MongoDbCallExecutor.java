@@ -65,11 +65,11 @@ public final class MongoDbCallExecutor {
             final int noOfRetries) {
 
         final Promise<Void> indexCreationPromise = Promise.promise();
-        LOG.debug("creating index [collection: {}]", collectionName);
+        LOG.info("creating index [collection: {}]", collectionName);
 
         mongoClient.createIndexWithOptions(collectionName, keys, options, res -> {
             if (res.succeeded()) {
-                LOG.debug("successfully created index [collection: {}]", collectionName);
+                LOG.info("successfully created index [collection: {}]", collectionName);
                 indexCreationPromise.complete();
             } else {
                 if (noOfRetries > 0) {

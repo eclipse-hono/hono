@@ -629,51 +629,35 @@ public interface AbstractCredentialsServiceTest {
         final var authId = UUID.randomUUID().toString();
         final var pwdCredentials = Credentials.createPasswordCredential(authId, "bar");
 
-        final Checkpoint checkpoint = ctx.checkpoint(3);
-
-        // phase 1 - create device
-
-        final Promise<?> phase1 = Promise.promise();
-
-        getDeviceManagementService()
-                .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s2 -> {
-                    checkpoint.flag();
-                    phase1.complete();
-                }));
-
-        // phase 2 - set credentials
-
-        final Promise<String> phase2 = Promise.promise();
-
-        phase1.future().onSuccess(s1 -> {
-
-                getCredentialsManagementService().updateCredentials(tenantId, deviceId,
-                        List.of(pwdCredentials), Optional.empty(), NoopSpan.INSTANCE)
-                        .onComplete(ctx.succeeding(s2 -> {
-                            ctx.verify(() -> {
-                                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
-                                assertResourceVersion(s2);
-                            });
-                            checkpoint.flag();
-                            phase2.complete(s2.getResourceVersion().get());
-                        }));
-
-        });
-
-        // phase 3 - update with wrong version
-
-        phase2.future()
-            .compose(resourceVersion -> getCredentialsManagementService().updateCredentials(
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .compose(result -> getCredentialsManagementService().updateCredentials(
                     tenantId,
                     deviceId,
                     List.of(pwdCredentials),
-                    Optional.of("other_" + resourceVersion),
+                    Optional.empty(),
                     NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus());
-                checkpoint.flag();
-            })));
+            .compose(result -> {
+                ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
+                    assertResourceVersion(result);
+                });
+                final String resourceVersion = result.getResourceVersion()
+                        .map(res -> "other_" + res)
+                        .orElse("non-existing");
+                // update with wrong resource version
+                return getCredentialsManagementService().updateCredentials(
+                        tenantId,
+                        deviceId,
+                        List.of(pwdCredentials),
+                        Optional.of(resourceVersion),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

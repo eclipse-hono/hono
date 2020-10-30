@@ -41,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -105,11 +104,9 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
      */
     @Override
     public Future<Void> start() {
-        return createIndices()
-                .map(ok -> {
-                    LOG.debug("MongoDB credentials service started");
-                    return null;
-                });
+        return createIndices().onSuccess(ok -> {
+            LOG.info("MongoDB Credentials service started");
+        });
     }
 
     /**
@@ -281,33 +278,34 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
-    private CompositeFuture createIndices() {
+    private Future<Void> createIndices() {
+
         final String authIdKey = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
                 RegistryManagementConstants.FIELD_AUTH_ID);
         final String credentialsTypeKey = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
                 RegistryManagementConstants.FIELD_TYPE);
 
-        return CompositeFuture.all(
-                // index based on tenantId & deviceId
-                mongoDbCallExecutor.createCollectionIndex(
-                        config.getCollectionName(),
-                        new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
-                        new IndexOptions().unique(true),
-                        INDEX_CREATION_MAX_RETRIES),
-                // index based on tenantId, authId & type
-                mongoDbCallExecutor.createCollectionIndex(
-                        config.getCollectionName(),
-                        new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                                .put(authIdKey, 1)
-                                .put(credentialsTypeKey, 1),
-                        new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject()
-                                        .put(authIdKey, new JsonObject().put("$exists", true))
-                                        .put(credentialsTypeKey, new JsonObject().put("$exists", true))),
-                        INDEX_CREATION_MAX_RETRIES));
+        // index based on tenantId & deviceId
+        return mongoDbCallExecutor.createCollectionIndex(
+                config.getCollectionName(),
+                new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                        .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
+                new IndexOptions().unique(true),
+                INDEX_CREATION_MAX_RETRIES)
+
+            // index based on tenantId, authId & type
+            .compose(ok -> mongoDbCallExecutor.createCollectionIndex(
+                    config.getCollectionName(),
+                    new JsonObject()
+                            .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .put(authIdKey, 1)
+                            .put(credentialsTypeKey, 1),
+                    new IndexOptions().unique(true)
+                            .partialFilterExpression(new JsonObject()
+                                    .put(authIdKey, new JsonObject().put("$exists", true))
+                                    .put(credentialsTypeKey, new JsonObject().put("$exists", true))),
+                    INDEX_CREATION_MAX_RETRIES));
     }
 
     private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey) {

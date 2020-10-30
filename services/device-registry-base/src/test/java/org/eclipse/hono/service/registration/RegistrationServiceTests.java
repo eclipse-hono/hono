@@ -601,15 +601,13 @@ public interface RegistrationServiceTests {
     default void testUpdateDeviceFailsForNonMatchingResourceVersion(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
-        final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .map(response -> {
-                    ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
-                    register.flag();
-                    return response;
-                }).compose(rr -> {
-                    final String resourceVersion = rr.getResourceVersion().orElse(null);
+                .compose(response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+                    });
+                    final String resourceVersion = response.getResourceVersion().orElse("existing");
                     return getDeviceManagementService().updateDevice(
                             TENANT,
                             deviceId,
@@ -620,7 +618,7 @@ public interface RegistrationServiceTests {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
                     });
-                    register.flag();
+                    ctx.completeNow();
                 }));
     }
 

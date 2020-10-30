@@ -114,15 +114,15 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     @Override
     public Future<Void> start() {
 
-        final Promise<Void> startPromise = Promise.promise();
-        mongoDbCallExecutor.createCollectionIndex(
+        return mongoDbCallExecutor.createCollectionIndex(
                 config.getCollectionName(),
                 new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1)
                         .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
                 new IndexOptions().unique(true),
                 INDEX_CREATION_MAX_RETRIES)
-        .onComplete(startPromise);
-        return startPromise.future();
+            .onSuccess(ok -> {
+                LOG.info("MongoDB Registration service started");
+            });
     }
 
     @Override
