@@ -16,14 +16,12 @@ package org.eclipse.hono.adapter.client.command;
 import java.util.Objects;
 import java.util.function.Predicate;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
-import io.vertx.proton.ProtonHelper;
 
 /**
  * A wrapper around payload that has been sent by a device in
@@ -37,23 +35,29 @@ public final class CommandResponse {
     private static final Predicate<Integer> INVALID_STATUS_CODE = code ->
         code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
 
-    private final Message message;
+    private final String tenantId;
+    private final String deviceId;
+    private final Buffer payload;
+    private final String contentType;
+    private final int status;
+    private final String correlationId;
     private final String replyToId;
 
-    private CommandResponse(final String tenantId, final String deviceId, final Buffer payload,
-            final String contentType, final int status, final String correlationId, final String replyToId) {
-        message = ProtonHelper.message();
-        message.setCorrelationId(correlationId);
-        MessageHelper.setCreationTime(message);
-        MessageHelper.addTenantId(message, tenantId);
-        MessageHelper.addDeviceId(message, deviceId);
-        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, status);
-        MessageHelper.setPayload(message, contentType, payload);
-        this.replyToId = replyToId;
-    }
+    private CommandResponse(
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final int status,
+            final String correlationId,
+            final String replyToId) {
 
-    private CommandResponse(final Message message, final String replyToId) {
-        this.message = message;
+        this.tenantId = tenantId;
+        this.deviceId = deviceId;
+        this.payload = payload;
+        this.contentType = contentType;
+        this.status = status;
+        this.correlationId = correlationId;
         this.replyToId = replyToId;
     }
 
@@ -61,16 +65,16 @@ public final class CommandResponse {
      * Creates a response for a request ID.
      *
      * @param requestId The request ID of the command that this is the response for.
-     * @param tenantId The tenant ID of the device sending the response.
-     * @param deviceId The device ID of the device sending the response.
-     * @param payload The payload of the response.
-     * @param contentType The contentType of the response. May be {@code null} since it is not required.
+     * @param tenantId The tenant that the device sending the response belongs to.
+     * @param deviceId The ID of the device that the response originates from.
+     * @param payload The payload of the response or {@code null} if the response has no payload.
+     * @param contentType The contentType of the response or {@code null} if the response has no payload.
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
      * @throws NullPointerException if tenantId or deviceId is {@code null}.
      */
-    public static CommandResponse from(
+    public static CommandResponse fromRequestId(
             final String requestId,
             final String tenantId,
             final String deviceId,
@@ -93,11 +97,13 @@ public final class CommandResponse {
         } else {
             try {
                 final String replyToOptionsBitFlag = requestId.substring(0, 1);
-                final boolean addDeviceIdToReply = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
+                final boolean addDeviceIdToReply = Commands.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
                 return new CommandResponse(
-                        tenantId, deviceId, payload,
+                        tenantId,
+                        deviceId,
+                        payload,
                         contentType,
                         status,
                         requestId.substring(3, 3 + lengthStringOne), // correlation ID
@@ -110,49 +116,92 @@ public final class CommandResponse {
     }
 
     /**
-     * Creates a command response from a given message.
+     * Creates a response for a correlation ID.
      *
-     * @param message The command response message.
-     *
-     * @return The command response or {@code null} if message or any of correlationId, address and status is null or if
-     *         the status code is &lt; 200 or &gt;= 600.
-     * @throws NullPointerException if message is {@code null}.
+     * @param correlationId The correlation ID of the command that this is the response for.
+     * @param address The address of the response message.
+     * @param payload The payload of the response or {@code null} if the response has no payload.
+     * @param contentType The contentType of the response or {@code null} if the response has no payload.
+     * @param status The HTTP status code indicating the outcome of the command.
+     * @return The response or {@code null} if correlation ID is {@code null}, the address cannot be parsed,
+     *         the status is {@code null} or if the status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse from(final Message message) {
-        Objects.requireNonNull(message);
+    public static CommandResponse fromCorrelationId(
+            final String correlationId,
+            final String address,
+            final Buffer payload,
+            final String contentType,
+            final Integer status) {
 
-        final String correlationId = message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null;
-        final Integer status = MessageHelper.getStatus(message);
-
-        if (correlationId == null || message.getAddress() == null || status == null) {
+        if (correlationId == null || Strings.isNullOrEmpty(address) || status == null) {
             LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
-                    correlationId, message.getAddress(), status);
+                    correlationId, address, status);
             return null;
         } else if (INVALID_STATUS_CODE.test(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
-        } else {
-            try {
-                final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
-                MessageHelper.addTenantId(message, resource.getTenantId());
-                MessageHelper.addDeviceId(message, resource.getResourceId());
-
-                final String deviceId = resource.getResourceId();
-                final String pathWithoutBase = resource.getPathWithoutBase();
-                if (pathWithoutBase.length() < deviceId.length() + 3) {
-                    throw new IllegalArgumentException("invalid resource length");
-                }
-                // pathWithoutBase starts with deviceId/[bit flag]
-                final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
-                final boolean replyToContainedDeviceId = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
-                final String replyToId = pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
-                        replyToContainedDeviceId ? deviceId + "/" : "");
-                return new CommandResponse(message, replyToId);
-            } catch (NullPointerException | IllegalArgumentException e) {
-                LOG.debug("error creating CommandResponse", e);
-                return null;
-            }
         }
+
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(address);
+        final String tenantId = resource.getTenantId();
+        final String deviceId = resource.getResourceId();
+        if (tenantId == null || deviceId == null) {
+            LOG.debug("cannot create CommandResponse: invalid address, missing tenant and/or device identifier");
+            return null;
+        }
+        final String pathWithoutBase = resource.getPathWithoutBase();
+        if (pathWithoutBase.length() < deviceId.length() + 3) {
+            LOG.debug("cannot create CommandResponse: invalid address resource length");
+            return null;
+        }
+        try {
+            // pathWithoutBase starts with deviceId/[bit flag]
+            final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
+            final boolean replyToContainedDeviceId = Commands.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
+            final String replyToId = pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
+                    replyToContainedDeviceId ? deviceId + "/" : "");
+            return new CommandResponse(tenantId, deviceId, payload, contentType, status, correlationId, replyToId);
+        } catch (final NumberFormatException e) {
+            LOG.debug("error creating CommandResponse, invalid bit flag value", e);
+            return null;
+        }
+    }
+
+    /**
+     * Gets the type of this message's payload.
+     *
+     * @return The content type or {@code null} if the response has no
+     *         payload.
+     */
+    public String getContentType() {
+        return contentType;
+    }
+
+    /**
+     * Gets this message's payload.
+     *
+     * @return The payload or {@code null}.
+     */
+    public Buffer getPayload() {
+        return payload;
+    }
+
+    /**
+     * Gets the tenant that the device belongs to.
+     *
+     * @return The tenant identifier.
+     */
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * Gets the identifier of the device that the response originates from.
+     *
+     * @return The identifier.
+     */
+    public String getDeviceId() {
+        return deviceId;
     }
 
     /**
@@ -170,7 +219,7 @@ public final class CommandResponse {
      * @return The identifier or {@code null} if the request ID could not be parsed.
      */
     public String getCorrelationId() {
-        return (String) message.getCorrelationId();
+        return correlationId;
     }
 
     /**
@@ -180,16 +229,6 @@ public final class CommandResponse {
      * @return The status code.
      */
     public int getStatus() {
-        return MessageHelper.getStatus(message);
+        return status;
     }
-
-    /**
-     * Gets the AMQP 1.0 message representing this command response.
-     *
-     * @return The command response message.
-     */
-    public Message toMessage() {
-        return message;
-    }
-
 }

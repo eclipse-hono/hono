@@ -22,7 +22,11 @@ import java.util.Optional;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
+import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -36,7 +40,6 @@ import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -154,8 +157,9 @@ public abstract class AbstractProtocolAdapterApplication {
             }
         });
 
-        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory();
-        commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
+        final CommandConsumerFactory commandConsumerFactory = commandConsumerFactory(
+                commandTargetMapper,
+                new CommandHandlingAdapterInfoAccess() {
 
                     @Override
                     public Future<Void> setCommandHandlingAdapterInstance(
@@ -181,7 +185,7 @@ public abstract class AbstractProtocolAdapterApplication {
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
-        adapter.setDeviceConnectionClient(deviceConnectionClient);
+        adapter.setCommandRouterClient(deviceConnectionClient);
         adapter.setEventSender(downstreamSender());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
@@ -283,10 +287,22 @@ public abstract class AbstractProtocolAdapterApplication {
     /**
      * Creates a new factory for command consumers.
      *
+     * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
+     *            protocol adapter instance that can handle it.
+     * @param commandRoutingInfoAccess The component for setting and clearing information that maps a device to
+     *                                 a protocol adapter instance.
      * @return The factory.
      */
-    protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory() {
-        return ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection());
+    protected CommandConsumerFactory commandConsumerFactory(
+            final CommandTargetMapper commandTargetMapper,
+            final CommandHandlingAdapterInfoAccess commandRoutingInfoAccess) {
+
+        return new ProtonBasedCommandConsumerFactory(
+                HonoConnection.newConnection(vertx, config.command),
+                messageSamplerFactory,
+                protocolAdapterProperties,
+                commandTargetMapper,
+                commandRoutingInfoAccess);
     }
 
     /**
@@ -296,6 +312,18 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CommandTargetMapper commandTargetMapper() {
         return CommandTargetMapper.create(tracer);
+    }
+
+    /**
+     * Creates a new client for sending command response messages downstream.
+     *
+     * @return The client.
+     */
+    protected CommandResponseSender commandResponseSender() {
+        return new ProtonBasedCommandResponseSender(
+                HonoConnection.newConnection(vertx, config.command),
+                messageSamplerFactory,
+                protocolAdapterProperties);
     }
 
     /**

@@ -22,7 +22,12 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -31,14 +36,9 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -77,7 +77,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
 /**
@@ -103,9 +102,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private EventSender eventSender;
     private DeviceRegistrationClient registrationClient;
     private TenantClient tenantClient;
-    private DeviceConnectionClient deviceConnectionClient;
+    private CommandRouterClient commandRouterClient;
     private CredentialsClient credentialsClient;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
+    private CommandConsumerFactory commandConsumerFactory;
+    private CommandResponseSender commandResponseSender;
     private ConnectionLimitManager connectionLimitManager;
 
     private ConnectionEventProducer connectionEventProducer;
@@ -177,13 +177,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for accessing the Device Connection service.
+     * Sets the client to use for accessing the Device Connection or Command Router service.
      *
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    public final void setDeviceConnectionClient(final DeviceConnectionClient client) {
-        this.deviceConnectionClient = Objects.requireNonNull(client);
+    public final void setCommandRouterClient(final CommandRouterClient client) {
+        this.commandRouterClient = Objects.requireNonNull(client);
     }
 
     /**
@@ -327,22 +327,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory to use for creating clients to receive commands via the AMQP Messaging Network.
+     * Sets the factory to use for creating clients to receive commands.
      *
      * @param factory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
-    public final void setCommandConsumerFactory(final ProtocolAdapterCommandConsumerFactory factory) {
+    public final void setCommandConsumerFactory(final CommandConsumerFactory factory) {
         this.commandConsumerFactory = Objects.requireNonNull(factory);
     }
 
     /**
-     * Gets the factory used for creating clients to receive commands via the AMQP Messaging Network.
+     * Gets the factory used for creating clients to receive commands.
      *
      * @return The factory.
      */
-    public final ProtocolAdapterCommandConsumerFactory getCommandConsumerFactory() {
+    public final CommandConsumerFactory getCommandConsumerFactory() {
         return this.commandConsumerFactory;
+    }
+
+    /**
+     * Sets the client to use for sending command responses downstream.
+     *
+     * @param sender The client.
+     * @throws NullPointerException if client is {@code null}.
+     */
+    public final void setCommandResponseSender(final CommandResponseSender sender) {
+        this.commandResponseSender = Objects.requireNonNull(sender);
     }
 
     /**
@@ -410,8 +420,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (credentialsClient == null) {
             result.fail(new IllegalStateException("Credentials client must be set"));
         } else if (commandConsumerFactory == null) {
-            result.fail(new IllegalStateException("Command & Control client factory must be set"));
-        } else if (deviceConnectionClient == null) {
+            result.fail(new IllegalStateException("Command & Control consumer factory must be set"));
+        } else if (commandResponseSender == null) {
+            result.fail(new IllegalStateException("Command & Control response sender must be set"));
+        } else if (commandRouterClient == null) {
             result.fail(new IllegalStateException("Device Connection client must be set"));
         } else {
 
@@ -422,18 +434,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
             startServiceClient(credentialsClient, "Credentials service");
-            startServiceClient(deviceConnectionClient, "Device Connection service");
-
-            connectToService(
-                    commandConsumerFactory,
-                    "Command & Control",
-                    this::onCommandConnectionLost,
-                    this::onCommandConnectionEstablished)
-            .onComplete(c -> {
-                if (c.succeeded()) {
-                    onCommandConnectionEstablished(c.result());
-                }
-            });
+            startServiceClient(commandRouterClient, "Device Connection service");
+            startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
+            startServiceClient(commandResponseSender, "Command & Control response sender");
 
             doStart(result);
         }
@@ -478,8 +481,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(stopServiceClient(tenantClient));
         results.add(stopServiceClient(registrationClient));
         results.add(stopServiceClient(credentialsClient));
-        results.add(disconnectFromService(commandConsumerFactory));
-        results.add(stopServiceClient(deviceConnectionClient));
+        results.add(stopServiceClient(commandConsumerFactory));
+        results.add(stopServiceClient(commandRouterClient));
         results.add(stopServiceClient(eventSender));
         results.add(stopServiceClient(telemetrySender));
         return CompositeFuture.all(results);
@@ -498,17 +501,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         Objects.requireNonNull(client);
         return client.stop();
-    }
-
-    private Future<Void> disconnectFromService(final ConnectionLifecycle<?> connection) {
-
-        final Promise<Void> disconnectTracker = Promise.promise();
-        if (connection == null) {
-            disconnectTracker.complete();
-        } else {
-            connection.disconnect(disconnectTracker);
-        }
-        return disconnectTracker.future();
     }
 
     /**
@@ -879,7 +871,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      * @return Result of the receiver creation.
      */
-    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
+    protected final Future<CommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
@@ -897,27 +889,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Creates a link for sending a command response downstream.
-     *
-     * @param tenantId The tenant that the device belongs to from which
-     *                 the response has been received.
-     * @param replyId The command's reply-to-id.
-     * @return The sender.
-     */
-    protected final Future<CommandResponseSender> createCommandResponseSender(
-            final String tenantId,
-            final String replyId) {
-        return commandConsumerFactory.getCommandResponseSender(tenantId, replyId);
-    }
-
-    /**
      * Forwards a response message that has been sent by a device in reply to a
      * command to the sender of the command.
      * <p>
      * This method opens a new link for sending the response, tries to send the
      * response message and then closes the link again.
      *
-     * @param tenantId The tenant that the device belongs to.
      * @param response The response message.
      * @param context The currently active OpenTracing span. An implementation
      *         should use this as the parent for any span it creates for tracing
@@ -926,27 +903,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         the message. The link will be closed in any case.
      * @throws NullPointerException if any of the parameters other than context are {@code null}.
      */
-    protected final Future<ProtonDelivery> sendCommandResponse(
-            final String tenantId,
+    protected final Future<Void> sendCommandResponse(
             final CommandResponse response,
             final SpanContext context) {
 
-        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(response);
 
-        final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenantId,
-                response.getReplyToId());
-        return senderTracker
-                .compose(sender -> sender.sendCommandResponse(response, context))
-                .map(delivery -> {
-                    senderTracker.result().close(c -> {});
-                    return delivery;
-                }).recover(t -> {
-                    if (senderTracker.succeeded()) {
-                        senderTracker.result().close(c -> {});
-                    }
-                    return Future.failedFuture(t);
-                });
+        return commandResponseSender.sendCommandResponse(response, context);
     }
 
     /**
@@ -1062,7 +1025,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         final Future<String> gatewayIdFuture = getGatewayId(tenantId, deviceId, authenticatedDevice);
         return gatewayIdFuture
-                .compose(gwId -> deviceConnectionClient.setLastKnownGatewayForDevice(
+                .compose(gwId -> commandRouterClient.setLastKnownGatewayForDevice(
                         tenantId,
                         deviceId,
                         Optional.ofNullable(gatewayIdFuture.result()).orElse(deviceId),
@@ -1140,15 +1103,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
 
-        Optional.ofNullable(commandConsumerFactory)
-            .ifPresent(factory -> {
-                handler.register("connected-to-command-endpoint", 2000L, status -> {
-                    factory.isConnected()
-                        .onSuccess(connected -> status.tryComplete(Status.OK()))
-                        .onFailure(t -> status.tryComplete(Status.KO()));
-                });
-            });
-
+        if (commandConsumerFactory instanceof ServiceClient) {
+            ((ServiceClient) commandConsumerFactory).registerReadinessChecks(handler);
+        }
+        if (commandResponseSender instanceof ServiceClient) {
+            ((ServiceClient) commandResponseSender).registerReadinessChecks(handler);
+        }
         if (tenantClient instanceof ServiceClient) {
             ((ServiceClient) tenantClient).registerReadinessChecks(handler);
         }
@@ -1158,8 +1118,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (credentialsClient instanceof ServiceClient) {
             ((ServiceClient) credentialsClient).registerReadinessChecks(handler);
         }
-        if (deviceConnectionClient instanceof ServiceClient) {
-            ((ServiceClient) deviceConnectionClient).registerReadinessChecks(handler);
+        if (commandRouterClient instanceof ServiceClient) {
+            ((ServiceClient) commandRouterClient).registerReadinessChecks(handler);
         }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
@@ -1178,6 +1138,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         registerEventLoopBlockedCheck(handler);
+
+        if (commandConsumerFactory instanceof ServiceClient) {
+            ((ServiceClient) commandConsumerFactory).registerLivenessChecks(handler);
+        }
+        if (commandResponseSender instanceof ServiceClient) {
+            ((ServiceClient) commandResponseSender).registerLivenessChecks(handler);
+        }
         if (tenantClient instanceof ServiceClient) {
             ((ServiceClient) tenantClient).registerLivenessChecks(handler);
         }
@@ -1187,8 +1154,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (credentialsClient instanceof ServiceClient) {
             ((ServiceClient) credentialsClient).registerLivenessChecks(handler);
         }
-        if (deviceConnectionClient instanceof ServiceClient) {
-            ((ServiceClient) deviceConnectionClient).registerLivenessChecks(handler);
+        if (commandRouterClient instanceof ServiceClient) {
+            ((ServiceClient) commandRouterClient).registerLivenessChecks(handler);
         }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerLivenessChecks(handler);

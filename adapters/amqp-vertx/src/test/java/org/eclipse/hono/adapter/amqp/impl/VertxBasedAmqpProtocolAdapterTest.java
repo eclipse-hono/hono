@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -51,13 +52,13 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -471,7 +472,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
-            .thenReturn(Future.succeededFuture(mock(ProtocolAdapterCommandConsumer.class)));
+            .thenReturn(Future.succeededFuture(mock(CommandConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -498,7 +499,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAnEventSenderForAnyTenant();
 
         // and a device that wants to receive commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
@@ -593,7 +594,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         connectHandler.getValue().handle(deviceConnection);
 
         // that wants to receive commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
@@ -644,7 +645,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         connectHandler.getValue().handle(deviceConnection);
 
         // that wants to receive commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
                 .thenReturn(Future.succeededFuture(commandConsumer));
@@ -678,14 +679,13 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture(delivery));
+        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture());
         // which is enabled for the test tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an unauthenticated device publishes a command response
         final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
-                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
@@ -695,6 +695,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         message.setCorrelationId("correlation-id");
         message.setApplicationProperties(props);
 
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // THEN the adapter forwards the command response message downstream
@@ -723,15 +724,14 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any()))
-                .thenReturn(Future.succeededFuture(delivery));
+                .thenReturn(Future.succeededFuture());
         // which is enabled for the test tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an unauthenticated device publishes a command response
         final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
-                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
@@ -740,6 +740,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         message.setCorrelationId("correlation-id");
         message.setApplicationProperties(props);
 
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // THEN the adapter forwards the command response message downstream
@@ -767,7 +768,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery successfulDelivery = mock(ProtonDelivery.class);
         when(successfulDelivery.remotelySettled()).thenReturn(true);
         when(successfulDelivery.getRemoteState()).thenReturn(new Accepted());
-        testOneWayCommandOutcome(successfulDelivery, Accepted.class, ProcessingOutcome.FORWARDED);
+        testOneWayCommandOutcome(successfulDelivery, ctx -> verify(ctx).accept(), ProcessingOutcome.FORWARDED);
     }
 
     /**
@@ -781,7 +782,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
         when(unsuccessfulDelivery.remotelySettled()).thenReturn(true);
         when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
-        testOneWayCommandOutcome(unsuccessfulDelivery, Rejected.class, ProcessingOutcome.UNPROCESSABLE);
+        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).reject(any()), ProcessingOutcome.UNPROCESSABLE);
     }
 
     /**
@@ -795,7 +796,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
         when(unsuccessfulDelivery.remotelySettled()).thenReturn(true);
         when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
-        testOneWayCommandOutcome(unsuccessfulDelivery, Released.class, ProcessingOutcome.UNDELIVERABLE);
+        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).release(), ProcessingOutcome.UNDELIVERABLE);
     }
 
     /**
@@ -809,13 +810,13 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
         when(unsuccessfulDelivery.remotelySettled()).thenReturn(false);
         when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
-        testOneWayCommandOutcome(unsuccessfulDelivery, Released.class, ProcessingOutcome.UNDELIVERABLE);
+        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).release(), ProcessingOutcome.UNDELIVERABLE);
     }
 
     @SuppressWarnings("unchecked")
     private void testOneWayCommandOutcome(
-            final ProtonDelivery outcome,
-            final Class<? extends DeliveryState> expectedDeliveryState,
+            final ProtonDelivery deviceDisposition,
+            final Consumer<CommandContext> outcomeAssertion,
             final ProcessingOutcome expectedProcessingOutcome) {
 
         // GIVEN an AMQP adapter
@@ -827,23 +828,23 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an application sends a one-way command to the device
-        final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
-        final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final Buffer payload = Buffer.buffer("payload");
-        final Message message = getFakeMessage(commandAddress, payload, "text/plain", "commandToExecute");
-        final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
-        final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+
+        final CommandContext context = givenAOneWayCommandContext(
+                TEST_TENANT_ID,
+                TEST_DEVICE,
+                "commandToExecute",
+                "text/plain",
+                payload);
+
         adapter.onCommandReceived(tenantObject, deviceLink, context);
         // and the device settles it
         final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceLink).send(any(Message.class), deliveryUpdateHandler.capture());
-        deliveryUpdateHandler.getValue().handle(outcome);
+        deliveryUpdateHandler.getValue().handle(deviceDisposition);
 
-        // THEN the command message is settled on the receiver link
-        // with the same outcome
-        verify(commandDelivery).disposition(any(expectedDeliveryState), eq(true));
+        // THEN the command is handled according to the device's disposition update
+        outcomeAssertion.accept(context);
         // and the command has been reported according to the outcome
         verify(metrics).reportCommand(
                 eq(Direction.ONE_WAY),
@@ -1074,8 +1075,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
-        final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        givenACommandResponseSenderForAnyTenant();
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
@@ -1083,7 +1083,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device uploads a command response to the adapter
         final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
-                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
         final Buffer payload = Buffer.buffer("payload");
         final Message message = getFakeMessage(replyToAddress, payload);
         message.setCorrelationId("correlation-id");
@@ -1092,12 +1092,12 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ApplicationProperties props = new ApplicationProperties(propertyMap);
         message.setApplicationProperties(props);
 
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the adapter does not send the message (regardless of the delivery mode).
-                        verify(responseSender, never()).send(any(Message.class), any());
-                        verify(responseSender, never()).sendAndWaitForOutcome(any(Message.class), any());
+                        assertNoCommandResponseHasBeenSentDownstream();
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND notifies the device by sending back a REJECTED disposition
@@ -1131,14 +1131,13 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an application sends a one-way command to the device
-        final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
-        final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final Buffer payload = Buffer.buffer("payload");
-        final Message message = getFakeMessage(commandAddress, payload, "text/plain", "commandToExecute");
-        final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
-        final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        final CommandContext context = givenAOneWayCommandContext(
+                TEST_TENANT_ID,
+                TEST_DEVICE,
+                "commandToExecute",
+                "text/plain",
+                payload);
 
         // AND no delivery update is received from the device after sometime
         doAnswer(invocation -> {
@@ -1148,8 +1147,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
 
         adapter.onCommandReceived(tenantObject, deviceLink, context);
-        // THEN the adapter notifies the application by sending back a RELEASED disposition
-        verify(commandDelivery).disposition(any(Released.class), eq(true));
+        // THEN the adapter releases the command
+        verify(context).release();
     }
 
     /**

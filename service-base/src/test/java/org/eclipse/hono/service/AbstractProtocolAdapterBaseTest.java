@@ -25,8 +25,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,7 +33,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -43,10 +43,6 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -96,8 +92,9 @@ public class AbstractProtocolAdapterBaseTest {
     private CredentialsClient credentialsClient;
     private TelemetrySender telemetrySender;
     private EventSender eventSender;
-    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private DeviceConnectionClient deviceConnectionClient;
+    private CommandConsumerFactory commandConsumerFactory;
+    private CommandResponseSender commandResponseSender;
+    private CommandRouterClient commandRouterClient;
     private ConnectionEventProducer.Context connectionEventProducerContext;
 
     /**
@@ -121,11 +118,14 @@ public class AbstractProtocolAdapterBaseTest {
         eventSender = mock(EventSender.class);
         when(eventSender.start()).thenReturn(Future.succeededFuture());
 
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
 
-        deviceConnectionClient = mock(DeviceConnectionClient.class);
-        when(deviceConnectionClient.start()).thenReturn(Future.succeededFuture());
+        commandResponseSender = mock(CommandResponseSender.class);
+        when(commandResponseSender.start()).thenReturn(Future.succeededFuture());
+
+        commandRouterClient = mock(CommandRouterClient.class);
+        when(commandRouterClient.start()).thenReturn(Future.succeededFuture());
 
         connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
         when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(eventSender);
@@ -148,8 +148,9 @@ public class AbstractProtocolAdapterBaseTest {
 
     private void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCredentialsClient(credentialsClient);
-        adapter.setDeviceConnectionClient(deviceConnectionClient);
+        adapter.setCommandRouterClient(commandRouterClient);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
@@ -157,16 +158,12 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     private void givenAnAdapterConfiguredWithServiceClients(
-            final Handler<Void> startupHandler,
-            final Handler<Void> commandConnectionEstablishedHandler,
-            final Handler<Void> commandConnectionLostHandler) {
+            final Handler<Void> startupHandler) {
 
         adapter = newProtocolAdapter(
                 properties,
                 ADAPTER_NAME,
-                startupHandler,
-                commandConnectionEstablishedHandler,
-                commandConnectionLostHandler);
+                startupHandler);
         setCollaborators(adapter);
     }
 
@@ -205,9 +202,7 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an adapter configured with service clients
         // that can connect to the corresponding services
         final Handler<Void> startupHandler = mock(Handler.class);
-        final Handler<Void> commandConnectionHandler = mock(Handler.class);
-        final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
-        givenAnAdapterConfiguredWithServiceClients(startupHandler, commandConnectionHandler, commandConnectionLostHandler);
+        givenAnAdapterConfiguredWithServiceClients(startupHandler);
         // WHEN starting the adapter
         adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
             // THEN the service clients have connected
@@ -216,47 +211,9 @@ public class AbstractProtocolAdapterBaseTest {
             verify(tenantClient).start();
             verify(registrationClient).start();
             verify(credentialsClient).start();
-            verify(commandConsumerFactory).connect();
-            verify(commandConsumerFactory).addDisconnectListener(any(DisconnectListener.class));
-            verify(commandConsumerFactory).addReconnectListener(any(ReconnectListener.class));
+            verify(commandConsumerFactory).start();
+            verify(commandResponseSender).start();
             verify(startupHandler).handle(null);
-            // and the establishment of the command consumer factory's connection
-            // is signaled
-            verify(commandConnectionHandler).handle(null);
-            verify(commandConnectionLostHandler, never()).handle(null);
-
-            ctx.completeNow();
-        })));
-    }
-
-    /**
-     * Verifies that the <em>onCommandConnectionLost</em> and
-     * <em>onCommandConnectionEstablished</em> hooks are invoked
-     * when the command connection is re-established.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testCallbacksInvokedOnReconnect(final VertxTestContext ctx) {
-
-        // GIVEN an adapter connected to Hono services
-        final Handler<Void> commandConnectionEstablishedHandler = mock(Handler.class);
-        final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
-        givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
-        adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
-            final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
-            verify(commandConsumerFactory).addDisconnectListener(disconnectHandlerCaptor.capture());
-            final ArgumentCaptor<ReconnectListener<HonoConnection>> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
-            verify(commandConsumerFactory).addReconnectListener(reconnectHandlerCaptor.capture());
-            // WHEN the command connection is lost
-            disconnectHandlerCaptor.getValue().onDisconnect(mock(HonoConnection.class));
-            // THEN the onCommandConnectionLost hook is being invoked,
-            verify(commandConnectionLostHandler).handle(null);
-            // and when the connection is re-established
-            reconnectHandlerCaptor.getValue().onReconnect(mock(HonoConnection.class));
-            // the onCommandConnectionEstablished hook is being invoked
-            verify(commandConnectionEstablishedHandler, times(2)).handle(null);
 
             ctx.completeNow();
         })));
@@ -669,15 +626,6 @@ public class AbstractProtocolAdapterBaseTest {
             final ProtocolAdapterProperties props,
             final String typeName,
             final Handler<Void> startupHandler) {
-        return newProtocolAdapter(props, typeName, startupHandler, null, null);
-    }
-
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
-            final ProtocolAdapterProperties props,
-            final String typeName,
-            final Handler<Void> startupHandler,
-            final Handler<Void> commandConnectionEstablishedHandler,
-            final Handler<Void> commandConnectionLostHandler) {
 
         final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<>() {
 
@@ -710,20 +658,6 @@ public class AbstractProtocolAdapterBaseTest {
             protected void doStart(final Promise<Void> startPromise) {
                 startupHandler.handle(null);
                 startPromise.complete();
-            }
-
-            @Override
-            protected void onCommandConnectionEstablished(final HonoConnection connectedClient) {
-                if (commandConnectionEstablishedHandler != null) {
-                    commandConnectionEstablishedHandler.handle(null);
-                }
-            }
-
-            @Override
-            protected void onCommandConnectionLost(final HonoConnection commandConnection) {
-                if (commandConnectionLostHandler != null) {
-                    commandConnectionLostHandler.handle(null);
-                }
             }
         };
         result.setConfig(props);

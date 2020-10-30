@@ -18,7 +18,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -33,7 +38,6 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -115,18 +119,19 @@ public abstract class AbstractAdapterConfig {
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, adapterProperties);
         // look up client via bean factory in order to take advantage of conditional bean instantiation based
         // on config properties
-        final DeviceConnectionClient deviceConnectionClient = context.getBean(DeviceConnectionClient.class);
-        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(
+        final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
+        final CommandConsumerFactory commandConsumerFactory = commandConsumerFactory(
                 adapterProperties,
                 samplerFactory,
                 registrationClient,
-                deviceConnectionClient);
+                commandRouterClient);
 
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setCommandResponseSender(commandResponseSender(samplerFactory, adapterProperties));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient(samplerFactory, adapterProperties));
-        adapter.setDeviceConnectionClient(deviceConnectionClient);
+        adapter.setCommandRouterClient(commandRouterClient);
         adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
@@ -619,71 +624,97 @@ public abstract class AbstractAdapterConfig {
         return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
     }
 
-    ProtocolAdapterCommandConsumerFactory commandConsumerFactory(
+    CommandConsumerFactory commandConsumerFactory(
             final ProtocolAdapterProperties adapterProperties,
             final SendMessageSampler.Factory samplerFactory,
             final DeviceRegistrationClient registrationClient,
-            final DeviceConnectionClient deviceConnectionClient) {
+            final CommandRouterClient commandRouterClient) {
 
-        final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(getTracer());
+        if (commandRouterClient instanceof DeviceConnectionClient) {
 
-        commandTargetMapper.initialize(new CommandTargetMapperContext() {
+            final DeviceConnectionClient deviceConnectionClient = (DeviceConnectionClient) commandRouterClient;
+            final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(getTracer());
 
-            @Override
-            public Future<List<String>> getViaGateways(
-                    final String tenant,
-                    final String deviceId,
-                    final SpanContext context) {
+            commandTargetMapper.initialize(new CommandTargetMapperContext() {
 
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
+                @Override
+                public Future<List<String>> getViaGateways(
+                        final String tenant,
+                        final String deviceId,
+                        final SpanContext context) {
 
-                return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                        .map(RegistrationAssertion::getAuthorizedGateways);
-            }
+                    Objects.requireNonNull(tenant);
+                    Objects.requireNonNull(deviceId);
 
-            @Override
-            public Future<JsonObject> getCommandHandlingAdapterInstances(
-                    final String tenant,
-                    final String deviceId,
-                    final List<String> viaGateways,
-                    final SpanContext context) {
+                    return registrationClient.assertRegistration(tenant, deviceId, null, context)
+                            .map(RegistrationAssertion::getAuthorizedGateways);
+                }
 
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-                Objects.requireNonNull(viaGateways);
+                @Override
+                public Future<JsonObject> getCommandHandlingAdapterInstances(
+                        final String tenant,
+                        final String deviceId,
+                        final List<String> viaGateways,
+                        final SpanContext context) {
 
-                return deviceConnectionClient.getCommandHandlingAdapterInstances(
-                        tenant, deviceId, viaGateways, context);
-            }
-        });
+                    Objects.requireNonNull(tenant);
+                    Objects.requireNonNull(deviceId);
+                    Objects.requireNonNull(viaGateways);
 
-        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory =
-                ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection());
+                    return deviceConnectionClient.getCommandHandlingAdapterInstances(
+                            tenant, deviceId, viaGateways, context);
+                }
+            });
 
-        commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
+            return new ProtonBasedCommandConsumerFactory(
+                    commandConsumerConnection(),
+                    samplerFactory,
+                    adapterProperties,
+                    commandTargetMapper,
+                    new CommandHandlingAdapterInfoAccess() {
 
-                    @Override
-                    public Future<Void> setCommandHandlingAdapterInstance(
-                            final String tenant,
-                            final String deviceId,
-                            final String adapterInstanceId,
-                            final Duration lifespan,
-                            final SpanContext context) {
-                        return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
-                    }
+                        @Override
+                        public Future<Void> setCommandHandlingAdapterInstance(
+                                final String tenant,
+                                final String deviceId,
+                                final String adapterInstanceId,
+                                final Duration lifespan,
+                                final SpanContext context) {
+                            return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
+                        }
 
-                    @Override
-                    public Future<Void> removeCommandHandlingAdapterInstance(
-                            final String tenant,
-                            final String deviceId,
-                            final String adapterInstanceId,
-                            final SpanContext context) {
-                        return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
-                    }
-                });
+                        @Override
+                        public Future<Void> removeCommandHandlingAdapterInstance(
+                                final String tenant,
+                                final String deviceId,
+                                final String adapterInstanceId,
+                                final SpanContext context) {
+                            return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
+                        }
+                    });
+        } else {
+            throw new IllegalArgumentException("this adapter does not support the Command Router service yet");
+            // TODO add implementation based on Command Router service
+        }
+    }
 
-        return commandConsumerFactory;
+    /**
+     * Exposes a client for sending command response messages downstream.
+     *
+     * @param samplerFactory The sampler factory to use.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The client.
+     */
+    @Bean
+    @Scope("prototype")
+    public CommandResponseSender commandResponseSender(
+            final SendMessageSampler.Factory samplerFactory, 
+            final ProtocolAdapterProperties adapterConfig) {
+
+        return new ProtonBasedCommandResponseSender(
+                commandConsumerConnection(),
+                samplerFactory,
+                adapterConfig);
     }
 
     /**

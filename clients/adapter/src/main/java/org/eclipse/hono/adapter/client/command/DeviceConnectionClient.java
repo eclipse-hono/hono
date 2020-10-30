@@ -16,8 +16,6 @@ package org.eclipse.hono.adapter.client.command;
 import java.time.Duration;
 import java.util.List;
 
-import org.eclipse.hono.util.Lifecycle;
-
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -28,47 +26,7 @@ import io.vertx.core.json.JsonObject;
  * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">
  * Device Connection API specification</a> for a description of the result codes returned.
  */
-public interface DeviceConnectionClient extends Lifecycle {
-
-    /**
-     * Sets the given gateway as the last gateway that acted on behalf of the given device.
-     * <p>
-     * If a device connects directly instead of through a gateway, the device identifier itself is to be used as value
-     * for the <em>gatewayId</em> parameter.
-     *
-     * @param tenant The tenant that the device belongs to.
-     * @param deviceId The device id.
-     * @param gatewayId The gateway id (or the device id if the last message came from the device directly).
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            An implementation should use this as the parent for any span it creates for tracing
-     *            the execution of this operation.
-     * @return A future indicating whether the operation succeeded or not.
-     * @throws NullPointerException if tenant, device id or gateway id are {@code null}.
-     */
-    Future<Void> setLastKnownGatewayForDevice(String tenant, String deviceId, String gatewayId, SpanContext context);
-
-    /**
-     * Gets the gateway that last acted on behalf of the given device.
-     * <p>
-     * If no last known gateway has been set for the given device yet, a failed future with status <em>Not Found</em>
-     * is returned.
-     *
-     * @param tenant The tenant that the device belongs to.
-     * @param deviceId The device id.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            An implementation should use this as the parent for any span it creates for tracing
-     *            the execution of this operation.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with status 200 has been received from the device connection service.
-     *         In that case the value of the future will contain a <em>gateway-id</em> property with the
-     *         gateway id.
-     *         <p>
-     *         In case a status other then 200 is received, the future will fail with a
-     *         {@code org.eclipse.hono.client.ServiceInvocationException} containing the (error) status code returned by the service.
-     * @throws NullPointerException if tenant or device id are {@code null}.
-     */
-    Future<JsonObject> getLastKnownGatewayForDevice(String tenant, String deviceId, SpanContext context);
+public interface DeviceConnectionClient extends CommandRouterClient {
 
     /**
      * Sets the protocol adapter instance that handles commands for the given device.

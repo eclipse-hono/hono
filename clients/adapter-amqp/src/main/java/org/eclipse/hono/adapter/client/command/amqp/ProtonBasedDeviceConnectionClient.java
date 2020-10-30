@@ -38,7 +38,7 @@ import io.vertx.core.json.JsonObject;
 
 
 /**
- * A ProtonBasedDeviceConnectionClient.
+ * A vertx-proton based client for accessing Hono's <em>Device Connection</em> API.
  *
  */
 public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseClient<DeviceConnectionResult>
@@ -122,22 +122,8 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
 
     /**
      * {@inheritDoc}
-     */
-    @Override
-    public Future<JsonObject> getLastKnownGatewayForDevice(
-            final String tenant,
-            final String deviceId,
-            final SpanContext context) {
-
-        Objects.requireNonNull(tenant);
-        Objects.requireNonNull(deviceId);
-
-        return getOrCreateDeviceConnectionClient(tenant)
-                .compose(client -> client.getLastKnownGatewayForDevice(deviceId, context));
-    }
-
-    /**
-     * {@inheritDoc}
+     * <p>
+     * Simply delegates to {@link #registerCommandConsumer(String, String, String, Duration, SpanContext)}.
      */
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(
@@ -147,16 +133,32 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
             final Duration lifespan,
             final SpanContext context) {
 
-        Objects.requireNonNull(tenant);
+        return registerCommandConsumer(tenant, deviceId, adapterInstanceId, lifespan, context);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> registerCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final Duration lifespan,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return getOrCreateDeviceConnectionClient(tenant)
+        return getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, lifespan, context));
     }
 
     /**
      * {@inheritDoc}
+     * <p>
+     * Simply delegates to {@link #unregisterCommandConsumer(String, String, String, SpanContext)}.
      */
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(
@@ -165,11 +167,24 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
             final String adapterInstanceId,
             final SpanContext context) {
 
-        Objects.requireNonNull(tenant);
+        return unregisterCommandConsumer(tenant, deviceId, adapterInstanceId, context);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> unregisterCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return getOrCreateDeviceConnectionClient(tenant)
+        return getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context));
     }
 

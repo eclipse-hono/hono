@@ -35,12 +35,12 @@ import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
@@ -747,7 +747,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint, span), address)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        verify(sender).sendCommandResponse(any(), any());
+                        verify(sender).sendCommandResponse(any(CommandResponse.class), any());
                         // then it is forwarded successfully
                         verify(metrics).reportCommand(
                                 eq(MetricsTags.Direction.RESPONSE),
@@ -889,7 +889,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
         // WHEN a device subscribes to commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
@@ -933,7 +933,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
         // WHEN a device subscribes to commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
         when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any()))
                 .thenReturn(Future.succeededFuture(commandConsumer));
@@ -982,7 +982,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
@@ -1302,7 +1302,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         adapter.uploadMessage(newMqttContext(msg, mockEndpoint(), span),
                 ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
-                        Command.getRequestId("cmd123", "to", "deviceId"))),
+                        Commands.getRequestId("cmd123", "to", "deviceId"))),
                 msg)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {

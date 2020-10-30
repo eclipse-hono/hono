@@ -30,9 +30,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
@@ -76,7 +76,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedHttpProtocolAdapter}.
@@ -90,7 +89,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     private static final String ADAPTER_TYPE = "http";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private ProtocolAdapterCommandConsumer commandConsumer;
+    private CommandConsumer commandConsumer;
     private Vertx vertx;
     private Context context;
     private HttpAdapterMetrics metrics;
@@ -121,7 +120,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         createClientFactories();
         prepareClients();
 
-        commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
@@ -434,7 +433,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // GIVEN an adapter with a downstream application attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenACommandResponseSenderForAnyTenant(outcome);
 
         // WHEN a device publishes a command response
@@ -461,7 +460,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 any());
 
         // until the command response has been accepted by the application
-        outcome.complete(mock(ProtonDelivery.class));
+        outcome.complete();
         verify(response).setStatusCode(202);
         verify(response).end();
         verify(metrics).reportCommand(
@@ -587,7 +586,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     public void testUploadCommandResponseFailsForRejectedOutcome() {
 
         // GIVEN an adapter with a downstream application attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenACommandResponseSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
 
@@ -680,7 +679,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
             return 0;
         });
         // and the creation of the command consumer completes at a later point
-        final Promise<ProtocolAdapterCommandConsumer> commandConsumerPromise = Promise.promise();
+        final Promise<CommandConsumer> commandConsumerPromise = Promise.promise();
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
                 .thenReturn(commandConsumerPromise.future());
 
