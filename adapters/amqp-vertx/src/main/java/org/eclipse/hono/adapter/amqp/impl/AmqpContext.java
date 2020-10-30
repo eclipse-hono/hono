@@ -12,7 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp.impl;
 
+import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -107,6 +109,18 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Optional<Duration> getTimeToLive() {
+        if (endpoint == EndpointType.EVENT && message.getTtl() > 0) {
+            // make sure it is at least one second
+            return Optional.of(Duration.ofMillis(message.getTtl() >= 1000L ? message.getTtl() : 1000L));
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Gets the delivery state.
      *
      * @return The delivery state of this context.
@@ -174,5 +188,15 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
     @Override
     public QoS getRequestedQos() {
         return isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The value of the message's <em>to</em> property.
+     */
+    @Override
+    public String getOrigAddress() {
+        return message.getAddress();
     }
 }

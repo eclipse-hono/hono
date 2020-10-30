@@ -22,6 +22,7 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -527,15 +528,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Invoked before the message is sent to the downstream peer.
      * <p>
-     * Subclasses may override this method in order to customize the message before it is sent, e.g. adding custom
-     * properties.
-     * <p>
-     * This default implementation does nothing.
+     * Subclasses may override this method in order to customize the
+     * properties used for sending the message, e.g. adding custom properties.
      *
-     * @param downstreamMessage The message that will be sent downstream.
-     * @param context The context representing the request to be processed.
+     * @param messageProperties The properties that are being added to the downstream message.
+     * @param ctx The routing context.
      */
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final CoapContext context) {
+    protected void customizeDownstreamMessageProperties(final Map<String, Object> messageProperties, final CoapContext ctx) {
+        // this default implementation does nothing
     }
 
     @Override
@@ -634,7 +634,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         return doUploadMessage(
                 Objects.requireNonNull(context),
-                context.isConfirmable(),
                 getTelemetrySender(context.getOriginDevice().getTenantId()),
                 MetricsTags.EndpointType.TELEMETRY);
     }
@@ -654,7 +653,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         if (context.isConfirmable()) {
             return doUploadMessage(
                     context,
-                    true,
                     getEventSender(context.getOriginDevice().getTenantId()),
                     MetricsTags.EndpointType.EVENT);
         } else {
@@ -670,15 +668,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
      * @param context The context representing the request to be processed.
-     * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
-     *            the sent.
      * @param senderTracker hono message sender tracker
      * @param endpoint message destination endpoint
      * @return A succeeded future containing the CoAP status code that has been returned to the device.
      */
     private Future<ResponseCode> doUploadMessage(
             final CoapContext context,
-            final boolean waitForOutcome,
             final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
@@ -695,7 +690,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final String gatewayId = context.getGatewayId();
             final String tenantId = context.getOriginDevice().getTenantId();
             final String deviceId = context.getOriginDevice().getDeviceId();
-            final MetricsTags.QoS qos = waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE;
+            final MetricsTags.QoS qos = context.isConfirmable() ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE;
 
             final Span currentSpan = TracingHelper
                     .buildChildSpan(tracer, context.getTracingContext(),
@@ -746,22 +741,26 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
             return CompositeFuture.join(senderTracker, commandConsumerTracker)
             .compose(ok -> {
-                final DownstreamSender sender = senderTracker.result();
-                final Integer ttd = Optional.ofNullable(commandConsumerTracker.result())
+
+                final Map<String, Object> props = getDownstreamMessageProperties(context);
+                Optional.ofNullable(commandConsumerTracker.result())
                         .map(c -> ttdTracker.result())
-                        .orElse(null);
-                final Message downstreamMessage = newMessage(
-                        context.getRequestedQos(),
+                        .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
+                props.put(MessageHelper.APP_PROPERTY_QOS, context.getRequestedQos().ordinal());
+                customizeDownstreamMessageProperties(props, context);
+                final Message downstreamMessage = MessageHelper.newMessage(
                         ResourceIdentifier.from(endpoint.getCanonicalName(), tenantId, deviceId),
-                        "/" + context.getExchange().getRequestOptions().getUriPathString(),
                         contentType,
                         payload,
                         tenantTracker.result(),
-                        tokenTracker.result(),
-                        ttd);
-                customizeDownstreamMessage(downstreamMessage, context);
+                        props,
+                        tokenTracker.result().getDefaults(),
+                        getConfig().isDefaultsEnabled(),
+                        getConfig().isJmsVendorPropsEnabled());
 
-                if (waitForOutcome) {
+                final DownstreamSender sender = senderTracker.result();
+
+                if (context.isConfirmable()) {
                     // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
                     context.startAcceptTimer(vertx, tenantTracker.result(), getConfig().getTimeoutToAck());
                     return CompositeFuture.all(
@@ -774,6 +773,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             responseReady.future())
                             .mapEmpty();
                 }
+
             }).map(proceed -> {
                 // downstream message sent and (if ttd was set) command was received or ttd has timed out
                 final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null

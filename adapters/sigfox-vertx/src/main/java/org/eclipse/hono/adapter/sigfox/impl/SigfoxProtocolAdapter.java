@@ -14,10 +14,10 @@
 package org.eclipse.hono.adapter.sigfox.impl;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -178,8 +178,8 @@ public final class SigfoxProtocolAdapter
     }
 
     @Override
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final HttpContext ctx) {
-        super.customizeDownstreamMessage(downstreamMessage, ctx);
+    protected void customizeDownstreamMessageProperties(final Map<String, Object> properties, final HttpContext ctx) {
+        super.customizeDownstreamMessageProperties(properties, ctx);
 
         // pass along all query parameters that start with 'sigfox.'
         // If a key has multiple values, then only one of them will be mapped.
@@ -188,7 +188,7 @@ public final class SigfoxProtocolAdapter
             if (entry.getKey() == null || !entry.getKey().startsWith(SIGFOX_PROPERTY_PREFIX)) {
                 continue;
             }
-            downstreamMessage.getApplicationProperties().getValue().put(entry.getKey(), entry.getValue());
+            properties.put(entry.getKey(), entry.getValue());
         }
 
     }

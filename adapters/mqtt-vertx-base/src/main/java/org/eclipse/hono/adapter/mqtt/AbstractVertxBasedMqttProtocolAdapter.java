@@ -14,7 +14,6 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -1148,8 +1147,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .start();
 
             final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
-            final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
-                    targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
+            final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
+                    targetAddress.getTenantId(),
+                    targetAddress.getResourceId(),
+                    ctx.authenticatedDevice(),
+                    currentSpan.context());
             final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
             final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
                                     isAdapterEnabled(tenantTracker.result()),
@@ -1212,28 +1214,33 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(tenantObject.getTenantId(), deviceId,
-                ctx.authenticatedDevice(), currentSpan.context());
+        final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
+                tenantObject.getTenantId(),
+                deviceId,
+                ctx.authenticatedDevice(),
+                currentSpan.context());
         final Future<?> tenantValidationTracker = CompositeFuture.all(
                 isAdapterEnabled(tenantObject),
                 checkMessageLimit(tenantObject, payload.length(), currentSpan.context()));
 
         return CompositeFuture.all(tokenTracker, tenantValidationTracker, senderTracker).compose(ok -> {
 
-            final DownstreamSender sender = senderTracker.result();
-            final Message downstreamMessage = newMessage(
-                    ctx.getRequestedQos(),
+            final Map<String, Object> props = getDownstreamMessageProperties(ctx);
+            props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
+            addRetainAnnotation(ctx, props, currentSpan);
+            customizeDownstreamMessageProperties(props, ctx);
+
+            final Message downstreamMessage = MessageHelper.newMessage(
                     ResourceIdentifier.from(endpoint.getCanonicalName(), tenantObject.getTenantId(), deviceId),
-                    ctx.message().topicName(),
                     ctx.contentType(),
                     payload,
                     tenantObject,
-                    tokenTracker.result(),
-                    null,
-                    EndpointType.EVENT.equals(endpoint) ? getTimeToLive(ctx.propertyBag()) : null);
+                    props,
+                    tokenTracker.result().getDefaults(),
+                    getConfig().isDefaultsEnabled(),
+                    getConfig().isJmsVendorPropsEnabled());
 
-            addRetainAnnotation(ctx, downstreamMessage, currentSpan);
-            customizeDownstreamMessage(downstreamMessage, ctx);
+            final DownstreamSender sender = senderTracker.result();
 
             if (ctx.isAtLeastOnce()) {
                 return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
@@ -1352,15 +1359,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     /**
      * Invoked before the message is sent to the downstream peer.
      * <p>
-     * This default implementation does nothing.
-     * <p>
-     * Subclasses may override this method in order to customize the message before it is sent, e.g. adding custom
-     * properties.
+     * Subclasses may override this method in order to customize the
+     * properties used for sending the message, e.g. adding custom properties.
      *
-     * @param downstreamMessage The message that will be sent downstream.
-     * @param ctx The context in which the MQTT message has been published.
+     * @param messageProperties The properties that are being added to the
+     *                          downstream message.
+     * @param ctx The message processing context.
      */
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final MqttContext ctx) {
+    protected void customizeDownstreamMessageProperties(final Map<String, Object> messageProperties, final MqttContext ctx) {
+        // this default implementation does nothing
     }
 
     /**
@@ -1524,36 +1531,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 getMicrometerSample(commandContext));
     }
 
-    /**
-     * Gets the <em>time-to-live</em> duration from the given property bag object.
-     *
-     * @param propertyBag The property bag object.
-     * @return The <em>time-to-live</em> duration or {@code null} if
-     * <ul>
-     *     <li>the given property bag object is {@code null.}</li>
-     *     <li>no property with id {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} exists.</li>
-     *     <li>the contained value cannot be parsed as a Long.</li>
-     *     <li>the contained value is negative.</li>
-     * </ul>
-     */
-    protected final Duration getTimeToLive(final PropertyBag propertyBag) {
-        try {
-            return Optional.ofNullable(propertyBag)
-                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
-                    .map(Long::parseLong)
-                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
-                    .orElse(null);
-        } catch (final NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static void addRetainAnnotation(final MqttContext context, final Message downstreamMessage,
+    private static void addRetainAnnotation(
+            final MqttContext context,
+            final Map<String, Object> props,
             final Span currentSpan) {
 
         if (context.message().isRetain()) {
             currentSpan.log("device wants to retain message");
-            MessageHelper.addAnnotation(downstreamMessage, MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.TRUE);
+            props.put(MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.TRUE);
         }
     }
 

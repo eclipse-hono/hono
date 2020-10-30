@@ -17,7 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.mock;
@@ -26,6 +25,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -265,12 +266,11 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
     public void customizeDownstreamMessageAddsProviderNameToMessage() {
 
         final HttpContext httpContext = newHttpContext();
-        final Message messageMock = mock(Message.class);
+        final Map<String, Object> props = new HashMap<>();
 
-        adapter.customizeDownstreamMessage(messageMock, httpContext);
+        adapter.customizeDownstreamMessageProperties(props, httpContext);
 
-        verify(messageMock).setApplicationProperties(argThat(properties -> TEST_PROVIDER
-                .equals(properties.getValue().get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER))));
+        assertThat(props).contains(Map.entry(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER));
     }
 
     private LoraProvider getLoraProviderMock() {
@@ -293,9 +293,13 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final LoraMetaData metaData = new LoraMetaData();
         metaData.setFunctionPort(TEST_FUNCTION_PORT);
 
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.uri()).thenReturn("/lora");
+
         final RoutingContext context = mock(RoutingContext.class);
         when(context.getBody()).thenReturn(Buffer.buffer());
         when(context.user()).thenReturn(new DeviceUser(TEST_TENANT_ID, TEST_GATEWAY_ID));
+        when(context.request()).thenReturn(request);
         when(context.response()).thenReturn(mock(HttpServerResponse.class));
         when(context.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER)).thenReturn(TEST_PROVIDER);
         when(context.get(LoraConstants.APP_PROPERTY_META_DATA)).thenReturn(metaData);

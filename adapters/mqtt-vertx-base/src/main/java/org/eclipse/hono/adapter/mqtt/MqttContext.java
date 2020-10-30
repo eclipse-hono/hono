@@ -13,16 +13,18 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -45,21 +47,22 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private Sample timer;
     private MetricsTags.EndpointType endpoint;
     private PropertyBag propertyBag;
+    private Optional<Duration> timeToLive = Optional.empty();
 
     private MqttContext(final Span span, final Device authenticatedDevice) {
         super(span, authenticatedDevice);
     }
 
-    @Override
-    public QoS getRequestedQos() {
-
-        switch (message.qosLevel()) {
-            case AT_LEAST_ONCE:
-                return QoS.AT_LEAST_ONCE;
-            case AT_MOST_ONCE:
-                return QoS.AT_MOST_ONCE;
-            default:
-                return null;
+    private static Optional<Duration> determineTimeToLive(final PropertyBag properties) {
+        try {
+            final Duration timeToLive = Optional.ofNullable(properties)
+                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
+                    .map(Long::parseLong)
+                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
+                    .orElse(null);
+            return Optional.ofNullable(timeToLive);
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
         }
     }
 
@@ -106,18 +109,33 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         result.message = publishedMessage;
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
-        if (!Strings.isNullOrEmpty(publishedMessage.topicName())) {
-            Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
-                    .ifPresentOrElse(propertyBag -> {
-                        result.topic = propertyBag.topicWithoutPropertyBag();
-                        result.propertyBag = propertyBag;
-                        // sets the content type using the corresponding value from the property bag
-                        Optional.ofNullable(propertyBag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
-                                .ifPresent(contentType -> result.contentType = contentType);
-                    }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
-            result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
-        }
+        Optional.ofNullable(publishedMessage.topicName())
+            .map(PropertyBag::fromTopic)
+            .ifPresent(bag -> {
+                result.propertyBag = bag;
+                result.topic = bag.topicWithoutPropertyBag();
+                result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
+                // set the content-type using the corresponding value from the property bag
+                result.contentType = Optional.ofNullable(bag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
+                        .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                if (result.endpoint == EndpointType.EVENT) {
+                    result.timeToLive = determineTimeToLive(bag);
+                }
+            });
         return result;
+    }
+
+    @Override
+    public QoS getRequestedQos() {
+
+        switch (message.qosLevel()) {
+            case AT_LEAST_ONCE:
+                return QoS.AT_LEAST_ONCE;
+            case AT_MOST_ONCE:
+                return QoS.AT_MOST_ONCE;
+            default:
+                return null;
+        }
     }
 
     /**
@@ -152,8 +170,13 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * Gets the content type of the message payload.
+     * <p>
+     * The type determined from the message topic's property
+     * bag, if if contains a content type.
+     * Otherwise, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
+     * content type} is used.
      *
-     * @return The type or {@code null} if the content type is unknown.
+     * @return The type of the message payload.
      */
     public String contentType() {
         return contentType;
@@ -161,11 +184,15 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * Sets the content type of the message payload.
+     * <p>
+     * This overwrites the content type determined from the message topic's
+     * property bag (if any).
      *
-     * @param contentType The type or {@code null} if the content type is unknown.
+     * @param contentType The type.
+     * @throws NullPointerException if contentType is {@code null}.
      */
     public void setContentType(final String contentType) {
-        this.contentType = contentType;
+        this.contentType = Objects.requireNonNull(contentType);
     }
 
     /**
@@ -262,5 +289,30 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      */
     public Sample getTimer() {
         return timer;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The message topic.
+     */
+    @Override
+    public String getOrigAddress() {
+        return message.topicName();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return An optional containing the <em>time-to-live</em> duration or an empty optional if
+     * <ul>
+     *     <li>the topic has no property bag</li>
+     *     <li>the property bag does not contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} property</li>
+     *     <li>the contained value cannot be parsed as a positive long</li>
+     * </ul>
+     */
+    @Override
+    public Optional<Duration> getTimeToLive() {
+        return timeToLive;
     }
 }

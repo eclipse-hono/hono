@@ -15,6 +15,7 @@ package org.eclipse.hono.service.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -101,6 +102,8 @@ public class HttpContextTest {
      */
     @Test
     public void testGetTimeToLiveUsesHeader() {
+
+        when(httpServerRequest.uri()).thenReturn("/event");
         final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds
@@ -110,7 +113,7 @@ public class HttpContextTest {
                 .thenReturn(String.valueOf(timeToLive));
 
         // THEN the get method returns this value
-        assertEquals(timeToLive, httpContext.getTimeToLive().toSeconds());
+        assertEquals(timeToLive, httpContext.getTimeToLive().get().toSeconds());
     }
 
     /**
@@ -119,6 +122,8 @@ public class HttpContextTest {
      */
     @Test
     public void testGetTimeToLiveUsesQueryParam() {
+
+        when(httpServerRequest.uri()).thenReturn("/event");
         final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds
@@ -128,17 +133,17 @@ public class HttpContextTest {
                 .thenReturn(String.valueOf(timeToLive));
 
         // THEN the get method returns this value
-        assertEquals(timeToLive, httpContext.getTimeToLive().toSeconds());
+        assertEquals(timeToLive, httpContext.getTimeToLive().get().toSeconds());
     }
 
     /**
      * Verifies that the {@link HttpContext#getTimeToLive()} method
-     * returns {@code null} if {@link Constants#HEADER_TIME_TO_LIVE} is neither
+     * returns an empty Optional if {@link Constants#HEADER_TIME_TO_LIVE} is neither
      * provided as query parameter nor as header.
      */
     @Test
-    public void testGetTimeToLiveReturnsNullIfNotSpecified() {
+    public void testGetTimeToLiveReturnsEmptyOptionalIfNotSpecified() {
         final HttpContext httpContext = HttpContext.from(routingContext);
-        assertNull(httpContext.getTimeToLive());
+        assertTrue(httpContext.getTimeToLive().isEmpty());
     }
 }
