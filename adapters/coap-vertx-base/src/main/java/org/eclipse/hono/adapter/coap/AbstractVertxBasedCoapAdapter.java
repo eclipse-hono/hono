@@ -634,7 +634,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         return doUploadMessage(
                 Objects.requireNonNull(context),
-                context.isConfirmable(),
                 getTelemetrySender(context.getOriginDevice().getTenantId()),
                 MetricsTags.EndpointType.TELEMETRY);
     }
@@ -654,7 +653,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         if (context.isConfirmable()) {
             return doUploadMessage(
                     context,
-                    true,
                     getEventSender(context.getOriginDevice().getTenantId()),
                     MetricsTags.EndpointType.EVENT);
         } else {
@@ -670,15 +668,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
      * @param context The context representing the request to be processed.
-     * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
-     *            the sent.
      * @param senderTracker hono message sender tracker
      * @param endpoint message destination endpoint
      * @return A succeeded future containing the CoAP status code that has been returned to the device.
      */
     private Future<ResponseCode> doUploadMessage(
             final CoapContext context,
-            final boolean waitForOutcome,
             final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 

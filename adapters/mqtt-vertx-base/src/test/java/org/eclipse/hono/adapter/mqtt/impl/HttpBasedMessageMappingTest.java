@@ -24,6 +24,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
@@ -100,7 +102,7 @@ public class HttpBasedMessageMappingTest {
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         messageMapping.mapMessage(context, targetAddress, new RegistrationAssertion("gateway"))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -126,7 +128,7 @@ public class HttpBasedMessageMappingTest {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
         messageMapping.mapMessage(context, targetAddress, assertion)
@@ -169,8 +171,13 @@ public class HttpBasedMessageMappingTest {
 
         when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
 
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"), "text");
+        final String topic = String.format(
+                "%s/?content-type=%s",
+                TelemetryConstants.TELEMETRY_ENDPOINT,
+                URLEncoder.encode("text/plain", StandardCharsets.UTF_8));
+
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, topic);
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
         messageMapping.mapMessage(context, targetAddress, assertion)
@@ -191,25 +198,30 @@ public class HttpBasedMessageMappingTest {
         final ArgumentCaptor<MultiMap> headersCaptor = ArgumentCaptor.forClass(MultiMap.class);
         verify(httpRequest).putHeaders(headersCaptor.capture());
         final MultiMap addedHeaders = headersCaptor.getValue();
-        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals("telemetry"));
-        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text"));
+        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals(topic));
+        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text/plain"));
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice, final String contentType) {
+    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
         final MqttContext mqttContext = MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
-        mqttContext.setContentType(contentType);
         return mqttContext;
     }
 
-    private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {
+    private static MqttPublishMessage newMessage(
+            final MqttQoS qosLevel,
+            final String topic) {
         return newMessage(qosLevel, topic, Buffer.buffer("test"));
     }
 
-    private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic, final Buffer payload) {
+    private static MqttPublishMessage newMessage(
+            final MqttQoS qosLevel,
+            final String topic,
+            final Buffer payload) {
+
         final MqttPublishMessage message = mock(MqttPublishMessage.class);
         when(message.qosLevel()).thenReturn(qosLevel);
-        when(message.topicName()).thenReturn(topic);
         when(message.payload()).thenReturn(payload);
+        when(message.topicName()).thenReturn(topic);
         return message;
     }
 }

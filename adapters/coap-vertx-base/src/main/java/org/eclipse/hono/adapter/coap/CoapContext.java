@@ -435,8 +435,6 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     @Override
     public String getOrigAddress() {
-        return Optional.ofNullable(exchange.getRequestOptions().getUriPathString())
-                .map(address -> "/" + address)
-                .orElse(null);
+        return "/" + exchange.getRequestOptions().getUriPathString();
     }
 }

@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,7 +44,11 @@ public class PropertyBagTest {
      */
     @Test
     public void verifyWhenNoPropertyBagIsSet() {
-        assertNull(PropertyBag.fromTopic("event/tenant/device"));
+        final PropertyBag bag = PropertyBag.fromTopic("event/tenant/device");
+        assertThat(bag.getPropertiesIterator()).isExhausted();
+        assertThat(bag.topicWithoutPropertyBag().getEndpoint()).isEqualTo("event");
+        assertThat(bag.topicWithoutPropertyBag().getTenantId()).isEqualTo("tenant");
+        assertThat(bag.topicWithoutPropertyBag().getResourceId()).isEqualTo("device");
     }
 
     /**
@@ -52,7 +56,12 @@ public class PropertyBagTest {
      */
     @Test
     public void verifyTopicWithSpecialCharacters() {
-        assertNull(PropertyBag.fromTopic("event/tenant/device/segment1?param=value/segment2/"));
+        final PropertyBag bag = PropertyBag.fromTopic("event/tenant/device/segment1?param=value/segment2/");
+        assertThat(bag.getPropertiesIterator()).isExhausted();
+        assertThat(bag.topicWithoutPropertyBag().getEndpoint()).isEqualTo("event");
+        assertThat(bag.topicWithoutPropertyBag().getTenantId()).isEqualTo("tenant");
+        assertThat(bag.topicWithoutPropertyBag().getResourceId()).isEqualTo("device");
+        assertThat(bag.topicWithoutPropertyBag().getPathWithoutBase()).isEqualTo("device/segment1?param=value/segment2");
     }
 
     /**

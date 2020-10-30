@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,17 +36,24 @@ public final class PropertyBag {
     }
 
     /**
-     * Creates a property bag object from the given topic by retrieving 
-     * all the properties from the <em>property-bag</em>.
+     * Creates a property bag object from a topic.
+     * <p>
+     * The properties are retrieved from the topic by means of parsing
+     * the topic after the last occurrence of <em>/?</em> as an HTTP query
+     * string.
      *
      * @param topic The topic that the message has been published to.
-     * @return The property bag object or {@code null} if no 
-     *         <em>property-bag</em> is set in the topic.
+     * @return The property bag (which may be empty) or {@code null} if the
+     *         topic has zero length.
      * @throws NullPointerException if topic is {@code null}.
      */
     public static PropertyBag fromTopic(final String topic) {
 
         Objects.requireNonNull(topic);
+
+        if (topic.isEmpty()) {
+            return null;
+        }
 
         final int index = topic.lastIndexOf("/?");
         if (index > 0) {
@@ -60,7 +67,8 @@ public final class PropertyBag {
 
             return new PropertyBag(ResourceIdentifier.fromString(topic.substring(0, index)), properties);
         }
-        return null;
+        // topic does not contain property bag
+        return new PropertyBag(ResourceIdentifier.fromString(topic), MultiMap.caseInsensitiveMultiMap());
     }
 
     /**

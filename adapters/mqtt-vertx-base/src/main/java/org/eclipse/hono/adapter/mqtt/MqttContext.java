@@ -25,12 +25,10 @@ import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -49,21 +47,22 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private Sample timer;
     private MetricsTags.EndpointType endpoint;
     private PropertyBag propertyBag;
+    private Optional<Duration> timeToLive = Optional.empty();
 
     private MqttContext(final Span span, final Device authenticatedDevice) {
         super(span, authenticatedDevice);
     }
 
-    @Override
-    public QoS getRequestedQos() {
-
-        switch (message.qosLevel()) {
-            case AT_LEAST_ONCE:
-                return QoS.AT_LEAST_ONCE;
-            case AT_MOST_ONCE:
-                return QoS.AT_MOST_ONCE;
-            default:
-                return null;
+    private static Optional<Duration> determineTimeToLive(final PropertyBag properties) {
+        try {
+            final Duration timeToLive = Optional.ofNullable(properties)
+                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
+                    .map(Long::parseLong)
+                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
+                    .orElse(null);
+            return Optional.ofNullable(timeToLive);
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
         }
     }
 
@@ -110,18 +109,33 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         result.message = publishedMessage;
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
-        if (!Strings.isNullOrEmpty(publishedMessage.topicName())) {
-            Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
-                    .ifPresentOrElse(propertyBag -> {
-                        result.topic = propertyBag.topicWithoutPropertyBag();
-                        result.propertyBag = propertyBag;
-                        // sets the content type using the corresponding value from the property bag
-                        Optional.ofNullable(propertyBag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
-                                .ifPresent(contentType -> result.contentType = contentType);
-                    }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
-            result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
-        }
+        Optional.ofNullable(publishedMessage.topicName())
+            .map(PropertyBag::fromTopic)
+            .ifPresent(bag -> {
+                result.propertyBag = bag;
+                result.topic = bag.topicWithoutPropertyBag();
+                result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
+                // set the content-type using the corresponding value from the property bag
+                result.contentType = Optional.ofNullable(bag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
+                        .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                if (result.endpoint == EndpointType.EVENT) {
+                    result.timeToLive = determineTimeToLive(bag);
+                }
+            });
         return result;
+    }
+
+    @Override
+    public QoS getRequestedQos() {
+
+        switch (message.qosLevel()) {
+            case AT_LEAST_ONCE:
+                return QoS.AT_LEAST_ONCE;
+            case AT_MOST_ONCE:
+                return QoS.AT_MOST_ONCE;
+            default:
+                return null;
+        }
     }
 
     /**
@@ -157,8 +171,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     /**
      * Gets the content type of the message payload.
      * <p>
-     * The type is the value set via {@link #setContentType(String)}.
-     * Otherwise, the type is determined from the message topic's property
+     * The type determined from the message topic's property
      * bag, if if contains a content type.
      * Otherwise, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
      * content type} is used.
@@ -166,21 +179,20 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * @return The type of the message payload.
      */
     public String contentType() {
-        if (contentType != null) {
-            return contentType;
-        }
-        return Optional.ofNullable(propertyBag)
-                .flatMap(bag -> Optional.ofNullable((String) bag.getProperty(HttpHeaders.CONTENT_TYPE.toString())))
-                .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+        return contentType;
     }
 
     /**
      * Sets the content type of the message payload.
+     * <p>
+     * This overwrites the content type determined from the message topic's
+     * property bag (if any).
      *
-     * @param contentType The type or {@code null} if the content type is unknown.
+     * @param contentType The type.
+     * @throws NullPointerException if contentType is {@code null}.
      */
     public void setContentType(final String contentType) {
-        this.contentType = contentType;
+        this.contentType = Objects.requireNonNull(contentType);
     }
 
     /**
@@ -301,20 +313,6 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      */
     @Override
     public Optional<Duration> getTimeToLive() {
-
-        if (endpoint != EndpointType.EVENT) {
-            return Optional.empty();
-        }
-
-        try {
-            final Duration timeToLive = Optional.ofNullable(propertyBag)
-                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
-                    .map(Long::parseLong)
-                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
-                    .orElse(null);
-            return Optional.ofNullable(timeToLive);
-        } catch (final NumberFormatException e) {
-            return Optional.empty();
-        }
+        return timeToLive;
     }
 }
