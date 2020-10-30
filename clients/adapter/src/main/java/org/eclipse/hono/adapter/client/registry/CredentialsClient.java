@@ -45,7 +45,7 @@ public interface CredentialsClient extends Lifecycle {
      *         defined in <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
-     *         Otherwise, the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant ID, type or auth ID are {@code null}.
      */
@@ -72,7 +72,7 @@ public interface CredentialsClient extends Lifecycle {
      *         defined in <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
-     *         Otherwise, the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant ID, type or auth ID are {@code null}.
      */

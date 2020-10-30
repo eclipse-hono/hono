@@ -34,7 +34,7 @@ public interface CommandResponseSender extends Lifecycle {
      *         <p>
      *         The future will succeed if the response has been sent downstream.
      *         <p>
-     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         The future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         if the response could not be sent.
      * @throws NullPointerException if response is {@code null}.
      */

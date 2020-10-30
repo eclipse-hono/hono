@@ -44,7 +44,7 @@ public interface TenantClient extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
      *         Get Tenant Information</a>.
      *         <p>
-     *         Otherwise, the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant ID is {@code null}.
      */
@@ -69,7 +69,7 @@ public interface TenantClient extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
      *         Get Tenant Information</a>.
      *         <p>
-     *         Otherwise, the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if subject DN is {@code null}.
      */

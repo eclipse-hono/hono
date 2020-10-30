@@ -36,10 +36,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-core</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
@@ -156,9 +152,6 @@
             <Require-Capability>
               osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${maven.compiler.target}))"
             </Require-Capability>
-            <Embed-Dependency>
-              hono-client-core;inline=true,
-            </Embed-Dependency>
           </instructions>
         </configuration>
       </plugin>

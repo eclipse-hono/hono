@@ -47,7 +47,7 @@ public interface TelemetrySender extends Lifecycle {
      *         The future will be succeeded if the data has been sent downstream according to
      *         the delivery semantics indicated by the qos parameter.
      *         <p>
-     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data
+     *         The future will be failed with a {@code org.eclipse.hono.client.ServerErrorException} if the data
      *         could not be sent. The error code contained in the exception indicates the
      *         cause of the failure.
      * @throws NullPointerException if tenant, device, qos or contentType are {@code null}.

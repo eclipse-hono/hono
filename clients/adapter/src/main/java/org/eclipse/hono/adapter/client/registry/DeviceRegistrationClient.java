@@ -44,7 +44,7 @@ public interface DeviceRegistrationClient extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
-     *         Otherwise, the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant or device ID are {@code null}.
      */
@@ -71,7 +71,7 @@ public interface DeviceRegistrationClient extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
-     *         Otherwise, the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
      * @throws NullPointerException if tenant, device or gateway ID are {@code null}.
      */
