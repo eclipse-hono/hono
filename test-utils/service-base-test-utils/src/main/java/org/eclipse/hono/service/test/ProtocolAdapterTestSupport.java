@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.CommandResponse;
@@ -42,8 +43,6 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.EventConstants;
@@ -82,7 +81,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected RegistrationClientFactory registrationClientFactory;
     protected TenantClient tenantClient;
     protected TelemetrySender telemetrySender;
-    protected TenantClientFactory tenantClientFactory;
+
+    private TenantClient createTenantClientMock() {
+        final TenantClient client = mock(TenantClient.class);
+        when(client.start()).thenReturn(Future.succeededFuture());
+        when(client.stop()).thenReturn(Future.succeededFuture());
+        return client;
+    }
 
     private TelemetrySender createTelemetrySenderMock() {
         final TelemetrySender sender = mock(TelemetrySender.class);
@@ -149,14 +154,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             return null;
         }).when(registrationClientFactory).disconnect(any(Handler.class));
 
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(tenantClientFactory).disconnect(any(Handler.class));
+        this.tenantClient = createTenantClientMock();
 
         commandTargetMapper = mock(CommandTargetMapper.class);
         this.telemetrySender = createTelemetrySenderMock();
@@ -181,19 +179,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      */
     protected void createClients() {
 
-        if (tenantClientFactory == null
-                || registrationClientFactory == null) {
+        if (registrationClientFactory == null) {
             throw new IllegalStateException("factories are not initialized");
         }
 
-        tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString())).thenAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        });
         when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         registrationClient = mock(RegistrationClient.class);
         when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
@@ -220,7 +212,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setTelemetrySender(telemetrySender);
-        adapter.setTenantClientFactory(tenantClientFactory);
+        adapter.setTenantClient(tenantClient);
     }
 
     /**
@@ -325,8 +317,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * when checking their connection status.
      */
     protected void forceClientMocksToDisconnected() {
-        when(tenantClientFactory.isConnected())
-            .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(registrationClientFactory.isConnected())
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(credentialsClientFactory.isConnected())

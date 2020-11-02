@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
@@ -45,8 +46,6 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -115,7 +114,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private TelemetrySender telemetrySender;
     private EventSender eventSender;
     private RegistrationClientFactory registrationClientFactory;
-    private TenantClientFactory tenantClientFactory;
+    private TenantClient tenantClient;
     private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
@@ -132,8 +131,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
         @Override
-        public TenantClientFactory getTenantClientFactory() {
-            return AbstractProtocolAdapterBase.this.tenantClientFactory;
+        public TenantClient getTenantClient() {
+            return AbstractProtocolAdapterBase.this.tenantClient;
         }
 
     };
@@ -176,33 +175,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory to use for creating a client for the Tenant service.
+     * Sets the client to use for accessing the Tenant service.
      *
-     * @param factory The factory.
-     * @throws NullPointerException if the factory is {@code null}.
+     * @param client The client.
+     * @throws NullPointerException if the client is {@code null}.
      */
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Autowired
-    public final void setTenantClientFactory(final TenantClientFactory factory) {
-        this.tenantClientFactory = Objects.requireNonNull(factory);
+    public final void setTenantClient(final TenantClient client) {
+        this.tenantClient = Objects.requireNonNull(client);
     }
 
     /**
-     * Gets the factory used for creating a client for the Tenant service.
-     *
-     * @return The factory.
-     */
-    public final TenantClientFactory getTenantClientFactory() {
-        return tenantClientFactory;
-    }
-
-    /**
-     * Gets a client for interacting with the Tenant service.
+     * Gets the client used for accessing the Tenant service.
      *
      * @return The client.
      */
-    protected final Future<TenantClient> getTenantClient() {
-        return getTenantClientFactory().getOrCreateTenantClient();
+    public final TenantClient getTenantClient() {
+        return tenantClient;
     }
 
     /**
@@ -485,7 +475,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
-        } else if (tenantClientFactory == null) {
+        } else if (tenantClient == null) {
             result.fail(new IllegalStateException("Tenant client factory must be set"));
         } else if (telemetrySender == null) {
             result.fail(new IllegalStateException("Telemetry message sender must be set"));
@@ -505,7 +495,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             startServiceClient(telemetrySender, "Telemetry");
             startServiceClient(eventSender, "Event");
-            connectToService(tenantClientFactory, "Tenant service");
+            startServiceClient(tenantClient, "Tenant service");
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
             if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
@@ -566,7 +556,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
-        results.add(disconnectFromService(tenantClientFactory));
+        results.add(stopServiceClient(tenantClient));
         results.add(disconnectFromService(registrationClientFactory));
         results.add(disconnectFromService(credentialsClientFactory));
         results.add(disconnectFromService(commandConsumerFactory));
@@ -984,10 +974,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         @SuppressWarnings("rawtypes")
         final List<Future> connections = new ArrayList<>();
-        connections.add(Optional.ofNullable(tenantClientFactory)
-                .map(client -> client.isConnected())
-                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set"))));
         connections.add(Optional.ofNullable(registrationClientFactory)
                 .map(client -> client.isConnected())
                 .orElseGet(() -> Future.failedFuture(new ServerErrorException(
@@ -1280,7 +1266,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<TenantObject> getTenantConfiguration(final String tenantId, final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
-        return getTenantClient().compose(client -> client.get(tenantId, context));
+        return getTenantClient().get(tenantId, context);
     }
 
     /**
@@ -1315,6 +1301,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 return null;
             });
         });
+        if (tenantClient instanceof ServiceClient) {
+            ((ServiceClient) tenantClient).registerReadinessChecks(handler);
+        }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
         }
@@ -1332,6 +1321,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         registerEventLoopBlockedCheck(handler);
+        if (tenantClient instanceof ServiceClient) {
+            ((ServiceClient) tenantClient).registerLivenessChecks(handler);
+        }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerLivenessChecks(handler);
         }

@@ -22,10 +22,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -51,7 +50,6 @@ class HonoEventConnectionEventProducerTest {
     private HonoEventConnectionEventProducer producer;
     private ConnectionEventProducer.Context context;
     private EventSender sender;
-    private TenantClientFactory tenantClientFactory;
     private TenantClient tenantClient;
     private TenantObject tenant;
 
@@ -61,8 +59,6 @@ class HonoEventConnectionEventProducerTest {
     @BeforeEach
     void setUp() {
         tenantClient = mock(TenantClient.class);
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
         sender = mock(EventSender.class);
         when(sender.sendEvent(
                 any(TenantObject.class),
@@ -73,7 +69,7 @@ class HonoEventConnectionEventProducerTest {
                 any())).thenReturn(Future.succeededFuture());
         context = mock(ConnectionEventProducer.Context.class);
         when(context.getMessageSenderClient()).thenReturn(sender);
-        when(context.getTenantClientFactory()).thenReturn(tenantClientFactory);
+        when(context.getTenantClient()).thenReturn(tenantClient);
         producer = new HonoEventConnectionEventProducer();
     }
 
@@ -84,7 +80,7 @@ class HonoEventConnectionEventProducerTest {
         final Device authenticatedDevice = new Device(tenantId, "device");
         tenant = new TenantObject(tenantId, true)
                 .setResourceLimits(new ResourceLimits().setMaxTtl(500));
-        when(tenantClient.get(anyString())).thenReturn(Future.succeededFuture(tenant));
+        when(tenantClient.get(anyString(), any())).thenReturn(Future.succeededFuture(tenant));
 
         producer.connected(context, "device-internal-id", "custom-adapter", authenticatedDevice, new JsonObject())
             .onComplete(ctx.succeeding(ok -> {

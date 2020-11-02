@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
@@ -30,7 +32,6 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -375,7 +376,7 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.tenant")
     @Bean
     public RequestResponseClientConfigProperties tenantServiceClientConfig() {
-        final RequestResponseClientConfigProperties config = Optional.ofNullable(getTenantClientFactoryConfigDefaults())
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getTenantClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         setConfigServerRoleIfUnknown(config, "Tenant");
         setDefaultConfigNameIfNotSet(config);
@@ -391,21 +392,29 @@ public abstract class AbstractAdapterConfig {
      *
      * @return The properties.
      */
-    protected RequestResponseClientConfigProperties getTenantClientFactoryConfigDefaults() {
+    protected RequestResponseClientConfigProperties getTenantClientConfigDefaults() {
         return new RequestResponseClientConfigProperties();
     }
 
     /**
-     * Exposes a factory for creating clients for the <em>Tenant</em> API as a Spring bean.
+     * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @return The factory.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The client.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
-    public TenantClientFactory tenantClientFactory(final SendMessageSampler.Factory samplerFactory) {
-        return TenantClientFactory.create(tenantServiceConnection(), tenantCacheProvider(), samplerFactory);
+    public TenantClient tenantClient(
+            final SendMessageSampler.Factory samplerFactory, 
+            final ProtocolAdapterProperties adapterConfig) {
+
+        return new ProtonBasedTenantClient(
+                tenantServiceConnection(),
+                samplerFactory,
+                adapterConfig,
+                tenantCacheProvider());
     }
 
     /**

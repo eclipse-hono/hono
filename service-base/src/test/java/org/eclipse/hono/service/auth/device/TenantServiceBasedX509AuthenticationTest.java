@@ -29,8 +29,7 @@ import java.security.cert.X509Certificate;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -57,11 +56,9 @@ class TenantServiceBasedX509AuthenticationTest {
         cert = (X509Certificate) factory.generateCertificate(new FileInputStream(ssc.certificatePath()));
         certPath = new Certificate[] { cert };
 
-        final TenantClientFactory tcf = mock(TenantClientFactory.class);
         tenantClient = mock(TenantClient.class);
-        when(tcf.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        underTest = new TenantServiceBasedX509Authentication(tcf);
+        underTest = new TenantServiceBasedX509Authentication(tenantClient);
     }
 
     /**

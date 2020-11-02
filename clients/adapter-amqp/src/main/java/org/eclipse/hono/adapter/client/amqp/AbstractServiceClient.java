@@ -81,7 +81,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      * Simply delegates to {@link HonoConnection#addDisconnectListener(DisconnectListener)}.
      */
     @Override
-    public void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
+    public final void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
         connection.addDisconnectListener(listener);
     }
 
@@ -91,7 +91,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      * Simply delegates to {@link HonoConnection#addReconnectListener(ReconnectListener)}.
      */
     @Override
-    public void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
+    public final void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
         connection.addReconnectListener(listener);
     }
 
