@@ -87,12 +87,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     private TelemetrySender createTelemetrySenderMock() {
         final TelemetrySender sender = mock(TelemetrySender.class);
         when(sender.start()).thenReturn(Future.succeededFuture());
+        when(sender.stop()).thenReturn(Future.succeededFuture());
         return sender;
     }
 
     private EventSender createEventSenderMock() {
         final EventSender sender = mock(EventSender.class);
         when(sender.start()).thenReturn(Future.succeededFuture());
+        when(sender.stop()).thenReturn(Future.succeededFuture());
         return sender;
     }
 
