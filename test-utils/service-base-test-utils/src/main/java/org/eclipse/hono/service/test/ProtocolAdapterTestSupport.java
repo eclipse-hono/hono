@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
@@ -40,8 +41,6 @@ import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -49,7 +48,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.mockito.ArgumentCaptor;
 
@@ -58,7 +56,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -77,13 +74,19 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected DeviceConnectionClientFactory deviceConnectionClientFactory;
     protected EventSender eventSender;
     protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    protected RegistrationClient registrationClient;
-    protected RegistrationClientFactory registrationClientFactory;
+    protected DeviceRegistrationClient registrationClient;
     protected TenantClient tenantClient;
     protected TelemetrySender telemetrySender;
 
     private TenantClient createTenantClientMock() {
         final TenantClient client = mock(TenantClient.class);
+        when(client.start()).thenReturn(Future.succeededFuture());
+        when(client.stop()).thenReturn(Future.succeededFuture());
+        return client;
+    }
+
+    private DeviceRegistrationClient createDeviceRegistrationClientMock() {
+        final DeviceRegistrationClient client = mock(DeviceRegistrationClient.class);
         when(client.start()).thenReturn(Future.succeededFuture());
         when(client.stop()).thenReturn(Future.succeededFuture());
         return client;
@@ -145,16 +148,8 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             return null;
         }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
 
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(registrationClientFactory).disconnect(any(Handler.class));
-
         this.tenantClient = createTenantClientMock();
+        this.registrationClient = createDeviceRegistrationClientMock();
 
         commandTargetMapper = mock(CommandTargetMapper.class);
         this.telemetrySender = createTelemetrySenderMock();
@@ -179,7 +174,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      */
     protected void createClients() {
 
-        if (registrationClientFactory == null) {
+        if (registrationClient == null) {
             throw new IllegalStateException("factories are not initialized");
         }
 
@@ -187,16 +182,12 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        registrationClient = mock(RegistrationClient.class);
-        when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
+        when(registrationClient.assertRegistration(anyString(), anyString(), any(), (SpanContext) any()))
                 .thenAnswer(invocation -> {
-                    final String deviceId = invocation.getArgument(0);
-                    final JsonObject regAssertion = new JsonObject()
-                            .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+                    final String deviceId = invocation.getArgument(1);
+                    final RegistrationAssertion regAssertion = new RegistrationAssertion(deviceId);
                     return Future.succeededFuture(regAssertion);
                 });
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
-            .thenReturn(Future.succeededFuture(registrationClient));
     }
 
     /**
@@ -210,7 +201,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setEventSender(eventSender);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
         adapter.setTenantClient(tenantClient);
     }
@@ -317,8 +308,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * when checking their connection status.
      */
     protected void forceClientMocksToDisconnected() {
-        when(registrationClientFactory.isConnected())
-            .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(credentialsClientFactory.isConnected())
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(commandConsumerFactory.isConnected())

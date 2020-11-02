@@ -17,7 +17,9 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
@@ -29,7 +31,6 @@ import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -243,8 +244,8 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.registration")
     @Bean
-    public RequestResponseClientConfigProperties registrationClientFactoryConfig() {
-        final RequestResponseClientConfigProperties config = Optional.ofNullable(getRegistrationClientFactoryConfigDefaults())
+    public RequestResponseClientConfigProperties registrationClientConfig() {
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getRegistrationClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         setConfigServerRoleIfUnknown(config, "Device Registration");
         setDefaultConfigNameIfNotSet(config);
@@ -253,28 +254,36 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
-     * via {@link #registrationClientFactoryConfig()}.
+     * via {@link #registrationClientConfig()}.
      * <p>
      * This method returns an empty set of properties by default. Subclasses may override this method to set specific
      * properties.
      *
      * @return The properties.
      */
-    protected RequestResponseClientConfigProperties getRegistrationClientFactoryConfigDefaults() {
+    protected RequestResponseClientConfigProperties getRegistrationClientConfigDefaults() {
         return new RequestResponseClientConfigProperties();
     }
 
     /**
-     * Exposes a factory for creating clients for the <em>Device Registration</em> API as a Spring bean.
+     * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @return The factory.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public RegistrationClientFactory registrationClientFactory(final SendMessageSampler.Factory samplerFactory) {
-        return RegistrationClientFactory.create(registrationServiceConnection(), registrationCacheProvider(), samplerFactory);
+    public DeviceRegistrationClient registrationClient(
+            final SendMessageSampler.Factory samplerFactory, 
+            final ProtocolAdapterProperties adapterConfig) {
+
+        return new ProtonBasedDeviceRegistrationClient(
+                registrationServiceConnection(),
+                samplerFactory,
+                adapterConfig,
+                registrationCacheProvider());
     }
 
     /**
@@ -286,7 +295,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public HonoConnection registrationServiceConnection() {
-        return HonoConnection.newConnection(vertx(), registrationClientFactoryConfig());
+        return HonoConnection.newConnection(vertx(), registrationClientConfig());
     }
 
     /**
@@ -298,7 +307,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public CacheProvider registrationCacheProvider() {
-        return newCaffeineCache(registrationClientFactoryConfig());
+        return newCaffeineCache(registrationClientConfig());
     }
 
     /**

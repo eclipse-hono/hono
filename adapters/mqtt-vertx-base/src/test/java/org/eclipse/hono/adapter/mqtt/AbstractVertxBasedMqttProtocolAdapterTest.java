@@ -387,7 +387,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "9999")));
         // but for which no registration information is available
-        when(registrationClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
+        when(registrationClient.assertRegistration(anyString(), eq("9999"), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
                         HttpURLConnection.HTTP_NOT_FOUND, "device unknown or disabled")));
 
@@ -553,7 +553,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         givenATelemetrySenderForAnyTenant();
 
         // WHEN an unknown device publishes a telemetry message
-        when(registrationClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
+        when(registrationClient.assertRegistration(anyString(), eq("unknown"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         final MqttEndpoint endpoint = mockEndpoint();

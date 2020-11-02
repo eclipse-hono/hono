@@ -23,7 +23,9 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
@@ -35,7 +37,6 @@ import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.quarkus.CaffeineBasedExpiringValueCache;
@@ -127,7 +128,7 @@ public class Application {
         adapter.setEventSender(newDownstreamSender());
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setMetrics(metrics);
-        adapter.setRegistrationClientFactory(registrationClientFactory());
+        adapter.setRegistrationClient(registrationClient());
         adapter.setTelemetrySender(newDownstreamSender());
         adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
@@ -178,11 +179,12 @@ public class Application {
     }
 
     @Produces
-    RegistrationClientFactory registrationClientFactory() {
-        return RegistrationClientFactory.create(
+    DeviceRegistrationClient registrationClient() {
+        return new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(vertx, config.registration),
-                newCaffeineCache(config.registration.getResponseCacheMinSize(), config.registration.getResponseCacheMaxSize()),
-                metrics);
+                metrics,
+                config.mqtt,
+                newCaffeineCache(config.registration.getResponseCacheMinSize(), config.registration.getResponseCacheMaxSize()));
     }
 
     @Produces

@@ -277,8 +277,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // WHEN an unknown device that supposedly belongs to that tenant publishes a telemetry message
         // with a TTD value set
-        when(registrationClient.assertRegistration(eq("unknown-device"), any(), any(SpanContext.class))).thenReturn(
-                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        when(registrationClient.assertRegistration(eq("my-tenant"), eq("unknown-device"), any(), any(SpanContext.class)))
+            .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
@@ -289,7 +289,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // THEN the device gets a 404
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_NOT_FOUND);
-        verify(registrationClient).assertRegistration(eq("unknown-device"), any(), any(SpanContext.class));
+        verify(registrationClient).assertRegistration(eq("my-tenant"), eq("unknown-device"), any(), any(SpanContext.class));
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and no Command consumer has been created for the device
@@ -561,7 +561,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(ctx.getAuthenticatedDevice()).thenReturn(new DeviceUser("tenant", "9999"));
 
         // but for which no registration information is available
-        when(registrationClient.assertRegistration((String) any(), (String) any(), (SpanContext) any()))
+        when(registrationClient.assertRegistration(anyString(), anyString(), any(), any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                         "cannot publish data for device of other tenant")));
 
