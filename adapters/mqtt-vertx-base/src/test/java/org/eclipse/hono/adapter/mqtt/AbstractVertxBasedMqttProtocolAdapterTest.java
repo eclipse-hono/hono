@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -34,13 +35,11 @@ import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
@@ -54,8 +53,8 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -84,7 +83,6 @@ import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttTopicSubscription;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.mqtt.messages.MqttSubscribeMessage;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedMqttProtocolAdapter}.
@@ -137,11 +135,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
         createClients();
-
-        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
-                .thenReturn(Future.succeededFuture(mock(DownstreamSender.class)));
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
-                .thenReturn(Future.succeededFuture(mock(DownstreamSender.class)));
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -646,7 +639,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // GIVEN an adapter with a downstream event consumer
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
         testUploadQoS1MessageSendsPubAckOnSuccess(
                 outcome,
@@ -668,7 +661,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // GIVEN an adapter with a downstream telemetry consumer
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenATelemetrySenderForAnyTenant(outcome);
 
         testUploadQoS1MessageSendsPubAckOnSuccess(
@@ -682,7 +675,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     }
 
     private void testUploadQoS1MessageSendsPubAckOnSuccess(
-            final Promise<ProtonDelivery> outcome,
+            final Promise<Void> outcome,
             final EndpointType type,
             final BiConsumer<AbstractVertxBasedMqttProtocolAdapter<?>, MqttContext> upload) {
 
@@ -711,7 +704,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 any());
 
         // until the message has been settled and accepted
-        outcome.complete(mock(ProtonDelivery.class));
+        outcome.complete();
         verify(endpoint).publishAcknowledge(5555555);
         verify(metrics).reportTelemetry(
                 eq(type),
@@ -776,7 +769,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // GIVEN an adapter with a downstream event consumer
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event
@@ -843,11 +836,15 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                     // THEN the device has received a PUBACK
                     verify(endpoint).publishAcknowledge(5555555);
                     // and the message has been sent downstream
-                    final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
-                    verify(downstreamSender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
                     // including the "retain" annotation
-                    assertThat(MessageHelper.getAnnotation(msgCaptor.getValue(), MessageHelper.ANNOTATION_X_OPT_RETAIN,
-                            Boolean.class)).isTrue();
+                    verify(telemetrySender).sendTelemetry(
+                            argThat(tenant -> tenant.getTenantId().equals("my-tenant")),
+                            argThat(assertion -> assertion.getDeviceId().equals("4712")),
+                            eq(QoS.AT_LEAST_ONCE),
+                            anyString(),
+                            any(),
+                            argThat(props -> props.get(MessageHelper.ANNOTATION_X_OPT_RETAIN).equals(Boolean.TRUE)),
+                            any());
                     verify(metrics).reportTelemetry(
                             eq(MetricsTags.EndpointType.TELEMETRY),
                             eq("my-tenant"),
@@ -1348,40 +1345,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the TTL value of the amqp message is 30 seconds.
-                        assertEventHasBeenSentDownstream("tenant", "device", null, 30_000L);
-                    });
-                    ctx.completeNow();
-                }));
-    }
-
-    /**
-     * Verifies that the TTL for a downstream event is limited by the <em>max-ttl</em> specified for a tenant, if the
-     * given <em>time-to-live</em> duration in the <em>property-bag</em> exceeds the <em>max-ttl</em> value.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void verifyEventMessageLimitsTtlToMaxValue(final VertxTestContext ctx) {
-        // Given the maximum ttl as 10 seconds for the given tenant.
-        final TenantObject myTenantConfig = TenantObject.from("tenant", true)
-                .setResourceLimits(new ResourceLimits().setMaxTtl(10L));
-        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
-        // Given an adapter
-        givenAnAdapter(properties);
-        givenAnEventSenderForAnyTenant();
-
-        // WHEN a device publishes an event message with a TTL value of 30 seconds.
-        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
-        when(msg.topicName()).thenReturn("e/tenant/device/?hono-ttl=30&param2=value2");
-        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        adapter.uploadEventMessage(
-                newMqttContext(msg, mockEndpoint(), span),
-                "tenant",
-                "device",
-                Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the TTL value of the amqp message is 10 seconds.
-                        assertEventHasBeenSentDownstream("tenant", "device", null, 10_000L);
+                        assertEventHasBeenSentDownstream("tenant", "device", null, 30L);
                     });
                     ctx.completeNow();
                 }));

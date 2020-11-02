@@ -12,8 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import org.eclipse.hono.client.DownstreamSenderFactory;
-
 /**
  * A connection event producer based on the Hono <em>Event API</em>.
  */
@@ -23,7 +21,7 @@ public final class HonoEventConnectionEventProducer extends AbstractMessageSende
      * Create a new <em>connection event producer</em> based on the Hono <em>Event API</em>.
      */
     public HonoEventConnectionEventProducer() {
-        super(DownstreamSenderFactory::getOrCreateEventSender);
+        super();
     }
 
     /**

@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
@@ -317,7 +317,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // GIVEN an adapter with a downstream event consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event
@@ -346,7 +346,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 any());
 
         // until the event has been accepted
-        outcome.complete(mock(ProtonDelivery.class));
+        outcome.complete();
         verify(response).setStatusCode(202);
         verify(response).end();
         verify(metrics).reportTelemetry(
@@ -369,7 +369,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         // GIVEN an adapter with a downstream event consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event that is not accepted by the peer
@@ -402,7 +402,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     public void testUploadEventWithTimeToLive() {
         // GIVEN an adapter with a downstream event consumer attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         givenAnEventSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an event with a time to live value as a header
@@ -421,7 +421,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         adapter.uploadEventMessage(ctx, "tenant", "device");
 
         // verifies that the downstream message contains the time to live value
-        assertEventHasBeenSentDownstream("tenant", "device", "text/plain", 10_000L);
+        assertEventHasBeenSentDownstream("tenant", "device", "text/plain", 10L);
     }
 
     /**
@@ -654,15 +654,19 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
     /**
      * Verifies that the adapter closes the command consumer created as part of
-     * handling a request with a TTD parameter if creation of the telemetry
-     * message sender failed.
+     * handling a request with a TTD parameter if sending of the telemetry
+     * message fails.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testUploadTelemetryWithTtdClosesCommandConsumerIfSenderCreationFailed() {
+    public void testUploadTelemetryWithTtdClosesCommandConsumerIfSendingFails() {
 
-        // GIVEN an adapter with a downstream telemetry consumer attached
+        // GIVEN an adapter
         givenAnAdapter(properties);
+        // with the downstream telemetry sender unable to forward messages
+        final Promise<Void> sendResult = Promise.promise();
+        sendResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+        givenATelemetrySenderForAnyTenant(sendResult);
 
         // WHEN a device publishes a telemetry message with a TTD
         final Buffer payload = Buffer.buffer("some payload");
@@ -675,9 +679,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
             handler.handle(null);
             return 0;
         });
-        // and the creation of the telemetry message sender fails immediately
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.failedFuture(
-                new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
         // and the creation of the command consumer completes at a later point
         final Promise<ProtocolAdapterCommandConsumer> commandConsumerPromise = Promise.promise();
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
@@ -734,9 +735,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         verify(response).setStatusCode(202);
         verify(response).end();
         // and the downstream message contains the configured max TTD
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(downstreamSender).send(messageCaptor.capture(), (SpanContext) any());
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(20);
+        verify(telemetrySender).sendTelemetry(
+                eq(tenant),
+                argThat(assertion -> assertion.getDeviceId().equals("device")),
+                eq(org.eclipse.hono.util.QoS.AT_MOST_ONCE),
+                eq("text/plain"),
+                any(Buffer.class),
+                argThat(props -> props.get(MessageHelper.APP_PROPERTY_DEVICE_TTD).equals(20)),
+                any());
     }
 
     /**

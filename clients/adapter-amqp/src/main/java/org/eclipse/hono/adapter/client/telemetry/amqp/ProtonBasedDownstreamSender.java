@@ -183,4 +183,14 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
                 adapterConfig.isDefaultsEnabled(),
                 adapterConfig.isJmsVendorPropsEnabled());
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return new StringBuilder(ProtonBasedDownstreamSender.class.getName())
+                .append(" via AMQP 1.0 Messaging Network")
+                .toString();
+    }
 }

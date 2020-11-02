@@ -26,13 +26,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -543,7 +541,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                     checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(authenticatedDevice))
-                .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
                 .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority()))
                 .recover(t -> {
                     if (authAttempt.failed()) {
@@ -1003,8 +1000,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
 
         return tenantTracker
-                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getTelemetrySender(tenant),
-                        ctx.endpoint()))
+                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, ctx.endpoint()))
                 .compose(success -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
@@ -1063,8 +1059,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
 
         return tenantTracker
-                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getEventSender(tenant),
-                        ctx.endpoint()))
+                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, ctx.endpoint()))
                 .compose(success -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
@@ -1198,7 +1193,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final TenantObject tenantObject,
             final String deviceId,
             final Buffer payload,
-            final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
@@ -1223,31 +1217,32 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 isAdapterEnabled(tenantObject),
                 checkMessageLimit(tenantObject, payload.length(), currentSpan.context()));
 
-        return CompositeFuture.all(tokenTracker, tenantValidationTracker, senderTracker).compose(ok -> {
+        return CompositeFuture.all(tokenTracker, tenantValidationTracker).compose(ok -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
             addRetainAnnotation(ctx, props, currentSpan);
             customizeDownstreamMessageProperties(props, ctx);
 
-            final Message downstreamMessage = MessageHelper.newMessage(
-                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenantObject.getTenantId(), deviceId),
-                    ctx.contentType(),
-                    payload,
-                    tenantObject,
-                    props,
-                    tokenTracker.result().getDefaults(),
-                    getConfig().isDefaultsEnabled(),
-                    getConfig().isJmsVendorPropsEnabled());
-
-            final DownstreamSender sender = senderTracker.result();
-
-            if (ctx.isAtLeastOnce()) {
-                return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+            if (endpoint == EndpointType.EVENT) {
+                return getEventSender().sendEvent(
+                        tenantObject,
+                        tokenTracker.result(),
+                        ctx.contentType(),
+                        payload,
+                        props,
+                        currentSpan.context());
             } else {
-                return sender.send(downstreamMessage, currentSpan.context());
+                return getTelemetrySender().sendTelemetry(
+                        tenantObject,
+                        tokenTracker.result(),
+                        ctx.getRequestedQos(),
+                        ctx.contentType(),
+                        payload,
+                        props,
+                        currentSpan.context());
             }
-        }).compose(delivery -> {
+        }).map(ok -> {
 
             log.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
                     ctx.message().topicName(), ctx.message().qosLevel(), tenantObject.getTenantId(), deviceId);
@@ -1257,7 +1252,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 ctx.acknowledge();
             }
             currentSpan.finish();
-            return Future.<Void> succeededFuture();
+            return ok;
 
         }).recover(t -> {
 
@@ -1540,23 +1535,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             currentSpan.log("device wants to retain message");
             props.put(MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.TRUE);
         }
-    }
-
-    private Future<Device> createLinks(final Device authenticatedDevice, final Span currentSpan) {
-
-        final Future<DownstreamSender> telemetrySender = getTelemetrySender(authenticatedDevice.getTenantId());
-        final Future<DownstreamSender> eventSender = getEventSender(authenticatedDevice.getTenantId());
-
-        return CompositeFuture
-                .all(telemetrySender, eventSender)
-                .compose(ok -> {
-                    currentSpan.log("opened downstream links");
-                    log.debug(
-                            "providently opened downstream links [credit telemetry: {}, credit event: {}] for tenant [{}]",
-                            telemetrySender.result().getCredit(), eventSender.result().getCredit(),
-                            authenticatedDevice.getTenantId());
-                    return Future.succeededFuture(authenticatedDevice);
-                });
     }
 
     private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice,

@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
@@ -53,7 +52,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.config.KeyLoader;
@@ -61,6 +59,7 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -69,7 +68,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -627,15 +625,11 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param context The context representing the request to be processed.
      * @return A future containing the response code that has been returned to
      *         the device.
-     * @throws NullPointerException if context or originDevice are {@code null}.
+     * @throws NullPointerException if context is {@code null}.
      */
-    public final Future<ResponseCode> uploadTelemetryMessage(
-            final CoapContext context) {
+    public final Future<ResponseCode> uploadTelemetryMessage(final CoapContext context) {
 
-        return doUploadMessage(
-                Objects.requireNonNull(context),
-                getTelemetrySender(context.getOriginDevice().getTenantId()),
-                MetricsTags.EndpointType.TELEMETRY);
+        return doUploadMessage(context, MetricsTags.EndpointType.TELEMETRY);
     }
 
     /**
@@ -644,17 +638,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param context The context representing the request to be processed.
      * @return A future containing the response code that has been returned to
      *         the device.
-     * @throws NullPointerException if context or originDevice are {@code null}.
+     * @throws NullPointerException if context is {@code null}.
      */
     public final Future<ResponseCode> uploadEventMessage(
             final CoapContext context) {
 
         Objects.requireNonNull(context);
         if (context.isConfirmable()) {
-            return doUploadMessage(
-                    context,
-                    getEventSender(context.getOriginDevice().getTenantId()),
-                    MetricsTags.EndpointType.EVENT);
+            return doUploadMessage(context, MetricsTags.EndpointType.EVENT);
         } else {
             context.respondWithCode(ResponseCode.BAD_REQUEST, "event endpoint supports confirmable request messages only");
             return Future.succeededFuture(ResponseCode.BAD_REQUEST);
@@ -667,15 +658,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Depending on the outcome of the attempt to upload the message, the CoAP response code is set as
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
-     * @param context The context representing the request to be processed.
-     * @param senderTracker hono message sender tracker
      * @param endpoint message destination endpoint
      * @return A succeeded future containing the CoAP status code that has been returned to the device.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     private Future<ResponseCode> doUploadMessage(
             final CoapContext context,
-            final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
+
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(endpoint);
 
         final String contentType = context.getContentType();
         final Buffer payload = context.getPayload();
@@ -739,108 +731,104 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             responseReady,
                             currentSpan));
 
-            return CompositeFuture.join(senderTracker, commandConsumerTracker)
-            .compose(ok -> {
+            return commandConsumerTracker
+                .compose(ok -> {
+                    final Map<String, Object> props = getDownstreamMessageProperties(context);
+                    Optional.ofNullable(commandConsumerTracker.result())
+                            .map(c -> ttdTracker.result())
+                            .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
+                    customizeDownstreamMessageProperties(props, context);
 
-                final Map<String, Object> props = getDownstreamMessageProperties(context);
-                Optional.ofNullable(commandConsumerTracker.result())
-                        .map(c -> ttdTracker.result())
-                        .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
-                props.put(MessageHelper.APP_PROPERTY_QOS, context.getRequestedQos().ordinal());
-                customizeDownstreamMessageProperties(props, context);
-                final Message downstreamMessage = MessageHelper.newMessage(
-                        ResourceIdentifier.from(endpoint.getCanonicalName(), tenantId, deviceId),
-                        contentType,
-                        payload,
-                        tenantTracker.result(),
-                        props,
-                        tokenTracker.result().getDefaults(),
-                        getConfig().isDefaultsEnabled(),
-                        getConfig().isJmsVendorPropsEnabled());
+                    if (context.isConfirmable()) {
+                        context.startAcceptTimer(vertx, tenantTracker.result(), getConfig().getTimeoutToAck());
+                    }
+                    final Future<Void> sendResult;
+                    if (endpoint == EndpointType.EVENT) {
+                        sendResult = getEventSender().sendEvent(
+                                tenantTracker.result(),
+                                tokenTracker.result(),
+                                contentType,
+                                payload,
+                                props,
+                                currentSpan.context());
+                    } else {
+                        sendResult = getTelemetrySender().sendTelemetry(
+                                tenantTracker.result(),
+                                tokenTracker.result(),
+                                context.getRequestedQos(),
+                                contentType,
+                                payload,
+                                props,
+                                currentSpan.context());
+                    }
+                    return CompositeFuture.all(sendResult, responseReady.future()).mapEmpty();
+                }).map(proceed -> {
+                    // downstream message sent and (if ttd was set) command was received or ttd has timed out
+                    final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
+                            ? commandConsumerTracker.result().close(currentSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
+                            : Future.succeededFuture();
 
-                final DownstreamSender sender = senderTracker.result();
+                    final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
+                    final Response response = new Response(ResponseCode.CHANGED);
+                    if (commandContext != null) {
+                        addCommandToResponse(response, commandContext, currentSpan);
+                        commandContext.accept();
+                        metrics.reportCommand(
+                                commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                tenantId,
+                                tenantTracker.result(),
+                                ProcessingOutcome.FORWARDED,
+                                commandContext.getCommand().getPayloadSize(),
+                                context.getTimer());
+                    }
 
-                if (context.isConfirmable()) {
-                    // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
-                    context.startAcceptTimer(vertx, tenantTracker.result(), getConfig().getTimeoutToAck());
-                    return CompositeFuture.all(
-                            sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
-                            responseReady.future())
-                            .mapEmpty();
-                } else {
-                    return CompositeFuture.all(
-                            sender.send(downstreamMessage, currentSpan.context()),
-                            responseReady.future())
-                            .mapEmpty();
-                }
-
-            }).map(proceed -> {
-                // downstream message sent and (if ttd was set) command was received or ttd has timed out
-                final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
-                        ? commandConsumerTracker.result().close(currentSpan.context())
-                                .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                        : Future.succeededFuture();
-
-                final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
-                final Response response = new Response(ResponseCode.CHANGED);
-                if (commandContext != null) {
-                    addCommandToResponse(response, commandContext, currentSpan);
-                    commandContext.accept();
-                    metrics.reportCommand(
-                            commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                    log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                            tenantId, deviceId, endpoint.getCanonicalName());
+                    metrics.reportTelemetry(
+                            endpoint,
                             tenantId,
                             tenantTracker.result(),
-                            ProcessingOutcome.FORWARDED,
-                            commandContext.getCommand().getPayloadSize(),
+                            MetricsTags.ProcessingOutcome.FORWARDED,
+                            qos,
+                            payload.length(),
+                            getTtdStatus(context),
                             context.getTimer());
-                }
 
-                log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        tenantId, deviceId, endpoint.getCanonicalName());
-                metrics.reportTelemetry(
-                        endpoint,
-                        tenantId,
-                        tenantTracker.result(),
-                        MetricsTags.ProcessingOutcome.FORWARDED,
-                        qos,
-                        payload.length(),
-                        getTtdStatus(context),
-                        context.getTimer());
+                    context.getExchange().respond(response);
+                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                    return response.getCode();
 
-                context.getExchange().respond(response);
-                commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
-                return response.getCode();
+                }).recover(t -> {
 
-            }).recover(t -> {
-
-                log.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        tenantId, deviceId, endpoint.getCanonicalName(), t);
-                final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
-                        ? commandConsumerTracker.result().close(currentSpan.context())
-                                .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                        : Future.succeededFuture();
-                final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
-                if (commandContext != null) {
-                    TracingHelper.logError(commandContext.getTracingSpan(),
-                            "command won't be forwarded to device in CoAP response, CoAP request handling failed", t);
-                    commandContext.release();
-                    currentSpan.log("released command for device");
-                }
-                metrics.reportTelemetry(
-                        endpoint,
-                        tenantId,
-                        tenantTracker.result(),
-                        ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
-                        qos,
-                        payload.length(),
-                        getTtdStatus(context),
-                        context.getTimer());
-                TracingHelper.logError(currentSpan, t);
-                final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
-                final ResponseCode responseCode = context.respond(response);
-                commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
-                return Future.succeededFuture(responseCode);
-            });
+                    log.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                            tenantId, deviceId, endpoint.getCanonicalName(), t);
+                    final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
+                            ? commandConsumerTracker.result().close(currentSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
+                            : Future.succeededFuture();
+                    final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
+                    if (commandContext != null) {
+                        TracingHelper.logError(commandContext.getTracingSpan(),
+                                "command won't be forwarded to device in CoAP response, CoAP request handling failed", t);
+                        commandContext.release();
+                        currentSpan.log("released command for device");
+                    }
+                    metrics.reportTelemetry(
+                            endpoint,
+                            tenantId,
+                            tenantTracker.result(),
+                            ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
+                            qos,
+                            payload.length(),
+                            getTtdStatus(context),
+                            context.getTimer());
+                    TracingHelper.logError(currentSpan, t);
+                    final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
+                    final ResponseCode responseCode = context.respond(response);
+                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                    return Future.succeededFuture(responseCode);
+                });
         }
     }
 

@@ -301,7 +301,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadTelemetryWithAtLeastOnceDeliverySemantics() {
         // GIVEN an adapter configured to use a user-define server.
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> sendResult = Promise.promise();
+        final Promise<Void> sendResult = Promise.promise();
         givenATelemetrySenderForAnyTenant(sendResult);
 
         // which is enabled for a tenant
@@ -325,7 +325,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         //  and waits for the outcome from the downstream peer
         verify(delivery, never()).disposition(any(DeliveryState.class), anyBoolean());
         // until the transfer is settled
-        sendResult.complete(mock(ProtonDelivery.class));
+        sendResult.complete();
         verify(delivery).disposition(any(Accepted.class), eq(true));
         // and has reported the telemetry message
         verify(metrics).reportTelemetry(

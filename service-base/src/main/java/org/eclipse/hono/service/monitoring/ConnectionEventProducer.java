@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,8 @@
 package org.eclipse.hono.service.monitoring;
 
 
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.TenantClientFactory;
 
 import io.vertx.core.Future;
@@ -47,12 +47,12 @@ public interface ConnectionEventProducer {
     interface Context {
 
         /**
-         * Provide the device message sender client provided by the caller.
+         * Gets the client for sending connection events downstream.
          *
-         * @return The instance of the message sender client which the {@link ConnectionEventProducer} method should
+         * @return The instance of the message sender client which the {@link ConnectionEventProducer} should
          *         use. This client has to be initialized and started.
          */
-        DownstreamSenderFactory getMessageSenderClient();
+        EventSender getMessageSenderClient();
         /**
          * Provides the tenant client which the {@link ConnectionEventProducer} should use to lookup the tenant
          * that the device connecting to a protocol adapter belongs to.

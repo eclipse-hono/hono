@@ -14,32 +14,31 @@
 
 package org.eclipse.hono.service.monitoring;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.proton.ProtonDelivery;
 
 
 /**
@@ -51,25 +50,29 @@ class HonoEventConnectionEventProducerTest {
 
     private HonoEventConnectionEventProducer producer;
     private ConnectionEventProducer.Context context;
-    private DownstreamSenderFactory senderFactory;
-    private DownstreamSender sender;
+    private EventSender sender;
     private TenantClientFactory tenantClientFactory;
     private TenantClient tenantClient;
     private TenantObject tenant;
 
     /**
+     * Sets up the fixture.
      */
     @BeforeEach
     void setUp() {
         tenantClient = mock(TenantClient.class);
         tenantClientFactory = mock(TenantClientFactory.class);
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
-        sender = mock(DownstreamSender.class);
-        when(sender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        senderFactory = mock(DownstreamSenderFactory.class);
-        when(senderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
+        sender = mock(EventSender.class);
+        when(sender.sendEvent(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                anyString(),
+                any(),
+                any(),
+                any())).thenReturn(Future.succeededFuture());
         context = mock(ConnectionEventProducer.Context.class);
-        when(context.getMessageSenderClient()).thenReturn(senderFactory);
+        when(context.getMessageSenderClient()).thenReturn(sender);
         when(context.getTenantClientFactory()).thenReturn(tenantClientFactory);
         producer = new HonoEventConnectionEventProducer();
     }
@@ -86,11 +89,13 @@ class HonoEventConnectionEventProducerTest {
         producer.connected(context, "device-internal-id", "custom-adapter", authenticatedDevice, new JsonObject())
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
-                    final ArgumentCaptor<Message> event = ArgumentCaptor.forClass(Message.class);
-                    verify(sender).send(event.capture());
-                    assertThat(event.getValue().getAddress()).isEqualTo(String.format("event/%s", tenantId));
-                    assertThat(event.getValue().getTtl()).isEqualTo(500_000);
-                    assertThat(event.getValue().getContentType()).isEqualTo(EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE);
+                    verify(sender).sendEvent(
+                            eq(tenant),
+                            any(RegistrationAssertion.class),
+                            eq(EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE),
+                            any(),
+                            argThat(props -> props.get(MessageHelper.SYS_HEADER_PROPERTY_TTL).equals(500L)),
+                            any());
                 });
                 ctx.completeNow();
             }));
