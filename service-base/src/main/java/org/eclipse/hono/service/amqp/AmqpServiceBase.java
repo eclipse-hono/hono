@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
@@ -499,7 +498,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                 final HonoUser user = Constants.getClientPrincipal(con);
                 getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).onComplete(authAttempt -> {
                     if (authAttempt.succeeded() && authAttempt.result()) {
-                        Constants.copyProperties(con, receiver);
                         receiver.setSource(receiver.getRemoteSource());
                         receiver.setTarget(receiver.getRemoteTarget());
                         endpoint.onLinkAttach(con, receiver, targetResource);
@@ -535,7 +533,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             final HonoUser user = Constants.getClientPrincipal(con);
             getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).onComplete(authAttempt -> {
                 if (authAttempt.succeeded() && authAttempt.result()) {
-                    Constants.copyProperties(con, sender);
                     sender.setSource(sender.getRemoteSource());
                     sender.setTarget(sender.getRemoteTarget());
                     endpoint.onLinkAttach(con, sender, targetResource);
@@ -598,8 +595,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * <p>
      * This default implementation
      * <ol>
-     * <li>adds a unique connection identifier to the connection's attachments
-     * under key {@link Constants#KEY_CONNECTION_ID}</li>
      * <li>invokes {@link #processDesiredCapabilities(ProtonConnection, Symbol[])}</li>
      * <li>sets a timer that closes the connection once the client's token
      * has expired</li>
@@ -612,8 +607,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
         log.debug("processing open frame from client container [{}]", connection.getRemoteContainer());
         final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
-        // attach an ID so that we can later inform downstream components when connection is closed
-        connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
         processDesiredCapabilities(connection, connection.getRemoteDesiredCapabilities());
         final Duration delay = Duration.between(Instant.now(), clientPrincipal.getExpirationTime());
         final WeakReference<ProtonConnection> conRef = new WeakReference<>(connection);

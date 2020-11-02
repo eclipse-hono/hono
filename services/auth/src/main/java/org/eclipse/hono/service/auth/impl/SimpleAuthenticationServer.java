@@ -134,7 +134,6 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
             if (Constants.SUBJECT_ANONYMOUS.equals(user.getName())) {
                 con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "client must authenticate using SASL")).close();
             } else {
-                Constants.copyProperties(con, sender);
                 sender.setSource(sender.getRemoteSource());
                 endpoint.onLinkAttach(con, sender, targetResource);
             }
