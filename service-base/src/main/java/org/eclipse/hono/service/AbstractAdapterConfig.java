@@ -203,7 +203,7 @@ public abstract class AbstractAdapterConfig {
      *                       {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
      *                       out of the box.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The factory.
+     * @return The client.
      */
     @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
     @Bean
@@ -223,7 +223,7 @@ public abstract class AbstractAdapterConfig {
      *                       {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
      *                       out of the box.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The factory.
+     * @return The client.
      */
     @Qualifier(EventConstants.EVENT_ENDPOINT)
     @Bean

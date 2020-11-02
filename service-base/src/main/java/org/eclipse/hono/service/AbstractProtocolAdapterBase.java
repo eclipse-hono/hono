@@ -249,7 +249,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for sending telemetry messages via the AMQP Messaging Network.
+     * Sets the client to use for sending telemetry messages downstream.
      *
      * @param sender The sender.
      * @throws NullPointerException if the sender is {@code null}.
@@ -261,7 +261,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets the client being used for sending telemetry messages via the AMQP Messaging Network.
+     * Gets the client being used for sending telemetry messages downstream.
      *
      * @return The sender.
      */
@@ -270,7 +270,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for sending events via the AMQP Messaging Network.
+     * Sets the client to use for sending events downstream.
      *
      * @param sender The sender.
      * @throws NullPointerException if the sender is {@code null}.
@@ -282,7 +282,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets the client being used for sending events via the AMQP Messaging Network.
+     * Gets the client being used for sending events downstream.
      *
      * @return The sender.
      */
@@ -860,10 +860,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(serviceName);
 
         return serviceClient.start().map(c -> {
-            log.info("connected to {}", serviceName);
+            log.info(" {} successfully connected to {}", serviceClient, serviceName);
             return c;
         }).recover(t -> {
-            log.warn("failed to connect to {}", serviceName, t);
+            log.warn("{} failed to connect to {}", serviceClient, serviceName, t);
             return Future.failedFuture(t);
         });
     }

@@ -638,7 +638,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param context The context representing the request to be processed.
      * @return A future containing the response code that has been returned to
      *         the device.
-     * @throws NullPointerException if context or originDevice are {@code null}.
+     * @throws NullPointerException if context is {@code null}.
      */
     public final Future<ResponseCode> uploadEventMessage(
             final CoapContext context) {
