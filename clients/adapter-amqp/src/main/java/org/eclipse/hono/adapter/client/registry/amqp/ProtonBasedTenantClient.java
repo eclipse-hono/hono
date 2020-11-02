@@ -32,7 +32,7 @@ import io.vertx.core.Future;
 
 
 /**
- * A vertx-proton based client of Hono's Device Registration service.
+ * A vertx-proton based client of Hono's Tenant service.
  *
  */
 public final class ProtonBasedTenantClient extends AbstractRequestResponseClient<TenantResult<TenantObject>> implements TenantClient {
@@ -42,10 +42,10 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseClient
     /**
      * Creates a new client for a connection.
      *
-     * @param connection The connection to the Device Registration service.
+     * @param connection The connection to the service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @param cacheProvider The cache provider to use for creating the cache for tenant service responses.
+     * @param cacheProvider The cache provider to use for creating the cache for service responses.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public ProtonBasedTenantClient(
