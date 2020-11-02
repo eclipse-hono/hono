@@ -503,8 +503,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
-            startServiceClient(telemetrySender, "AMQP Messaging Network (Telemetry)");
-            startServiceClient(eventSender, "AMQP Messaging Network (Event)");
+            startServiceClient(telemetrySender, "Telemetry");
+            startServiceClient(eventSender, "Event");
             connectToService(tenantClientFactory, "Tenant service");
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
@@ -860,10 +860,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(serviceName);
 
         return serviceClient.start().map(c -> {
-            log.info(" {} successfully connected to {}", serviceClient, serviceName);
+            log.info("{} client [{}] successfully connected", serviceName, serviceClient);
             return c;
         }).recover(t -> {
-            log.warn("{} failed to connect to {}", serviceClient, serviceName, t);
+            log.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
             return Future.failedFuture(t);
         });
     }
