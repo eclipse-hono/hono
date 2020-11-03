@@ -79,7 +79,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     private final String adapterName;
     private final CoapAdapterProperties config;
     private final CredentialsClientFactory credentialsClientFactory;
-    private final TenantClient tenantClientFactory;
+    private final TenantClient tenantClient;
     private volatile PskSecretResultHandler californiumResultHandler;
 
     /**
@@ -106,7 +106,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
-        this.tenantClientFactory = tenantClient;
+        this.tenantClient = tenantClient;
     }
 
     /**
@@ -252,7 +252,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     }
 
     private Future<Void> applyTraceSamplingPriority(final PreSharedKeyDeviceIdentity deviceIdentity, final Span span) {
-        return tenantClientFactory.get(deviceIdentity.getTenantId(), span.context())
+        return tenantClient.get(deviceIdentity.getTenantId(), span.context())
                 .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, deviceIdentity.getAuthId());
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, deviceIdentity.getAuthId(), span);
