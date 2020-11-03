@@ -46,7 +46,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseClient
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
      * @param cacheProvider The cache provider to use for creating the cache for service responses.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters other than cacheProvider are {@code null}.
      */
     public ProtonBasedTenantClient(
             final HonoConnection connection,

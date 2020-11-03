@@ -42,7 +42,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
      * @param cacheProvider The provider to use for creating cache instances for service responses.
-     * @throws NullPointerException if any of context or configuration are {@code null}.
+     * @throws NullPointerException if any of the parameters other than cacheProvider are {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
