@@ -84,7 +84,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
 
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
-        createClients();
+        prepareClients();
 
         currentSpan = mock(Span.class);
         when(currentSpan.context()).thenReturn(mock(SpanContext.class));

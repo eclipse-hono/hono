@@ -56,7 +56,7 @@ public interface CommandTargetMapper {
      * Access to collaborators that the mapper needs for doing its work.
      *
      */
-    public interface CommandTargetMapperContext {
+    interface CommandTargetMapperContext {
 
         /**
          * Gets the device identifiers of the gateways that an edge device may connect via.
@@ -118,8 +118,8 @@ public interface CommandTargetMapper {
      * @return The mapper context.
      */
     static CommandTargetMapperContext createContext(
-            RegistrationClientFactory registrationClientFactory,
-            BasicDeviceConnectionClientFactory deviceConnectionClientFactory) {
+            final RegistrationClientFactory registrationClientFactory,
+            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory) {
 
         Objects.requireNonNull(registrationClientFactory);
         Objects.requireNonNull(deviceConnectionClientFactory);
@@ -138,13 +138,10 @@ public interface CommandTargetMapper {
                 return registrationClientFactory.getOrCreateRegistrationClient(tenant)
                         .compose(client -> client.assertRegistration(deviceId, null, context))
                         .map(json -> Optional.ofNullable(json.getJsonArray(RegistrationConstants.FIELD_VIA))
-                                .map(array -> {
-                                    final List<String> result = array.stream()
-                                            .filter(String.class::isInstance)
-                                            .map(String.class::cast)
-                                            .collect(Collectors.toList());
-                                    return result;
-                                })
+                                .map(array -> array.stream()
+                                        .filter(String.class::isInstance)
+                                        .map(String.class::cast)
+                                        .collect(Collectors.toList()))
                                 .orElse(Collections.emptyList()));
             }
 

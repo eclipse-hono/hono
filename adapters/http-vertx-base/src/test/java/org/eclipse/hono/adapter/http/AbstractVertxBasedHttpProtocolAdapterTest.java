@@ -119,7 +119,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
-        createClients();
+        prepareClients();
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());

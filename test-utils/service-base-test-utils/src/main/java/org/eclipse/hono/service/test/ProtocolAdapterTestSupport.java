@@ -157,37 +157,36 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     }
 
     /**
-     * Creates mock instances of the service clients and
-     * configures the factories to return them.
+     * Prepares the (mock) service clients with default behavior.
      * <p>
      * This method is separate from {@link #createClientFactories()} in order to
-     * support setups where the factories are created once for all test cases but
+     * support setups where the factories/clients are created once for all test cases but
      * the client instances need to be (re-)set for each individual test case.
      * <p>
-     * All clients are configured to return succeeded futures
-     * containing <em>happy-path</em> results.
-     * <p>
-     * Creates a {@link TenantClient} and a {@link RegistrationClient}.
-     *
-     * @throws IllegalStateException if any of factories for which
-     *         a mock client instance is to be created is {@code null}.
+     * This method configures
+     * <ul>
+     * <li>the Tenant client to always return a succeeded future containing a TenantObject
+     * for the given tenant</li>
+     * <li>the Device Registration service client to always return a succeeded future containing
+     * a {@link RegistrationAssertion} for the given device</li>
+     * </ul>
      */
-    protected void createClients() {
+    protected void prepareClients() {
 
-        if (registrationClient == null) {
-            throw new IllegalStateException("factories are not initialized");
+        if (tenantClient != null) {
+            when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
+                return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+            });
         }
 
-        when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
-        });
-
-        when(registrationClient.assertRegistration(anyString(), anyString(), any(), (SpanContext) any()))
-                .thenAnswer(invocation -> {
-                    final String deviceId = invocation.getArgument(1);
-                    final RegistrationAssertion regAssertion = new RegistrationAssertion(deviceId);
-                    return Future.succeededFuture(regAssertion);
-                });
+        if (registrationClient != null) {
+            when(registrationClient.assertRegistration(anyString(), anyString(), any(), (SpanContext) any()))
+            .thenAnswer(invocation -> {
+                final String deviceId = invocation.getArgument(1);
+                final RegistrationAssertion regAssertion = new RegistrationAssertion(deviceId);
+                return Future.succeededFuture(regAssertion);
+            });
+        }
     }
 
     /**
