@@ -13,9 +13,9 @@
 package org.eclipse.hono.service.monitoring;
 
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.TenantClientFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -57,10 +57,9 @@ public interface ConnectionEventProducer {
          * Provides the tenant client which the {@link ConnectionEventProducer} should use to lookup the tenant
          * that the device connecting to a protocol adapter belongs to.
          *
-         * @return The tenant client instance. This client has to be initialized and started.
+         * @return The tenant client instance.
          */
-        TenantClientFactory getTenantClientFactory();
-
+        TenantClient getTenantClient();
     }
 
     /**

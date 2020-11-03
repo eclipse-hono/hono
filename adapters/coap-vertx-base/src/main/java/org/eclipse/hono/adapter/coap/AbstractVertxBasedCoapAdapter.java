@@ -363,14 +363,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
                 .orElseGet(() -> new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
-                        getCredentialsClientFactory(), getTenantClientFactory()));
+                        getCredentialsClientFactory(), getTenantClient()));
         final AdvancedPskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
                     if (deviceResolver instanceof AdvancedPskStore) {
                         return (AdvancedPskStore) deviceResolver;
                     } else {
                         return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
-                                getCredentialsClientFactory(), getTenantClientFactory());
+                                getCredentialsClientFactory(), getTenantClient());
                     }
                 });
 

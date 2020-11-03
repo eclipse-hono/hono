@@ -34,6 +34,7 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.auth.Device;
@@ -48,8 +49,6 @@ import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
@@ -96,7 +95,7 @@ public class AbstractProtocolAdapterBaseTest {
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private RegistrationClient registrationClient;
-    private TenantClientFactory tenantClientFactory;
+    private TenantClient tenantClient;
     private RegistrationClientFactory registrationClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
     private TelemetrySender telemetrySender;
@@ -113,8 +112,8 @@ public class AbstractProtocolAdapterBaseTest {
     @BeforeEach
     public void setup() {
 
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.start()).thenReturn(Future.succeededFuture());
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
@@ -138,7 +137,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
         when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(eventSender);
-        when(connectionEventProducerContext.getTenantClientFactory()).thenReturn(tenantClientFactory);
+        when(connectionEventProducerContext.getTenantClient()).thenReturn(tenantClient);
 
         commandTargetMapper = mock(CommandTargetMapper.class);
 
@@ -165,7 +164,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setTelemetrySender(telemetrySender);
-        adapter.setTenantClientFactory(tenantClientFactory);
+        adapter.setTenantClient(tenantClient);
     }
 
     private void givenAnAdapterConfiguredWithServiceClients(
@@ -223,7 +222,9 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN starting the adapter
         adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
             // THEN the service clients have connected
-            verify(tenantClientFactory).connect();
+            verify(telemetrySender).start();
+            verify(eventSender).start();
+            verify(tenantClient).start();
             verify(registrationClientFactory).connect();
             verify(credentialsClientFactory).connect();
             verify(commandConsumerFactory).connect();
@@ -647,13 +648,11 @@ public class AbstractProtocolAdapterBaseTest {
 
         // WHEN a device, belonging to a tenant for which a max TTL is configured, connects to such an adapter
         final Device authenticatedDevice = new Device(Constants.DEFAULT_TENANT, "4711");
-        final TenantClient tenantClient = mock(TenantClient.class);
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         final ResourceLimits tenantLimits = new ResourceLimits();
         tenantLimits.setMaxTtl(5L);
         tenantObject.setResourceLimits(tenantLimits);
-        when(tenantClient.get(Constants.DEFAULT_TENANT)).thenReturn(Future.succeededFuture(tenantObject));
+        when(tenantClient.get(eq(Constants.DEFAULT_TENANT), any())).thenReturn(Future.succeededFuture(tenantObject));
 
         // THEN the adapter forwards the connection event message downstream
         adapter.sendConnectedEvent("remote-id", authenticatedDevice)

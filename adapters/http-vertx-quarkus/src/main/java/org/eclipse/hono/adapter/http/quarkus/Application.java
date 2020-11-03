@@ -23,6 +23,8 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
@@ -34,7 +36,6 @@ import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.quarkus.CaffeineBasedExpiringValueCache;
@@ -128,7 +129,7 @@ public class Application {
         adapter.setMetrics(metrics);
         adapter.setRegistrationClientFactory(registrationClientFactory());
         adapter.setTelemetrySender(newDownstreamSender());
-        adapter.setTenantClientFactory(tenantClientFactory());
+        adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;
@@ -185,11 +186,12 @@ public class Application {
     }
 
     @Produces
-    TenantClientFactory tenantClientFactory() {
-        return TenantClientFactory.create(
+    TenantClient tenantClient() {
+        return new ProtonBasedTenantClient(
                 HonoConnection.newConnection(vertx, config.tenant),
-                newCaffeineCache(config.tenant.getResponseCacheMinSize(), config.tenant.getResponseCacheMaxSize()),
-                metrics);
+                metrics,
+                config.http,
+                newCaffeineCache(config.tenant.getResponseCacheMinSize(), config.tenant.getResponseCacheMaxSize()));
     }
 
     /**
@@ -213,7 +215,6 @@ public class Application {
             private final Map<String, ExpiringValueCache<Object, Object>> caches = new HashMap<>();
 
             @Override
-            @SuppressWarnings("unchecked")
             public ExpiringValueCache<Object, Object> getCache(final String cacheName) {
 
                 return caches.computeIfAbsent(cacheName, name -> new CaffeineBasedExpiringValueCache<>(caffeine.build()));

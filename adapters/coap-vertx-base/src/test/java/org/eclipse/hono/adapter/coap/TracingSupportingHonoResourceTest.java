@@ -24,7 +24,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -35,11 +34,8 @@ import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
@@ -72,7 +68,6 @@ public class TracingSupportingHonoResourceTest {
     private SpanBuilder spanBuilder;
     private TracingSupportingHonoResource resource;
     private TenantClient tenantClient;
-    private TenantClientFactory tenantClientFactory;
 
     /**
      * Sets up the fixture.
@@ -90,13 +85,7 @@ public class TracingSupportingHonoResourceTest {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.isConnected())
-                .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
-
-        resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantClientFactory) {
+        resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantClient) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange, final Span span) {

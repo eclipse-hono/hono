@@ -985,7 +985,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
 
-        adapter.setTenantClientFactory(tenantClientFactory);
+        adapter.setTenantClient(tenantClient);
         adapter.setEventSender(eventSender);
         adapter.setTelemetrySender(telemetrySender);
         adapter.setRegistrationClientFactory(registrationClientFactory);

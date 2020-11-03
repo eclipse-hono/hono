@@ -29,12 +29,10 @@ import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,47 +60,47 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     private static final Logger log = LoggerFactory.getLogger(TenantServiceBasedX509Authentication.class);
 
     private final Tracer tracer;
-    private final TenantClientFactory tenantClientFactory;
+    private final TenantClient tenantClient;
     private final DeviceCertificateValidator certPathValidator;
 
     /**
      * Creates a new instance for a Tenant service client.
      *
-     * @param tenantClientFactory The factory to use for creating a Tenant service client.
+     * @param tenantClient The client to use for accessing the Tenant service.
      */
-    public TenantServiceBasedX509Authentication(final TenantClientFactory tenantClientFactory) {
+    public TenantServiceBasedX509Authentication(final TenantClient tenantClient) {
 
-        this(tenantClientFactory, NoopTracerFactory.create());
+        this(tenantClient, NoopTracerFactory.create());
     }
 
     /**
      * Creates a new instance for a Tenant service client.
      *
-     * @param tenantClientFactory The factory to use for creating a Tenant service client.
+     * @param tenantClient The client to use for accessing the Tenant service.
      * @param tracer The <em>OpenTracing</em> tracer to use for tracking the process of
      *               authenticating the client.
      */
     public TenantServiceBasedX509Authentication(
-            final TenantClientFactory tenantClientFactory,
+            final TenantClient tenantClient,
             final Tracer tracer) {
-        this(tenantClientFactory, tracer, new DeviceCertificateValidator());
+        this(tenantClient, tracer, new DeviceCertificateValidator());
     }
 
     /**
      * Creates a new instance for a Tenant service client.
      *
-     * @param tenantClientFactory The factory to use for creating a Tenant service client.
+     * @param tenantClient The client to use for accessing the Tenant service.
      * @param tracer The <em>OpenTracing</em> tracer to use for tracking the process of
      *               authenticating the client.
      * @param certPathValidator The validator to use for establishing the client certificate's
      *                          chain of trust.
      */
     public TenantServiceBasedX509Authentication(
-            final TenantClientFactory tenantClientFactory,
+            final TenantClient tenantClient,
             final Tracer tracer,
             final DeviceCertificateValidator certPathValidator) {
 
-        this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
         this.tracer = Objects.requireNonNull(tracer);
         this.certPathValidator = Objects.requireNonNull(certPathValidator);
     }
@@ -117,7 +115,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      *                    if no context exists (yet).
      * @return A future indicating the outcome of the validation.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *         if the certificate path could not be validated.
      *         <p>
      *         Otherwise, the future will be succeeded with a JSON object having
@@ -183,8 +181,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
     private Future<TenantObject> getTenant(final X509Certificate clientCert, final Span span) {
 
-        return tenantClientFactory.getOrCreateTenantClient().compose(tenantClient ->
-            tenantClient.get(clientCert.getIssuerX500Principal(), span.context()));
+        return tenantClient.get(clientCert.getIssuerX500Principal(), span.context());
     }
 
     private Future<List<X509Certificate>> getX509CertificatePath(final Certificate[] clientPath) {
@@ -207,9 +204,9 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      * <p>
      * This returns a JSON object that contains the following properties:
      * <ul>
-     * <li>{@link RequestResponseApiConstants#FIELD_PAYLOAD_SUBJECT_DN} -
+     * <li>{@link CredentialsConstants#FIELD_PAYLOAD_SUBJECT_DN} -
      * the subject DN from the certificate (<em>mandatory</em>)</li>
-     * <li>{@link RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID} -
+     * <li>{@link CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} -
      * the identifier of the tenant that the device belongs to (<em>mandatory</em>)</li>
      * <li>{@link CredentialsConstants#FIELD_CLIENT_CERT} -
      * the client certificate that the device used for authenticating as Base64  encoded

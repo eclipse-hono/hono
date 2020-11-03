@@ -122,7 +122,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     protected Future<Void> preStartup() {
 
         final Set<Resource> result = new HashSet<>();
-        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName(), getTenantClientFactory()) {
+        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName(), getTenantClient()) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
@@ -145,7 +145,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             }
         });
 
-        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName(), getTenantClientFactory()) {
+        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName(), getTenantClient()) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {
@@ -167,7 +167,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 return uploadEventMessage(ctx);
             }
         });
-        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName(), getTenantClientFactory()) {
+        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName(), getTenantClient()) {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange exchange, final Span span) {

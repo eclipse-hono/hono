@@ -16,11 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.TenantObject;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -74,7 +72,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
         final String tenantId = authenticatedDevice.getTenantId();
         final String deviceId = authenticatedDevice.getDeviceId();
 
-        return getTenant(context.getTenantClientFactory(), tenantId)
+        return context.getTenantClient().get(tenantId, null)
                 .compose(tenant -> {
 
                     final JsonObject payload = new JsonObject();
@@ -99,9 +97,5 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                             props,
                             null);
                 });
-    }
-
-    private Future<TenantObject> getTenant(final TenantClientFactory factory, final String tenant) {
-        return factory.getOrCreateTenantClient().compose(client -> client.get(tenant));
     }
 }

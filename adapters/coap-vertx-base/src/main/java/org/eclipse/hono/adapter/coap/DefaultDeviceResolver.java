@@ -36,9 +36,9 @@ import org.eclipse.californium.scandium.dtls.PskSecretResultHandler;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -79,7 +79,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     private final String adapterName;
     private final CoapAdapterProperties config;
     private final CredentialsClientFactory credentialsClientFactory;
-    private final TenantClientFactory tenantClientFactory;
+    private final TenantClient tenantClient;
     private volatile PskSecretResultHandler californiumResultHandler;
 
     /**
@@ -90,7 +90,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * @param adapterName The name of the protocol adapter.
      * @param config The configuration properties.
      * @param credentialsClientFactory The factory to use for creating clients to the Credentials service.
-     * @param tenantClientFactory The factory to use for creating a Tenant service client.
+     * @param tenantClient The client to use for accessing the Tenant service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public DefaultDeviceResolver(
@@ -99,14 +99,14 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
             final String adapterName,
             final CoapAdapterProperties config,
             final CredentialsClientFactory credentialsClientFactory,
-            final TenantClientFactory tenantClientFactory) {
+            final TenantClient tenantClient) {
 
         this.context = Objects.requireNonNull(vertxContext);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
-        this.tenantClientFactory = tenantClientFactory;
+        this.tenantClient = tenantClient;
     }
 
     /**
@@ -252,8 +252,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     }
 
     private Future<Void> applyTraceSamplingPriority(final PreSharedKeyDeviceIdentity deviceIdentity, final Span span) {
-        return tenantClientFactory.getOrCreateTenantClient()
-                .compose(tenantClient -> tenantClient.get(deviceIdentity.getTenantId(), span.context()))
+        return tenantClient.get(deviceIdentity.getTenantId(), span.context())
                 .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, deviceIdentity.getAuthId());
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, deviceIdentity.getAuthId(), span);
