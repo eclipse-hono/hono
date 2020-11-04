@@ -116,6 +116,7 @@ public interface CommandTargetMapper {
      * @param registrationClientFactory The factory for creating Device Registration service clients.
      * @param deviceConnectionClientFactory The factory for creating Device Connection service clients.
      * @return The mapper context.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     static CommandTargetMapperContext createContext(
             final RegistrationClientFactory registrationClientFactory,

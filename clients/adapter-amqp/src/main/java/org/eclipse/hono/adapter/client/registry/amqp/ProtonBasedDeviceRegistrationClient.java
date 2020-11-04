@@ -52,8 +52,9 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
      * @param connection The connection to the Device Registration service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @param cacheProvider The cache provider to use for creating a cache for service responses.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @param cacheProvider The cache provider to use for creating a cache for service responses or
+     *                      {@code null} if responses should not be cached.
+     * @throws NullPointerException if any of the parameters other than the cache provider are {@code null}.
      */
     public ProtonBasedDeviceRegistrationClient(
             final HonoConnection connection,
@@ -61,7 +62,7 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
             final ProtocolAdapterProperties adapterConfig,
             final CacheProvider cacheProvider) {
         super(connection, samplerFactory, adapterConfig, cacheProvider);
-        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
+        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), RegistrationClient::isOpen);
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }

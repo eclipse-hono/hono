@@ -79,7 +79,8 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
 
         return mapperContext.getViaGateways(tenantId, deviceId, span.context())
                 .recover(t -> {
-                    LOG.debug("Error getting registration assertion", t);
+                    LOG.debug("Error retrieving gateways authorized to act on behalf of device [tenant-id: {}, device-id: {}]",
+                            tenantId, deviceId, t);
                     return Future.failedFuture(t);
                 }).compose(viaGateways -> {
                     return mapperContext.getCommandHandlingAdapterInstances(tenantId, deviceId, viaGateways, span.context())
