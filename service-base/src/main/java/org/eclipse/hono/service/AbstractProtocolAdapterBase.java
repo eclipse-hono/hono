@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
@@ -33,6 +34,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
+import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClient;
@@ -42,8 +44,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -113,7 +113,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private TelemetrySender telemetrySender;
     private EventSender eventSender;
-    private RegistrationClientFactory registrationClientFactory;
+    private DeviceRegistrationClient registrationClient;
     private TenantClient tenantClient;
     private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
@@ -281,24 +281,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory to use for creating a client for the Device Registration service.
+     * Sets the client to use for accessing the Device Registration service.
      *
-     * @param factory The factory.
-     * @throws NullPointerException if the factory is {@code null}.
+     * @param client The client.
+     * @throws NullPointerException if the client is {@code null}.
      */
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Autowired
-    public final void setRegistrationClientFactory(final RegistrationClientFactory factory) {
-        this.registrationClientFactory = Objects.requireNonNull(factory);
+    public final void setRegistrationClient(final DeviceRegistrationClient client) {
+        this.registrationClient = Objects.requireNonNull(client);
     }
 
     /**
-     * Gets the factory used for creating a client for the Device Registration service.
+     * Gets the client used for accessing the Device Registration service.
      *
-     * @return The factory.
+     * @return The client.
      */
-    public final RegistrationClientFactory getRegistrationClientFactory() {
-        return registrationClientFactory;
+    public final DeviceRegistrationClient getRegistrationClient() {
+        return registrationClient;
     }
 
     /**
@@ -476,13 +476,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
-            result.fail(new IllegalStateException("Tenant client factory must be set"));
+            result.fail(new IllegalStateException("Tenant client must be set"));
         } else if (telemetrySender == null) {
             result.fail(new IllegalStateException("Telemetry message sender must be set"));
         } else if (eventSender == null) {
             result.fail(new IllegalStateException("Event sender must be set"));
-        } else if (registrationClientFactory == null) {
-            result.fail(new IllegalStateException("Device Registration client factory must be set"));
+        } else if (registrationClient == null) {
+            result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsClientFactory == null) {
             result.fail(new IllegalStateException("Credentials client factory must be set"));
         } else if (commandConsumerFactory == null) {
@@ -496,7 +496,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             startServiceClient(telemetrySender, "Telemetry");
             startServiceClient(eventSender, "Event");
             startServiceClient(tenantClient, "Tenant service");
-            connectToService(registrationClientFactory, "Device Registration service");
+            startServiceClient(registrationClient, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
             if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
                 connectToService((ConnectionLifecycle<?>) deviceConnectionClientFactory, "Device Connection service");
@@ -512,8 +512,38 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     onCommandConnectionEstablished(c.result());
                 }
             });
+
             // initialize components dependent on the above clientFactories
-            commandTargetMapper.initialize(registrationClientFactory, deviceConnectionClientFactory);
+            commandTargetMapper.initialize(new CommandTargetMapperContext() {
+
+                @Override
+                public Future<List<String>> getViaGateways(
+                        final String tenant,
+                        final String deviceId,
+                        final SpanContext context) {
+
+                    Objects.requireNonNull(tenant);
+                    Objects.requireNonNull(deviceId);
+
+                    return registrationClient.assertRegistration(tenant, deviceId, null, context)
+                            .map(RegistrationAssertion::getAuthorizedGateways);
+                }
+
+                @Override
+                public Future<JsonObject> getCommandHandlingAdapterInstances(
+                        final String tenant,
+                        final String deviceId,
+                        final List<String> viaGateways,
+                        final SpanContext context) {
+
+                    Objects.requireNonNull(tenant);
+                    Objects.requireNonNull(deviceId);
+                    Objects.requireNonNull(viaGateways);
+
+                    return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenant)
+                            .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, viaGateways, context));
+                }
+            });
             commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
 
             doStart(result);
@@ -557,7 +587,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
         results.add(stopServiceClient(tenantClient));
-        results.add(disconnectFromService(registrationClientFactory));
+        results.add(stopServiceClient(registrationClient));
         results.add(disconnectFromService(credentialsClientFactory));
         results.add(disconnectFromService(commandConsumerFactory));
         if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
@@ -974,10 +1004,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         @SuppressWarnings("rawtypes")
         final List<Future> connections = new ArrayList<>();
-        connections.add(Optional.ofNullable(registrationClientFactory)
-                .map(client -> client.isConnected())
-                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set"))));
         connections.add(Optional.ofNullable(credentialsClientFactory)
                 .map(client -> client.isConnected())
                 .orElseGet(() -> Future.failedFuture(new ServerErrorException(
@@ -1079,16 +1105,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets a client for interacting with the Device Registration service.
-     *
-     * @param tenantId The tenant that the client is scoped to.
-     * @return The client.
-     */
-    protected final Future<RegistrationClient> getRegistrationClient(final String tenantId) {
-        return getRegistrationClientFactory().getOrCreateRegistrationClient(tenantId);
-    }
-
-    /**
      * Gets an assertion of a device's registration status.
      * <p>
      * Note that this method will also update the last gateway associated with
@@ -1120,21 +1136,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final Future<String> gatewayId = getGatewayId(tenantId, deviceId, authenticatedDevice);
 
         return gatewayId
-                .compose(gwId -> getRegistrationClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context))
-                .map(registrationAssertion -> {
-                    try {
-                        return registrationAssertion.mapTo(RegistrationAssertion.class);
-                    } catch (final DecodeException e) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("registration service returned invalid response:{}{}",
-                                    System.lineSeparator(), registrationAssertion.encodePrettily());
-                        }
-                        throw new ServerErrorException(
-                                HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                "registration service returned invalid response");
-                    }
-                })
+                .compose(gwId -> getRegistrationClient().assertRegistration(tenantId, deviceId, gwId, context))
                 .onSuccess(assertion -> {
                     // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
                     // so don't wait for the outcome here
@@ -1304,6 +1306,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (tenantClient instanceof ServiceClient) {
             ((ServiceClient) tenantClient).registerReadinessChecks(handler);
         }
+        if (registrationClient instanceof ServiceClient) {
+            ((ServiceClient) registrationClient).registerReadinessChecks(handler);
+        }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
         }
@@ -1323,6 +1328,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         registerEventLoopBlockedCheck(handler);
         if (tenantClient instanceof ServiceClient) {
             ((ServiceClient) tenantClient).registerLivenessChecks(handler);
+        }
+        if (registrationClient instanceof ServiceClient) {
+            ((ServiceClient) registrationClient).registerLivenessChecks(handler);
         }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerLivenessChecks(handler);

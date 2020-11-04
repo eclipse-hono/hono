@@ -33,7 +33,9 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
@@ -46,8 +48,6 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -58,7 +58,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -76,7 +75,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -94,9 +92,8 @@ public class AbstractProtocolAdapterBaseTest {
     private Context context;
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
-    private RegistrationClient registrationClient;
     private TenantClient tenantClient;
-    private RegistrationClientFactory registrationClientFactory;
+    private DeviceRegistrationClient registrationClient;
     private CredentialsClientFactory credentialsClientFactory;
     private TelemetrySender telemetrySender;
     private EventSender eventSender;
@@ -115,11 +112,8 @@ public class AbstractProtocolAdapterBaseTest {
         tenantClient = mock(TenantClient.class);
         when(tenantClient.start()).thenReturn(Future.succeededFuture());
 
-        registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-
-        registrationClient = mock(RegistrationClient.class);
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
+        registrationClient = mock(DeviceRegistrationClient.class);
+        when(registrationClient.start()).thenReturn(Future.succeededFuture());
 
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
@@ -162,7 +156,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setEventSender(eventSender);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
         adapter.setTenantClient(tenantClient);
     }
@@ -225,7 +219,7 @@ public class AbstractProtocolAdapterBaseTest {
             verify(telemetrySender).start();
             verify(eventSender).start();
             verify(tenantClient).start();
-            verify(registrationClientFactory).connect();
+            verify(registrationClient).start();
             verify(credentialsClientFactory).connect();
             verify(commandConsumerFactory).connect();
             verify(commandConsumerFactory).addDisconnectListener(any(DisconnectListener.class));
@@ -296,8 +290,8 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetRegistrationAssertionSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        final JsonObject assertionResult = newRegistrationAssertionResult("device");
-        when(registrationClient.assertRegistration(eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
+        final RegistrationAssertion assertionResult = newRegistrationAssertionResult("device");
+        when(registrationClient.assertRegistration(eq("tenant"), eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
 
         // WHEN an assertion for the device is retrieved
         adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
@@ -320,7 +314,7 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetRegistrationAssertionFailsWith404ForNonExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        when(registrationClient.assertRegistration(eq("non-existent"), any(), any())).thenReturn(
+        when(registrationClient.assertRegistration(eq("tenant"), eq("non-existent"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         // WHEN an assertion for a non-existing device is retrieved
@@ -742,20 +736,17 @@ public class AbstractProtocolAdapterBaseTest {
         return result;
     }
 
-    private static JsonObject newRegistrationAssertionResult(final String deviceId) {
+    private static RegistrationAssertion newRegistrationAssertionResult(final String deviceId) {
         return newRegistrationAssertionResult(deviceId, null);
     }
 
-    private static JsonObject newRegistrationAssertionResult(
+    private static RegistrationAssertion newRegistrationAssertionResult(
             final String deviceId,
             final String defaultContentType) {
 
-        final JsonObject result = new JsonObject();
-        result.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
-        if (defaultContentType != null) {
-            result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
-                    .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
-        }
+        final RegistrationAssertion result = new RegistrationAssertion(deviceId);
+        Optional.ofNullable(defaultContentType)
+            .ifPresent(ct -> result.setDefaults(Map.of(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct)));
         return result;
     }
 }

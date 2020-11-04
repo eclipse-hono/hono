@@ -121,7 +121,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
-        createClients();
+        prepareClients();
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
@@ -988,7 +988,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setTenantClient(tenantClient);
         adapter.setEventSender(eventSender);
         adapter.setTelemetrySender(telemetrySender);
-        adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setRegistrationClient(registrationClient);
         if (complete) {
             adapter.setCredentialsClientFactory(credentialsClientFactory);
         }

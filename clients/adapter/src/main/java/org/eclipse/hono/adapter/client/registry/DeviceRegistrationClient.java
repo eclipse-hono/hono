@@ -33,28 +33,6 @@ public interface DeviceRegistrationClient extends Lifecycle {
      *
      * @param tenantId The ID of the tenant that the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
-     * @param context The currently active OpenTracing span. An implementation
-     *         should use this as the parent for any span it creates for tracing
-     *         the execution of this operation.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with a status code in the [200, 300) range
-     *         has been received from the Device Registration service. The contained object will
-     *         then have properties according to the response message defined by
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
-     *         Assert Device Registration</a>.
-     *         <p>
-     *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
-     *         containing the (error) status code returned by the service.
-     * @throws NullPointerException if tenant or device ID are {@code null}.
-     */
-    Future<RegistrationAssertion> assertRegistration(String tenantId, String deviceId, SpanContext context);
-
-    /**
-     * Asserts that a device is registered and <em>enabled</em>.
-     *
-     * @param tenantId The ID of the tenant that the device belongs to.
-     * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that tries to act on behalf of the device.
      *                  <p>
      *                  If not {@code null}, the service will verify that the gateway
@@ -73,7 +51,7 @@ public interface DeviceRegistrationClient extends Lifecycle {
      *         <p>
      *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         containing the (error) status code returned by the service.
-     * @throws NullPointerException if tenant, device or gateway ID are {@code null}.
+     * @throws NullPointerException if tenant or device ID are {@code null}.
      */
     Future<RegistrationAssertion> assertRegistration(
             String tenantId,

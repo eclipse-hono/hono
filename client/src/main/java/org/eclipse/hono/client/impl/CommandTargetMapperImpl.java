@@ -14,21 +14,16 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +45,7 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
 
     private final Tracer tracer;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
-    private RegistrationClientFactory registrationClientFactory;
-    private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
+    private CommandTargetMapperContext mapperContext;
 
     /**
      * Creates a new GatewayMapperImpl instance.
@@ -64,10 +58,8 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
     }
 
     @Override
-    public void initialize(final RegistrationClientFactory registrationClientFactory,
-            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory) {
-        this.registrationClientFactory = Objects.requireNonNull(registrationClientFactory);
-        this.deviceConnectionClientFactory = Objects.requireNonNull(deviceConnectionClientFactory);
+    public void initialize(final CommandTargetMapperContext context) {
+        this.mapperContext = Objects.requireNonNull(context);
         initialized.set(true);
     }
 
@@ -85,19 +77,13 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
 
-        return registrationClientFactory.getOrCreateRegistrationClient(tenantId)
-                .compose(client -> client.assertRegistration(deviceId, null, span.context()))
+        return mapperContext.getViaGateways(tenantId, deviceId, span.context())
                 .recover(t -> {
-                    LOG.debug("Error getting registration assertion", t);
+                    LOG.debug("Error retrieving gateways authorized to act on behalf of device [tenant-id: {}, device-id: {}]",
+                            tenantId, deviceId, t);
                     return Future.failedFuture(t);
-                }).compose(registrationAssertionJson -> {
-                    final Object viaObject = registrationAssertionJson.getValue(RegistrationConstants.FIELD_VIA);
-                    @SuppressWarnings("unchecked")
-                    final List<String> viaGateways = viaObject instanceof JsonArray
-                            ? new ArrayList<String>(((JsonArray) viaObject).getList())
-                            : Collections.emptyList();
-                    return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
-                            .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, viaGateways, span.context()))
+                }).compose(viaGateways -> {
+                    return mapperContext.getCommandHandlingAdapterInstances(tenantId, deviceId, viaGateways, span.context())
                             .compose(resultJson -> determineTargetInstanceJson(resultJson, deviceId, viaGateways, span));
                 }).map(result -> {
                     span.finish();

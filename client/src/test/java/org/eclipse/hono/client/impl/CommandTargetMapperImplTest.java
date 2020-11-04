@@ -21,14 +21,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
-import org.eclipse.hono.client.DeviceConnectionClient;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,8 +43,7 @@ import io.vertx.core.json.JsonObject;
 public class CommandTargetMapperImplTest {
 
     private CommandTargetMapperImpl commandTargetMapper;
-    private RegistrationClient regClient;
-    private DeviceConnectionClient devConClient;
+    private CommandTargetMapperContext mapperContext;
     private String tenantId;
     private String deviceId;
     private Span span;
@@ -65,17 +62,9 @@ public class CommandTargetMapperImplTest {
 
         tenantId = "testTenant";
         deviceId = "testDevice";
-        regClient = mock(RegistrationClient.class);
-        final RegistrationClientFactory registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
-                .thenReturn(Future.succeededFuture(regClient));
-
-        devConClient = mock(DeviceConnectionClient.class);
-        final DeviceConnectionClientFactory deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(anyString()))
-                .thenReturn(Future.succeededFuture(devConClient));
+        mapperContext = mock(CommandTargetMapperContext.class);
         commandTargetMapper = new CommandTargetMapperImpl(tracer);
-        commandTargetMapper.initialize(registrationClientFactory, deviceConnectionClientFactory);
+        commandTargetMapper.initialize(mapperContext);
     }
 
     /**
@@ -85,8 +74,8 @@ public class CommandTargetMapperImplTest {
     @Test
     public void testGetTargetGatewayAndAdapterInstanceUsingDeviceWithNoVia() {
         // GIVEN assertRegistration result with no 'via'
-        final JsonObject assertRegistrationResult = new JsonObject();
-        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        when(mapperContext.getViaGateways(anyString(), anyString(), any()))
+            .thenReturn(Future.succeededFuture(Collections.emptyList()));
 
         // and a getCommandHandlingAdapterInstances result with one object for the device
         final String adapterInstanceId = "adapter1";
@@ -95,7 +84,7 @@ public class CommandTargetMapperImplTest {
         adapterInstanceEntry.put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         adapterInstanceEntry.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, adapterInstanceId);
         adapterInstancesResult.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES, new JsonArray(Collections.singletonList(adapterInstanceEntry)));
-        when(devConClient.getCommandHandlingAdapterInstances(eq(deviceId), any(), any())).thenReturn(Future.succeededFuture(adapterInstancesResult));
+        when(mapperContext.getCommandHandlingAdapterInstances(eq(tenantId), eq(deviceId), any(), any())).thenReturn(Future.succeededFuture(adapterInstancesResult));
 
         // WHEN getTargetGatewayAndAdapterInstance() is invoked
         final Future<JsonObject> mappedGatewayDeviceFuture = commandTargetMapper.getTargetGatewayAndAdapterInstance(tenantId, deviceId, null);
@@ -116,10 +105,8 @@ public class CommandTargetMapperImplTest {
         final String gatewayId = "testDeviceVia";
 
         // GIVEN assertRegistration result with non-empty 'via'
-        final JsonObject assertRegistrationResult = new JsonObject();
-        final JsonArray viaArray = new JsonArray(Collections.singletonList(gatewayId));
-        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, viaArray);
-        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        when(mapperContext.getViaGateways(anyString(), anyString(), any()))
+            .thenReturn(Future.succeededFuture(Collections.singletonList(gatewayId)));
 
         // and a getCommandHandlingAdapterInstances result with one object for the gateway
         final String adapterInstanceId = "adapter1";
@@ -128,7 +115,7 @@ public class CommandTargetMapperImplTest {
         adapterInstanceEntry.put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, gatewayId);
         adapterInstanceEntry.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, adapterInstanceId);
         adapterInstancesResult.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES, new JsonArray(Collections.singletonList(adapterInstanceEntry)));
-        when(devConClient.getCommandHandlingAdapterInstances(eq(deviceId), any(), any())).thenReturn(Future.succeededFuture(adapterInstancesResult));
+        when(mapperContext.getCommandHandlingAdapterInstances(eq(tenantId), eq(deviceId), any(), any())).thenReturn(Future.succeededFuture(adapterInstancesResult));
 
         // WHEN getMappedGatewayDevice() is invoked
         final Future<JsonObject> mappedGatewayDeviceFuture = commandTargetMapper.getTargetGatewayAndAdapterInstance(tenantId, deviceId, null);
@@ -147,14 +134,11 @@ public class CommandTargetMapperImplTest {
     public void tesGetTargetGatewayAndAdapterInstanceUsingDeviceWithMappedGateway() {
         final String gatewayId = "testDeviceVia";
         final String otherGatewayId = "otherGatewayId";
-
+        final List<String> viaList = new ArrayList<>();
+        viaList.add(gatewayId);
+        viaList.add(otherGatewayId);
         // GIVEN assertRegistration result with non-empty 'via'
-        final JsonObject assertRegistrationResult = new JsonObject();
-        final JsonArray viaArray = new JsonArray();
-        viaArray.add(gatewayId);
-        viaArray.add(otherGatewayId);
-        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, viaArray);
-        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        when(mapperContext.getViaGateways(anyString(), anyString(), any())).thenReturn(Future.succeededFuture(viaList));
 
         // and a getCommandHandlingAdapterInstances result with 2 objects with the one with 'gatewayId' being first
         final String adapterInstanceId = "adapter1";
@@ -171,7 +155,7 @@ public class CommandTargetMapperImplTest {
         adapterInstances.add(adapterInstanceEntry);
         adapterInstances.add(adapterInstanceOtherEntry);
         adapterInstancesResult.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES, adapterInstances);
-        when(devConClient.getCommandHandlingAdapterInstances(eq(deviceId), any(), any())).thenReturn(Future.succeededFuture(adapterInstancesResult));
+        when(mapperContext.getCommandHandlingAdapterInstances(eq(tenantId), eq(deviceId), any(), any())).thenReturn(Future.succeededFuture(adapterInstancesResult));
 
         // WHEN getMappedGatewayDevice() is invoked
         final Future<JsonObject> mappedGatewayDeviceFuture = commandTargetMapper.getTargetGatewayAndAdapterInstance(tenantId, deviceId, null);

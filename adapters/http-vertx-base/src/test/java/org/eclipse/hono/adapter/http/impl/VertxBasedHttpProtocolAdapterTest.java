@@ -137,7 +137,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         LOG.info("running test case [{}]", testInfo.getDisplayName());
 
-        createClients();
+        prepareClients();
 
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
