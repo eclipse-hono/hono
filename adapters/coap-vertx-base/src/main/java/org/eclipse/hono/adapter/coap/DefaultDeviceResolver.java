@@ -36,9 +36,9 @@ import org.eclipse.californium.scandium.dtls.PskSecretResultHandler;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -78,7 +78,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
     private final Tracer tracer;
     private final String adapterName;
     private final CoapAdapterProperties config;
-    private final CredentialsClientFactory credentialsClientFactory;
+    private final CredentialsClient credentialsClient;
     private final TenantClient tenantClient;
     private volatile PskSecretResultHandler californiumResultHandler;
 
@@ -89,7 +89,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * @param tracer The OpenTracing tracer.
      * @param adapterName The name of the protocol adapter.
      * @param config The configuration properties.
-     * @param credentialsClientFactory The factory to use for creating clients to the Credentials service.
+     * @param credentialsClient The client to use for accessing the Credentials service.
      * @param tenantClient The client to use for accessing the Tenant service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
@@ -98,15 +98,15 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
             final Tracer tracer,
             final String adapterName,
             final CoapAdapterProperties config,
-            final CredentialsClientFactory credentialsClientFactory,
+            final CredentialsClient credentialsClient,
             final TenantClient tenantClient) {
 
         this.context = Objects.requireNonNull(vertxContext);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
-        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
-        this.tenantClient = tenantClient;
+        this.credentialsClient = Objects.requireNonNull(credentialsClient);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
     }
 
     /**
@@ -172,9 +172,12 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
                 final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
                 context.runOnContext(go -> {
                     applyTraceSamplingPriority(deviceIdentity, span)
-                            .compose(v -> credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId()))
-                            .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
-                                    deviceIdentity.getAuthId(), new JsonObject(), span.context()))
+                            .compose(v -> credentialsClient.get(
+                                    deviceIdentity.getTenantId(),
+                                    CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
+                                    deviceIdentity.getAuthId(),
+                                    new JsonObject(),
+                                    span.context()))
                             .onSuccess(credentials -> credentialsResult.complete(credentials))
                             .onFailure(t -> credentialsResult.completeExceptionally(t));
                 });
@@ -221,8 +224,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
         TracingHelper.TAG_AUTH_ID.set(span, handshakeIdentity.getAuthId());
 
         applyTraceSamplingPriority(handshakeIdentity, span)
-                .compose(v -> credentialsClientFactory.getOrCreateCredentialsClient(handshakeIdentity.getTenantId()))
-                .compose(client -> client.get(
+                .compose(v -> credentialsClient.get(
+                        handshakeIdentity.getTenantId(),
                         handshakeIdentity.getType(),
                         handshakeIdentity.getAuthId(),
                         new JsonObject(),

@@ -24,10 +24,9 @@ import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,7 +51,6 @@ import io.vertx.junit5.VertxTestContext;
 public class CredentialsApiAuthProviderTest {
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
-    private CredentialsClientFactory credentialsClientFactory;
     private CredentialsClient credentialsClient;
 
     /**
@@ -62,9 +60,6 @@ public class CredentialsApiAuthProviderTest {
     public void setUp() {
 
         credentialsClient = mock(CredentialsClient.class);
-        when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
         provider = getProvider(getDeviceCredentials("type", "TENANT", "user"), NoopTracerFactory.create());
     }
 
@@ -78,7 +73,7 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWithExceptionReportedByCredentialsClient(final VertxTestContext ctx) {
 
         final ServerErrorException reportedException = new ServerErrorException(503);
-        when(credentialsClient.get(anyString(), anyString(), any(JsonObject.class), any())).thenReturn(Future.failedFuture(reportedException));
+        when(credentialsClient.get(anyString(), anyString(), anyString(), any(JsonObject.class), any())).thenReturn(Future.failedFuture(reportedException));
         provider.authenticate(new JsonObject(), ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isEqualTo(reportedException));
             ctx.completeNow();
@@ -115,8 +110,8 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWith401ForNonExistingAuthId(final VertxTestContext ctx) {
 
         // WHEN trying to authenticate using an auth-id that is not known
-        when(credentialsClient.get(anyString(), eq("user"), any(JsonObject.class), any()))
-        .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        when(credentialsClient.get(anyString(), anyString(), eq("user"), any(JsonObject.class), any()))
+            .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         provider.authenticate(new JsonObject(), ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
@@ -136,8 +131,8 @@ public class CredentialsApiAuthProviderTest {
         final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity");
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", false)
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
-        when(credentialsClient.get(eq("type"), eq("identity"), any(JsonObject.class), any()))
-        .thenReturn(Future.succeededFuture(credentialsOnRecord));
+        when(credentialsClient.get(eq("tenant"), eq("type"), eq("identity"), any(JsonObject.class), any()))
+            .thenReturn(Future.succeededFuture(credentialsOnRecord));
         provider.authenticate(creds, null, ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
@@ -147,7 +142,7 @@ public class CredentialsApiAuthProviderTest {
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials, final Tracer tracer) {
 
-        return new CredentialsApiAuthProvider<>(credentialsClientFactory, tracer) {
+        return new CredentialsApiAuthProvider<>(credentialsClient, tracer) {
 
             @Override
             public AbstractDeviceCredentials getCredentials(final JsonObject authInfo) {

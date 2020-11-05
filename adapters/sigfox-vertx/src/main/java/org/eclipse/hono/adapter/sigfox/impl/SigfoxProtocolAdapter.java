@@ -106,7 +106,7 @@ public final class SigfoxProtocolAdapter
 
         authHandler.append(new HonoBasicAuthHandler(
                 Optional.ofNullable(this.usernamePasswordAuthProvider).orElseGet(
-                        () -> new UsernamePasswordAuthProvider(getCredentialsClientFactory(), this.tracer)),
+                        () -> new UsernamePasswordAuthProvider(getCredentialsClient(), this.tracer)),
                 getConfig().getRealm()));
 
         router.route().handler(authHandler);

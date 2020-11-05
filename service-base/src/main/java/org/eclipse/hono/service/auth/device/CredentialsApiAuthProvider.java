@@ -16,10 +16,9 @@ package org.eclipse.hono.service.auth.device;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -53,29 +52,19 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private final CredentialsClientFactory credentialsClientFactory;
+    private final CredentialsClient credentialsClient;
     private final Tracer tracer;
 
     /**
-     * Creates a new authentication provider for a credentials client factory.
+     * Creates a new authentication provider for a credentials client.
      *
-     * @param credentialsClientFactory The factory.
+     * @param credentialsClient The client for accessing the Credentials service.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if the factory or the tracer are {@code null}
+     * @throws NullPointerException if the client or the tracer are {@code null}
      */
-    public CredentialsApiAuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
-        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
+    public CredentialsApiAuthProvider(final CredentialsClient credentialsClient, final Tracer tracer) {
+        this.credentialsClient = Objects.requireNonNull(credentialsClient);
         this.tracer = Objects.requireNonNull(tracer);
-    }
-
-    /**
-     * Gets a client for the Credentials service.
-     *
-     * @param tenantId The tenant to get the client for.
-     * @return A future containing the client.
-     */
-    protected final Future<CredentialsClient> getCredentialsClient(final String tenantId) {
-        return credentialsClientFactory.getOrCreateCredentialsClient(tenantId);
     }
 
     /**
@@ -87,13 +76,17 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      *         Hono's <em>Credentials</em> API.
      * @throws NullPointerException if device credentials is {@code null}.
      */
-    protected final Future<CredentialsObject> getCredentialsForDevice(final DeviceCredentials deviceCredentials,
+    protected final Future<CredentialsObject> getCredentialsForDevice(
+            final DeviceCredentials deviceCredentials,
             final SpanContext spanContext) {
 
         Objects.requireNonNull(deviceCredentials);
-        return getCredentialsClient(deviceCredentials.getTenantId())
-                .compose(client -> client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(),
-                        deviceCredentials.getClientContext(), spanContext));
+        return credentialsClient.get(
+                deviceCredentials.getTenantId(),
+                deviceCredentials.getType(),
+                deviceCredentials.getAuthId(),
+                deviceCredentials.getClientContext(),
+                spanContext);
     }
 
     @Override
