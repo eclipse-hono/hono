@@ -67,7 +67,6 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     @BeforeAll
     public void startService(final VertxTestContext testContext) {
 
-        final Checkpoint started = testContext.checkpoint(2);
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
         credentialsService = new MongoDbBasedCredentialsService(
@@ -81,8 +80,11 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 registrationServiceConfig,
                 new NoopTenantInformationService());
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
-        credentialsService.start().onSuccess(ok -> started.flag());
-        registrationService.start().onSuccess(ok -> started.flag());
+        // start services sequentially as concurrent startup seems to cause
+        // concurrency issues sometimes
+        credentialsService.start()
+            .compose(ok -> registrationService.start())
+            .onComplete(testContext.completing());
     }
 
     /**
