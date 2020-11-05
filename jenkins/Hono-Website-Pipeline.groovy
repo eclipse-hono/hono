@@ -73,7 +73,7 @@ def build() {
     }
 
     stage('Cloning Hono web site repository') {
-        sshagent(['git.eclipse.org-bot-ssh']) {
+        sshagent(['67bd9855-4241-478b-8b98-82e66060f56d']) {
             echo "cloning Hono web site repository..."
             sh ''' 
                echo "cloning Hono web site repository..."
@@ -150,7 +150,7 @@ EOS
     }
 
     stage('Commit and push') {
-        sshagent(['git.eclipse.org-bot-ssh']) {
+        sshagent(['67bd9855-4241-478b-8b98-82e66060f56d']) {
             sh '''
                 cd $WORKSPACE/hono-web-site && 
                 git config --global user.email "hono-bot@eclipse.org" &&
