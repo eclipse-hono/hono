@@ -990,7 +990,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setTelemetrySender(telemetrySender);
         adapter.setRegistrationClient(registrationClient);
         if (complete) {
-            adapter.setCredentialsClientFactory(credentialsClientFactory);
+            adapter.setCredentialsClient(credentialsClient);
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);

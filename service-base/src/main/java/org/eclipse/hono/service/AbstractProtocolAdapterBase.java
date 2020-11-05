@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
@@ -36,7 +37,6 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
@@ -116,7 +116,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DeviceRegistrationClient registrationClient;
     private TenantClient tenantClient;
     private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
-    private CredentialsClientFactory credentialsClientFactory;
+    private CredentialsClient credentialsClient;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private CommandTargetMapper commandTargetMapper;
     private ConnectionLimitManager connectionLimitManager;
@@ -302,24 +302,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory to use for creating a client for the Credentials service.
+     * Sets the client to use for accessing the Credentials service.
      *
-     * @param factory The factory.
+     * @param client The client.
      * @throws NullPointerException if the factory is {@code null}.
      */
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Autowired
-    public final void setCredentialsClientFactory(final CredentialsClientFactory factory) {
-        this.credentialsClientFactory = Objects.requireNonNull(factory);
+    public final void setCredentialsClient(final CredentialsClient client) {
+        this.credentialsClient = Objects.requireNonNull(client);
     }
 
     /**
-     * Gets the factory used for creating a client for the Credentials service.
+     * Gets the client used for accessing the Credentials service.
      *
-     * @return The factory.
+     * @return The client.
      */
-    public final CredentialsClientFactory getCredentialsClientFactory() {
-        return credentialsClientFactory;
+    public final CredentialsClient getCredentialsClient() {
+        return credentialsClient;
     }
 
     /**
@@ -483,8 +483,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Event sender must be set"));
         } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
-        } else if (credentialsClientFactory == null) {
-            result.fail(new IllegalStateException("Credentials client factory must be set"));
+        } else if (credentialsClient == null) {
+            result.fail(new IllegalStateException("Credentials client must be set"));
         } else if (commandConsumerFactory == null) {
             result.fail(new IllegalStateException("Command & Control client factory must be set"));
         } else if (deviceConnectionClientFactory == null) {
@@ -497,7 +497,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             startServiceClient(eventSender, "Event");
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
-            connectToService(credentialsClientFactory, "Credentials service");
+            startServiceClient(credentialsClient, "Credentials service");
             if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
                 connectToService((ConnectionLifecycle<?>) deviceConnectionClientFactory, "Device Connection service");
             }
@@ -588,7 +588,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final List<Future> results = new ArrayList<>();
         results.add(stopServiceClient(tenantClient));
         results.add(stopServiceClient(registrationClient));
-        results.add(disconnectFromService(credentialsClientFactory));
+        results.add(stopServiceClient(credentialsClient));
         results.add(disconnectFromService(commandConsumerFactory));
         if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
             results.add(disconnectFromService((ConnectionLifecycle<?>) deviceConnectionClientFactory));
@@ -1004,10 +1004,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         @SuppressWarnings("rawtypes")
         final List<Future> connections = new ArrayList<>();
-        connections.add(Optional.ofNullable(credentialsClientFactory)
-                .map(client -> client.isConnected())
-                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set"))));
         connections.add(Optional.ofNullable(commandConsumerFactory)
                 .map(client -> client.isConnected())
                 .orElseGet(() -> Future.failedFuture(new ServerErrorException(
@@ -1309,6 +1305,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (registrationClient instanceof ServiceClient) {
             ((ServiceClient) registrationClient).registerReadinessChecks(handler);
         }
+        if (credentialsClient instanceof ServiceClient) {
+            ((ServiceClient) credentialsClient).registerReadinessChecks(handler);
+        }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
         }
@@ -1331,6 +1330,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
         if (registrationClient instanceof ServiceClient) {
             ((ServiceClient) registrationClient).registerLivenessChecks(handler);
+        }
+        if (credentialsClient instanceof ServiceClient) {
+            ((ServiceClient) credentialsClient).registerLivenessChecks(handler);
         }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerLivenessChecks(handler);

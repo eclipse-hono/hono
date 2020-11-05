@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -38,8 +38,8 @@ class X509AuthProviderTest {
 
     @BeforeAll
     static void setUp() {
-        final CredentialsClientFactory credentialsClientFactory = mock(CredentialsClientFactory.class);
-        provider = new X509AuthProvider(credentialsClientFactory, NoopTracerFactory.create());
+        final CredentialsClient credentialsClient = mock(CredentialsClient.class);
+        provider = new X509AuthProvider(credentialsClient, NoopTracerFactory.create());
 
     }
 

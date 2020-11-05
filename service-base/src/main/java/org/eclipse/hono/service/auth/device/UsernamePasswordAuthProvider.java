@@ -17,11 +17,11 @@ import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,30 +44,30 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     /**
      * Creates a new provider for a given configuration.
      *
-     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
+     * @param credentialsClient The client to use for accessing the Credentials service.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public UsernamePasswordAuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
-        this(credentialsClientFactory, new SpringBasedHonoPasswordEncoder(), tracer);
+    public UsernamePasswordAuthProvider(final CredentialsClient credentialsClient, final Tracer tracer) {
+        this(credentialsClient, new SpringBasedHonoPasswordEncoder(), tracer);
     }
 
     /**
      * Creates a new provider for a given configuration.
      *
-     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
+     * @param credentialsClient The client to use for accessing the Credentials service.
      * @param pwdEncoder The object to use for validating hashed passwords.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
     public UsernamePasswordAuthProvider(
-            final CredentialsClientFactory credentialsClientFactory,
+            final CredentialsClient credentialsClient,
             final HonoPasswordEncoder pwdEncoder,
             final Tracer tracer) {
 
-        super(credentialsClientFactory, tracer);
+        super(credentialsClient, tracer);
         this.pwdEncoder = Objects.requireNonNull(pwdEncoder);
     }
 

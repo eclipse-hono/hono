@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
@@ -42,7 +43,6 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
@@ -94,7 +94,7 @@ public class AbstractProtocolAdapterBaseTest {
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private TenantClient tenantClient;
     private DeviceRegistrationClient registrationClient;
-    private CredentialsClientFactory credentialsClientFactory;
+    private CredentialsClient credentialsClient;
     private TelemetrySender telemetrySender;
     private EventSender eventSender;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
@@ -115,8 +115,8 @@ public class AbstractProtocolAdapterBaseTest {
         registrationClient = mock(DeviceRegistrationClient.class);
         when(registrationClient.start()).thenReturn(Future.succeededFuture());
 
-        credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        credentialsClient = mock(CredentialsClient.class);
+        when(credentialsClient.start()).thenReturn(Future.succeededFuture());
 
         telemetrySender = mock(TelemetrySender.class);
         when(telemetrySender.start()).thenReturn(Future.succeededFuture());
@@ -153,7 +153,7 @@ public class AbstractProtocolAdapterBaseTest {
     private void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandTargetMapper(commandTargetMapper);
-        adapter.setCredentialsClientFactory(credentialsClientFactory);
+        adapter.setCredentialsClient(credentialsClient);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
@@ -220,7 +220,7 @@ public class AbstractProtocolAdapterBaseTest {
             verify(eventSender).start();
             verify(tenantClient).start();
             verify(registrationClient).start();
-            verify(credentialsClientFactory).connect();
+            verify(credentialsClient).start();
             verify(commandConsumerFactory).connect();
             verify(commandConsumerFactory).addDisconnectListener(any(DisconnectListener.class));
             verify(commandConsumerFactory).addReconnectListener(any(ReconnectListener.class));

@@ -23,8 +23,10 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
@@ -33,7 +35,6 @@ import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
@@ -123,7 +124,7 @@ public class Application {
         adapter.setCommandConsumerFactory(commandConsumerFactory());
         adapter.setCommandTargetMapper(commandTargetMapper());
         adapter.setConfig(config.http);
-        adapter.setCredentialsClientFactory(credentialsClientFactory());
+        adapter.setCredentialsClient(credentialsClient());
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory());
         adapter.setEventSender(newDownstreamSender());
         adapter.setHealthCheckServer(healthCheckServer());
@@ -159,11 +160,12 @@ public class Application {
     }
 
     @Produces
-    CredentialsClientFactory credentialsClientFactory() {
-        return CredentialsClientFactory.create(
+    CredentialsClient credentialsClient() {
+        return new ProtonBasedCredentialsClient(
                 HonoConnection.newConnection(vertx, config.credentials),
-                newCaffeineCache(config.credentials.getResponseCacheMinSize(), config.credentials.getResponseCacheMaxSize()),
-                metrics);
+                metrics,
+                config.http,
+                newCaffeineCache(config.credentials.getResponseCacheMinSize(), config.credentials.getResponseCacheMaxSize()));
     }
 
     @Produces
