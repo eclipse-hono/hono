@@ -15,7 +15,8 @@
 
 /**
  * Builds Hono's web site using Hugo every night (between 3 and 4 AM) and publishes to Eclipse.
- *
+ * This pipeline is deprecated in favor of Hono-Website-Pipeline-Declarative.groovy which
+ * is supposed to ru non the EF's new JIRO environment.
  */
 
 node {
