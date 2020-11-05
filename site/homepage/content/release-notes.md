@@ -47,6 +47,31 @@ title = "Release Notes"
 * The default pattern for valid device identifiers used for the file based and the MongoDB based registry
   implementations now also contains a colon for compatibility with Eclipse Ditto.
 
+## 1.4.3
+
+### Fixes & Enhancements
+
+* The file based as well as the Mongo DB based registry implementations now remove the shared-key from
+  PSK credentials returned in the response of the Management API's *get credentials* operation.
+* The Device Registry Management API erroneously declared the *plain text password* conveyed in the
+  *update credentials* operation's request payload as a Base64 encoded byte array instead of a
+  plain string. This has been fixed.
+* The file based as well as the Mongo DB based registry implementations had failed to do both
+  updating an existing secret (referred to by ID) and adding a new secret to the same credentials
+  in a single request. This has been fixed.
+* The property names for specifying the patterns for validating Tenant and Device IDs have been fixed
+  in the admin guides for the file based and the Mongo DB based registry implementations.
+* The registry implementations did not accept X.509 credentials in an update Credentials request.
+  They also failed to remove existing credentials of a device if they were not included in an
+  update Credentials request. This has been fixed.
+* The AMQP protocol adapter did accept messages from clients (devices) exceeding the adapter's configured
+  max-message-size. This has been fixed and the adapter now closes the link to the device in this case.
+
+### API Changes
+
+* The default pattern for valid device identifiers used for the file based and the MongoDB based registry
+  implementations now also contains a colon (`:`) for compatibility with Eclipse Ditto.
+
 ## 1.4.0
 
 ### New Features
@@ -81,6 +106,31 @@ title = "Release Notes"
   realized by configuring just one tenant in the device registry.
 * The `HONO_REGISTRY_REST_*` configuration properties of the file based device registry have been deprecated
   in favor of corresponding properties with the `HONO_REGISTRY_HTTP_` prefix.
+
+## 1.3.1
+
+### Fixes & Enhancements
+
+* The file based as well as the Mongo DB based registry implementations now remove the shared-key from
+  PSK credentials returned in the response of the Management API's *get credentials* operation.
+* The Device Registry Management API erroneously declared the *plain text password* conveyed in the
+  *update credentials* operation's request payload as a Base64 encoded byte array instead of a
+  plain string. This has been fixed.
+* The file based as well as the Mongo DB based registry implementations had failed to do both
+  updating an existing secret (referred to by ID) and adding a new secret to the same credentials
+  in a single request. This has been fixed.
+* The property names for specifying the patterns for validating Tenant and Device IDs have been fixed
+  in the admin guides for the file based and the Mongo DB based registry implementations.
+* The registry implementations did not accept X.509 credentials in an update Credentials request.
+  They also failed to remove existing credentials of a device if they were not included in an
+  update Credentials request. This has been fixed.
+* The AMQP protocol adapter did accept messages from clients (devices) exceeding the adapter's configured
+  max-message-size. This has been fixed and the adapter now closes the link to the device in this case.
+
+### API Changes
+
+* The default pattern for valid device identifiers used for the file based and the MongoDB based registry
+  implementations now also contains a colon (`:`) for compatibility with Eclipse Ditto.
 
 ## 1.3.0
 
