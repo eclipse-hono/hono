@@ -89,7 +89,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
      * @param tracer The OpenTracing tracer.
      * @param adapterName The name of the protocol adapter.
      * @param config The configuration properties.
-     * @param credentialsClientFactory The factory to use for creating clients to the Credentials service.
+     * @param credentialsClient The client to use for accessing the Credentials service.
      * @param tenantClient The client to use for accessing the Tenant service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
@@ -98,15 +98,15 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, Adva
             final Tracer tracer,
             final String adapterName,
             final CoapAdapterProperties config,
-            final CredentialsClient credentialsClientFactory,
+            final CredentialsClient credentialsClient,
             final TenantClient tenantClient) {
 
         this.context = Objects.requireNonNull(vertxContext);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
-        this.credentialsClient = Objects.requireNonNull(credentialsClientFactory);
-        this.tenantClient = tenantClient;
+        this.credentialsClient = Objects.requireNonNull(credentialsClient);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
     }
 
     /**

@@ -305,7 +305,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Sets the client to use for accessing the Credentials service.
      *
      * @param client The client.
-     * @throws NullPointerException if the factory is {@code null}.
+     * @throws NullPointerException if the client is {@code null}.
      */
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Autowired
