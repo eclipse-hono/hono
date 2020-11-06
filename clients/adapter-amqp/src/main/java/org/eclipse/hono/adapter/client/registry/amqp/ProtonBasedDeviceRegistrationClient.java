@@ -100,6 +100,16 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
 
     /**
      * {@inheritDoc}
+     *
+     * Clears the state of the client factory.
+     */
+    @Override
+    protected void onDisconnect() {
+        clientFactory.clearState();
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public Future<RegistrationAssertion> assertRegistration(

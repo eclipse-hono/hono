@@ -96,6 +96,16 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseClient<
 
     /**
      * {@inheritDoc}
+     *
+     * Clears the state of the client factory.
+     */
+    @Override
+    protected void onDisconnect() {
+        clientFactory.clearState();
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public Future<CredentialsObject> get(
