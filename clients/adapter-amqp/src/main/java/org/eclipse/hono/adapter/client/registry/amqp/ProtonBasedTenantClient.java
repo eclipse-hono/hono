@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.client.registry.amqp;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;

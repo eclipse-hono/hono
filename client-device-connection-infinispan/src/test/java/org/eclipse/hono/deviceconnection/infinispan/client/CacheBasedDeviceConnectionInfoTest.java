@@ -105,7 +105,7 @@ class CacheBasedDeviceConnectionInfoTest {
         cacheManager.defineConfiguration("cache-name", new ConfigurationBuilder()
                 .build());
         cache = new EmbeddedCache<>(vertx, cacheManager, "cache-name", "foo", "bar");
-        cache.connect().onComplete(testContext.completing());
+        cache.start().onComplete(testContext.completing());
 
         final SpanContext spanContext = mock(SpanContext.class);
         span = mock(Span.class);

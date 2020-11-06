@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.client.registry.amqp;
 
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;

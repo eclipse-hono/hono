@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -27,9 +29,7 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -503,17 +503,24 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating clients for the <em>Device Connection</em> API as a Spring bean.
+     * Exposes a client for accessing the <em>Device Connection</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @return The factory.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The client.
      */
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @Scope("prototype")
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
-    public BasicDeviceConnectionClientFactory deviceConnectionClientFactory(final SendMessageSampler.Factory samplerFactory) {
-        return DeviceConnectionClientFactory.create(deviceConnectionServiceConnection(), samplerFactory);
+    public DeviceConnectionClient deviceConnectionClient(
+            final SendMessageSampler.Factory samplerFactory, 
+            final ProtocolAdapterProperties adapterConfig) {
+
+        return new ProtonBasedDeviceConnectionClient(
+                deviceConnectionServiceConnection(),
+                samplerFactory,
+                adapterConfig);
     }
 
     /**

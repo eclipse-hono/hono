@@ -94,8 +94,8 @@ abstract class AbstractBasicCacheTest {
     void testGetSucceeds(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         when(grid.getAsync(anyString())).thenReturn(CompletableFuture.completedFuture("value"));
-        cache.connect()
-            .compose(c -> c.get("key"))
+        cache.start()
+            .compose(ok -> cache.get("key"))
             .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
                     verify(grid).getAsync("key");
@@ -115,8 +115,8 @@ abstract class AbstractBasicCacheTest {
     void testGetFails(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         when(grid.getAsync(anyString())).thenThrow(new IllegalStateException());
-        cache.connect()
-            .compose(c -> c.get("key"))
+        cache.start()
+            .compose(ok -> cache.get("key"))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(grid).getAsync("key");
@@ -136,8 +136,8 @@ abstract class AbstractBasicCacheTest {
     void testPutSucceeds(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
-        cache.connect()
-            .compose(c -> c.put("key", "value"))
+        cache.start()
+            .compose(ok -> cache.put("key", "value"))
             .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
                     verify(grid).putAsync("key", "value");
@@ -158,8 +158,8 @@ abstract class AbstractBasicCacheTest {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         when(grid.putAsync(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
                 .thenReturn(CompletableFuture.completedFuture("oldValue"));
-        cache.connect()
-                .compose(c -> c.put("key", "value", 1, TimeUnit.SECONDS))
+        cache.start()
+                .compose(ok -> cache.put("key", "value", 1, TimeUnit.SECONDS))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).putAsync("key", "value", 1, TimeUnit.SECONDS);
@@ -179,8 +179,8 @@ abstract class AbstractBasicCacheTest {
     void testPutFails(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         when(grid.putAsync(anyString(), anyString())).thenThrow(new IllegalStateException());
-        cache.connect()
-            .compose(c -> c.put("key", "value"))
+        cache.start()
+            .compose(ok -> cache.put("key", "value"))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(grid).putAsync("key", "value");
@@ -200,8 +200,8 @@ abstract class AbstractBasicCacheTest {
     void testRemoveWithValueSucceeds(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         mockRemoveWithValue(grid, "key", "value", true);
-        cache.connect()
-                .compose(c -> c.remove("key", "value"))
+        cache.start()
+                .compose(ok -> cache.remove("key", "value"))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verifyRemoveWithValue(grid, "key", "value", true);
@@ -221,8 +221,8 @@ abstract class AbstractBasicCacheTest {
     void testRemoveWithValueFails(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         mockRemoveWithValue(grid, "key", "value", false);
-        cache.connect()
-                .compose(c -> c.remove("key", "value"))
+        cache.start()
+                .compose(ok -> cache.remove("key", "value"))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verifyRemoveWithValue(grid, "key", "value", false);
@@ -244,8 +244,8 @@ abstract class AbstractBasicCacheTest {
         final Map<Object, Object> mapValue = new HashMap<>();
         when(grid.getAllAsync(anySet())).thenReturn(CompletableFuture.completedFuture(mapValue));
         final Set<String> keys = Set.of("key");
-        cache.connect()
-                .compose(c -> c.getAll(keys))
+        cache.start()
+                .compose(ok -> cache.getAll(keys))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).getAllAsync(keys);
@@ -266,8 +266,8 @@ abstract class AbstractBasicCacheTest {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
         when(grid.getAllAsync(anySet())).thenThrow(new IllegalStateException());
         final Set<String> keys = Set.of("key");
-        cache.connect()
-                .compose(c -> c.getAll(keys))
+        cache.start()
+                .compose(ok -> cache.getAll(keys))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         verify(grid).getAllAsync(keys);

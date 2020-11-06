@@ -13,6 +13,7 @@
 package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -29,7 +31,6 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
@@ -37,12 +38,11 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.DeviceConnectionClient;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -115,7 +115,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private EventSender eventSender;
     private DeviceRegistrationClient registrationClient;
     private TenantClient tenantClient;
-    private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
+    private DeviceConnectionClient deviceConnectionClient;
     private CredentialsClient credentialsClient;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private CommandTargetMapper commandTargetMapper;
@@ -196,46 +196,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory to use for creating a client for the Device Connection service.
+     * Sets the client to use for accessing the Device Connection service.
      *
-     * @param factory The factory.
-     * @throws NullPointerException if the factory is {@code null}.
+     * @param client The client.
+     * @throws NullPointerException if the client is {@code null}.
      */
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @Autowired
-    public final void setDeviceConnectionClientFactory(final BasicDeviceConnectionClientFactory factory) {
-        this.deviceConnectionClientFactory = Objects.requireNonNull(factory);
-    }
-
-    /**
-     * Gets the factory used for creating a client for the Device Connection service.
-     *
-     * @return The factory.
-     * @deprecated Use {@link #getDeviceConnectionClient(String)} in order to access
-     *             device connection information.
-     */
-    @Deprecated(forRemoval = true)
-    public final DeviceConnectionClientFactory getDeviceConnectionClientFactory() {
-        if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
-            return (DeviceConnectionClientFactory) deviceConnectionClientFactory;
-        } else {
-             return null;
-        }
-    }
-
-    /**
-     * Gets a client for interacting with the Device Connection service.
-     *
-     * @param tenantId The tenant that the client is scoped to.
-     * @return The client.
-     * @throws IllegalStateException if no client factory is set.
-     */
-    protected final Future<DeviceConnectionClient> getDeviceConnectionClient(final String tenantId) {
-
-        if (deviceConnectionClientFactory == null) {
-            throw new IllegalStateException("Device Connection client factory is not set");
-        }
-        return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId);
+    public final void setDeviceConnectionClient(final DeviceConnectionClient client) {
+        this.deviceConnectionClient = Objects.requireNonNull(client);
     }
 
     /**
@@ -487,8 +456,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Credentials client must be set"));
         } else if (commandConsumerFactory == null) {
             result.fail(new IllegalStateException("Command & Control client factory must be set"));
-        } else if (deviceConnectionClientFactory == null) {
-            result.fail(new IllegalStateException("Device Connection client factory must be set"));
+        } else if (deviceConnectionClient == null) {
+            result.fail(new IllegalStateException("Device Connection client must be set"));
         } else {
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
@@ -498,9 +467,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
             startServiceClient(credentialsClient, "Credentials service");
-            if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
-                connectToService((ConnectionLifecycle<?>) deviceConnectionClientFactory, "Device Connection service");
-            }
+            startServiceClient(deviceConnectionClient, "Device Connection service");
 
             connectToService(
                     commandConsumerFactory,
@@ -540,13 +507,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     Objects.requireNonNull(deviceId);
                     Objects.requireNonNull(viaGateways);
 
-                    return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenant)
-                            .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, viaGateways, context));
+                    return deviceConnectionClient.getCommandHandlingAdapterInstances(
+                            tenant, deviceId, viaGateways, context);
                 }
             });
-            commandConsumerFactory.initialize(
-                    commandTargetMapper,
-                    ProtocolAdapterCommandConsumerFactory.createCommandHandlingAdapterInfoAccess(deviceConnectionClientFactory));
+            commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
+
+                @Override
+                public Future<Void> setCommandHandlingAdapterInstance(
+                        final String tenant,
+                        final String deviceId,
+                        final String adapterInstanceId,
+                        final Duration lifespan,
+                        final SpanContext context) {
+                    return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
+                }
+
+                @Override
+                public Future<Void> removeCommandHandlingAdapterInstance(
+                        final String tenant,
+                        final String deviceId,
+                        final String adapterInstanceId,
+                        final SpanContext context) {
+                    return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
+                }
+            });
 
             doStart(result);
         }
@@ -592,9 +577,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(stopServiceClient(registrationClient));
         results.add(stopServiceClient(credentialsClient));
         results.add(disconnectFromService(commandConsumerFactory));
-        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
-            results.add(disconnectFromService((ConnectionLifecycle<?>) deviceConnectionClientFactory));
-        }
+        results.add(stopServiceClient(deviceConnectionClient));
         results.add(stopServiceClient(eventSender));
         results.add(stopServiceClient(telemetrySender));
         return CompositeFuture.all(results);
@@ -1010,9 +993,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElseGet(() -> Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set"))));
-        connections.add(Optional.ofNullable(deviceConnectionClientFactory)
+        connections.add(Optional.ofNullable(deviceConnectionClient)
                 .map(client -> {
-                    if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+                    if (deviceConnectionClient instanceof ConnectionLifecycle) {
                         return ((ConnectionLifecycle<?>) client).isConnected();
                     } else {
                         return Future.succeededFuture();
@@ -1215,9 +1198,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         final Future<String> gatewayIdFuture = getGatewayId(tenantId, deviceId, authenticatedDevice);
         return gatewayIdFuture
-                .compose(gwId -> getDeviceConnectionClient(tenantId))
-                .compose(client -> client.setLastKnownGatewayForDevice(deviceId,
-                        Optional.ofNullable(gatewayIdFuture.result()).orElse(deviceId), context))
+                .compose(gwId -> deviceConnectionClient.setLastKnownGatewayForDevice(
+                        tenantId,
+                        deviceId,
+                        Optional.ofNullable(gatewayIdFuture.result()).orElse(deviceId),
+                        context))
                 .map(registrationAssertion);
     }
 
@@ -1310,6 +1295,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (credentialsClient instanceof ServiceClient) {
             ((ServiceClient) credentialsClient).registerReadinessChecks(handler);
         }
+        if (deviceConnectionClient instanceof ServiceClient) {
+            ((ServiceClient) deviceConnectionClient).registerReadinessChecks(handler);
+        }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
         }
@@ -1335,6 +1323,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
         if (credentialsClient instanceof ServiceClient) {
             ((ServiceClient) credentialsClient).registerLivenessChecks(handler);
+        }
+        if (deviceConnectionClient instanceof ServiceClient) {
+            ((ServiceClient) deviceConnectionClient).registerLivenessChecks(handler);
         }
         if (telemetrySender instanceof ServiceClient) {
             ((ServiceClient) telemetrySender).registerLivenessChecks(handler);
