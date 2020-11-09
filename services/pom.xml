@@ -55,6 +55,12 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-base</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.hono</groupId>
+          <artifactId>hono-client-adapter-amqp</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

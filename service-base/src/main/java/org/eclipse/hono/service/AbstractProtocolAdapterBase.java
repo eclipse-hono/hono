@@ -44,7 +44,6 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
@@ -429,9 +428,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Establishes the connections to the services this adapter depends on.
      * <p>
-     * Note that the connections will most likely not have been established when the
-     * returned future completes. The {@link #isConnected()} method can be used to
-     * determine the current connection status.
+     * Note that the connections will most likely not have been established yet, when the
+     * returned future completes.
      *
      * @return A future indicating the outcome of the startup process. the future will
      *         fail if the {@link #getTypeName()} method returns {@code null} or an empty string
@@ -969,44 +967,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if this adapter is connected to the services it depends on.
-     * <p>
-     * Subclasses may override this method in order to add checks or omit checks for
-     * connection to services that are not used/needed by the adapter.
-     *
-     * @return A future indicating the outcome of the check. The future will succeed if this adapter is currently
-     *         connected to
-     *         <ul>
-     *         <li>a Tenant service</li>
-     *         <li>a Device Registration service</li>
-     *         <li>a Credentials service</li>
-     *         <li>the AMQP Messaging Network for receiving command messages</li>
-     *         <li>a Device Connection service</li>
-     *         </ul>
-     *         Otherwise, the future will fail.
-     */
-    protected Future<Void> isConnected() {
-
-        @SuppressWarnings("rawtypes")
-        final List<Future> connections = new ArrayList<>();
-        connections.add(Optional.ofNullable(commandConsumerFactory)
-                .map(client -> client.isConnected())
-                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set"))));
-        connections.add(Optional.ofNullable(deviceConnectionClient)
-                .map(client -> {
-                    if (deviceConnectionClient instanceof ConnectionLifecycle) {
-                        return ((ConnectionLifecycle<?>) client).isConnected();
-                    } else {
-                        return Future.succeededFuture();
-                    }
-                })
-                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set"))));
-        return CompositeFuture.all(connections).mapEmpty();
-    }
-
-    /**
      * Creates a command consumer for a specific device.
      *
      * @param tenantId The tenant of the command receiver.
@@ -1271,21 +1231,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Registers a check that succeeds if this component is connected to the services it depends on.
-     *
-     * @see #isConnected()
+     * Registers checks which verify that this component is connected to the services it depends on.
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        handler.register("connection-to-services", 2000L, status -> {
-            isConnected().map(connected -> {
-                status.tryComplete(Status.OK());
-                return null;
-            }).otherwise(t -> {
-                status.tryComplete(Status.KO());
-                return null;
+
+        Optional.ofNullable(commandConsumerFactory)
+            .ifPresent(factory -> {
+                handler.register("connected-to-command-endpoint", 2000L, status -> {
+                    factory.isConnected()
+                        .onSuccess(connected -> status.tryComplete(Status.OK()))
+                        .onFailure(t -> status.tryComplete(Status.KO()));
+                });
             });
-        });
+
         if (tenantClient instanceof ServiceClient) {
             ((ServiceClient) tenantClient).registerReadinessChecks(handler);
         }

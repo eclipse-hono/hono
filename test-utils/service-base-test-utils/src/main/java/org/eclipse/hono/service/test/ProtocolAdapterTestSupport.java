@@ -25,7 +25,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -41,7 +40,6 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.EventConstants;
@@ -298,15 +296,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
                 .thenReturn(Future.succeededFuture(responseSender));
         return responseSender;
-    }
-
-    /**
-     * Configures all mock collaborators to return a failed future
-     * when checking their connection status.
-     */
-    protected void forceClientMocksToDisconnected() {
-        when(commandConsumerFactory.isConnected())
-            .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
     }
 
     /**

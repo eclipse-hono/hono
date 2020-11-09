@@ -49,7 +49,7 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
     /**
      * Creates a new client for a connection.
      *
-     * @param connection The connection to the Credentials service.
+     * @param connection The connection to the Device Connection service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters other than the cache provider are {@code null}.
