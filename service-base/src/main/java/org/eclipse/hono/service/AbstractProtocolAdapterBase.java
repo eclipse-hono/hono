@@ -544,7 +544,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, viaGateways, context));
                 }
             });
-            commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
+            commandConsumerFactory.initialize(
+                    commandTargetMapper,
+                    ProtocolAdapterCommandConsumerFactory.createCommandHandlingAdapterInfoAccess(deviceConnectionClientFactory));
 
             doStart(result);
         }

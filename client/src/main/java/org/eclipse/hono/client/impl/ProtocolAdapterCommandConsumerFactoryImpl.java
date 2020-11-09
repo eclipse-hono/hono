@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponseSender;
@@ -81,7 +80,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
     private final AtomicBoolean recreatingConsumers = new AtomicBoolean(false);
     private final AtomicBoolean tryAgainRecreatingConsumers = new AtomicBoolean(false);
 
-    private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
+    private CommandHandlingAdapterInfoAccess commandHandlingAdapterInfoAccessor;
     private MappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
     private ProtonReceiver adapterSpecificConsumer;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -103,10 +102,12 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
     }
 
     @Override
-    public void initialize(final CommandTargetMapper commandTargetMapper,
-            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory) {
+    public void initialize(
+            final CommandTargetMapper commandTargetMapper,
+            final CommandHandlingAdapterInfoAccess accessor) {
+
         Objects.requireNonNull(commandTargetMapper);
-        this.deviceConnectionClientFactory = Objects.requireNonNull(deviceConnectionClientFactory);
+        this.commandHandlingAdapterInfoAccessor = Objects.requireNonNull(accessor);
 
         mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(connection,
                 commandTargetMapper, adapterInstanceCommandHandler, adapterInstanceId, samplerFactory.create(CommandConstants.COMMAND_ENDPOINT));
@@ -192,8 +193,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     private Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final Duration lifespan, final SpanContext context) {
-        return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
-                .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, lifespan, context))
+        return commandHandlingAdapterInfoAccessor.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, context)
                 .recover(thr -> {
                     log.info("error setting command handling adapter instance [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);
@@ -225,9 +225,11 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
                     "local command handler already replaced or removed"));
         }
-        return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
-                .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId,
-                        onCloseSpanContext))
+        return commandHandlingAdapterInfoAccessor.removeCommandHandlingAdapterInstance(
+                    tenantId,
+                    deviceId,
+                    adapterInstanceId,
+                    onCloseSpanContext)
                 .recover(thr -> {
                     if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
                         final boolean entryMayHaveExpired = !lifespan.isNegative() && Instant.now().isAfter(lifespanStart.plus(lifespan));
