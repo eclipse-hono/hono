@@ -98,7 +98,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                         "device_id",
                         "version",
                         "data",
-                        "created");
+                        "created",
+                        "auto_provisioned");
 
         this.createMemberOfStatement = cfg
                 .getRequiredStatement("createMemberOf")
@@ -121,7 +122,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                         "next_version",
                         "data",
                         "expected_version",
-                        "updated_on");
+                        "updated_on",
+                        "auto_provisioning_notification_sent");
 
         this.deleteStatement = cfg
                 .getRequiredStatement("delete")
@@ -217,7 +219,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(key, device);
+        // setting autoProvisioned to null until #2053 is implemented
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(key, null, device);
         return SQL
 
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) -> {
@@ -228,6 +231,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                         params.put("version", deviceDto.getVersion());
                         params.put("data", deviceDto.getDeviceJson());
                         params.put("created", deviceDto.getCreationTime());
+                        params.put("auto_provisioned", deviceDto.isAutoProvisioned());
                     });
 
                     log.debug("createDevice - statement: {}", expanded);
@@ -367,7 +371,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .<Set<String>>map(HashSet::new)
                 .orElse(Collections.emptySet());
 
-        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(key, device);
+        // setting autoProvisioningNotificationSent to null until #2053 is implemented
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(key, null, device);
         return SQL
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) ->
 
@@ -392,6 +397,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             map.put("expected_version", version);
                                             map.put("next_version", deviceDto.getVersion());
                                             map.put("updated_on", deviceDto.getUpdatedOn());
+                                            map.put("auto_provisioning_notification_sent", deviceDto.isAutoProvisioningNotificationSent());
                                         })
                                         .trace(this.tracer, span.context()).update(connection)
 

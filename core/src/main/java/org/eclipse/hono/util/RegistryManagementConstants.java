@@ -347,6 +347,16 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String DEFAULT_DEVICE_ID_PATTERN = "^[a-zA-Z0-9-_\\.:]+$";
 
+    /**
+     * The name of the field that contains a boolean indicating if an entity was auto-provisioned.
+     */
+    public static final String FIELD_AUTO_PROVISIONED   = "autoProvisioned";
+
+    /**
+     * The name of the field that contains a boolean indicating if a notification for an auto-provisioned device was sent.
+     */
+    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "autoProvisioningNotificationSent";
+
     private RegistryManagementConstants() {
         // prevent instantiation
     }

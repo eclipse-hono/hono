@@ -31,14 +31,16 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
      * @param deviceKey The key of the device.
+     * @param autoProvisioned Marks this device as being auto-provisioned.
      * @param device The data of the DTO.
      *
      * @return A DTO instance for creating a new entry.
      */
-    public static JdbcBasedDeviceDto forCreation(final DeviceKey deviceKey, final Device device) {
+    public static JdbcBasedDeviceDto forCreation(final DeviceKey deviceKey, final Boolean autoProvisioned, final Device device) {
 
         return DeviceDto.forCreation(JdbcBasedDeviceDto::new, deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
+                autoProvisioned,
                 device,
                 UUID.randomUUID().toString());
     }
@@ -57,6 +59,8 @@ public class JdbcBasedDeviceDto extends DeviceDto {
         return DeviceDto.forRead(tenantId,
                 deviceId,
                 Json.decodeValue(recordJson.getString("data"), Device.class),
+                recordJson.getBoolean("auto_provisioned"),
+                recordJson.getBoolean("auto_provisioning_notification_sent"),
                 recordJson.getInstant("created"),
                 recordJson.getInstant("updated_on"),
                 Optional.ofNullable(recordJson.getString("version")).orElse(null));
@@ -66,15 +70,17 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
      *
      * @param deviceKey The key of the device.
+     * @param autoProvisioningNotificationSent Marks the auto-provisioning notification for this device as sent.
      * @param device The data of the DTO.
      *
      * @return A DTO instance for updating an entry.
      */
-    public static JdbcBasedDeviceDto forUpdate(final DeviceKey deviceKey, final Device device) {
+    public static JdbcBasedDeviceDto forUpdate(final DeviceKey deviceKey, final Boolean autoProvisioningNotificationSent, final Device device) {
 
         return DeviceDto.forUpdate(JdbcBasedDeviceDto::new,
                 deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
+                autoProvisioningNotificationSent,
                 withoutStatus(device),
                 UUID.randomUUID().toString());
     }

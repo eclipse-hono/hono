@@ -65,7 +65,7 @@ public class Device {
 
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS)
     @JsonInclude(value = Include.NON_EMPTY)
-    private Status status;
+    private DeviceStatus status;
 
     @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
@@ -289,7 +289,7 @@ public class Device {
      * @param status The status information to be set or {@code null} if there is none.
      * @return A reference to this for fluent use.
      */
-    public final Device setStatus(final Status status) {
+    public final Device setStatus(final DeviceStatus status) {
         this.status = status;
         return this;
     }
@@ -299,7 +299,7 @@ public class Device {
      *
      * @return The registry internal status information or {@code null} if there is none.
      */
-    public final Status getStatus() {
+    public final DeviceStatus getStatus() {
         return status;
     }
 }

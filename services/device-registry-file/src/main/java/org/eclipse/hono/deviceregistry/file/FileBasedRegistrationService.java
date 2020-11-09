@@ -38,11 +38,11 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.management.device.Sort;
-import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
@@ -742,7 +742,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         @JsonIgnore
         public Versioned<Device> getDeviceWithStatus() {
             final Device deviceWithStatus = new Device(getData().getValue());
-            deviceWithStatus.setStatus(new Status()
+            deviceWithStatus.setStatus(new DeviceStatus()
                     .setCreationTime(getCreationTime())
                     .setLastUpdate(getUpdatedOn())
                 );

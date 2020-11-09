@@ -46,6 +46,8 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
         return DeviceDto.forRead(tenantId,
             deviceId,
             recordJson.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
+            recordJson.getBoolean(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONED),
+            recordJson.getBoolean(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT),
             recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
             recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
             recordJson.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION));
