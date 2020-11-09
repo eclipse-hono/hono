@@ -36,6 +36,7 @@ import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -140,7 +141,9 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                 .thenReturn(Future.succeededFuture());
 
         commandConsumerFactory = new ProtocolAdapterCommandConsumerFactoryImpl(connection, SendMessageSampler.Factory.noop());
-        commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
+        commandConsumerFactory.initialize(
+                commandTargetMapper,
+                ProtocolAdapterCommandConsumerFactory.createCommandHandlingAdapterInfoAccess(deviceConnectionClientFactory));
     }
 
     /**

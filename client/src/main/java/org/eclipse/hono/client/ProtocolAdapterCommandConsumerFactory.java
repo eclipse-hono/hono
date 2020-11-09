@@ -14,6 +14,7 @@
 package org.eclipse.hono.client;
 
 import java.time.Duration;
+import java.util.Objects;
 
 import org.eclipse.hono.client.impl.ProtocolAdapterCommandConsumerFactoryImpl;
 
@@ -26,6 +27,94 @@ import io.vertx.core.Handler;
  * receive commands and send responses.
  */
 public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecycle<HonoConnection> {
+
+    /**
+     * A service for setting and clearing information mapping protocol adapter instances to devices.
+     */
+    interface CommandHandlingAdapterInfoAccess {
+
+        /**
+         * Sets the protocol adapter instance that handles commands for the given device.
+         *
+         * @param tenant The tenant that the device belongs to.
+         * @param deviceId The device id.
+         * @param adapterInstanceId The protocol adapter instance id.
+         * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
+         *                 interpreted as an unlimited lifespan. Only the number of seconds in the given duration
+         *                 will be taken into account.
+         * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
+         *            An implementation should use this as the parent for any span it creates for tracing
+         *            the execution of this operation.
+         * @return A future indicating whether the operation succeeded or not.
+         * @throws NullPointerException if tenant, device id or adapter instance id are {@code null}.
+         */
+        Future<Void> setCommandHandlingAdapterInstance(
+                String tenant,
+                String deviceId,
+                String adapterInstanceId,
+                Duration lifespan,
+                SpanContext context);
+
+        /**
+         * Removes the mapping information that associates the given device with the given protocol adapter instance
+         * that handles commands for the given device. The mapping entry is only deleted if its value
+         * contains the given protocol adapter instance id.
+         *
+         * @param tenant The tenant that the device belongs to.
+         * @param deviceId The device id.
+         * @param adapterInstanceId The protocol adapter instance id that the entry to be removed has to contain.
+         * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
+         *            An implementation should use this as the parent for any span it creates for tracing
+         *            the execution of this operation.
+         * @return A future indicating the outcome of the operation.
+         *         <p>
+         *         The future will be succeeded if the entry was successfully removed.
+         *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+         * @throws NullPointerException if tenant, device id or adapter instance id are {@code null}.
+         */
+        Future<Void> removeCommandHandlingAdapterInstance(
+                String tenant,
+                String deviceId,
+                String adapterInstanceId,
+                SpanContext context);
+    }
+
+    /**
+     * Creates an accessor for a Device Connection service client factory.
+     *
+     * @param factory The factory.
+     * @return The accessor.
+     * @throws NullPointerException if the factory is {@code null}.
+     */
+    static CommandHandlingAdapterInfoAccess createCommandHandlingAdapterInfoAccess(
+            final BasicDeviceConnectionClientFactory factory) {
+
+        Objects.requireNonNull(factory);
+
+        return new CommandHandlingAdapterInfoAccess() {
+
+            @Override
+            public Future<Void> setCommandHandlingAdapterInstance(
+                    final String tenant,
+                    final String deviceId,
+                    final String adapterInstanceId,
+                    final Duration lifespan,
+                    final SpanContext context) {
+                return factory.getOrCreateDeviceConnectionClient(tenant)
+                        .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, lifespan, context));
+            }
+
+            @Override
+            public Future<Void> removeCommandHandlingAdapterInstance(
+                    final String tenant,
+                    final String deviceId,
+                    final String adapterInstanceId,
+                    final SpanContext context) {
+                return factory.getOrCreateDeviceConnectionClient(tenant)
+                        .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context));
+            }
+        };
+    }
 
     /**
      * Creates a new factory for an existing connection.
@@ -54,13 +143,14 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * Initializes the ProtocolAdapterCommandConsumerFactory with the given components.
      *
      * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
-     *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
+     *            protocol adapter instance that can handle it. Note that no initialization of this component will be done
      *            here, that is supposed to be done by the calling method.
-     * @param deviceConnectionClientFactory The factory to create a device connection client instance. Note that no
-     *            initialization of this factory will be done here, that is supposed to be done by the calling method.
+     * @param commandHandlingAdapterInfoAccess The component for setting and clearing information mapping protocol
+     *                                         adapter instances to devices.
      */
-    void initialize(CommandTargetMapper commandTargetMapper,
-            BasicDeviceConnectionClientFactory deviceConnectionClientFactory);
+    void initialize(
+            CommandTargetMapper commandTargetMapper,
+            CommandHandlingAdapterInfoAccess commandHandlingAdapterInfoAccess);
 
     /**
      * Creates a command consumer for a device.
@@ -72,7 +162,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * once it is no longer needed by invoking its {@link ProtocolAdapterCommandConsumer#close(SpanContext)}
      * method.
      * <p>
-     * Note that {@link #initialize(CommandTargetMapper, BasicDeviceConnectionClientFactory)} has to have been called
+     * Note that {@link #initialize(CommandTargetMapper, CommandHandlingAdapterInfoAccess)} has to have been called
      * already, otherwise a failed future is returned.
      *
      * @param tenantId The tenant to consume commands from.
@@ -112,7 +202,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * once it is no longer needed by invoking its {@link ProtocolAdapterCommandConsumer#close(SpanContext)}
      * method.
      * <p>
-     * Note that {@link #initialize(CommandTargetMapper, BasicDeviceConnectionClientFactory)} has to have been called
+     * Note that {@link #initialize(CommandTargetMapper, CommandHandlingAdapterInfoAccess)} has to have been called
      * already, otherwise a failed future is returned.
      *
      * @param tenantId The tenant to consume commands from.
