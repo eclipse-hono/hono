@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -43,7 +44,6 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
@@ -98,7 +98,7 @@ public class AbstractProtocolAdapterBaseTest {
     private TelemetrySender telemetrySender;
     private EventSender eventSender;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
+    private DeviceConnectionClient deviceConnectionClient;
     private CommandTargetMapper commandTargetMapper;
     private ConnectionEventProducer.Context connectionEventProducerContext;
 
@@ -126,8 +126,8 @@ public class AbstractProtocolAdapterBaseTest {
         commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        deviceConnectionClient = mock(DeviceConnectionClient.class);
+        when(deviceConnectionClient.start()).thenReturn(Future.succeededFuture());
 
         connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
         when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(eventSender);
@@ -154,7 +154,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setCredentialsClient(credentialsClient);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setDeviceConnectionClient(deviceConnectionClient);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);

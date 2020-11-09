@@ -15,7 +15,7 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Optional;
 
-import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -80,20 +80,24 @@ public class HotrodCacheConfig {
     }
 
     /**
-     * Exposes a factory for creating clients for accessing device connection information
-     * in an Infinispan data grid.
+     * Exposes a client for accessing device connection information in an Infinispan data grid.
      *
      * @param cache The remote cache in the Infinispan data grid.
      * @param tracer The OpenTracing {@code Tracer} to use for tracking requests done by clients created by this factory.
      *               If an empty Optional is given, the {@code NoopTracer} from OpenTracing will be used.
-     * @return The factory.
+     * @return The client.
      */
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
-    public BasicDeviceConnectionClientFactory hotrodBasedDeviceConnectionClientFactory(
-            final HotrodCache<String, String> cache, final Optional<Tracer> tracer) {
-        return new CacheBasedDeviceConnectionClientFactory(cache, tracer.orElse(NoopTracerFactory.create()));
+    public DeviceConnectionClient hotrodBasedDeviceConnectionClient(
+            final HotrodCache<String, String> cache,
+            final Optional<Tracer> tracer) {
+
+        final Tracer effectiveTracer = tracer.orElse(NoopTracerFactory.create());
+        return new CacheBasedDeviceConnectionClient(
+                new CacheBasedDeviceConnectionInfo(cache, effectiveTracer),
+                effectiveTracer);
     }
 
     /**

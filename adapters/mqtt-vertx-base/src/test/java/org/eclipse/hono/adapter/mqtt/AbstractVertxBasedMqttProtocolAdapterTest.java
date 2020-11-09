@@ -41,6 +41,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -217,10 +218,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // GIVEN an adapter that is not connected to
         // all of its required services
         givenAnAdapter(properties);
-        forceClientMocksToDisconnected();
+        when(tenantClient.get(anyString(), any())).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+        when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
+            .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "4711")));
 
         // WHEN a client tries to connect
-        final MqttEndpoint endpoint = mockEndpoint();
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection request is rejected

@@ -25,11 +25,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -38,10 +38,8 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.EventConstants;
@@ -71,7 +69,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
     protected CommandTargetMapper commandTargetMapper;
     protected CredentialsClient credentialsClient;
-    protected DeviceConnectionClientFactory deviceConnectionClientFactory;
+    protected DeviceConnectionClient deviceConnectionClient;
     protected EventSender eventSender;
     protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     protected DeviceRegistrationClient registrationClient;
@@ -94,6 +92,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
     private CredentialsClient createCredentialsClientMock() {
         final CredentialsClient client = mock(CredentialsClient.class);
+        when(client.start()).thenReturn(Future.succeededFuture());
+        when(client.stop()).thenReturn(Future.succeededFuture());
+        return client;
+    }
+
+    private DeviceConnectionClient createDeviceConnectionClientMock() {
+        final DeviceConnectionClient client = mock(DeviceConnectionClient.class);
         when(client.start()).thenReturn(Future.succeededFuture());
         when(client.stop()).thenReturn(Future.succeededFuture());
         return client;
@@ -137,15 +142,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
             return null;
         }).when(commandConsumerFactory).disconnect(any(Handler.class));
 
-        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
-        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(deviceConnectionClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
-
+        this.deviceConnectionClient = createDeviceConnectionClientMock();
         this.tenantClient = createTenantClientMock();
         this.registrationClient = createDeviceRegistrationClientMock();
         this.credentialsClient = createCredentialsClientMock();
@@ -197,7 +194,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setCredentialsClient(credentialsClient);
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setDeviceConnectionClient(deviceConnectionClient);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
@@ -299,17 +296,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
                 .thenReturn(Future.succeededFuture(responseSender));
         return responseSender;
-    }
-
-    /**
-     * Configures all mock collaborators to return a failed future
-     * when checking their connection status.
-     */
-    protected void forceClientMocksToDisconnected() {
-        when(commandConsumerFactory.isConnected())
-            .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(deviceConnectionClientFactory.isConnected())
-            .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
     }
 
     /**

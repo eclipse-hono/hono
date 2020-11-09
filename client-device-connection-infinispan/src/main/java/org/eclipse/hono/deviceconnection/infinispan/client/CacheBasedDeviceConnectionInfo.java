@@ -23,10 +23,11 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.util.DeviceConnectionConstants;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ import io.vertx.ext.healthchecks.Status;
 /**
  * A client for accessing device connection information in a data grid.
  */
-public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInfo, HealthCheckProvider {
+public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInfo, ServiceClient, Lifecycle {
 
     /**
      * Lifespan for last-known-gateway cache entries.
@@ -453,7 +454,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     /**
      * {@inheritDoc}
      * <p>
-     * Registers a check for an established connection to the remote cache.
+     * Registers a check which verifies if the underlying cache is available.
      * The check times out (and fails) after 1000ms.
      */
     @Override
@@ -474,5 +475,29 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> start() {
+        if (cache instanceof Lifecycle) {
+            return ((Lifecycle) cache).start();
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> stop() {
+        if (cache instanceof Lifecycle) {
+            return ((Lifecycle) cache).stop();
+        } else {
+            return Future.succeededFuture();
+        }
     }
 }

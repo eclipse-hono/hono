@@ -23,18 +23,15 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.Futures;
+import org.eclipse.hono.util.Lifecycle;
 import org.infinispan.commons.api.BasicCacheContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -45,7 +42,7 @@ import io.vertx.core.json.JsonObject;
  * @param <K> The type of the key.
  * @param <V> The type of the value.
  */
-public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecycle<BasicCache<K, V>> {
+public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(BasicCache.class);
 
@@ -95,34 +92,16 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      * {@inheritDoc}
      */
     @Override
-    public Future<BasicCache<K, V>> connect() {
-        return connectToGrid().map(ok -> this);
+    public Future<Void> start() {
+        return connectToGrid();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> isConnected() {
-        return checkForCacheAvailability().mapEmpty();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void disconnect() {
-        disconnect(r -> {
-        });
-    }
-
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
-
+    public Future<Void> stop() {
+        final Promise<Void> result = Promise.promise();
         vertx.executeBlocking(r -> {
             try {
                 cacheManager.stop();
@@ -136,25 +115,9 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
             } else {
                 LOG.info("error trying to stop connection(s) to cache", stopAttempt.cause());
             }
-            completionHandler.handle(stopAttempt);
+            result.handle(stopAttempt);
         });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addDisconnectListener(final DisconnectListener<BasicCache<K, V>> listener) {
-        // neither the embedded cache nor the Hotrod protocol does support signaling of connection loss
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addReconnectListener(final ReconnectListener<BasicCache<K, V>> listener) {
-        // neither the embedded cache nor the Hotrod protocol does support signaling of connection loss
-        // thus, there is no way to know when a connection has been re-established
+        return result.future();
     }
 
     protected void setCache(final org.infinispan.commons.api.BasicCache<K, V> cache) {

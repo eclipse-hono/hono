@@ -403,27 +403,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             connectionClosedPrematurely.set(true);
         });
 
-        isConnected()
-                .compose(v -> handleConnectionRequest(endpoint, span))
-                .compose(authenticatedDevice -> handleConnectionRequestResult(endpoint, authenticatedDevice, connectionClosedPrematurely, span))
-                .onSuccess(authenticatedDevice -> {
-                    // we NEVER maintain session state
-                    endpoint.accept(false);
-                    span.log("connection accepted");
-                    metrics.reportConnectionAttempt(
-                            ConnectionAttemptOutcome.SUCCEEDED,
-                            Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
-                })
-                .onFailure(t -> {
-                    log.debug("rejecting connection request from client [clientId: {}], cause:",
-                            endpoint.clientIdentifier(), t);
+        handleConnectionRequest(endpoint, span)
+            .compose(authenticatedDevice -> handleConnectionRequestResult(endpoint, authenticatedDevice, connectionClosedPrematurely, span))
+            .onSuccess(authenticatedDevice -> {
+                // we NEVER maintain session state
+                endpoint.accept(false);
+                span.log("connection accepted");
+                metrics.reportConnectionAttempt(
+                        ConnectionAttemptOutcome.SUCCEEDED,
+                        Optional.ofNullable(authenticatedDevice).map(device -> device.getTenantId()).orElse(null));
+            })
+            .onFailure(t -> {
+                log.debug("rejecting connection request from client [clientId: {}], cause:",
+                        endpoint.clientIdentifier(), t);
 
-                    final MqttConnectReturnCode code = getConnectReturnCode(t);
-                    rejectConnectionRequest(endpoint, code, span);
-                    TracingHelper.logError(span, t);
-                    reportFailedConnectionAttempt(t);
-                })
-                .onComplete(result -> span.finish());
+                final MqttConnectReturnCode code = getConnectReturnCode(t);
+                rejectConnectionRequest(endpoint, code, span);
+                TracingHelper.logError(span, t);
+                reportFailedConnectionAttempt(t);
+            })
+            .onComplete(result -> span.finish());
 
     }
 

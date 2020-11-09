@@ -80,7 +80,7 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
                     if (status != ComponentStatus.RUNNING) {
                         LOG.debug("trying to start cache manager, current state: {}", status);
                         cacheManager.start();
-                        LOG.info("started cache manager, now connecting to remote cache");
+                        LOG.info("started cache manager");
                     }
                     LOG.debug("trying to get cache");
                     setCache(cacheManager.getCache(cacheName));

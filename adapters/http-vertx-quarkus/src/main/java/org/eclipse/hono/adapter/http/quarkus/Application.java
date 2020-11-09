@@ -23,6 +23,8 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -35,7 +37,6 @@ import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -125,7 +126,7 @@ public class Application {
         adapter.setCommandTargetMapper(commandTargetMapper());
         adapter.setConfig(config.http);
         adapter.setCredentialsClient(credentialsClient());
-        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory());
+        adapter.setDeviceConnectionClient(deviceConnectionClient());
         adapter.setEventSender(newDownstreamSender());
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setMetrics(metrics);
@@ -169,8 +170,11 @@ public class Application {
     }
 
     @Produces
-    DeviceConnectionClientFactory deviceConnectionClientFactory() {
-        return DeviceConnectionClientFactory.create(HonoConnection.newConnection(vertx, config.deviceConnection), metrics);
+    DeviceConnectionClient deviceConnectionClient() {
+        return new ProtonBasedDeviceConnectionClient(
+                HonoConnection.newConnection(vertx, config.deviceConnection),
+                metrics,
+                config.http);
     }
 
     @Singleton
