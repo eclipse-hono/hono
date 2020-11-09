@@ -72,8 +72,8 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     /**
      * Identifier that has to be unique to this factory instance.
-     * Will be used to represent the protocol adapter instance that this factory instance is used in, when registering
-     * command handlers with the Device Connection service.
+     * Will be used to represent the protocol adapter instance that this factory instance is used in,
+     * when registering command handlers with the CommandHandlingAdapterInfoAccess service.
      */
     private final String adapterInstanceId;
     private final AdapterInstanceCommandHandler adapterInstanceCommandHandler;
