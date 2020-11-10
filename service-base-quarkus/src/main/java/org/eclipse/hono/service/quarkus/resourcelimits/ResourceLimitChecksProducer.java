@@ -10,13 +10,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.http.quarkus;
+package org.eclipse.hono.service.quarkus.resourcelimits;
 
 import java.time.Duration;
 
 import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
 
+import org.eclipse.hono.service.quarkus.ProtocolAdapterConfig;
 import org.eclipse.hono.service.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
@@ -31,22 +31,16 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
 /**
- * A factory class that creates resource limit checks based on the profile.
+ * A producer for resource limit checks based on the profile.
  */
-public class ResourceLimitChecksFactory {
-
-    @Inject
-    Vertx vertx;
-
-    @Inject
-    HonoConfig config;
-
-    @Inject
-    Tracer tracer;
+public class ResourceLimitChecksProducer {
 
     @Produces
     @IfBuildProperty(name = "hono.metrics", stringValue = "prometheus")
-    ResourceLimitChecks prometheusResourceLimitChecks() {
+    ResourceLimitChecks prometheusResourceLimitChecks(
+            final ProtocolAdapterConfig config,
+            final Vertx vertx,
+            final Tracer tracer) {
 
         final WebClientOptions webClientOptions = new WebClientOptions();
         webClientOptions.setDefaultHost(config.resourceLimitChecks.getHost());
