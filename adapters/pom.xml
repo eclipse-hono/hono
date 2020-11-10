@@ -82,10 +82,6 @@
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-noop</artifactId>
     </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-    </dependency>
 
     <!-- Testing -->
     <dependency>
