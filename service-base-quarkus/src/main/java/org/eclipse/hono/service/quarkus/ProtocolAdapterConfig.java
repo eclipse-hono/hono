@@ -10,9 +10,8 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.mqtt.quarkus;
+package org.eclipse.hono.service.quarkus;
 
-import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -21,18 +20,16 @@ import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitCheck
 import io.quarkus.arc.config.ConfigProperties;
 
 /**
- * Configuration properties for the MQTT adapter.
+ * Configuration properties for a Hono protocol adapter.
  */
 @ConfigProperties(prefix = "hono", namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class HonoConfig {
+public class ProtocolAdapterConfig {
 
      public CommandConfig command;
 
      public HealthCheckConfig healthCheck;
 
      public ApplicationConfig app;
-
-     public MqttConfig mqtt;
 
      public CredentialsClientConfig credentials;
 
@@ -63,12 +60,6 @@ public class HonoConfig {
       */
      @ConfigProperties(prefix = "hono.app", failOnMismatchingMember = false)
      public static class ApplicationConfig extends ApplicationConfigProperties { }
-
-     /**
-      * Mqtt endpoint configuration.
-      */
-     @ConfigProperties(prefix = "hono.mqtt", failOnMismatchingMember = false)
-     public static class MqttConfig extends MqttProtocolAdapterProperties { }
 
      /**
       * Credentials client configuration.

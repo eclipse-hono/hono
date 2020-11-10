@@ -12,52 +12,24 @@
  */
 package org.eclipse.hono.adapter.mqtt.quarkus;
 
-import java.util.Collections;
-import java.util.List;
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
-import org.eclipse.hono.service.metric.PrometheusScrapingResource;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.quarkus.arc.DefaultBean;
-import io.quarkus.arc.properties.IfBuildProperty;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.web.Router;
 
 /**
- * A factory class that creates a proper metrics based on the profile.
+ * A factory class that creates protocol adapter specific metrics.
  */
 @ApplicationScoped
 public class MetricsFactory {
 
-    @Inject
-    Vertx vertx;
-
-    @Inject
-    MeterRegistry registry;
-
+    @Singleton
     @Produces
-    @IfBuildProperty(name = "hono.metrics", stringValue = "prometheus")
-    List<Handler<Router>> scrapingResource() {
-        return Collections.singletonList(new PrometheusScrapingResource((PrometheusMeterRegistry) registry));
-    }
-
-    @Produces
-    @DefaultBean
-    List<Handler<Router>> emptyResources() {
-        return Collections.emptyList();
-    }
-
-    @Produces
-    MicrometerBasedMqttAdapterMetrics metrics() {
+    MicrometerBasedMqttAdapterMetrics metrics(final Vertx vertx, final MeterRegistry registry) {
         return new MicrometerBasedMqttAdapterMetrics(registry, vertx);
     }
-
 }
-
