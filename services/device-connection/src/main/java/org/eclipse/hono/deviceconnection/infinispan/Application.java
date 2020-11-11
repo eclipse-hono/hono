@@ -95,7 +95,7 @@ public class Application extends AbstractApplication {
         } else {
             return Future.failedFuture(String.format(
                     "cannot deploy component [%s]: not a Verticle",
-                    serviceImplementation.getClass().getName()));
+                    component.getClass().getName()));
         }
     }
     /**
@@ -115,7 +115,7 @@ public class Application extends AbstractApplication {
     }
 
     /**
-     * Starts the Device Registry Server.
+     * Starts the Device Connection service server.
      *
      * @param args command line arguments to pass to the server.
      */

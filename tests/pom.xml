@@ -1305,6 +1305,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <file>${project.build.directory}/docker/jaeger.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
+                    <file>${project.build.directory}/docker/deviceconnection.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.http.port.properties</file>
