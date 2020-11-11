@@ -170,7 +170,7 @@ public class CommandTest {
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo("doThis");
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
-        assertThat(cmd.getReplyToId()).isNull();;
+        assertThat(cmd.getReplyToId()).isNull();
         assertTrue(cmd.isOneWay());
     }
 

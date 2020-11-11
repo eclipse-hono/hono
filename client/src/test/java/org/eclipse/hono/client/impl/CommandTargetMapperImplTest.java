@@ -26,12 +26,12 @@ import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -53,12 +53,8 @@ public class CommandTargetMapperImplTest {
      */
     @BeforeEach
     public void setup() {
-        final SpanContext spanContext = mock(SpanContext.class);
-        span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
-        final Tracer tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         tenantId = "testTenant";
         deviceId = "testDevice";

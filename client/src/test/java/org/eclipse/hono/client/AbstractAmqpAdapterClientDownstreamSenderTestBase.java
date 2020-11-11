@@ -15,7 +15,6 @@ package org.eclipse.hono.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,13 +25,13 @@ import java.util.Map;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
-import org.eclipse.hono.client.impl.VertxMockSupport;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -74,12 +73,9 @@ public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
 
         when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(protonDelivery);
 
-        final Span span = mock(Span.class);
-        when(span.context()).thenReturn(mock(SpanContext.class));
-        spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
-
-        final Tracer tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        final Span span = TracingMockSupport.mockSpan();
+        spanBuilder = TracingMockSupport.mockSpanBuilder(span);
+        final Tracer tracer = TracingMockSupport.mockTracer(spanBuilder);
 
         connection = HonoClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,20 +11,45 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.test;
+
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 /**
- * Argument matchers for the use with vert.x.
+ * Argument matchers and mocks for the use with vert.x.
  */
 public final class VertxMockSupport {
 
     private VertxMockSupport() {
+    }
+
+    /**
+     * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.
+     *
+     * @param vertx The vert.x instance that the mock of the context is created for.
+     * @return The mocked context.
+     */
+    public static Context mockContext(final Vertx vertx) {
+
+        final Context context = mock(Context.class);
+
+        when(context.owner()).thenReturn(vertx);
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return null;
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
+        return context;
     }
 
     /**

@@ -42,6 +42,8 @@ import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -50,7 +52,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -79,15 +80,11 @@ public class MappingAndDelegatingCommandHandlerTest {
      */
     @BeforeEach
     public void setUp() {
-        final SpanContext spanContext = mock(SpanContext.class);
-        final Span span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
-        final Tracer tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        final Span span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         final Vertx vertx = mock(Vertx.class);
-        final Context context = HonoClientUnitTestHelper.mockContext(vertx);
+        final Context context = VertxMockSupport.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
@@ -178,7 +175,6 @@ public class MappingAndDelegatingCommandHandlerTest {
      * Verifies that a command message with an address that doesn't contain a device ID
      * gets rejected.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMapForMessageHavingAddressWithoutDeviceId() {
 
@@ -197,14 +193,13 @@ public class MappingAndDelegatingCommandHandlerTest {
                 argThat(state -> Constants.AMQP_BAD_REQUEST.equals(((Rejected) state).getError().getCondition())),
                 eq(true));
         // and the message is not being delegated
-        verify(sender, never()).send(any(Message.class), any(Handler.class));
+        verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
     }
 
     /**
      * Verifies that a command message with an address that contains a tenant which doesn't
      * match the scope of the command receiver link gets rejected.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMapForMessageHavingAddressWithInvalidTenant() {
 
@@ -223,7 +218,7 @@ public class MappingAndDelegatingCommandHandlerTest {
                 argThat(state -> AmqpError.UNAUTHORIZED_ACCESS.equals(((Rejected) state).getError().getCondition())),
                 eq(true));
         // and the message is not being delegated
-        verify(sender, never()).send(any(Message.class), any(Handler.class));
+        verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
     }
 
     /**

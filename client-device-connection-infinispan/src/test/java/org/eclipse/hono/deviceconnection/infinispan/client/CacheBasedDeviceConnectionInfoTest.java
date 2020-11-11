@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -35,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -44,12 +44,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.tag.Tag;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -97,7 +94,6 @@ class CacheBasedDeviceConnectionInfoTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp(final Vertx vertx, final VertxTestContext testContext) {
 
@@ -107,19 +103,8 @@ class CacheBasedDeviceConnectionInfoTest {
         cache = new EmbeddedCache<>(vertx, cacheManager, "cache-name", "foo", "bar");
         cache.start().onComplete(testContext.completing());
 
-        final SpanContext spanContext = mock(SpanContext.class);
-        span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = mock(Tracer.SpanBuilder.class, Mockito.RETURNS_SMART_NULLS);
-        when(spanBuilder.addReference(anyString(), any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), (String) any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(any(Tag.class), any())).thenReturn(spanBuilder);
-        when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
-        when(spanBuilder.start()).thenReturn(span);
-        tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        span = TracingMockSupport.mockSpan();
+        tracer = TracingMockSupport.mockTracer(span);
 
         info = new CacheBasedDeviceConnectionInfo(cache, tracer);
     }

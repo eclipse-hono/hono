@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -31,6 +30,8 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -41,9 +42,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -74,22 +73,15 @@ public class DeviceConnectionClientImplTest {
     @BeforeEach
     public void setUp() {
 
-        final SpanContext spanContext = mock(SpanContext.class);
-
-        span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-        final SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
-
-        final Tracer tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         final Vertx vertx = mock(Vertx.class);
         final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
-        when(connection.getTracer()).thenReturn(tracer);
+        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config, tracer);
 
         client = new DeviceConnectionClientImpl(connection, Constants.DEFAULT_TENANT, sender, receiver, SendMessageSampler.noop());
     }

@@ -31,7 +31,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
-import org.eclipse.hono.client.impl.VertxMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
