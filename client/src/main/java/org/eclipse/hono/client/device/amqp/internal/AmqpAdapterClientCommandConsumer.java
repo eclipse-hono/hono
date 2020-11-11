@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp.internal;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
@@ -22,17 +20,11 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.CommandConsumer;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.log.Fields;
-import io.opentracing.noop.NoopTracer;
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
@@ -127,39 +119,9 @@ public class AmqpAdapterClientCommandConsumer extends CommandConsumer {
         return con.createReceiver(
                 address.toString(),
                 ProtonQoS.AT_LEAST_ONCE,
-                (protonDelivery, message) -> {
-                    traceCommand(con, address, message);
-                    messageHandler.accept(protonDelivery, message);
-                },
+                messageHandler::accept,
                 // TODO maybe this could be handled by reopening the link?
                 remote -> LOG.info("The remote [{}] closed the receiver link", remote));
-    }
-
-    private static void traceCommand(final HonoConnection con, final ResourceIdentifier address,
-            final Message message) {
-        final Tracer tracer = con.getTracer();
-        if (tracer instanceof NoopTracer) {
-            return;
-        }
-
-        // try to extract Span context from incoming message
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
-        final Span currentSpan = createSpan("receive command", address.getTenantId(),
-                address.getResourceId(), null, tracer, spanContext);
-        final Object correlationId = message.getCorrelationId();
-        if (correlationId == null || correlationId instanceof String) {
-            final Map<String, String> items = new HashMap<>(5);
-            items.put(Fields.EVENT, "received command message");
-            TracingHelper.TAG_CORRELATION_ID.set(currentSpan, ((String) correlationId));
-            items.put("to", message.getAddress());
-            items.put("reply-to", message.getReplyTo());
-            items.put("name", message.getSubject());
-            items.put("content-type", message.getContentType());
-            currentSpan.log(items);
-        } else {
-            TracingHelper.logError(currentSpan,
-                    "received invalid command message. correlation-id is not of type string.");
-        }
     }
 
     private void setReceiver(final ProtonReceiver protonReceiver) {
