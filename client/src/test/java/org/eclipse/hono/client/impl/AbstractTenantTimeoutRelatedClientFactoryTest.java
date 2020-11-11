@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

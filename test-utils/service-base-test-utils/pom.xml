@@ -31,6 +31,11 @@
       <artifactId>hono-service-base</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>core-test-utils</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>compile</scope>

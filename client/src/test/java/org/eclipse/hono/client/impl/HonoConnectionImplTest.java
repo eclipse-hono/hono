@@ -47,6 +47,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,7 +95,7 @@ public class HonoConnectionImplTest {
     @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
-        final Context context = HonoClientUnitTestHelper.mockContext(vertx);
+        final Context context = VertxMockSupport.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
         // run any timer immediately
         when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {

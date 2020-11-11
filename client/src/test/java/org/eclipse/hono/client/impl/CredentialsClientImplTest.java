@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -32,6 +31,8 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -45,7 +46,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
@@ -68,7 +68,6 @@ public class CredentialsClientImplTest {
     private ProtonSender sender;
     private CredentialsClientImpl client;
     private ExpiringValueCache<Object, CredentialsResult<CredentialsObject>> cache;
-    private Tracer tracer;
     private Span span;
 
     /**
@@ -78,18 +77,11 @@ public class CredentialsClientImplTest {
     @BeforeEach
     public void setUp() {
 
-        final SpanContext spanContext = mock(SpanContext.class);
-
-        span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
-
-        tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(mock(Vertx.class),
-                new RequestResponseClientConfigProperties());
-        when(connection.getTracer()).thenReturn(tracer);
+                new RequestResponseClientConfigProperties(), tracer);
 
         sender = HonoClientUnitTestHelper.mockProtonSender();
         cache = mock(ExpiringValueCache.class);

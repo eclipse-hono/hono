@@ -13,24 +13,16 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.mockito.Mockito;
+import org.eclipse.hono.test.VertxMockSupport;
 
-import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.noop.NoopTracerFactory;
-import io.opentracing.tag.Tag;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -47,25 +39,6 @@ public final class HonoClientUnitTestHelper {
 
     private HonoClientUnitTestHelper() {
         // prevent instantiation
-    }
-
-    /**
-     * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.
-     *
-     * @param vertx The vert.x instance that the mock of the context is created for.
-     * @return The mocked context.
-     */
-    public static Context mockContext(final Vertx vertx) {
-
-        final Context context = mock(Context.class);
-
-        when(context.owner()).thenReturn(vertx);
-        doAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(VertxMockSupport.anyHandler());
-        return context;
     }
 
     /**
@@ -97,28 +70,6 @@ public final class HonoClientUnitTestHelper {
     }
 
     /**
-     * Creates a mocked OpenTracing SpanBuilder for creating a given Span.
-     * <p>
-     * All invocations on the mock are stubbed to return the builder by default.
-     *
-     * @param spanToCreate The object that the <em>start</em> method of the
-     *                     returned builder should produce.
-     * @return The builder.
-     */
-    @SuppressWarnings("unchecked")
-    public static SpanBuilder mockSpanBuilder(final Span spanToCreate) {
-        final SpanBuilder spanBuilder = mock(SpanBuilder.class, Mockito.RETURNS_SMART_NULLS);
-        when(spanBuilder.addReference(anyString(), any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), (String) any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(any(Tag.class), any())).thenReturn(spanBuilder);
-        when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
-        when(spanBuilder.start()).thenReturn(spanToCreate);
-        return spanBuilder;
-    }
-
-    /**
      * Creates a mocked Hono connection that returns a
      * Noop Tracer.
      * <p>
@@ -141,8 +92,22 @@ public final class HonoClientUnitTestHelper {
      * @return The connection.
      */
     public static HonoConnection mockHonoConnection(final Vertx vertx, final ClientConfigProperties props) {
+        return mockHonoConnection(vertx, props, NoopTracerFactory.create());
+    }
 
-        final Tracer tracer = NoopTracerFactory.create();
+    /**
+     * Creates a mocked Hono connection.
+     *
+     * @param vertx The vert.x instance to use.
+     * @param props The client properties to use.
+     * @param tracer The tracer to use.
+     * @return The connection.
+     */
+    public static HonoConnection mockHonoConnection(
+            final Vertx vertx,
+            final ClientConfigProperties props,
+            final Tracer tracer) {
+
         final HonoConnection connection = mock(HonoConnection.class);
         when(connection.getVertx()).thenReturn(vertx);
         when(connection.getConfig()).thenReturn(props);

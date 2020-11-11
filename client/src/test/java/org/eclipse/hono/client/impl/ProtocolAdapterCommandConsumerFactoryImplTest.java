@@ -41,6 +41,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,7 +91,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
     public void setUp() {
 
         vertx = mock(Vertx.class);
-        context = HonoClientUnitTestHelper.mockContext(vertx);
+        context = VertxMockSupport.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);

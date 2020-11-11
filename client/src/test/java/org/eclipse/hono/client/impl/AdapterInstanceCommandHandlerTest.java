@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,6 +27,8 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -36,7 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
@@ -54,12 +54,8 @@ public class AdapterInstanceCommandHandlerTest {
      */
     @BeforeEach
     public void setUp() {
-        final SpanContext spanContext = mock(SpanContext.class);
-        final Span span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
-        final Tracer tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        final Span span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         final String adapterInstanceId = "adapterInstanceId";
         adapterInstanceCommandHandler = new AdapterInstanceCommandHandler(tracer, adapterInstanceId);
