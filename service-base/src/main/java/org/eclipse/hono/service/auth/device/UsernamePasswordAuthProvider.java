@@ -22,6 +22,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,7 +79,8 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * The JSON object passed in is required to contain a <em>username</em> and a
      * <em>password</em> property.
      *
-     * @param authInfo The credentials provided by the device.
+     * @param authInfo The credentials provided by the device. These usually get assembled via
+     *            {@link AuthHandler#parseCredentials(org.eclipse.hono.util.ExecutionContext)}.
      * @return The {@link UsernamePasswordCredentials} instance created from the auth info or
      *         {@code null} if the auth info does not contain the required information.
      * @throws NullPointerException if the auth info is {@code null}.
@@ -86,8 +88,8 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     @Override
     public UsernamePasswordCredentials getCredentials(final JsonObject authInfo) {
 
-        final String username = JsonHelper.getValue(authInfo, "username", String.class, null);
-        final String password = JsonHelper.getValue(authInfo, "password", String.class, null);
+        final String username = JsonHelper.getValue(authInfo, CredentialsConstants.FIELD_USERNAME, String.class, null);
+        final String password = JsonHelper.getValue(authInfo, CredentialsConstants.FIELD_PASSWORD, String.class, null);
         if (username == null || password == null) {
             return null;
         } else if (password.isEmpty()) {

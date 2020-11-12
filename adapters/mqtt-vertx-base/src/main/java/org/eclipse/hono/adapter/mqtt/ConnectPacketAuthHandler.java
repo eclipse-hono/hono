@@ -22,6 +22,7 @@ import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.util.CredentialsConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -103,8 +104,8 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
 
         } else {
             final JsonObject credentialsJSON = new JsonObject()
-                    .put("username", auth.getUsername())
-                    .put("password", auth.getPassword())
+                    .put(CredentialsConstants.FIELD_USERNAME, auth.getUsername())
+                    .put(CredentialsConstants.FIELD_PASSWORD, auth.getPassword())
                     .put(PROPERTY_CLIENT_IDENTIFIER, context.deviceEndpoint().clientIdentifier());
             // spanContext of MqttContext not injected into json here since authenticateDevice(mqttContext) will
             // pass on the MqttContext as well as the json into authProvider.authenticate()

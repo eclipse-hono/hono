@@ -39,6 +39,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.JsonHelper;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.AfterAll;
@@ -151,8 +152,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
         doAnswer(invocation -> {
             final JsonObject authInfo = invocation.getArgument(0);
-            final String username = JsonHelper.getValue(authInfo, "username", String.class, null);
-            final String password = JsonHelper.getValue(authInfo, "password", String.class, null);
+            final String username = JsonHelper.getValue(authInfo, CredentialsConstants.FIELD_USERNAME, String.class, null);
+            final String password = JsonHelper.getValue(authInfo, CredentialsConstants.FIELD_PASSWORD, String.class, null);
             if (username == null || password == null) {
                 return null;
             } else {

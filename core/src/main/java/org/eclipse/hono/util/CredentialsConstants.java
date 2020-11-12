@@ -24,6 +24,14 @@ import io.vertx.core.json.JsonObject;
 public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /**
+     * The name of the field that contains the user name.
+     */
+    public static final String FIELD_USERNAME                    = "username";
+    /**
+     * The name of the field that contains the password.
+     */
+    public static final String FIELD_PASSWORD                    = "password";
+    /**
      * The name of the field that contains the type of credentials.
      */
     public static final String FIELD_TYPE                        = "type";

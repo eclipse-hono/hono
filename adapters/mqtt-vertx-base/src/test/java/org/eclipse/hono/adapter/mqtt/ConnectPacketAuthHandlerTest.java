@@ -19,6 +19,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,8 +80,8 @@ public class ConnectPacketAuthHandlerTest {
             // THEN the auth info is correctly retrieved from the client certificate
             .onComplete(ctx.succeeding(info -> {
                 ctx.verify(() -> {
-                    assertThat(info.getString("username")).isEqualTo("sensor1@DEFAULT_TENANT");
-                    assertThat(info.getString("password")).isEqualTo("secret");
+                    assertThat(info.getString(CredentialsConstants.FIELD_USERNAME)).isEqualTo("sensor1@DEFAULT_TENANT");
+                    assertThat(info.getString(CredentialsConstants.FIELD_PASSWORD)).isEqualTo("secret");
                     assertThat(info.getString(X509AuthHandler.PROPERTY_CLIENT_IDENTIFIER)).isEqualTo("mqtt-device");
                 });
                 ctx.completeNow();

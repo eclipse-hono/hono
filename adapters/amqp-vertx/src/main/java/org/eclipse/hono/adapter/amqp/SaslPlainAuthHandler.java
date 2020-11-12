@@ -19,6 +19,7 @@ import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.util.CredentialsConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -79,7 +80,7 @@ public class SaslPlainAuthHandler extends ExecutionContextAuthHandler<SaslRespon
             throw new IllegalArgumentException("no sasl response fields");
         }
         return Future.succeededFuture(new JsonObject()
-                .put("username", saslResponseFields[1]) // represents authcid field
-                .put("password", saslResponseFields[2])); // represents passwd field
+                .put(CredentialsConstants.FIELD_USERNAME, saslResponseFields[1]) // represents authcid field
+                .put(CredentialsConstants.FIELD_PASSWORD, saslResponseFields[2])); // represents passwd field
     }
 }
