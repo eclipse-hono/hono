@@ -55,12 +55,12 @@ public class Status<T extends Status<T>> {
      *
      * @return A reference to this, enabling fluent use.
      */
-    public T setCreationTime(final Instant creationTime) {
+    public final T setCreationTime(final Instant creationTime) {
         this.creationTime = creationTime;
         return (T) this;
     }
 
-    public Instant getCreationTime() {
+    public final Instant getCreationTime() {
         return creationTime;
     }
 
@@ -71,12 +71,12 @@ public class Status<T extends Status<T>> {
      *
      * @return A reference to this, enabling fluent use.
      */
-    public T setLastUpdate(final Instant lastUpdate) {
+    public final T setLastUpdate(final Instant lastUpdate) {
         this.lastUpdate = lastUpdate;
         return (T) this;
     }
 
-    public Instant getLastUpdate() {
+    public final Instant getLastUpdate() {
         return lastUpdate;
     }
 
@@ -87,14 +87,14 @@ public class Status<T extends Status<T>> {
      * @param lastUser : the user Id to update with.
      * @return A reference to this for fluent use.
      */
-    public T update(final String lastUser) {
+    public final T update(final String lastUser) {
         this.lastUpdate = Instant.now();
         this.lastUser = lastUser;
 
         return (T) this;
     }
 
-    public String getLastUser() {
+    public final String getLastUser() {
         return lastUser;
     }
 

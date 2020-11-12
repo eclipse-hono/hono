@@ -772,8 +772,8 @@ public interface RegistrationServiceTests {
                         TENANT,
                         deviceId,
                         new Device().setStatus(new DeviceStatus()
-                                .setIsAutoProvisioned(true)
-                                .setIsAutoProvisioningNotificationSent(true)
+                                .setAutoProvisioned(true)
+                                .setAutoProvisioningNotificationSent(true)
                                 .setCreationTime(Instant.parse("2000-01-01T00:00:00.000000Z"))
                         ),
                         Optional.empty(),

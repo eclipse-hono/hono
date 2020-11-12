@@ -194,8 +194,8 @@ public class DeviceTest {
     public void testEncodeStatus() {
         final var device = new Device();
         device.setStatus(new DeviceStatus()
-                .setIsAutoProvisioned(true)
-                .setIsAutoProvisioningNotificationSent(true)
+                .setAutoProvisioned(true)
+                .setAutoProvisioningNotificationSent(true)
                 .setCreationTime(Instant.now()));
 
         final var json = JsonObject.mapFrom(device);

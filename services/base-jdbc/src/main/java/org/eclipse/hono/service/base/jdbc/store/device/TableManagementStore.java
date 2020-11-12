@@ -231,7 +231,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                         params.put("version", deviceDto.getVersion());
                         params.put("data", deviceDto.getDeviceJson());
                         params.put("created", deviceDto.getCreationTime());
-                        params.put("auto_provisioned", deviceDto.isAutoProvisioned());
+                        params.put("auto_provisioned", deviceDto.getDeviceStatus().isAutoProvisioned());
                     });
 
                     log.debug("createDevice - statement: {}", expanded);
@@ -397,7 +397,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             map.put("expected_version", version);
                                             map.put("next_version", deviceDto.getVersion());
                                             map.put("updated_on", deviceDto.getUpdatedOn());
-                                            map.put("auto_provisioning_notification_sent", deviceDto.isAutoProvisioningNotificationSent());
+                                            map.put("auto_provisioning_notification_sent", deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
                                         })
                                         .trace(this.tracer, span.context()).update(connection)
 

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * A status used in Device value object.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public class DeviceStatus extends Status<DeviceStatus> {
+public final class DeviceStatus extends Status<DeviceStatus> {
 
     @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
     private Boolean autoProvisioned;
@@ -50,7 +50,7 @@ public class DeviceStatus extends Status<DeviceStatus> {
      *
      * @return a reference to this for fluent use.
      */
-    public DeviceStatus setIsAutoProvisioned(final Boolean autoProvisioned) {
+    public DeviceStatus setAutoProvisioned(final Boolean autoProvisioned) {
         this.autoProvisioned = autoProvisioned;
         return this;
     }
@@ -74,7 +74,7 @@ public class DeviceStatus extends Status<DeviceStatus> {
      *
      * @return a reference to this for fluent use.
      */
-    public DeviceStatus setIsAutoProvisioningNotificationSent(final Boolean autoProvisioningNotificationSent) {
+    public DeviceStatus setAutoProvisioningNotificationSent(final Boolean autoProvisioningNotificationSent) {
         this.autoProvisioningNotificationSent = autoProvisioningNotificationSent;
         return this;
     }
