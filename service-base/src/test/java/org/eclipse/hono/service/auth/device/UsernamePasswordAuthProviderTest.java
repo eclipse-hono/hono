@@ -25,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
@@ -275,5 +276,32 @@ public class UsernamePasswordAuthProviderTest {
         final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
 
         assertThat(credentials).isNull();
+    }
+
+    /**
+     * Verifies that the provider adopts properties from the authInfo JSON into the clientContext
+     * of the credentials object.
+     *
+     */
+    @Test
+    public void testGetCredentialsSetsClientContext() {
+
+        final String username = "device" + "@" + Constants.DEFAULT_TENANT;
+
+        final JsonObject originalCredentials = new JsonObject()
+                .put(CredentialsConstants.FIELD_USERNAME, username)
+                .put(CredentialsConstants.FIELD_PASSWORD, "the-secret")
+                .put("client-id", "the-client-id");
+        final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
+
+        assertThat(credentials).isNotNull();
+        assertThat(credentials.getAuthId()).isEqualTo("device");
+        assertThat(credentials.getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
+        assertThat(credentials.getPassword()).isEqualTo("the-secret");
+
+        assertThat(credentials.getClientContext().size()).isEqualTo(1);
+        final Map.Entry<String, Object> firstClientContextEntry = credentials.getClientContext().stream().iterator().next();
+        assertThat(firstClientContextEntry.getKey()).isEqualTo("client-id");
+        assertThat(firstClientContextEntry.getValue()).isEqualTo("the-client-id");
     }
 }
