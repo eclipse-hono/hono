@@ -51,7 +51,7 @@ public interface EventSender extends Lifecycle {
      *         The future will be failed with a {@code org.eclipse.hono.client.ServerErrorException} if the data
      *         could not be sent. The error code contained in the exception indicates the
      *         cause of the failure.
-     * @throws NullPointerException if tenant or device are {@code null}.
+     * @throws NullPointerException if tenant, device or contentType are {@code null}.
      */
     Future<Void> sendEvent(
             TenantObject tenant,
