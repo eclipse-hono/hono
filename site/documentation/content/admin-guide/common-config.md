@@ -48,6 +48,13 @@ Protocol adapters require a connection to the *AMQP 1.0 Messaging Network* in or
 The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
 
+### Kafka based Messaging Configuration
+
+Alternatively, protocol adapters can be configured to publish messages to an *Apache Kafka&reg; cluster* instead of 
+an AMQP Messaging Network. 
+
+The Kafka client is configured according to [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
+
 ### Command & Control Connection Configuration
 
 Protocol adapters require an additional connection to the *AMQP 1.0 Messaging Network* in order to receive

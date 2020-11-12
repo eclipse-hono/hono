@@ -123,12 +123,22 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-kafka-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client-adapter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client-adapter-amqp</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-adapter-kafka</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -418,6 +428,11 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-rx-java2</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-kafka-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>
 
@@ -805,6 +820,12 @@
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>service-base-test-utils</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>kafka-test-utils</artifactId>
         <version>${project.version}</version>
         <scope>test</scope>
       </dependency>
