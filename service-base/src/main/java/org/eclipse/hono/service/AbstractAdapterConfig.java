@@ -36,6 +36,8 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -45,6 +47,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
+import org.eclipse.hono.kafka.client.KafkaProducerFactory;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
@@ -83,6 +87,7 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -136,14 +141,26 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             adapter.setCommandConsumerFactory(commandConsumerFactory(adapterProperties, samplerFactory, commandRouterClient));
         }
 
+        final KafkaProducerConfigProperties kafkaProducerConfig = kafkaProducerConfig();
+        if (kafkaProducerConfig.isConfigured()) {
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory();
+            adapter.setEventSender(
+                    downstreamEventKafkaSender(kafkaProducerFactory, kafkaProducerConfig, adapterProperties));
+            adapter.setTelemetrySender(
+                    downstreamTelemetryKafkaSender(kafkaProducerFactory, kafkaProducerConfig, adapterProperties));
+        } else {
+            // look up via bean factory is not possible because EventSender and TelemetrySender are implemented by
+            // ProtonBasedDownstreamSender
+            adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
+            adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
+        }
+
         adapter.setCommandResponseSender(commandResponseSender(samplerFactory, adapterProperties));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient(samplerFactory, adapterProperties));
-        adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
-        adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
         adapter.setTenantClient(tenantClient(samplerFactory, adapterProperties));
         adapter.setTracer(getTracer());
         resourceLimitChecks.ifPresent(adapter::setResourceLimitChecks);
@@ -228,6 +245,21 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
+     * Exposes configuration properties for accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public KafkaProducerConfigProperties kafkaProducerConfig() {
+        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+        if (getAdapterName() != null) {
+            configProperties.setClientId(getAdapterName());
+        }
+        return configProperties;
+    }
+
+    /**
      * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
      * via {@link #downstreamSenderConfig()}.
      * <p>
@@ -296,6 +328,51 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
+     * Exposes a factory for creating producers for sending downstream messages via the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return KafkaProducerFactory.sharedProducerFactory(vertx());
+    }
+
+    /**
+     * Exposes a client for sending telemetry messages via <em>Kafka</em> as a Spring bean.
+     *
+     * @return The client.
+     * @param kafkaProducerFactory The producer factory to use.
+     * @param kafkaProducerConfig The producer configuration to use.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     */
+    @Bean
+    @Scope("prototype")
+    public TelemetrySender downstreamTelemetryKafkaSender(
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig,
+            final ProtocolAdapterProperties adapterConfig) {
+        return new KafkaBasedTelemetrySender(kafkaProducerFactory, kafkaProducerConfig, adapterConfig, getTracer());
+    }
+
+    /**
+     * Exposes a client for sending events via <em>Kafka</em> as a Spring bean.
+     *
+     * @return The client.
+     * @param kafkaProducerFactory The producer factory to use.
+     * @param kafkaProducerConfig The producer configuration to use.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     */
+    @Bean
+    @Scope("prototype")
+    public EventSender downstreamEventKafkaSender(
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig,
+            final ProtocolAdapterProperties adapterConfig) {
+        return new KafkaBasedEventSender(kafkaProducerFactory, kafkaProducerConfig, adapterConfig, getTracer());
+    }
+
+    /**
      * Exposes configuration properties for accessing the registration service as a Spring bean.
      *
      * @return The properties.
@@ -335,7 +412,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public DeviceRegistrationClient registrationClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedDeviceRegistrationClient(
@@ -483,7 +560,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClient tenantClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedTenantClient(

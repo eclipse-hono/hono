@@ -2,6 +2,16 @@
 title = "Release Notes"
 +++
 
+
+## 1.6.0 (not yet released)
+
+### New Features
+
+* Kafka is now supported as a messaging system for events and telemetry messages.
+  This can be enabled by configuring protocol adapters to use Hono's new Kafka-based
+  client. Please refer to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration/" %}})
+  for details.
+
 ## 1.5.0
 
 ### New Features

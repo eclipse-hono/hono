@@ -30,6 +30,8 @@
   <modules>
     <module>adapter</module>
     <module>adapter-amqp</module>
+    <module>adapter-kafka</module>
+    <module>kafka-common</module>
   </modules>
 
   <dependencies>
