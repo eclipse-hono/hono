@@ -18,6 +18,8 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.json.JsonObject;
+
 /**
  * Helper class to parse username/password credentials provided by devices during authentication into properties to be
  * used with Hono's <em>Credentials</em> API.
@@ -35,8 +37,8 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
 
     private String password;
 
-    private UsernamePasswordCredentials(final String tenantId, final String authId) {
-        super(tenantId, authId);
+    private UsernamePasswordCredentials(final String tenantId, final String authId, final JsonObject clientContext) {
+        super(tenantId, authId, clientContext);
     }
 
     /**
@@ -48,9 +50,26 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static final UsernamePasswordCredentials create(final String username, final String password) {
+        return create(username, password, new JsonObject());
+    }
+
+    /**
+     * Creates a new instance for a set of credentials.
+     *
+     * @param username The username provided by the device.
+     * @param password The password provided by the device.
+     * @param clientContext The client context that can be used to get credentials from the Credentials API.
+     * @return The credentials or {@code null} if the username does not contain a tenant ID.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static final UsernamePasswordCredentials create(
+            final String username,
+            final String password,
+            final JsonObject clientContext) {
 
         Objects.requireNonNull(username);
         Objects.requireNonNull(password);
+        Objects.requireNonNull(clientContext);
 
         // username consists of <userId>@<tenantId>
         final String[] userComponents = username.split("@", 2);
@@ -58,7 +77,8 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
             LOG.trace("username [{}] does not comply with expected pattern [<authId>@<tenantId>]", username);
             return null;
         }
-        final UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(userComponents[1], userComponents[0]);
+        final UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(userComponents[1],
+                userComponents[0], clientContext);
         credentials.password = password;
         return credentials;
     }

@@ -92,14 +92,21 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
         final String password = JsonHelper.getValue(authInfo, CredentialsConstants.FIELD_PASSWORD, String.class, null);
         if (username == null || password == null) {
             return null;
-        } else if (password.isEmpty()) {
-            return tryGetCredentialsEncodedInUsername(username);
+        }
+        final JsonObject clientContext = authInfo.copy();
+        clientContext.remove(CredentialsConstants.FIELD_USERNAME);
+        clientContext.remove(CredentialsConstants.FIELD_PASSWORD);
+
+        if (password.isEmpty()) {
+            return tryGetCredentialsEncodedInUsername(username, clientContext);
         } else {
-            return UsernamePasswordCredentials.create(username, password);
+            return UsernamePasswordCredentials.create(username, password, clientContext);
         }
     }
 
-    private UsernamePasswordCredentials tryGetCredentialsEncodedInUsername(final String username) {
+    private UsernamePasswordCredentials tryGetCredentialsEncodedInUsername(
+            final String username,
+            final JsonObject clientContext) {
 
         try {
             final String decoded = new String(Base64.getDecoder().decode(username));
@@ -107,7 +114,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
             if (colonIdx > -1) {
                 final String user = decoded.substring(0, colonIdx);
                 final String pass = decoded.substring(colonIdx + 1);
-                return UsernamePasswordCredentials.create(user, pass);
+                return UsernamePasswordCredentials.create(user, pass, clientContext);
             } else {
                 return null;
             }
