@@ -55,7 +55,8 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * Any additional properties that might be present in the JSON object
      * are copied into the client context of the returned credentials.
      *
-     * @param authInfo The authentication information provided by the device.
+     * @param authInfo The credentials provided by the device. These usually get assembled via
+     *            {@link AuthHandler#parseCredentials(org.eclipse.hono.util.ExecutionContext)}.
      * @return The credentials or {@code null} if the authentication information
      *         does not contain a tenant ID and subject DN.
      * @throws NullPointerException if the authentication info is {@code null}.

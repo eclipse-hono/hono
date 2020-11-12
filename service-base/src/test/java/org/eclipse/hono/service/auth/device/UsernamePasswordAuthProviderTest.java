@@ -207,9 +207,12 @@ public class UsernamePasswordAuthProviderTest {
         final String usernameIncludingPassword = "device" + "@" + Constants.DEFAULT_TENANT + ":" + "the-secret";
         final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8));
 
-        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final JsonObject originalCredentials = new JsonObject()
+                .put(CredentialsConstants.FIELD_USERNAME, encodedUsername)
+                .put(CredentialsConstants.FIELD_PASSWORD, "");
         final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
 
+        assertThat(credentials).isNotNull();
         assertThat(credentials.getAuthId()).isEqualTo("device");
         assertThat(credentials.getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
         assertThat(credentials.getPassword()).isEqualTo("the-secret");
@@ -226,7 +229,9 @@ public class UsernamePasswordAuthProviderTest {
         final String usernameIncludingPassword = ":" + "the-secret";
         final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8));
 
-        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final JsonObject originalCredentials = new JsonObject()
+                .put(CredentialsConstants.FIELD_USERNAME, encodedUsername)
+                .put(CredentialsConstants.FIELD_PASSWORD, "");
         final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
 
         assertThat(credentials).isNull();
@@ -243,9 +248,12 @@ public class UsernamePasswordAuthProviderTest {
         final String usernameIncludingPassword = "device" + "@" + Constants.DEFAULT_TENANT + ":";
         final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8));
 
-        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final JsonObject originalCredentials = new JsonObject()
+                .put(CredentialsConstants.FIELD_USERNAME, encodedUsername)
+                .put(CredentialsConstants.FIELD_PASSWORD, "");
         final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
 
+        assertThat(credentials).isNotNull();
         assertThat(credentials.getAuthId()).isEqualTo("device");
         assertThat(credentials.getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
         assertThat(credentials.getPassword()).isEqualTo("");
@@ -261,7 +269,9 @@ public class UsernamePasswordAuthProviderTest {
         final String usernameIncludingPassword = "device" + "@" + Constants.DEFAULT_TENANT + ":" + "the-secret";
         final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8)) + "not Base64";
 
-        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final JsonObject originalCredentials = new JsonObject()
+                .put(CredentialsConstants.FIELD_USERNAME, encodedUsername)
+                .put(CredentialsConstants.FIELD_PASSWORD, "");
         final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
 
         assertThat(credentials).isNull();

@@ -50,9 +50,9 @@ public interface DeviceCredentialsAuthProvider<T extends AbstractDeviceCredentia
      * Subclasses need to create a concrete {@code DeviceCredentials} instance based on
      * the information contained in the JSON object.
      *
-     * @param authInfo The credentials provided by the device.
-     * @return The device credentials or {@code null} if the auth info does not contain
-     *         the required information.
+     * @param authInfo The credentials provided by the device. These usually get assembled via
+     *            {@link AuthHandler#parseCredentials(org.eclipse.hono.util.ExecutionContext)}.
+     * @return The device credentials or {@code null} if the auth info does not contain the required information.
      * @throws NullPointerException if auth info is {@code null}.
      */
     T getCredentials(JsonObject authInfo);
