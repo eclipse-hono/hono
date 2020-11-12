@@ -121,7 +121,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
      * @param sampler The sampler to use.
-     * @throws NullPointerException if any of context or configuration are {@code null}.
+     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
@@ -150,7 +150,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                 client should not be scoped to a tenant.
      * @param replyId The replyId to use in the reply-to address.
      * @param sampler The sampler to use.
-     * @throws NullPointerException if any of context or configuration are {@code null}.
+     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
@@ -159,7 +159,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final SendMessageSampler sampler) {
 
         super(connection);
-        this.sampler = sampler;
+        Objects.requireNonNull(replyId);
+        this.sampler = Objects.requireNonNull(sampler);
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         if (tenantId == null) {
             this.linkTargetAddress = getName();
@@ -191,7 +192,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @param sampler The sampler to use.
-     * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
@@ -204,6 +205,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
+        Objects.requireNonNull(sampler);
 
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         this.linkTargetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
@@ -221,7 +223,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
      * @param sampler The sampler to use.
-     * @throws NullPointerException if any of the parameters other than tenant are {@code null}.
+     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
      */
     protected AbstractRequestResponseClient(
             final HonoConnection connection,
@@ -393,11 +395,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Creates the sender and receiver links to the peer for sending requests
      * and receiving responses.
      *
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
-     * @throws NullPointerException if connection is {@code null}.
      */
     protected final Future<Void> createLinks(final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {

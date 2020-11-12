@@ -140,10 +140,10 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param sampler The sampler to use.
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters other than cache provider is {@code null}.
+     * @throws NullPointerException if any of the parameters except for the close hooks is {@code null}.
      */
     public static final Future<DeviceConnectionClient> create(
             final HonoConnection con,

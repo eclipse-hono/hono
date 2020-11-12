@@ -97,6 +97,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      *           that this sender is used to send downstream.
      * @param sampler The sampler for sending messages.
      * @param targetAddress The target address to send the messages to.
+     * @throws NullPointerException if any of the parameters except targetAddress is {@code null}.
      */
     protected AbstractSender(
             final HonoConnection connection,
@@ -109,7 +110,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.targetAddress = targetAddress;
-        this.sampler = sampler;
+        this.sampler = Objects.requireNonNull(sampler);
         if (sender.isOpen()) {
             this.offeredCapabilities = Optional.ofNullable(sender.getRemoteOfferedCapabilities())
                     .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))

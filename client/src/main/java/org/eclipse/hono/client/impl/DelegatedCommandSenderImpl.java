@@ -241,7 +241,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      * @param sampler The sampler to use.
      * @param remoteCloseHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
      * @return A future indicating the result of the creation attempt.
-     * @throws NullPointerException if con or adapterInstanceId is {@code null}.
+     * @throws NullPointerException if any of the parameters except remoteCloseHook is {@code null}.
      */
     public static Future<DelegatedCommandSender> create(
             final HonoConnection con,
@@ -251,6 +251,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(adapterInstanceId);
+        Objects.requireNonNull(sampler);
 
         final String targetAddress = getTargetAddress(adapterInstanceId);
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)

@@ -69,7 +69,7 @@ public abstract class AbstractHonoClient {
      * Creates a client for a connection.
      *
      * @param connection The connection to use.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if connection is {@code null}.
      */
     protected AbstractHonoClient(final HonoConnection connection) {
         this.connection = Objects.requireNonNull(connection);

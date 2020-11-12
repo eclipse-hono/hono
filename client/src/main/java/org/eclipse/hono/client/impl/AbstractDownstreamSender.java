@@ -54,6 +54,7 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
      *           that this sender is used to send downstream.
      * @param sampler The sampler for sending messages.
      * @param targetAddress The target address to send the messages to.
+     * @throws NullPointerException if any of the parameters except targetAddress is {@code null}.
      */
     protected AbstractDownstreamSender(
             final HonoConnection connection,

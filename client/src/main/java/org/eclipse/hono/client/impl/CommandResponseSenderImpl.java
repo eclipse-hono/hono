@@ -52,6 +52,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param tenantId The tenant that the messages will be published for.
      * @param targetAddress The target address to send the messages to.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters except targetAddress is {@code null}.
      */
     protected CommandResponseSenderImpl(
             final HonoConnection connection,
@@ -115,9 +116,9 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
      * @param replyId The reply id as the unique postfix of the replyTo address.
      * @param sampler The sampler to use.
-     * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
+     * @param closeHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
      * @return A future indicating the result of the creation attempt.
-     * @throws NullPointerException if any of con, tenantId or replyId are {@code null}.
+     * @throws NullPointerException if any of the parameters except closeHook is {@code null}.
      */
     public static Future<CommandResponseSender> create(
             final HonoConnection con,
@@ -129,6 +130,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
+        Objects.requireNonNull(sampler);
 
         final String targetAddress = AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId, con.getConfig());
         final ClientConfigProperties props = new ClientConfigProperties(con.getConfig());

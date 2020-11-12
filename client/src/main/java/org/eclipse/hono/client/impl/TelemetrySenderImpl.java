@@ -57,6 +57,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
      * @param tenantId The tenant that the messages will be published for.
      * @param targetAddress The target address to send the messages to.
      * @param sampler The sampler for sending messages.
+     * @throws NullPointerException if any of the parameters except targetAddress is {@code null}.
      */
     protected TelemetrySenderImpl(
             final HonoConnection con,
@@ -87,7 +88,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
      * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
      *            sender's target address is provided as an argument to the handler.
      * @return A future indicating the outcome.
-     * @throws NullPointerException if con or tenantId is {@code null}.
+     * @throws NullPointerException if any of the parameters except remoteCloseHook is {@code null}.
      */
     public static Future<DownstreamSender> create(
             final HonoConnection con,
@@ -97,6 +98,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(sampler);
 
         final String targetAddress = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, con.getConfig());
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)

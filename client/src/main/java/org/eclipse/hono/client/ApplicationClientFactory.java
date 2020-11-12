@@ -231,7 +231,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
      *         tenant and replyId is already being executed.
-     * @throws NullPointerException if the tenantId is {@code null}.
+     * @throws NullPointerException if tenantId or replyId is {@code null}.
      */
     Future<CommandClient> getOrCreateCommandClient(String tenantId, String replyId);
 
@@ -246,7 +246,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
      *         tenant is already being executed.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if tenantId is {@code null}.
      */
     Future<AsyncCommandClient> getOrCreateAsyncCommandClient(String tenantId);
 }

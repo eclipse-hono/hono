@@ -333,7 +333,7 @@ public class DeviceConnectionClientImplTest {
 
     /**
      * Verifies that a client invocation of the <em>remove-cmd-handling-adapter-instance</em> operation
-     * returns a <em>Boolean.FALSE</em> value if a <em>PRECON_FAILED</em> response was returned.
+     * fails if a <em>PRECON_FAILED</em> response was returned from the device connection service.
      *
      * @param ctx The vert.x test context.
      */

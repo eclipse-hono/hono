@@ -145,10 +145,10 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
      *
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the device belongs to.
-     * @param closeHook A handler to invoke if the peer closes the sender link unexpectedly.
+     * @param closeHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
      * @param sampler The sampler to use.
      * @return A future indicating the outcome.
-     * @throws NullPointerException if any of connection, tenantId or deviceId are {@code null}.
+     * @throws NullPointerException if any of the parameters except closeHook is {@code null}.
      */
     public static Future<AsyncCommandClient> create(
             final HonoConnection con,
@@ -158,6 +158,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(sampler);
 
         final String linkTargetAddress = AsyncCommandClientImpl.getLinkTargetAddress(tenantId);
         return con.createSender(linkTargetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)

@@ -50,6 +50,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConn
 
     /**
      * @param connection The connection to use.
+     * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if connection is {@code null}.
      */
     AbstractHonoClientFactory(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
