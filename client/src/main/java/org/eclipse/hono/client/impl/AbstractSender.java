@@ -166,7 +166,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         Objects.requireNonNull(rawMessage);
 
         final Span span = startSpan(parent, rawMessage);
-        Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
+        Tags.MESSAGE_BUS_DESTINATION.set(span, getMessageAddress(rawMessage));
         TracingHelper.TAG_QOS.set(span, sender.getQoS().toString());
         TracingHelper.setDeviceTags(span, tenantId, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);

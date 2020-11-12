@@ -605,7 +605,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
                     final Span msgSpan = newSpan("upload message", authenticatedDevice, traceSamplingPriority, spanContext);
                     msgSpan.log(Map.of(
-                            Tags.MESSAGE_BUS_DESTINATION.getKey(), message,
+                            Tags.MESSAGE_BUS_DESTINATION.getKey(), message.getAddress(),
                             "settled", delivery.remotelySettled()));
 
                     final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, msgSpan, authenticatedDevice);

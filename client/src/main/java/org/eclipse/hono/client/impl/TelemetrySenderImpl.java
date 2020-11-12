@@ -123,7 +123,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
         // we create a child span (instead of a following span) because we depend
         // on the outcome of the sending operation
         final Span span = startChildSpan(parent, rawMessage);
-        Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
+        Tags.MESSAGE_BUS_DESTINATION.set(span, getMessageAddress(rawMessage));
         TracingHelper.TAG_QOS.set(span, sender.getQoS().toString());
         TracingHelper.setDeviceTags(span, tenantId, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
