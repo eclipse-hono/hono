@@ -34,6 +34,8 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -41,10 +43,14 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.KafkaProducerConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
+import org.eclipse.hono.service.conditions.ConditionalOnAmqpMessaging;
+import org.eclipse.hono.service.conditions.ConditionalOnKafkaMessaging;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
@@ -81,6 +87,7 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -134,14 +141,24 @@ public abstract class AbstractAdapterConfig {
             adapter.setCommandConsumerFactory(commandConsumerFactory(adapterProperties, samplerFactory, commandRouterClient));
         }
 
+        final KafkaProducerConfigProperties kafkaProducerConfig = kafkaProducerConfig();
+        if (kafkaProducerConfig.getAtLeastOnceConfig() == null) {
+            // look up via bean factory is not possible because EventSender and TelemetrySender are implemented by
+            // ProtonBasedDownstreamSender
+            adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
+            adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
+        } else {
+            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory();
+            adapter.setEventSender(downstreamEventKafkaSender(kafkaProducerFactory, kafkaProducerConfig));
+            adapter.setTelemetrySender(downstreamTelemetryKafkaSender(kafkaProducerFactory, kafkaProducerConfig));
+        }
+
         adapter.setCommandResponseSender(commandResponseSender(samplerFactory, adapterProperties));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient(samplerFactory, adapterProperties));
-        adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
-        adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
         adapter.setTenantClient(tenantClient(samplerFactory, adapterProperties));
         adapter.setTracer(getTracer());
         resourceLimitChecks.ifPresent(adapter::setResourceLimitChecks);
@@ -228,12 +245,28 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
+    @ConditionalOnAmqpMessaging
     public ClientConfigProperties downstreamSenderFactoryConfig() {
         final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderFactoryConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
         setConfigServerRoleIfUnknown(config, "AMQP Messaging Network");
         setDefaultConfigNameIfNotSet(config);
         return config;
+    }
+
+    /**
+     * Exposes configuration properties for accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public KafkaProducerConfigProperties kafkaProducerConfig() {
+        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+        if (getAdapterName() != null) {
+            configProperties.setClientId(getAdapterName());
+        }
+        return configProperties;
     }
 
     /**
@@ -259,9 +292,22 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Bean
+    @ConditionalOnAmqpMessaging
     @Scope("prototype")
     public HonoConnection downstreamConnection() {
         return HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig());
+    }
+
+    /**
+     * Exposes a factory for creating producers for sending downstream messages via the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    @ConditionalOnKafkaMessaging
+    public CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return CachingKafkaProducerFactory.sharedProducerFactory(vertx());
     }
 
     /**
@@ -277,11 +323,28 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
     @Bean
+    @ConditionalOnAmqpMessaging
     @Scope("prototype")
     public TelemetrySender downstreamTelemetrySender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
         return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+    }
+
+    /**
+     * Exposes a client for sending telemetry messages via <em>Kafka</em> as a Spring bean.
+     *
+     * @return The client.
+     * @param kafkaProducerFactory The producer factory to use.
+     * @param kafkaProducerConfig The producer configuration to use.
+     */
+    @Bean
+    @ConditionalOnKafkaMessaging
+    @Scope("prototype")
+    public TelemetrySender downstreamTelemetryKafkaSender(
+            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig) {
+        return new KafkaBasedTelemetrySender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
     }
 
     /**
@@ -297,11 +360,28 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(EventConstants.EVENT_ENDPOINT)
     @Bean
+    @ConditionalOnAmqpMessaging
     @Scope("prototype")
     public EventSender downstreamEventSender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
         return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+    }
+
+    /**
+     * Exposes a client for sending events via <em>Kafka</em> as a Spring bean.
+     *
+     * @return The client.
+     * @param kafkaProducerFactory The producer factory to use.
+     * @param kafkaProducerConfig The producer configuration to use.
+     */
+    @Bean
+    @ConditionalOnKafkaMessaging
+    @Scope("prototype")
+    public EventSender downstreamEventKafkaSender(
+            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig) {
+        return new KafkaBasedEventSender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
     }
 
     /**
@@ -344,7 +424,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public DeviceRegistrationClient registrationClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedDeviceRegistrationClient(
@@ -492,7 +572,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClient tenantClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedTenantClient(
@@ -666,7 +746,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public CommandResponseSender commandResponseSender(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedCommandResponseSender(

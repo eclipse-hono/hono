@@ -193,6 +193,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public final void setTelemetrySender(final TelemetrySender sender) {
         this.telemetrySender = Objects.requireNonNull(sender);
+        log.info("using TelemetrySender implementation [{}]", sender.getClass().getName());
     }
 
     /**
@@ -212,6 +213,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public final void setEventSender(final EventSender sender) {
         this.eventSender = Objects.requireNonNull(sender);
+        log.info("using EventSender implementation [{}]", sender.getClass().getName());
     }
 
     /**
