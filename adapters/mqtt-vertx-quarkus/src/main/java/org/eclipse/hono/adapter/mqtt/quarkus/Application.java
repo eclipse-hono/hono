@@ -58,7 +58,7 @@ public class Application extends AbstractProtocolAdapterApplication {
                 new DeploymentOptions().setInstances(config.app.getMaxInstances()),
                 deploymentTracker);
         deploymentTracker.future()
-            .compose(s -> healthCheckServer().start())
+            .compose(s -> healthCheckServer.start())
             .onSuccess(ok -> startup.complete(null))
             .onFailure(t -> startup.completeExceptionally(t));
         startup.join();
@@ -68,7 +68,7 @@ public class Application extends AbstractProtocolAdapterApplication {
     void onStop(final @Observes ShutdownEvent ev) {
         LOG.info("shutting down HTTP adapter");
         final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        healthCheckServer().stop()
+        healthCheckServer.stop()
             .onComplete(ok -> {
                 vertx.close(attempt -> {
                     if (attempt.succeeded()) {
@@ -90,7 +90,7 @@ public class Application extends AbstractProtocolAdapterApplication {
         adapter.setCredentialsClient(credentialsClient());
         adapter.setDeviceConnectionClient(deviceConnectionClient());
         adapter.setEventSender(downstreamSender());
-        adapter.setHealthCheckServer(healthCheckServer());
+        adapter.setHealthCheckServer(healthCheckServer);
         adapter.setMetrics(metrics);
         adapter.setRegistrationClient(registrationClient());
         adapter.setTelemetrySender(downstreamSender());

@@ -19,13 +19,17 @@ import java.util.List;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.metric.PrometheusScrapingResource;
+import org.eclipse.hono.service.quarkus.ProtocolAdapterConfig;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 
 /**
@@ -47,5 +51,24 @@ public class HealthCheckServerResourceProducer {
     @DefaultBean
     List<Handler<Router>> emptyResources() {
         return List.of();
+    }
+
+    /**
+     * Creates a new Health Check server.
+     *
+     * @param vertx The vert.x instance to use.
+     * @param config The protocol adapter configuration.
+     * @param additionalResources Additional resources that the server should expose.
+     * @return The server.
+     */
+    @Singleton
+    @Produces
+    HealthCheckServer healthCheckServer(
+            final Vertx vertx,
+            final ProtocolAdapterConfig config,
+            final List<Handler<Router>> additionalResources) {
+        final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, config.healthCheck);
+        server.setAdditionalResources(additionalResources);
+        return server;
     }
 }

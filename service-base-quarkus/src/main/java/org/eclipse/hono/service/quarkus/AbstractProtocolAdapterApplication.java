@@ -13,7 +13,6 @@
 package org.eclipse.hono.service.quarkus;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -38,7 +37,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.HealthCheckServer;
-import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.slf4j.Logger;
@@ -48,9 +46,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
 import io.quarkus.runtime.StartupEvent;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.web.Router;
 
 /**
  * A Quarkus main application base class for Hono protocol adapters.
@@ -72,7 +68,7 @@ public abstract class AbstractProtocolAdapterApplication {
     protected SendMessageSampler.Factory messageSamplerFactory;
 
     @Inject
-    protected List<Handler<Router>> healthCheckResourceProviders;
+    protected HealthCheckServer healthCheckServer;
 
     @Inject
     protected ResourceLimitChecks resourceLimitChecks;
@@ -98,17 +94,6 @@ public abstract class AbstractProtocolAdapterApplication {
                     Runtime.getRuntime().availableProcessors());
         }
 
-    }
-
-    /**
-     * Creates a new Health Check server.
-     *
-     * @return The server.
-     */
-    protected HealthCheckServer healthCheckServer() {
-        final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, config.healthCheck);
-        server.setAdditionalResources(healthCheckResourceProviders);
-        return server;
     }
 
     /**
