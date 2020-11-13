@@ -39,7 +39,7 @@ public class CommandConsumer extends AbstractConsumer {
      *                   commands are received.
      * @param receiver The receiver link for command messages.
      */
-    protected CommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
+    public CommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
         super(connection, receiver);
     }
 

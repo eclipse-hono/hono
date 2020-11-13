@@ -46,7 +46,7 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
      *
      * @param handler The handler.
      */
-    protected void setLocalCloseHandler(final Handler<String> handler) {
+    public void setLocalCloseHandler(final Handler<String> handler) {
         this.localCloseHandler = handler;
     }
 
