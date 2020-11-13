@@ -38,7 +38,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifyDetectsDeviceIdMismatch() {
         // GIVEN a registration message with device id not matching the link target
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", RegistrationConstants.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", RegistrationConstants.ACTION_ASSERT);
 
         // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
@@ -54,7 +54,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifyDetectsMissingDeviceId() {
         // GIVEN a registration message lacking the device id
-        final Message msg = givenAMessageHavingProperties(null, RegistrationConstants.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(null, RegistrationConstants.ACTION_ASSERT);
 
         // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
@@ -86,7 +86,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifySucceedsForTenantOnlyLinkTarget() {
         // GIVEN a valid registration message for myDevice
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, RegistrationConstants.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, RegistrationConstants.ACTION_ASSERT);
 
         // WHEN receiving the message via a link with matching tenant-level target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
@@ -102,7 +102,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifySucceedsForMatchingDevice() {
         // GIVEN a registration message for myDevice
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, RegistrationConstants.ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, RegistrationConstants.ACTION_ASSERT);
 
         // WHEN receiving the message via a link with matching device-level address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);

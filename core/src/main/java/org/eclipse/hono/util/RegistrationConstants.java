@@ -20,17 +20,15 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     /**
      * The AMQP 1.0 <em>subject</em> to use for the <em>assert device registration</em> operation.
      */
-    public static final String ACTION_ASSERT     = "assert";
-    /**
-     * The AMQP 1.0 <em>subject</em> to use for the <em>get registration information</em> operation.
-     */
-    public static final String ACTION_GET        = "get";
+    public static final String ACTION_ASSERT = "assert";
 
     /**
-     * The name of the field in a response to the <em>get registration information</em> operation
-     * that contains a device's registration information.
+     * The name of the field containing a device's registration information.
+     * May be used when getting registration data in order to create the
+     * response to the <em>assert device registration</em> operation (which
+     * won't contain such a field though).
      */
-    public static final String FIELD_DATA         = "data";
+    public static final String FIELD_DATA = "data";
 
     /**
      * The name of the field in a response to the <em>assert Device Registration</em> operation
