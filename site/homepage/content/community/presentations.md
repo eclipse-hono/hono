@@ -9,6 +9,11 @@ On this page you can find links to arbitrary resources covering Eclipse Hono&tra
 and meet-ups or are available online.
 <!--more-->
 
+## "Release of new MongoDB based device registry in Eclipse Hono" (Blog post November 2020)
+
+* Author: Kartheeswaran Kalidass (Bosch.IO)
+* [Article](https://blog.bosch-si.com/developer/release-of-new-mongodb-based-device-registry-in-eclipse-hono/)
+
 ## "X.509 based device authentication in Eclipse Hono" (Blog post February 2019)
 
 * Author: Kai Hudalla (Bosch Software Innovations)
