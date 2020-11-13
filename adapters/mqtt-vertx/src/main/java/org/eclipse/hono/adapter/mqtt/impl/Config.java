@@ -13,11 +13,16 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import java.util.Optional;
+
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
+import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -41,12 +46,25 @@ public class Config extends AbstractAdapterConfig {
     /**
      * Creates a new MQTT protocol adapter instance.
      *
+     * @param samplerFactory The sampler factory to use.
+     * @param metrics The component to use for reporting metrics.
+     * @param resourceLimitChecks The component to use for checking if the adapter's
+     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter() {
-        return new VertxBasedMqttProtocolAdapter();
+    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter(
+            final SendMessageSampler.Factory samplerFactory,
+            final MqttAdapterMetrics metrics,
+            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+
+        final VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
+        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        adapter.setConfig(adapterProperties());
+        adapter.setMetrics(metrics);
+        adapter.setMessageMapping(messageMapping());
+        return adapter;
     }
 
     @Override

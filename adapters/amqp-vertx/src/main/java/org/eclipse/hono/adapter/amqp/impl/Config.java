@@ -12,9 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp.impl;
 
+import java.util.Optional;
+
+import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -37,12 +42,24 @@ public class Config extends AbstractAdapterConfig {
     /**
      * Creates an AMQP protocol adapter instance.
      *
+     * @param samplerFactory The sampler factory to use.
+     * @param metrics The component to use for reporting metrics.
+     * @param resourceLimitChecks The component to use for checking if the adapter's
+     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedAmqpProtocolAdapter vertxBasedAmqpProtocolAdapter() {
-        return new VertxBasedAmqpProtocolAdapter();
+    public VertxBasedAmqpProtocolAdapter vertxBasedAmqpProtocolAdapter(
+            final SendMessageSampler.Factory samplerFactory,
+            final AmqpAdapterMetrics metrics,
+            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+
+        final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
+        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        adapter.setConfig(adapterProperties());
+        adapter.setMetrics(metrics);
+        return adapter;
     }
 
     @Override

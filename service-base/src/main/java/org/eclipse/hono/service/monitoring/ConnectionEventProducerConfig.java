@@ -20,7 +20,7 @@ import java.util.Objects;
  * Properties for selecting and configuring a {@code ConnectionEventProducer}.
  *
  */
-public final class ConnectionEventProducerConfig {
+public class ConnectionEventProducerConfig {
 
     public static final String DEFAULT_LOG_LEVEL = "info";
     public static final ConnectionEventProducerType DEFAULT_TYPE = ConnectionEventProducerType.logging;
@@ -29,15 +29,11 @@ public final class ConnectionEventProducerConfig {
     private String logLevel = DEFAULT_LOG_LEVEL;
     private boolean debugLogLevel = false;
 
-//    public void setProducer(final String type) {
-//        this.type = ConnectionEventProducerType.from(type);
-//    }
-
-    public void setProducer(final ConnectionEventProducerType type) {
+    public final void setProducer(final ConnectionEventProducerType type) {
         this.type = Objects.requireNonNull(type);
     }
 
-    public ConnectionEventProducerType getType() {
+    public final ConnectionEventProducerType getType() {
         return type;
     }
 
@@ -50,7 +46,7 @@ public final class ConnectionEventProducerConfig {
      * @throws NullPointerException if level is {@code null}.
      * @throws IllegalArgumentException if level is anything other than <em>debug</em> or <em>info</em>.
      */
-    public void setLogLevel(final String level) {
+    public final void setLogLevel(final String level) {
         Objects.requireNonNull(level);
         final String levelToUse = level.toLowerCase();
         switch (levelToUse) {
@@ -65,11 +61,11 @@ public final class ConnectionEventProducerConfig {
         }
     }
 
-    public String getLogLevel() {
+    public final String getLogLevel() {
         return logLevel;
     }
 
-    public boolean isDebugLogLevel() {
+    public final boolean isDebugLogLevel() {
         return debugLogLevel;
     }
 

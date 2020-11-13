@@ -994,7 +994,6 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClient(deviceConnectionClient);
-        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.init(vertx, mock(Context.class));
 
         return adapter;
