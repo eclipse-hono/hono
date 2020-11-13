@@ -28,6 +28,7 @@
   <modules>
     <module>auth</module>
     <module>base-jdbc</module>
+    <module>command-router</module>
     <module>device-connection</module>
     <module>device-registry-base</module>
     <module>device-registry-file</module>
@@ -89,6 +90,10 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>service-base-test-utils</artifactId>
     </dependency>
   </dependencies>
 

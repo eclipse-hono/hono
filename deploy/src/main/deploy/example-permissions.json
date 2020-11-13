@@ -46,6 +46,12 @@
         "activities": [ "EXECUTE" ]
       }
     ],
+    "command-router": [
+      {
+        "resource": "registration/*",
+        "activities": [ "READ" ]
+      }
+    ],
     "device-manager": [
       {
         "resource": "registration/*",
@@ -105,6 +111,11 @@
       "mechanism": "PLAIN",
       "password": "kura-secret",
       "authorities": [ "hono-component", "protocol-adapter" ]
+    },
+    "command-router@HONO": {
+      "mechanism": "PLAIN",
+      "password": "cmd-router-secret",
+      "authorities": [ "hono-component", "command-router" ]
     },
     "hono-client@HONO": {
       "mechanism": "PLAIN",

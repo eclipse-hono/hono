@@ -33,7 +33,7 @@ import io.vertx.core.Handler;
 /**
  * A base class for implementing client factories.
  */
-abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConnection> {
+public abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConnection> {
 
     /**
      * A logger to be shared with subclasses.
@@ -53,7 +53,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConn
      * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if connection is {@code null}.
      */
-    AbstractHonoClientFactory(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
+    protected AbstractHonoClientFactory(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
         this.connection = Objects.requireNonNull(connection);
         this.connection.addDisconnectListener(con -> onDisconnect());
         this.samplerFactory = samplerFactory;
