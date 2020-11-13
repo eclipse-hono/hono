@@ -40,6 +40,9 @@ title = "Release Notes"
   The secrets are currently filtered based on their validity period regardless of whether the status is enabled
   or not. This has been fixed now, so that the disabled secrets are filtered out.
 * The MQTT adapter now supports specifying the content-type of a telemetry/event message via a MQTT property bag.
+* The MQTT adapter now sets the MQTT client identifier as *client-id* in the payload of a Credentials API *get*
+  operation request also when authenticating a device using the username/password mechanism. Previously that was
+  only done for the client certificate authentication mechanism.  
 
 ### API Changes
 
