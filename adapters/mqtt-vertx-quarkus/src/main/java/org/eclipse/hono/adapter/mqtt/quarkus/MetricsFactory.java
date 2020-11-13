@@ -17,6 +17,8 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
+import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -30,6 +32,7 @@ public class MetricsFactory {
     @Singleton
     @Produces
     MicrometerBasedMqttAdapterMetrics metrics(final Vertx vertx, final MeterRegistry registry) {
+        registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
         return new MicrometerBasedMqttAdapterMetrics(registry, vertx);
     }
 }
