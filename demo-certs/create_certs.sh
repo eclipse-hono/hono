@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -21,6 +21,8 @@ AUTH_SERVER_KEY_STORE=authServerKeyStore.p12
 AUTH_SERVER_KEY_STORE_PWD=authkeys
 DEVCON_SERVER_KEY_STORE=deviceConnectionKeyStore.p12
 DEVCON_SERVER_KEY_STORE_PWD=deviceconnectionkeys
+CMD_ROUTER_KEY_STORE=commandRouterKeyStore.p12
+CMD_ROUTER_KEY_STORE_PWD=commandrouterkeys
 DEVREG_SERVER_KEY_STORE=deviceRegistryKeyStore.p12
 DEVREG_SERVER_KEY_STORE_PWD=deviceregistrykeys
 MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
@@ -128,6 +130,7 @@ create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
 create_cert device-registry $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD
 create_cert device-connection $DEVCON_SERVER_KEY_STORE $DEVCON_SERVER_KEY_STORE_PWD
+create_cert command-router $CMD_ROUTER_KEY_STORE $CMD_ROUTER_KEY_STORE_PWD
 create_cert http-adapter $HTTP_ADAPTER_KEY_STORE $HTTP_ADAPTER_KEY_STORE_PWD
 create_cert lora-adapter $LORA_ADAPTER_KEY_STORE $LORA_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD
