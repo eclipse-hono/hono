@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
+import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -30,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Spring Boot configuration for the COAP adapter.
@@ -49,6 +51,11 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.coap")
     public CoapAdapterProperties adapterProperties() {
         return new CoapAdapterProperties();
+    }
+
+    @Bean
+    CoapAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedCoapAdapterMetrics(registry, vertx);
     }
 
     /**

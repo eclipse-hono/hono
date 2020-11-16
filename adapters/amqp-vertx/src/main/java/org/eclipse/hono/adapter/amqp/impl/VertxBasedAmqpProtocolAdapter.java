@@ -76,7 +76,6 @@ import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -148,8 +147,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *
      * @param metrics The metrics
      */
-    @Autowired
     public void setMetrics(final AmqpAdapterMetrics metrics) {
+        Optional.ofNullable(metrics)
+            .ifPresent(m -> log.info("reporting metrics using [{}]", metrics.getClass().getName()));
         this.metrics = metrics;
     }
 

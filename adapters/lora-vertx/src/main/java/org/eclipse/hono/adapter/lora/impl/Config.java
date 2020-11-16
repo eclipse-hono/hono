@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.impl;
 
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.PostConstruct;
@@ -20,6 +21,7 @@ import javax.annotation.PostConstruct;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -63,6 +65,7 @@ public class Config extends AbstractAdapterConfig {
      * @param metrics The component to use for reporting metrics.
      * @param resourceLimitChecks The component to use for checking if the adapter's
      *                            resource limits are exceeded.
+     * @param providers The provider specific endpoint handlers.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_LORA_PROTOCOL_ADAPTER)
@@ -70,12 +73,14 @@ public class Config extends AbstractAdapterConfig {
     public LoraProtocolAdapter loraProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
             final HttpAdapterMetrics metrics,
-            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+            final Optional<ResourceLimitChecks> resourceLimitChecks,
+            final List<LoraProvider> providers) {
 
         final LoraProtocolAdapter adapter = new LoraProtocolAdapter();
         setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
+        adapter.setLoraProviders(providers);
         return adapter;
     }
 

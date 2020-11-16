@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -29,6 +30,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Spring Boot configuration for the AMQP protocol adapter.
@@ -65,6 +67,11 @@ public class Config extends AbstractAdapterConfig {
     @Override
     protected String getAdapterName() {
         return CONTAINER_ID_HONO_AMQP_ADAPTER;
+    }
+
+    @Bean
+    AmqpAdapterMetrics metrics(final MeterRegistry meterRegistry, final Vertx vertx) {
+        return new MicrometerBasedAmqpAdapterMetrics(meterRegistry, vertx);
     }
 
     /**

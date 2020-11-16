@@ -46,7 +46,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
@@ -84,7 +83,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      * @param providers The providers.
      * @throws NullPointerException if providers is {@code null}.
      */
-    @Autowired(required = false)
     public void setLoraProviders(final List<LoraProvider> providers) {
         Objects.requireNonNull(providers);
         this.loraProviders.clear();

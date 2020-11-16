@@ -63,7 +63,6 @@ import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -149,8 +148,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @param metrics The metrics
      */
-    @Autowired
     public final void setMetrics(final MqttAdapterMetrics metrics) {
+        Optional.ofNullable(metrics)
+            .ifPresent(m -> log.info("reporting metrics using [{}]", metrics.getClass().getName()));
         this.metrics = metrics;
     }
 

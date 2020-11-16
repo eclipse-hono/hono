@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -30,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Spring Boot configuration for the HTTP adapter.
@@ -77,6 +79,11 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.http")
     public HttpProtocolAdapterProperties adapterProperties() {
         return new HttpProtocolAdapterProperties();
+    }
+
+    @Bean
+    HttpAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedHttpAdapterMetrics(registry, vertx);
     }
 
     /**

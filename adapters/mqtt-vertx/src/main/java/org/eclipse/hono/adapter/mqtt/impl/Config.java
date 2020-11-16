@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.mqtt.impl;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
+import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
@@ -32,6 +33,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 
 /**
@@ -81,6 +83,11 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.mqtt")
     public MqttProtocolAdapterProperties adapterProperties() {
         return new MqttProtocolAdapterProperties();
+    }
+
+    @Bean
+    MqttAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedMqttAdapterMetrics(registry, vertx);
     }
 
     /**
