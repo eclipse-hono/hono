@@ -84,20 +84,10 @@ public class Application extends AbstractProtocolAdapterApplication {
     private VertxBasedMqttProtocolAdapter adapter() {
 
         final VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
-        adapter.setCommandConsumerFactory(commandConsumerFactory());
-        adapter.setCommandTargetMapper(commandTargetMapper());
         adapter.setConfig(adapterProperties);
-        adapter.setCredentialsClient(credentialsClient());
-        adapter.setDeviceConnectionClient(deviceConnectionClient());
-        adapter.setEventSender(downstreamSender());
-        adapter.setHealthCheckServer(healthCheckServer);
         adapter.setMetrics(metrics);
-        adapter.setRegistrationClient(registrationClient());
-        adapter.setTelemetrySender(downstreamSender());
-        adapter.setTenantClient(tenantClient());
-        adapter.setTracer(tracer);
-        adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.setMessageMapping(messageMapping());
+        setCollaborators(adapter);
         return adapter;
     }
 

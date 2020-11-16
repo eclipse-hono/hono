@@ -14,6 +14,7 @@
 package org.eclipse.hono.service;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -30,8 +31,10 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandTargetMapper;
+import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -53,6 +56,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -67,11 +71,14 @@ import org.springframework.context.annotation.Scope;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -79,6 +86,98 @@ import io.vertx.ext.web.client.WebClientOptions;
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
 public abstract class AbstractAdapterConfig {
+
+    /**
+     * Sets collaborators required by all protocol adapters.
+     *
+     * @param adapter The adapter to set the collaborators on.
+     * @param adapterProperties The adapter's configuration properties.
+     * @param samplerFactory The sampler factory to use.
+     * @param resourceLimitChecks The component to use for checking if the adapter's
+     *                            resource limits are exceeded.
+     * @throws NullPointerException if any of the parameters other than resource limit checks are {@code null}
+     */
+    protected void setCollaborators(
+            final AbstractProtocolAdapterBase<?> adapter,
+            final ProtocolAdapterProperties adapterProperties,
+            final SendMessageSampler.Factory samplerFactory,
+            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+
+        Objects.requireNonNull(adapter);
+        Objects.requireNonNull(adapterProperties);
+        Objects.requireNonNull(samplerFactory);
+
+        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, adapterProperties);
+        final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient(samplerFactory, adapterProperties);
+        final CommandTargetMapper commandTargetMapper = commandTargetMapper();
+
+        commandTargetMapper.initialize(new CommandTargetMapperContext() {
+
+            @Override
+            public Future<List<String>> getViaGateways(
+                    final String tenant,
+                    final String deviceId,
+                    final SpanContext context) {
+
+                Objects.requireNonNull(tenant);
+                Objects.requireNonNull(deviceId);
+
+                return registrationClient.assertRegistration(tenant, deviceId, null, context)
+                        .map(RegistrationAssertion::getAuthorizedGateways);
+            }
+
+            @Override
+            public Future<JsonObject> getCommandHandlingAdapterInstances(
+                    final String tenant,
+                    final String deviceId,
+                    final List<String> viaGateways,
+                    final SpanContext context) {
+
+                Objects.requireNonNull(tenant);
+                Objects.requireNonNull(deviceId);
+                Objects.requireNonNull(viaGateways);
+
+                return deviceConnectionClient.getCommandHandlingAdapterInstances(
+                        tenant, deviceId, viaGateways, context);
+            }
+        });
+
+        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory();
+        commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
+
+                    @Override
+                    public Future<Void> setCommandHandlingAdapterInstance(
+                            final String tenant,
+                            final String deviceId,
+                            final String adapterInstanceId,
+                            final Duration lifespan,
+                            final SpanContext context) {
+                        return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
+                    }
+
+                    @Override
+                    public Future<Void> removeCommandHandlingAdapterInstance(
+                            final String tenant,
+                            final String deviceId,
+                            final String adapterInstanceId,
+                            final SpanContext context) {
+                        return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
+                    }
+                });
+
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
+        Optional.ofNullable(connectionEventProducer())
+            .ifPresent(adapter::setConnectionEventProducer);
+        adapter.setCredentialsClient(credentialsClient(samplerFactory, adapterProperties));
+        adapter.setDeviceConnectionClient(deviceConnectionClient);
+        adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
+        adapter.setHealthCheckServer(healthCheckServer());
+        adapter.setRegistrationClient(registrationClient);
+        adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
+        adapter.setTenantClient(tenantClient(samplerFactory, adapterProperties));
+        adapter.setTracer(getTracer());
+        resourceLimitChecks.ifPresent(adapter::setResourceLimitChecks);
+    }
 
     /**
      * Exposes an OpenTracing {@code Tracer} as a Spring Bean.
@@ -135,11 +234,11 @@ public abstract class AbstractAdapterConfig {
      * Configures the Connection Event producer that the adapter should use for reporting
      * devices connecting/disconnecting to/from the adapter.
      *
-     * @param config The configuration properties for the producer.
      * @return The producer or {@code null} if the configured producer type is none or unsupported.
      */
     @Bean
-    public ConnectionEventProducer connectionEventProducer(final ConnectionEventProducerConfig config) {
+    public ConnectionEventProducer connectionEventProducer() {
+        final ConnectionEventProducerConfig config = connectionEventProducerConfig();
         switch (config.getType()) {
         case logging:
             return new LoggingConnectionEventProducer(config);
@@ -351,7 +450,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClient credentialsClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedCredentialsClient(
@@ -693,14 +792,14 @@ public abstract class AbstractAdapterConfig {
     /**
      * Creates resource limit checks based on data retrieved from a Prometheus server.
      *
-     * @param config The configuration properties for the resource limit checks.
      * @return The resource limit checks.
      * @throws NullPointerException if config is {@code null}.
      */
     @Bean
     @ConditionalOnBean(PrometheusBasedResourceLimitChecksConfig.class)
-    public ResourceLimitChecks resourceLimitChecks(final PrometheusBasedResourceLimitChecksConfig config) {
+    public ResourceLimitChecks resourceLimitChecks() {
 
+        final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
         Objects.requireNonNull(config);
         final Caffeine<Object, Object> builder = Caffeine.newBuilder()
                 .initialCapacity(config.getCacheMinSize())

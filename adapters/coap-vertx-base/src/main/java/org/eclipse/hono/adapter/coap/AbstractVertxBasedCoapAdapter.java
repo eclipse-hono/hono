@@ -71,7 +71,6 @@ import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -144,8 +143,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      *
      * @param metrics The metrics
      */
-    @Autowired
     public final void setMetrics(final CoapAdapterMetrics metrics) {
+        Optional.ofNullable(metrics)
+            .ifPresent(m -> log.info("reporting metrics using [{}]", metrics.getClass().getName()));
         this.metrics = metrics;
     }
 
@@ -165,7 +165,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param resources The resources.
      * @throws NullPointerException if resources is {@code null}.
      */
-    @Autowired(required = false)
     public final void setResources(final Set<Resource> resources) {
         this.resourcesToAdd.addAll(Objects.requireNonNull(resources));
     }
@@ -215,7 +214,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param server The coap server.
      * @throws NullPointerException if server is {@code null}.
      */
-    @Autowired(required = false)
     public final void setCoapServer(final CoapServer server) {
         Objects.requireNonNull(server);
         this.server = server;

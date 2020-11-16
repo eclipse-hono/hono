@@ -13,7 +13,6 @@
 package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,14 +34,11 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -55,22 +51,15 @@ import org.eclipse.hono.service.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TelemetryExecutionContext;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -117,7 +106,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DeviceConnectionClient deviceConnectionClient;
     private CredentialsClient credentialsClient;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
-    private CommandTargetMapper commandTargetMapper;
     private ConnectionLimitManager connectionLimitManager;
 
     private ConnectionEventProducer connectionEventProducer;
@@ -162,14 +150,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the configuration by means of Spring dependency injection.
-     * <p>
-     * Most protocol adapters will support a single transport protocol to communicate with devices only. For those
-     * adapters there will only be a single bean instance available in the application context of type <em>T</em>.
+     * {@inheritDoc}
      */
-    @Autowired
     @Override
-    public void setConfig(final T configuration) {
+    public final void setConfig(final T configuration) {
         setSpecificConfig(configuration);
     }
 
@@ -179,8 +163,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    @Qualifier(TenantConstants.TENANT_ENDPOINT)
-    @Autowired
     public final void setTenantClient(final TenantClient client) {
         this.tenantClient = Objects.requireNonNull(client);
     }
@@ -200,8 +182,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @Autowired
     public final void setDeviceConnectionClient(final DeviceConnectionClient client) {
         this.deviceConnectionClient = Objects.requireNonNull(client);
     }
@@ -212,8 +192,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param sender The sender.
      * @throws NullPointerException if the sender is {@code null}.
      */
-    @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
-    @Autowired
     public final void setTelemetrySender(final TelemetrySender sender) {
         this.telemetrySender = Objects.requireNonNull(sender);
     }
@@ -233,8 +211,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param sender The sender.
      * @throws NullPointerException if the sender is {@code null}.
      */
-    @Qualifier(EventConstants.EVENT_ENDPOINT)
-    @Autowired
     public final void setEventSender(final EventSender sender) {
         this.eventSender = Objects.requireNonNull(sender);
     }
@@ -254,8 +230,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Autowired
     public final void setRegistrationClient(final DeviceRegistrationClient client) {
         this.registrationClient = Objects.requireNonNull(client);
     }
@@ -275,8 +249,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.
      */
-    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
-    @Autowired
     public final void setCredentialsClient(final CredentialsClient client) {
         this.credentialsClient = Objects.requireNonNull(client);
     }
@@ -301,7 +273,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *            the setup this could be a simple log message or an event using the Hono Event API.
      * @throws NullPointerException if the producer is {@code null}.
      */
-    @Autowired(required = false)
     public void setConnectionEventProducer(final ConnectionEventProducer connectionEventProducer) {
         this.connectionEventProducer = Objects.requireNonNull(connectionEventProducer);
         log.info("using [{}] for reporting connection events, if applicable for device protocol", connectionEventProducer);
@@ -361,7 +332,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param factory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
-    @Autowired
     public final void setCommandConsumerFactory(final ProtocolAdapterCommandConsumerFactory factory) {
         this.commandConsumerFactory = Objects.requireNonNull(factory);
     }
@@ -376,24 +346,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the component for mapping an incoming command to the gateway (if applicable)
-     * and protocol adapter instance that can handle it.
-     *
-     * @param commandTargetMapper The mapper component.
-     * @throws NullPointerException if commandTargetMapper is {@code null}.
-     */
-    @Autowired
-    public final void setCommandTargetMapper(final CommandTargetMapper commandTargetMapper) {
-        this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
-    }
-
-    /**
      * Sets the ResourceLimitChecks instance used to check if the number of connections exceeded the limit or not.
      *
      * @param resourceLimitChecks The ResourceLimitChecks instance
      * @throws NullPointerException if the resourceLimitChecks is {@code null}.
      */
-    @Autowired(required = false)
     public final void setResourceLimitChecks(final ResourceLimitChecks resourceLimitChecks) {
         this.resourceLimitChecks = Objects.requireNonNull(resourceLimitChecks);
     }
@@ -475,59 +432,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             .onComplete(c -> {
                 if (c.succeeded()) {
                     onCommandConnectionEstablished(c.result());
-                }
-            });
-
-            // initialize components dependent on the above clientFactories
-            commandTargetMapper.initialize(new CommandTargetMapperContext() {
-
-                @Override
-                public Future<List<String>> getViaGateways(
-                        final String tenant,
-                        final String deviceId,
-                        final SpanContext context) {
-
-                    Objects.requireNonNull(tenant);
-                    Objects.requireNonNull(deviceId);
-
-                    return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                            .map(RegistrationAssertion::getAuthorizedGateways);
-                }
-
-                @Override
-                public Future<JsonObject> getCommandHandlingAdapterInstances(
-                        final String tenant,
-                        final String deviceId,
-                        final List<String> viaGateways,
-                        final SpanContext context) {
-
-                    Objects.requireNonNull(tenant);
-                    Objects.requireNonNull(deviceId);
-                    Objects.requireNonNull(viaGateways);
-
-                    return deviceConnectionClient.getCommandHandlingAdapterInstances(
-                            tenant, deviceId, viaGateways, context);
-                }
-            });
-            commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
-
-                @Override
-                public Future<Void> setCommandHandlingAdapterInstance(
-                        final String tenant,
-                        final String deviceId,
-                        final String adapterInstanceId,
-                        final Duration lifespan,
-                        final SpanContext context) {
-                    return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
-                }
-
-                @Override
-                public Future<Void> removeCommandHandlingAdapterInstance(
-                        final String tenant,
-                        final String deviceId,
-                        final String adapterInstanceId,
-                        final SpanContext context) {
-                    return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
                 }
             });
 

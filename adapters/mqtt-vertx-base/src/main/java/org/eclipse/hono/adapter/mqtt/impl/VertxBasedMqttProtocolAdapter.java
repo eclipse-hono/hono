@@ -26,7 +26,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
@@ -63,7 +62,6 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
      * @param messageMappingService The service to use for mapping messages.
      * @throws NullPointerException if messageMapping is {@code null}.
      */
-    @Autowired
     public void setMessageMapping(final MessageMapping<MqttContext> messageMappingService) {
         Objects.requireNonNull(messageMappingService);
         this.messageMapping = messageMappingService;

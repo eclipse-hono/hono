@@ -13,9 +13,15 @@
 
 package org.eclipse.hono.adapter.http.impl;
 
+import java.util.Optional;
+
+import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -25,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Spring Boot configuration for the HTTP adapter.
@@ -38,12 +45,24 @@ public class Config extends AbstractAdapterConfig {
     /**
      * Creates a new HTTP adapter instance.
      *
+     * @param samplerFactory The sampler factory to use.
+     * @param metrics The component to use for reporting metrics.
+     * @param resourceLimitChecks The component to use for checking if the adapter's
+     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter() {
-        return new VertxBasedHttpProtocolAdapter();
+    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter(
+            final SendMessageSampler.Factory samplerFactory,
+            final HttpAdapterMetrics metrics,
+            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+
+        final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
+        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        adapter.setConfig(adapterProperties());
+        adapter.setMetrics(metrics);
+        return adapter;
     }
 
     @Override
@@ -60,6 +79,11 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.http")
     public HttpProtocolAdapterProperties adapterProperties() {
         return new HttpProtocolAdapterProperties();
+    }
+
+    @Bean
+    HttpAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedHttpAdapterMetrics(registry, vertx);
     }
 
     /**

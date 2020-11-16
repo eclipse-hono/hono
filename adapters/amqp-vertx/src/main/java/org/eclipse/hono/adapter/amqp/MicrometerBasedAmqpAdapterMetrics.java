@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@
 package org.eclipse.hono.adapter.amqp;
 
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -23,7 +21,6 @@ import io.vertx.core.Vertx;
 /**
  * Micrometer based metrics for the AMQP adapter.
  */
-@Component
 public class MicrometerBasedAmqpAdapterMetrics extends MicrometerBasedMetrics implements AmqpAdapterMetrics {
 
     /**
@@ -34,7 +31,6 @@ public class MicrometerBasedAmqpAdapterMetrics extends MicrometerBasedMetrics im
      *
      * @throws NullPointerException if either parameter is {@code null}.
      */
-    @Autowired
     public MicrometerBasedAmqpAdapterMetrics(final MeterRegistry registry, final Vertx vertx) {
         super(registry, vertx);
     }

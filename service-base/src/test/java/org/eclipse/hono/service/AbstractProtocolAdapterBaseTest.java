@@ -43,7 +43,6 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
@@ -99,7 +98,6 @@ public class AbstractProtocolAdapterBaseTest {
     private EventSender eventSender;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClient deviceConnectionClient;
-    private CommandTargetMapper commandTargetMapper;
     private ConnectionEventProducer.Context connectionEventProducerContext;
 
     /**
@@ -133,8 +131,6 @@ public class AbstractProtocolAdapterBaseTest {
         when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(eventSender);
         when(connectionEventProducerContext.getTenantClient()).thenReturn(tenantClient);
 
-        commandTargetMapper = mock(CommandTargetMapper.class);
-
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties, ADAPTER_NAME);
         setCollaborators(adapter);
@@ -152,7 +148,6 @@ public class AbstractProtocolAdapterBaseTest {
 
     private void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setCredentialsClient(credentialsClient);
         adapter.setDeviceConnectionClient(deviceConnectionClient);
         adapter.setEventSender(eventSender);

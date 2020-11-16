@@ -80,19 +80,9 @@ public class Application extends AbstractProtocolAdapterApplication {
     private VertxBasedHttpProtocolAdapter adapter() {
 
         final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
-        adapter.setCommandConsumerFactory(commandConsumerFactory());
-        adapter.setCommandTargetMapper(commandTargetMapper());
         adapter.setConfig(adapterProperties);
-        adapter.setCredentialsClient(credentialsClient());
-        adapter.setDeviceConnectionClient(deviceConnectionClient());
-        adapter.setEventSender(downstreamSender());
-        adapter.setHealthCheckServer(healthCheckServer);
         adapter.setMetrics(metrics);
-        adapter.setRegistrationClient(registrationClient());
-        adapter.setTelemetrySender(downstreamSender());
-        adapter.setTenantClient(tenantClient());
-        adapter.setTracer(tracer);
-        adapter.setResourceLimitChecks(resourceLimitChecks);
+        setCollaborators(adapter);
         return adapter;
     }
 }

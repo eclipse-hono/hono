@@ -53,7 +53,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -98,10 +97,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *
      * @param metrics The metrics
      */
-    @Autowired
     public final void setMetrics(final HttpAdapterMetrics metrics) {
+        Optional.ofNullable(metrics)
+            .ifPresent(m -> log.info("reporting metrics using [{}]", metrics.getClass().getName()));
         this.metrics = metrics;
-        log.info("using Metrics implementation [{}]", metrics.getClass().getName());
     }
 
     /**
@@ -150,7 +149,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @throws NullPointerException if server is {@code null}.
      * @throws IllegalArgumentException if the server is already started and listening on an address/port.
      */
-    @Autowired(required = false)
     public final void setHttpServer(final HttpServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
@@ -171,7 +169,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @throws NullPointerException if server is {@code null}.
      * @throws IllegalArgumentException if the server is already started and listening on an address/port.
      */
-    @Autowired(required = false)
     public final void setInsecureHttpServer(final HttpServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {

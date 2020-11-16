@@ -13,9 +13,15 @@
 
 package org.eclipse.hono.adapter.coap.impl;
 
+import java.util.Optional;
+
+import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
+import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -25,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Spring Boot configuration for the COAP adapter.
@@ -46,15 +53,32 @@ public class Config extends AbstractAdapterConfig {
         return new CoapAdapterProperties();
     }
 
+    @Bean
+    CoapAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedCoapAdapterMetrics(registry, vertx);
+    }
+
     /**
      * Creates a new COAP adapter instance.
      *
+     * @param samplerFactory The sampler factory to use.
+     * @param metrics The component to use for reporting metrics.
+     * @param resourceLimitChecks The component to use for checking if the adapter's
+     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_COAP_ADAPTER)
     @Scope("prototype")
-    public VertxBasedCoapAdapter vertxBasedCoapAdapter() {
-        return new VertxBasedCoapAdapter();
+    public VertxBasedCoapAdapter vertxBasedCoapAdapter(
+            final SendMessageSampler.Factory samplerFactory,
+            final CoapAdapterMetrics metrics,
+            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+
+        final VertxBasedCoapAdapter adapter = new VertxBasedCoapAdapter();
+        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        adapter.setConfig(adapterProperties());
+        adapter.setMetrics(metrics);
+        return adapter;
     }
 
     @Override

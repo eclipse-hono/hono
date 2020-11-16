@@ -37,7 +37,6 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -67,7 +66,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected C properties;
     protected T adapter;
 
-    protected CommandTargetMapper commandTargetMapper;
     protected CredentialsClient credentialsClient;
     protected DeviceConnectionClient deviceConnectionClient;
     protected EventSender eventSender;
@@ -147,7 +145,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         this.registrationClient = createDeviceRegistrationClientMock();
         this.credentialsClient = createCredentialsClientMock();
 
-        commandTargetMapper = mock(CommandTargetMapper.class);
         this.telemetrySender = createTelemetrySenderMock();
         this.eventSender = createEventSenderMock();
     }
@@ -192,7 +189,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      */
     protected void setServiceClients(final T adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setCredentialsClient(credentialsClient);
         adapter.setDeviceConnectionClient(deviceConnectionClient);
         adapter.setEventSender(eventSender);

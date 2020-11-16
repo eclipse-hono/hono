@@ -15,6 +15,7 @@ package org.eclipse.hono.service.quarkus;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 
 import io.quarkus.arc.config.ConfigProperties;
@@ -42,6 +43,8 @@ public class ProtocolAdapterConfig {
      public TenantClientConfig tenant;
 
      public ResourceLimitChecksConfig resourceLimitChecks;
+
+     public QuarkusConnectionEventProducerConfig connectionEvents;
 
      /**
       * Command configuration.
@@ -96,4 +99,11 @@ public class ProtocolAdapterConfig {
       */
      @ConfigProperties(prefix = "hono.resource-limits.prometheus-based", failOnMismatchingMember = false)
      public static class ResourceLimitChecksConfig extends PrometheusBasedResourceLimitChecksConfig { }
+
+     /**
+      * Connection event producer configuration.
+      */
+     @ConfigProperties(prefix = "hono.connection-events", failOnMismatchingMember = false)
+     public static class QuarkusConnectionEventProducerConfig extends ConnectionEventProducerConfig { }
+
 }
