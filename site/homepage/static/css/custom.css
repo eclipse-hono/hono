@@ -121,9 +121,11 @@ pre {
 }
 
 .eclipsefdn-adopters ul li {
-  display: block;
-  float: left;
-  width: 80%;
-  max-width: 400px;
-  margin: 20px;
+  display: inline-block;
+  padding: 2%;
+  width: 50%;
+}
+
+.eclipsefdn-adopters ul li a img {
+  width: 100%;
 }
