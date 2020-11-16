@@ -60,12 +60,14 @@ import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
 
@@ -86,6 +88,9 @@ import io.vertx.ext.web.client.WebClientOptions;
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
 public abstract class AbstractAdapterConfig {
+
+    @Autowired
+    private ApplicationContext context;
 
     /**
      * Sets collaborators required by all protocol adapters.
@@ -108,62 +113,14 @@ public abstract class AbstractAdapterConfig {
         Objects.requireNonNull(samplerFactory);
 
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, adapterProperties);
-        final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient(samplerFactory, adapterProperties);
-        final CommandTargetMapper commandTargetMapper = commandTargetMapper();
-
-        commandTargetMapper.initialize(new CommandTargetMapperContext() {
-
-            @Override
-            public Future<List<String>> getViaGateways(
-                    final String tenant,
-                    final String deviceId,
-                    final SpanContext context) {
-
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-
-                return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                        .map(RegistrationAssertion::getAuthorizedGateways);
-            }
-
-            @Override
-            public Future<JsonObject> getCommandHandlingAdapterInstances(
-                    final String tenant,
-                    final String deviceId,
-                    final List<String> viaGateways,
-                    final SpanContext context) {
-
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-                Objects.requireNonNull(viaGateways);
-
-                return deviceConnectionClient.getCommandHandlingAdapterInstances(
-                        tenant, deviceId, viaGateways, context);
-            }
-        });
-
-        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory();
-        commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
-
-                    @Override
-                    public Future<Void> setCommandHandlingAdapterInstance(
-                            final String tenant,
-                            final String deviceId,
-                            final String adapterInstanceId,
-                            final Duration lifespan,
-                            final SpanContext context) {
-                        return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
-                    }
-
-                    @Override
-                    public Future<Void> removeCommandHandlingAdapterInstance(
-                            final String tenant,
-                            final String deviceId,
-                            final String adapterInstanceId,
-                            final SpanContext context) {
-                        return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
-                    }
-                });
+        // look up client via bean factory in order to take advantage of conditional bean instantiation based
+        // on config properties
+        final DeviceConnectionClient deviceConnectionClient = context.getBean(DeviceConnectionClient.class);
+        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(
+                adapterProperties,
+                samplerFactory,
+                registrationClient,
+                deviceConnectionClient);
 
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         Optional.ofNullable(connectionEventProducer())
@@ -662,28 +619,71 @@ public abstract class AbstractAdapterConfig {
         return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
     }
 
-    /**
-     * Exposes a factory for creating clients for receiving upstream commands
-     * via the AMQP Messaging Network.
-     *
-     * @return The factory.
-     */
-    @Bean
-    @Scope("prototype")
-    public ProtocolAdapterCommandConsumerFactory commandConsumerFactory() {
-        return ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection());
-    }
+    ProtocolAdapterCommandConsumerFactory commandConsumerFactory(
+            final ProtocolAdapterProperties adapterProperties,
+            final SendMessageSampler.Factory samplerFactory,
+            final DeviceRegistrationClient registrationClient,
+            final DeviceConnectionClient deviceConnectionClient) {
 
-    /**
-     * Exposes the component for mapping an incoming command to the gateway (if applicable)
-     * and protocol adapter instance that can handle it.
-     *
-     * @return The newly created mapper instance.
-     */
-    @Bean
-    @Scope("prototype")
-    public CommandTargetMapper commandTargetMapper() {
-        return CommandTargetMapper.create(getTracer());
+        final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(getTracer());
+
+        commandTargetMapper.initialize(new CommandTargetMapperContext() {
+
+            @Override
+            public Future<List<String>> getViaGateways(
+                    final String tenant,
+                    final String deviceId,
+                    final SpanContext context) {
+
+                Objects.requireNonNull(tenant);
+                Objects.requireNonNull(deviceId);
+
+                return registrationClient.assertRegistration(tenant, deviceId, null, context)
+                        .map(RegistrationAssertion::getAuthorizedGateways);
+            }
+
+            @Override
+            public Future<JsonObject> getCommandHandlingAdapterInstances(
+                    final String tenant,
+                    final String deviceId,
+                    final List<String> viaGateways,
+                    final SpanContext context) {
+
+                Objects.requireNonNull(tenant);
+                Objects.requireNonNull(deviceId);
+                Objects.requireNonNull(viaGateways);
+
+                return deviceConnectionClient.getCommandHandlingAdapterInstances(
+                        tenant, deviceId, viaGateways, context);
+            }
+        });
+
+        final ProtocolAdapterCommandConsumerFactory commandConsumerFactory =
+                ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection());
+
+        commandConsumerFactory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
+
+                    @Override
+                    public Future<Void> setCommandHandlingAdapterInstance(
+                            final String tenant,
+                            final String deviceId,
+                            final String adapterInstanceId,
+                            final Duration lifespan,
+                            final SpanContext context) {
+                        return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
+                    }
+
+                    @Override
+                    public Future<Void> removeCommandHandlingAdapterInstance(
+                            final String tenant,
+                            final String deviceId,
+                            final String adapterInstanceId,
+                            final SpanContext context) {
+                        return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
+                    }
+                });
+
+        return commandConsumerFactory;
     }
 
     /**
