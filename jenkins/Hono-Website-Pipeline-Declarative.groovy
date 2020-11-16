@@ -61,10 +61,12 @@ spec:
 
   options {
     buildDiscarder(logRotator(numToKeepStr: '3'))
+    disableConcurrentBuilds()
+    timeout(time: 15, unit: 'MINUTES')
   }
 
   triggers {
-      cron('TZ=Europe/Berlin \n # every night between 3 and 4 AM \n H 3 * * *')
+      cron('TZ=Europe/Berlin\n# every night between 3 and 4 AM\nH 3 * * *')
   }
 
   stages {
