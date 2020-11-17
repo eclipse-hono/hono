@@ -38,11 +38,15 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionClient;
+import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.DeviceConnectionCacheConfig;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache;
@@ -50,6 +54,7 @@ import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +91,9 @@ public abstract class AbstractProtocolAdapterApplication {
 
     @Inject
     protected ProtocolAdapterConfig config;
+
+    @Inject
+    protected DeviceConnectionCacheConfig deviceConnectionCacheConfig;
 
     @Inject
     protected ProtocolAdapterProperties protocolAdapterProperties;
@@ -216,10 +224,27 @@ public abstract class AbstractProtocolAdapterApplication {
      * @return The client.
      */
     protected DeviceConnectionClient deviceConnectionClient() {
-        return new ProtonBasedDeviceConnectionClient(
-                HonoConnection.newConnection(vertx, config.deviceConnection, tracer),
-                messageSamplerFactory,
-                protocolAdapterProperties);
+
+        if (config.deviceConnection.isHostConfigured()) {
+            return new ProtonBasedDeviceConnectionClient(
+                    HonoConnection.newConnection(vertx, config.deviceConnection, tracer),
+                    messageSamplerFactory,
+                    protocolAdapterProperties);
+        } else {
+            final RemoteCacheManager cacheManager = new RemoteCacheManager(
+                    deviceConnectionCacheConfig.getConfigurationBuilder().build(),
+                    false);
+            final CommonCacheConfig cacheConfig = new CommonCacheConfig();
+            final HotrodCache<String, String> cache = new HotrodCache<>(
+                    vertx,
+                    cacheManager,
+                    cacheConfig.getCacheName(),
+                    cacheConfig.getCheckKey(),
+                    cacheConfig.getCheckValue());
+            return new CacheBasedDeviceConnectionClient(
+                    new CacheBasedDeviceConnectionInfo(cache, tracer),
+                    tracer);
+        }
     }
 
     /**
@@ -280,15 +305,6 @@ public abstract class AbstractProtocolAdapterApplication {
             final CommandRouterClient commandRouterClient) {
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [unknown]");
         throw new UnsupportedOperationException("not supported yet");
-    }
-
-    /**
-     * Creates a new command target mapper.
-     *
-     * @return The mapper.
-     */
-    protected CommandTargetMapper commandTargetMapper() {
-        return CommandTargetMapper.create(tracer);
     }
 
     /**

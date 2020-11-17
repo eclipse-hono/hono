@@ -70,6 +70,10 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>client-device-connection-infinispan</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

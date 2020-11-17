@@ -21,6 +21,8 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
+
 
 /**
  * Configuration properties for a Hotrod connection to a remote cache.
@@ -75,4 +77,16 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
            getProperties().setProperty(key, v);
        });
     }
+
+    /**
+    * {@inheritDoc}
+    */
+   @Override
+   public String toString() {
+       return MoreObjects
+               .toStringHelper(this)
+               .add("serverList", this.getServerList())
+               .add("authUsername", this.getAuthUsername())
+               .toString();
+   }
 }

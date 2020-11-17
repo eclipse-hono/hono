@@ -396,7 +396,7 @@
         <plugin>
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-maven-plugin</artifactId>
-          <version>1.8.1.Final</version>
+          <version>1.9.2.Final</version>
           <executions>
             <execution>
               <goals>
@@ -408,7 +408,7 @@
         <plugin>
           <groupId>org.jboss.jandex</groupId>
           <artifactId>jandex-maven-plugin</artifactId>
-          <version>1.0.7</version>
+          <version>1.0.8</version>
           <executions>
             <execution>
               <id>make-index</id>

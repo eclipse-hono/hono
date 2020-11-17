@@ -183,6 +183,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public final void setCommandRouterClient(final CommandRouterClient client) {
         this.commandRouterClient = Objects.requireNonNull(client);
+        log.info("using Command Router client [{}]", client.getClass().getName());
     }
 
     /**

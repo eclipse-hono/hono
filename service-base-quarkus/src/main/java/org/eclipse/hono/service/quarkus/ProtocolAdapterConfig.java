@@ -25,17 +25,19 @@ import io.quarkus.arc.config.ConfigProperties;
 @ConfigProperties(prefix = "hono", namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
 public class ProtocolAdapterConfig {
 
+    public ApplicationConfig app;
+
     public CommandConfig command;
 
     public CommandRouterConfig commandRouter;
 
-    public HealthCheckConfig healthCheck;
-
-    public ApplicationConfig app;
+    public QuarkusConnectionEventProducerConfig connectionEvents;
 
     public CredentialsClientConfig credentials;
 
     public DeviceConnectionConfig deviceConnection;
+
+    public HealthCheckConfig healthCheck;
 
     public DownstreamSenderConfig messaging;
 
@@ -43,18 +45,10 @@ public class ProtocolAdapterConfig {
 
     public TenantClientConfig tenant;
 
-    public QuarkusConnectionEventProducerConfig connectionEvents;
-
     /**
      * Command configuration.
      */
     public static class CommandConfig extends RequestResponseClientConfigProperties {
-    }
-
-    /**
-     * Health check configuration.
-     */
-    public static class HealthCheckConfig extends ServerConfig {
     }
 
     /**
@@ -64,6 +58,11 @@ public class ProtocolAdapterConfig {
     }
 
     /**
+     * Command Router client configuration.
+     */
+    public static class CommandRouterConfig extends RequestResponseClientConfigProperties { }
+
+     /**
      * Credentials client configuration.
      */
     public static class CredentialsClientConfig extends RequestResponseClientConfigProperties {
@@ -76,15 +75,21 @@ public class ProtocolAdapterConfig {
     }
 
     /**
-     * Command Router client configuration.
-     */
-    public static class CommandRouterConfig extends RequestResponseClientConfigProperties {
-    }
-
-    /**
      * Messaging client configuration.
      */
     public static class DownstreamSenderConfig extends RequestResponseClientConfigProperties {
+    }
+
+    /**
+     * Health check configuration.
+     */
+    public static class HealthCheckConfig extends ServerConfig {
+    }
+
+    /**
+     * Connection event producer configuration.
+     */
+    public static class QuarkusConnectionEventProducerConfig extends ConnectionEventProducerConfig {
     }
 
     /**
@@ -97,11 +102,5 @@ public class ProtocolAdapterConfig {
      * Tenant client configuration.
      */
     public static class TenantClientConfig extends RequestResponseClientConfigProperties {
-    }
-
-    /**
-     * Connection event producer configuration.
-     */
-    public static class QuarkusConnectionEventProducerConfig extends ConnectionEventProducerConfig {
     }
 }
