@@ -40,8 +40,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.MultiMap;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -239,7 +241,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         registry.registerDevice(tenantId, deviceId, device)
             .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId))
             .onComplete(ctx.succeeding(httpResponse -> {
-                ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class), device));
+                ctx.verify(() -> assertRegistrationInformation(httpResponse, device));
                 ctx.completeNow();
             }));
     }
@@ -303,8 +305,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                     return registry.getRegistrationInfo(tenantId, deviceId);
                 })
                 .onComplete(ctx.succeeding(httpResponse -> {
-                    ctx.verify(() -> assertRegistrationInformation(httpResponse.bodyAsJson(Device.class),
-                            updatedData.mapTo(Device.class)));
+                    ctx.verify(() -> assertRegistrationInformation(httpResponse, updatedData.mapTo(Device.class)));
                     ctx.completeNow();
                 }));
     }
@@ -734,11 +735,19 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         return generatedId;
     }
 
-    private static void assertRegistrationInformation(final Device response, final Device expectedData) {
+    private static void assertRegistrationInformation(final HttpResponse<Buffer> response, final Device expectedData) {
 
+        final JsonObject actualDeviceJson = response.bodyAsJsonObject();
+
+        // internal status is not decoded from JSON as users should not be allowed to change internal status
+        final JsonObject actualDeviceStatus = actualDeviceJson.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
+        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isFalse();
+        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isFalse();
+
+        final Device actualDevice = actualDeviceJson.mapTo(Device.class);
         final Comparator<Instant> close = (Instant d1, Instant d2) -> d1.compareTo(d2) < 1000 ? 0 : 1;
 
-        assertThat(response)
+        assertThat(actualDevice)
                 .usingRecursiveComparison()
                 .withComparatorForFields(close, "status.creationTime", "status.lastUpdate")
                 .isEqualTo(expectedData);
