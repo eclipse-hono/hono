@@ -118,14 +118,16 @@ pre {
 
 .eclipsefdn-adopters ul {
   list-style: none;
+  padding-left: 0;
 }
 
 .eclipsefdn-adopters ul li {
   display: inline-block;
   padding: 2%;
   width: 50%;
+  text-align: center;
 }
 
 .eclipsefdn-adopters ul li a img {
-  width: 100%;
+  width: 80%;
 }
