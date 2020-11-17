@@ -23,6 +23,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
+import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -255,12 +256,16 @@ public class ApplicationConfig {
      * Exposes a factory for creating clients for receiving upstream commands
      * via the AMQP Messaging Network.
      *
+     * @param config The component's configuration properties.
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory() {
-        return CommandConsumerFactory.create(commandConsumerConnection());
+    public CommandConsumerFactory commandConsumerFactory(final CommandRouterServiceConfigProperties config) {
+        return new ProtonBasedCommandConsumerFactoryImpl(
+                commandConsumerConnection(),
+                SendMessageSampler.Factory.noop(),
+                config);
     }
 
     /**

@@ -14,7 +14,6 @@
 package org.eclipse.hono.commandrouter.impl.amqp;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,15 +21,16 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.impl.AbstractHonoClientFactory;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
+import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 
@@ -40,16 +40,17 @@ import io.vertx.core.Future;
 import io.vertx.proton.ProtonQoS;
 
 /**
- * A factory for creating clients for the <em>AMQP 1.0 Messaging Network</em> to receive commands and send responses.
+ * A factory for creating clients for the <em>AMQP 1.0 Messaging Network</em> to receive commands.
  * <p>
- * The factory a tenant-scoped link, created (if not already existing for that tenant) when
- * {@link #createCommandConsumer(String, String, String, Duration, SpanContext)} is invoked.
+ * The factory uses tenant-scoped links, created (if not already existing for the tenant) when
+ * {@link CommandConsumerFactory#createCommandConsumer(String, SpanContext)} is invoked.
  * <p>
  * Command messages are first received on the tenant-scoped consumer address. It is then determined which protocol
  * adapter instance can handle the command. The command is then forwarded to the AMQP messaging network on
  * an address containing that adapter instance id.
  */
-public class ProtonBasedCommandConsumerFactoryImpl extends AbstractHonoClientFactory implements CommandConsumerFactory {
+public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient implements
+        CommandConsumerFactory {
 
     private static final int RECREATE_CONSUMERS_DELAY = 20;
 
@@ -73,10 +74,14 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractHonoClientFac
      *
      * @param connection The connection to the AMQP network.
      * @param samplerFactory The sampler factory to use.
+     * @param config The component's configuration properties.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public ProtonBasedCommandConsumerFactoryImpl(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
-        super(connection, samplerFactory);
+    public ProtonBasedCommandConsumerFactoryImpl(
+            final HonoConnection connection,
+            final SendMessageSampler.Factory samplerFactory,
+            final CommandRouterServiceConfigProperties config) {
+        super(connection, samplerFactory, config);
     }
 
     @Override
@@ -106,30 +111,19 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractHonoClientFac
      * {@inheritDoc}
      */
     @Override
-    public final Future<Void> createCommandConsumer(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Duration lifespan, final SpanContext context) {
+    public final Future<Void> createCommandConsumer(final String tenantId, final SpanContext context) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(adapterInstanceId);
 
         if (!initialized.get()) {
             log.error("not initialized");
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
         }
-        log.trace("create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
         return connection.executeOnContext(result -> {
             // create the tenant-scoped consumer ("command/<tenantId>") that maps/delegates incoming commands to the right adapter-instance
             getOrCreateMappingAndDelegatingCommandConsumer(tenantId)
                     .map((Void) null)
                     .onComplete(result);
         });
-    }
-
-    @Override
-    public Future<Void> removeCommandConsumer(final String tenantId, final String deviceId, final String adapterInstanceId, final SpanContext context) {
-        log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
-        // nothing to do here
-        return Future.succeededFuture();
     }
 
     private Future<MessageConsumer> getOrCreateMappingAndDelegatingCommandConsumer(final String tenantId) {

@@ -19,12 +19,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
@@ -149,7 +147,7 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
             if (deviceConnectionInfo instanceof Lifecycle) {
                 startServiceClient((Lifecycle) deviceConnectionInfo, "Device Connection info");
             }
-            connectToService(commandConsumerFactory, "Command & Control");
+            startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
 
             // initialize components dependent on the above clientFactories
             commandTargetMapper.initialize(new CommandTargetMapper.CommandTargetMapperContext() {
@@ -198,11 +196,11 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
 
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
-        results.add(registrationClient.stop());
+        results.add(stopServiceClient(registrationClient));
         if (deviceConnectionInfo instanceof Lifecycle) {
-            results.add(((Lifecycle) deviceConnectionInfo).stop());
+            results.add(stopServiceClient((Lifecycle) deviceConnectionInfo));
         }
-        results.add(disconnectFromService(commandConsumerFactory));
+        results.add(stopServiceClient(commandConsumerFactory));
 
         CompositeFuture.all(results)
                 .recover(t -> {
@@ -214,20 +212,6 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
                     return (Void) null;
                 })
                 .onComplete(stopPromise);
-    }
-
-    /**
-     * Disconnects from a Hono Service component.
-     *
-     * @param connection  The connection.
-     * @return A future indicating the outcome of the operation.
-     * @throws NullPointerException if connection is {@code null}.
-     */
-    protected final Future<Void> disconnectFromService(final ConnectionLifecycle<?> connection) {
-        Objects.requireNonNull(connection);
-        final Promise<Void> disconnectTracker = Promise.promise();
-        connection.disconnect(disconnectTracker);
-        return disconnectTracker.future();
     }
 
     /**
@@ -255,27 +239,18 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
     }
 
     /**
-     * Establishes a connection to a Hono Service component.
+     * Stops a service client.
+     * <p>
+     * This method invokes the client's {@link Lifecycle#stop()} method.
      *
-     * @param factory The client factory for the service that is to be connected.
-     * @param serviceName The name of the service that is to be connected (used for logging).
-     * @return A future that will succeed once the connection has been established. The future will fail if the
-     *         connection cannot be established.
-     * @throws NullPointerException if serviceName is {@code null}.
-     * @throws IllegalArgumentException if factory is {@code null}.
-     * @param <C> The type of connection that the factory uses.
+     * @param client The client to stop.
+     * @return A future indicating the outcome of stopping the client.
+     * @throws NullPointerException if client is {@code null}.
      */
-    protected final <C> Future<C> connectToService(final ConnectionLifecycle<C> factory, final String serviceName) {
-        Objects.requireNonNull(factory);
-        factory.addDisconnectListener(c -> LOG.info("lost connection to {}", serviceName));
-        factory.addReconnectListener(c -> LOG.info("connection to {} re-established", serviceName));
-        return factory.connect().map(c -> {
-            LOG.info("connected to {}", serviceName);
-            return c;
-        }).recover(t -> {
-            LOG.warn("failed to connect to {}", serviceName, t);
-            return Future.failedFuture(t);
-        });
+    protected final Future<Void> stopServiceClient(final Lifecycle client) {
+
+        Objects.requireNonNull(client);
+        return client.stop();
     }
 
     @Override
@@ -291,7 +266,7 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
             final String deviceId, final String adapterInstanceId, final Duration lifespan,
             final Span span) {
 
-        return commandConsumerFactory.createCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, span.context())
+        return commandConsumerFactory.createCommandConsumer(tenantId, span.context())
                 .compose(v -> deviceConnectionInfo
                         .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, getSanitizedLifespan(lifespan), span)
                         .recover(thr -> {
@@ -312,34 +287,28 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
     public Future<CommandRouterResult> unregisterCommandConsumer(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
 
-        return commandConsumerFactory.removeCommandConsumer(tenantId, deviceId, adapterInstanceId, span.context())
-                .compose(v -> deviceConnectionInfo
-                        .removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
-                        .recover(thr -> {
-                            if (ServiceInvocationException.extractStatusCode(thr) != HttpURLConnection.HTTP_PRECON_FAILED) {
-                                LOG.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId, deviceId, thr);
-                            }
-                            return Future.failedFuture(thr);
-                        }))
+        return deviceConnectionInfo
+                .removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
+                .recover(thr -> {
+                    if (ServiceInvocationException.extractStatusCode(thr) != HttpURLConnection.HTTP_PRECON_FAILED) {
+                        LOG.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId, deviceId, thr);
+                    }
+                    return Future.failedFuture(thr);
+                })
                 .map(v -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> CommandRouterResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        Optional.ofNullable(commandConsumerFactory)
-                .ifPresent(factory -> {
-                    handler.register("connected-to-command-endpoint", 2000L, status -> {
-                        factory.isConnected()
-                                .onSuccess(connected -> status.tryComplete(Status.OK()))
-                                .onFailure(t -> status.tryComplete(Status.KO()));
-                    });
-                });
         if (registrationClient instanceof ServiceClient) {
             ((ServiceClient) registrationClient).registerReadinessChecks(handler);
         }
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerReadinessChecks(handler);
+        }
+        if (commandConsumerFactory instanceof ServiceClient) {
+            ((ServiceClient) commandConsumerFactory).registerReadinessChecks(handler);
         }
     }
 
@@ -351,6 +320,9 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
         }
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerLivenessChecks(handler);
+        }
+        if (commandConsumerFactory instanceof ServiceClient) {
+            ((ServiceClient) commandConsumerFactory).registerLivenessChecks(handler);
         }
     }
 
