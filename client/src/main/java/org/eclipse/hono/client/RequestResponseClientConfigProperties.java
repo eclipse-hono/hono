@@ -129,4 +129,17 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
         }
         this.responseCacheDefaultTimeout = timeout;
     }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return new StringBuilder(getClass().getName()).append("[")
+                .append("host: ").append(getHost())
+                .append(", linkEstablishmentTimeout: ").append(getLinkEstablishmentTimeout())
+                .append("]")
+                .toString();
+    }
 }

@@ -29,10 +29,32 @@ public class ConnectionEventProducerConfig {
     private String logLevel = DEFAULT_LOG_LEVEL;
     private boolean debugLogLevel = false;
 
+    /**
+     * Sets the type of producer of connection events.
+     * <p>
+     * Supported types are defined by {@link ConnectionEventProducerType}.
+     *
+     * @param type The type of producer.
+     */
+    public final void setProducer(final String type) {
+        Objects.requireNonNull(type);
+        this.type = ConnectionEventProducerType.from(type);
+    }
+
+    /**
+     * Sets the type of producer of connection events.
+     *
+     * @param type The type of producer.
+     */
     public final void setProducer(final ConnectionEventProducerType type) {
         this.type = Objects.requireNonNull(type);
     }
 
+    /**
+     * Gets the type of producer of connection events.
+     *
+     * @return The producer type.
+     */
     public final ConnectionEventProducerType getType() {
         return type;
     }
