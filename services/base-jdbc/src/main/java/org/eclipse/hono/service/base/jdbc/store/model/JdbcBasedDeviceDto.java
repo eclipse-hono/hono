@@ -18,6 +18,7 @@ import java.util.UUID;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -59,8 +60,9 @@ public class JdbcBasedDeviceDto extends DeviceDto {
         return DeviceDto.forRead(tenantId,
                 deviceId,
                 Json.decodeValue(recordJson.getString("data"), Device.class),
-                recordJson.getBoolean("auto_provisioned"),
-                recordJson.getBoolean("auto_provisioning_notification_sent"),
+                new DeviceStatus()
+                    .setAutoProvisioned(recordJson.getBoolean("auto_provisioned"))
+                    .setAutoProvisioningNotificationSent(recordJson.getBoolean("auto_provisioning_notification_sent")),
                 recordJson.getInstant("created"),
                 recordJson.getInstant("updated_on"),
                 Optional.ofNullable(recordJson.getString("version")).orElse(null));

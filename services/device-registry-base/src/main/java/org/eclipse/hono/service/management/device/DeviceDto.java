@@ -76,8 +76,7 @@ public class DeviceDto extends BaseDto<Device> {
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      * @param device The data of the DTO.
-     * @param autoProvisioned Marks this device as being auto-provisioned.
-     * @param autoProvisioningNotificationSent Marks the auto-provisioning notification for this device as sent.
+     * @param deviceStatus The registry internal status of the device.
      * @param created The instant when the object was created.
      * @param updated The instant of the most recent update.
      * @param version The version of the DTO
@@ -85,14 +84,11 @@ public class DeviceDto extends BaseDto<Device> {
      * @return A DTO instance for reading an entry.
      */
     public static DeviceDto forRead(final String tenantId, final String deviceId, final Device device,
-                                    final Boolean autoProvisioned, final Boolean autoProvisioningNotificationSent, final Instant created, final Instant updated, final String version) {
+                                    final DeviceStatus deviceStatus, final Instant created, final Instant updated, final String version) {
         final DeviceDto deviceDto = BaseDto.forRead(DeviceDto::new, device, created, updated, version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
-        deviceDto.setDeviceStatus(new DeviceStatus()
-                .setAutoProvisioned(autoProvisioned)
-                .setAutoProvisioningNotificationSent(autoProvisioningNotificationSent)
-        );
+        deviceDto.setDeviceStatus(deviceStatus);
 
         return deviceDto;
     }
