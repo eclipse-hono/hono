@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
+import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.util.AuthenticationConstants;
@@ -39,6 +40,7 @@ import io.vertx.core.json.pointer.JsonPointer;
  */
 public final class MongoDbDocumentBuilder {
 
+    public static final String SET_OPERATOR = "$set";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String FIELD_CREDENTIALS_AUTH_ID_KEY = String.format("%s.%s",
@@ -62,6 +64,24 @@ public final class MongoDbDocumentBuilder {
      */
     public static MongoDbDocumentBuilder builder() {
         return new MongoDbDocumentBuilder();
+    }
+
+    /**
+     * Creates a MongoDb update document for the update of the device DTO.
+     *
+     * @param deviceDto The device DTO for which an update should be generated.
+     *
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder forUpdateOf(final DeviceDto deviceDto) {
+        forUpdateOf((BaseDto) deviceDto);
+
+        final JsonObject updateDocument = document.getJsonObject(SET_OPERATOR);
+
+        updateDocument.put(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONED, deviceDto.getDeviceStatus().isAutoProvisioned());
+        updateDocument.put(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
+
+        return this;
     }
 
     /**
@@ -94,7 +114,7 @@ public final class MongoDbDocumentBuilder {
             updates.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, baseDto.getVersion());
         }
 
-        document.put("$set", updates);
+        document.put(SET_OPERATOR, updates);
         return this;
     }
 

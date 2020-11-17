@@ -10,13 +10,15 @@ create: |
       device_id,
       version,
       data,
-      created
+      created,
+      auto_provisioned
    ) VALUES (
       :tenant_id,
       :device_id,
       :version,
       :data,
-      :created
+      :created,
+      :auto_provisioned
    )
 
 readRegistration: |
@@ -25,7 +27,9 @@ readRegistration: |
       version,
       data,
       created,
-      updated_on
+      updated_on,
+      auto_provisioned,
+      auto_provisioning_notification_sent
    FROM
       %s
    WHERE
@@ -38,7 +42,8 @@ updateRegistrationVersioned: |
    SET
       data=:data,
       version=:next_version,
-      updated_on=:updated_on
+      updated_on=:updated_on,
+      auto_provisioning_notification_sent=:auto_provisioning_notification_sent
    WHERE
       tenant_id=:tenant_id
    AND

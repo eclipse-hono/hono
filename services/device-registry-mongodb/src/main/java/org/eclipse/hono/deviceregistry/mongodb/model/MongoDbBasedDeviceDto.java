@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.mongodb.model;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -46,6 +47,9 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
         return DeviceDto.forRead(tenantId,
             deviceId,
             recordJson.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
+            new DeviceStatus()
+                .setAutoProvisioned(recordJson.getBoolean(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONED))
+                .setAutoProvisioningNotificationSent(recordJson.getBoolean(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
             recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
             recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
             recordJson.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION));

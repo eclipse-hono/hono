@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 import java.util.ArrayList;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -192,11 +193,20 @@ public class DeviceTest {
     @Test
     public void testEncodeStatus() {
         final var device = new Device();
-        device.setStatus(new Status().setCreationTime(Instant.now()));
+        device.setStatus(new DeviceStatus()
+                .setAutoProvisioned(true)
+                .setAutoProvisioningNotificationSent(true)
+                .setCreationTime(Instant.now()));
+
         final var json = JsonObject.mapFrom(device);
+
         assertThat(json).isNotNull();
-        assertThat(json.getJsonObject("status")).isNotNull();
-        assertThat(json.getJsonObject("status").getString("created")).isNotEmpty();
+
+        final JsonObject status = json.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
+        assertThat(status).isNotNull();
+        assertThat(status.getString(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isNotEmpty();
+        assertThat(status.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isTrue();
+        assertThat(status.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isTrue();
     }
 
     /**

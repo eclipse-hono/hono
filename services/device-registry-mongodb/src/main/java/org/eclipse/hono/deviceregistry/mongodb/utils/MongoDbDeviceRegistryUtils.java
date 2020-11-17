@@ -58,6 +58,15 @@ public final class MongoDbDeviceRegistryUtils {
      * The name of the JSON property containing the version of the tenant or device or credentials information.
      */
     public static final String FIELD_VERSION = "version";
+    /**
+     * The name of the JSON property containing the flag if a device was auto-provisioned.
+     */
+    public static final String FIELD_AUTO_PROVISIONED = "autoProvisioned";
+    /**
+     * The name of the JSON property containing the flag if the notification for an auto-provisioned device was sent.
+     */
+    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "autoProvisioningNotificationSent";
+
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbDeviceRegistryUtils.class);
 
     private MongoDbDeviceRegistryUtils() {

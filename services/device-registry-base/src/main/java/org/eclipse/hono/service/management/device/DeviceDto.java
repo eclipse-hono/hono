@@ -21,6 +21,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 /**
  * A base class for a device DTO.
@@ -31,6 +32,9 @@ public class DeviceDto extends BaseDto<Device> {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)
     private String deviceId;
+
+    @JsonUnwrapped
+    private DeviceStatus deviceStatus = new DeviceStatus();
 
     /**
      * Default constructor for serialisation/deserialization.
@@ -45,20 +49,23 @@ public class DeviceDto extends BaseDto<Device> {
      * @param supplier A DTO subclass' constructor of which a new instance shall be created.
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
+     * @param autoProvisioned Marks this device as being auto-provisioned.
      * @param device The data of the DTO.
      * @param version The version of the DTO
      *
-     * @param <P> The type of the DTO's payload.
      * @param <T> The type of the DTO subclass.
      *
      * @return A DTO instance for creating a new entry.
      */
-    public static <P extends Device, T extends DeviceDto> T forCreation(final Supplier<T> supplier, final String tenantId, final String deviceId, final Device device, final String version) {
+    public static <T extends DeviceDto> T forCreation(final Supplier<T> supplier, final String tenantId, final String deviceId, final Boolean autoProvisioned, final Device device, final String version) {
         final T deviceDto = BaseDto.forCreation(supplier,
                 withoutStatus(device),
                 version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
+        deviceDto.setDeviceStatus(new DeviceStatus()
+                .setAutoProvisioned(autoProvisioned)
+        );
 
         return deviceDto;
     }
@@ -69,6 +76,7 @@ public class DeviceDto extends BaseDto<Device> {
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      * @param device The data of the DTO.
+     * @param deviceStatus The registry internal status of the device.
      * @param created The instant when the object was created.
      * @param updated The instant of the most recent update.
      * @param version The version of the DTO
@@ -76,10 +84,11 @@ public class DeviceDto extends BaseDto<Device> {
      * @return A DTO instance for reading an entry.
      */
     public static DeviceDto forRead(final String tenantId, final String deviceId, final Device device,
-                                    final Instant created, final Instant updated, final String version) {
+                                    final DeviceStatus deviceStatus, final Instant created, final Instant updated, final String version) {
         final DeviceDto deviceDto = BaseDto.forRead(DeviceDto::new, device, created, updated, version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
+        deviceDto.setDeviceStatus(deviceStatus);
 
         return deviceDto;
     }
@@ -90,18 +99,21 @@ public class DeviceDto extends BaseDto<Device> {
      * @param supplier A DTO subclass' constructor of which a new instance shall be created.
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
+     * @param autoProvisioningNotificationSent Marks the auto-provisioning notification for this device as sent.
      * @param device The data of the DTO.
      * @param version The version of the DTO
      *
-     * @param <P> The type of the DTO's payload.
      * @param <T> The type of the DTO subclass.
      *
      * @return A DTO instance for updating an entry.
      */
-    public static <P extends Device, T extends DeviceDto> T forUpdate(final Supplier<T> supplier, final String tenantId, final String deviceId, final Device device, final String version) {
+    public static <T extends DeviceDto> T forUpdate(final Supplier<T> supplier, final String tenantId, final String deviceId, final Boolean autoProvisioningNotificationSent, final Device device, final String version) {
         final T deviceDto = BaseDto.forUpdate(supplier, withoutStatus(device), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
+        deviceDto.setDeviceStatus(new DeviceStatus()
+                .setAutoProvisioningNotificationSent(autoProvisioningNotificationSent)
+        );
 
         return deviceDto;
     }
@@ -160,6 +172,26 @@ public class DeviceDto extends BaseDto<Device> {
     }
 
     /**
+     * Gets the registry internal status information of this device.
+     *
+     * @return The registry internal status information.
+     */
+    public final DeviceStatus getDeviceStatus() {
+        return deviceStatus;
+    }
+
+    /**
+     * Sets the registry internal status information of this device.
+     *
+     * @param deviceStatus The status information to be set.
+     */
+    public final void setDeviceStatus(final DeviceStatus deviceStatus) {
+        Objects.requireNonNull(deviceStatus);
+
+        this.deviceStatus = deviceStatus;
+    }
+
+    /**
      * Gets the device information including internal status.
      *
      * @return The device information including internal status or {@code null} if not set.
@@ -167,11 +199,12 @@ public class DeviceDto extends BaseDto<Device> {
     @JsonIgnore
     public Device getDeviceWithStatus() {
         final Device deviceWithStatus = new Device(getData());
-        deviceWithStatus.setStatus(new Status()
+        deviceWithStatus.setStatus(new DeviceStatus()
+                .setAutoProvisioned(getDeviceStatus().isAutoProvisioned())
+                .setAutoProvisioningNotificationSent(getDeviceStatus().isAutoProvisioningNotificationSent())
                 .setCreationTime(getCreationTime())
                 .setLastUpdate(getUpdatedOn())
         );
         return deviceWithStatus;
     }
-
 }

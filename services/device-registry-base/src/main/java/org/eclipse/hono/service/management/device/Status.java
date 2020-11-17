@@ -22,9 +22,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A status used in Device value object.
+ * A status base object of a model entity.
+ *
+ * @param <T> The concrete type of the status object for a model entity.
  */
-public final class Status {
+public class Status<T extends Status<T>> {
 
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
@@ -53,12 +55,12 @@ public final class Status {
      *
      * @return A reference to this, enabling fluent use.
      */
-    public Status setCreationTime(final Instant creationTime) {
+    public final T setCreationTime(final Instant creationTime) {
         this.creationTime = creationTime;
-        return this;
+        return (T) this;
     }
 
-    public Instant getCreationTime() {
+    public final Instant getCreationTime() {
         return creationTime;
     }
 
@@ -69,12 +71,12 @@ public final class Status {
      *
      * @return A reference to this, enabling fluent use.
      */
-    public Status setLastUpdate(final Instant lastUpdate) {
+    public final T setLastUpdate(final Instant lastUpdate) {
         this.lastUpdate = lastUpdate;
-        return this;
+        return (T) this;
     }
 
-    public Instant getLastUpdate() {
+    public final Instant getLastUpdate() {
         return lastUpdate;
     }
 
@@ -85,14 +87,14 @@ public final class Status {
      * @param lastUser : the user Id to update with.
      * @return A reference to this for fluent use.
      */
-    public Status update(final String lastUser) {
+    public final T update(final String lastUser) {
         this.lastUpdate = Instant.now();
         this.lastUser = lastUser;
 
-        return this;
+        return (T) this;
     }
 
-    public String getLastUser() {
+    public final String getLastUser() {
         return lastUser;
     }
 

@@ -26,7 +26,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.Status;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -713,7 +713,11 @@ public interface RegistrationServiceTests {
                 .map(readResponse -> {
                     final Device device = readResponse.getPayload();
                     creationTime.set(device.getStatus().getCreationTime());
-                    register.flag();
+                    ctx.verify(() -> {
+                        assertThat(device.getStatus().isAutoProvisioned()).isFalse();
+                        assertThat(device.getStatus().isAutoProvisioningNotificationSent()).isFalse();
+                        register.flag();
+                    });
                     return readResponse;
                 })
                 .compose(rr -> getDeviceManagementService().updateDevice(
@@ -730,8 +734,10 @@ public interface RegistrationServiceTests {
                         assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
                         assertThat(actualDevice.getStatus().getLastUpdate()).isNotNull();
                         assertThat(actualDevice.getStatus().getCreationTime()).isNotEqualTo(actualDevice.getStatus().getLastUpdate());
+                        assertThat(actualDevice.getStatus().isAutoProvisioned()).isFalse();
+                        assertThat(actualDevice.getStatus().isAutoProvisioningNotificationSent()).isFalse();
+                        register.flag();
                     });
-                    register.flag();
                 }));
     }
 
@@ -765,7 +771,11 @@ public interface RegistrationServiceTests {
                 .compose(rr -> getDeviceManagementService().updateDevice(
                         TENANT,
                         deviceId,
-                        new Device().setStatus(new Status().setCreationTime(Instant.parse("2000-01-01T00:00:00.000000Z"))),
+                        new Device().setStatus(new DeviceStatus()
+                                .setAutoProvisioned(true)
+                                .setAutoProvisioningNotificationSent(true)
+                                .setCreationTime(Instant.parse("2000-01-01T00:00:00.000000Z"))
+                        ),
                         Optional.empty(),
                         NoopSpan.INSTANCE)
                 )
@@ -774,8 +784,10 @@ public interface RegistrationServiceTests {
                     ctx.verify(() -> {
                         final Device actualDevice = readResponse.getPayload();
                         assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
+                        assertThat(actualDevice.getStatus().isAutoProvisioned()).isFalse();
+                        assertThat(actualDevice.getStatus().isAutoProvisioningNotificationSent()).isFalse();
+                        register.flag();
                     });
-                    register.flag();
                 }));
     }
 
