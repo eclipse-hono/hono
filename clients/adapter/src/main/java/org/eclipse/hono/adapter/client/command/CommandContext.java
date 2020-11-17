@@ -66,8 +66,11 @@ public interface CommandContext extends ExecutionContext {
     void modify(boolean deliveryFailed, boolean undeliverableHere);
 
     /**
-     * Indicates to the sender that the command message cannot not be delivered to its target due to
+     * Indicates to the sender that the command message cannot be delivered to its target due to
      * reasons that are the responsibility of the sender of the command.
+     * <p>
+     * The reason for a command being rejected often is that the command is invalid, e.g. lacking a
+     * subject or having a malformed address.
      *
      * @param cause The error that caused he command to be rejected or {@code null} if the cause is unknown.
      */

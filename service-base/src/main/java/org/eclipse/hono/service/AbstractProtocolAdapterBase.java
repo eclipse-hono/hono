@@ -36,10 +36,7 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
@@ -763,65 +760,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return c;
         }).recover(t -> {
             log.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
-            return Future.failedFuture(t);
-        });
-    }
-
-    /**
-     * Establishes a connection to a Hono Service component.
-     *
-     * @param factory The client factory for the service that is to be connected.
-     * @param serviceName The name of the service that is to be connected (used for logging).
-     * @return A future that will succeed once the connection has been established. The future will fail if the
-     *         connection cannot be established.
-     * @throws NullPointerException if serviceName is {@code null}.
-     * @throws IllegalArgumentException if factory is {@code null}.
-     * @param <C> The type of connection that the factory uses.
-     */
-    protected final <C> Future<C> connectToService(final ConnectionLifecycle<C> factory, final String serviceName) {
-        return connectToService(factory, serviceName, null, null);
-    }
-
-    /**
-     * Establishes a connection to a Hono Service component.
-     *
-     * @param factory The client factory for the service that is to be connected.
-     * @param serviceName The name of the service that is to be connected (used for logging).
-     * @param disconnectListener A listener to invoke when the connection is lost unexpectedly
-     *                           or {@code null} if no listener should be invoked. 
-     * @param reconnectListener A listener to invoke when the connection has been re-established
-     *                          after it had been lost unexpectedly or {@code null} if no listener
-     *                          should be invoked. 
-     * @return A future that will succeed once the connection has been established. The future will fail if the
-     *         connection cannot be established.
-     * @throws NullPointerException if serviceName is {@code null}.
-     * @throws IllegalArgumentException if factory is {@code null}.
-     * @param <C> The type of connection that the factory uses.
-     */
-    protected final <C> Future<C> connectToService(
-            final ConnectionLifecycle<C> factory,
-            final String serviceName,
-            final DisconnectListener<C> disconnectListener,
-            final ReconnectListener<C> reconnectListener) {
-
-        Objects.requireNonNull(factory);
-        factory.addDisconnectListener(c -> {
-            log.info("lost connection to {}", serviceName);
-            if (disconnectListener != null) {
-                disconnectListener.onDisconnect(c);
-            }
-        });
-        factory.addReconnectListener(c -> {
-            log.info("connection to {} re-established", serviceName);
-            if (reconnectListener != null) {
-                reconnectListener.onReconnect(c);
-            }
-        });
-        return factory.connect().map(c -> {
-            log.info("connected to {}", serviceName);
-            return c;
-        }).recover(t -> {
-            log.warn("failed to connect to {}", serviceName, t);
             return Future.failedFuture(t);
         });
     }

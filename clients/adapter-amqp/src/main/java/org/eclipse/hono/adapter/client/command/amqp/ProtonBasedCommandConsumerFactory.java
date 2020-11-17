@@ -78,6 +78,68 @@ public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient imp
         factory.initialize(commandTargetMapper, commandRoutingInfoAccess);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<CommandConsumer> createCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final Handler<CommandContext> commandHandler,
+            final Duration lifespan,
+            final SpanContext context) {
+
+        return factory.createCommandConsumer(
+                tenantId,
+                deviceId,
+                ctx -> {
+                    commandHandler.handle(new CommandContextAdapter(ctx));
+                },
+                lifespan,
+                context)
+                .map(adapterCommandConsumer -> {
+                    return new CommandConsumer() {
+
+                        @Override
+                        public Future<Void> close(final SpanContext spanContext) {
+                            return adapterCommandConsumer.close(spanContext);
+                        }
+                    };
+                });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<CommandConsumer> createCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
+            final Handler<CommandContext> commandHandler,
+            final Duration lifespan,
+            final SpanContext context) {
+
+        return factory.createCommandConsumer(
+                tenantId,
+                deviceId,
+                gatewayId,
+                ctx -> {
+                    commandHandler.handle(new CommandContextAdapter(ctx));
+                },
+                lifespan,
+                context)
+                .map(adapterCommandConsumer -> {
+                    return new CommandConsumer() {
+
+                        @Override
+                        public Future<Void> close(final SpanContext spanContext) {
+                            return adapterCommandConsumer.close(spanContext);
+                        }
+                    };
+                });
+    }
+
     private static class CommandContextAdapter implements CommandContext {
 
         private final org.eclipse.hono.client.CommandContext ctx;
@@ -181,67 +243,5 @@ public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient imp
         public Span getTracingSpan() {
             return ctx.getTracingSpan();
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<CommandConsumer> createCommandConsumer(
-            final String tenantId,
-            final String deviceId,
-            final Handler<CommandContext> commandHandler,
-            final Duration lifespan,
-            final SpanContext context) {
-
-        return factory.createCommandConsumer(
-                tenantId,
-                deviceId,
-                ctx -> {
-                    commandHandler.handle(new CommandContextAdapter(ctx));
-                },
-                lifespan,
-                context)
-                .map(adapterCommandConsumer -> {
-                    return new CommandConsumer() {
-
-                        @Override
-                        public Future<Void> close(final SpanContext spanContext) {
-                            return adapterCommandConsumer.close(spanContext);
-                        }
-                    };
-                });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<CommandConsumer> createCommandConsumer(
-            final String tenantId,
-            final String deviceId,
-            final String gatewayId,
-            final Handler<CommandContext> commandHandler,
-            final Duration lifespan,
-            final SpanContext context) {
-
-        return factory.createCommandConsumer(
-                tenantId,
-                deviceId,
-                gatewayId,
-                ctx -> {
-                    commandHandler.handle(new CommandContextAdapter(ctx));
-                },
-                lifespan,
-                context)
-                .map(adapterCommandConsumer -> {
-                    return new CommandConsumer() {
-
-                        @Override
-                        public Future<Void> close(final SpanContext spanContext) {
-                            return adapterCommandConsumer.close(spanContext);
-                        }
-                    };
-                });
     }
 }
