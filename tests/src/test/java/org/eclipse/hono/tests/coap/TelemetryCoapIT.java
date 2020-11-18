@@ -30,6 +30,7 @@ import org.eclipse.californium.elements.exception.ConnectorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,7 +81,7 @@ public class TelemetryCoapIT extends CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadUsingQoS1(final VertxTestContext ctx) throws InterruptedException {
+        public void testUploadUsingQoS1(final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
 
@@ -93,12 +94,15 @@ public class TelemetryCoapIT extends CoapTestBase {
 
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, Type.CON, getPostResource(), 0)),
+                null,
                 count -> {
-            final Promise<OptionSet> result = Promise.promise();
-            final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), count);
-            client.advanced(getHandler(result), request);
-            return result.future();
-        });
+                    final Promise<OptionSet> result = Promise.promise();
+                    final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), count);
+                    client.advanced(getHandler(result), request);
+                    return result.future();
+                },
+                MESSAGES_TO_SEND,
+                QoS.AT_LEAST_ONCE);
     }
 
     /**

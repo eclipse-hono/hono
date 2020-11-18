@@ -49,6 +49,11 @@ public class EventMqttIT extends MqttPublishTestBase {
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
     @Override
+    protected MqttQoS getExpectedQos() {
+        return MqttQoS.AT_LEAST_ONCE;
+    }
+
+    @Override
     protected Future<Void> send(
             final String tenantId,
             final String deviceId,
@@ -73,7 +78,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         mqttClient.publish(
                 topic,
                 payload,
-                MqttQoS.AT_LEAST_ONCE,
+                getExpectedQos(),
                 false, // is duplicate
                 false, // is retained
                 sendAttempt -> sendAttemptHandler.accept(sendAttempt, result));

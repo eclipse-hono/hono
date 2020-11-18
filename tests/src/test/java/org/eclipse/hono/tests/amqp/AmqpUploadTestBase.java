@@ -81,6 +81,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertAdditionalMessageProperties(ctx, msg);
     }
 
+    private void assertQosLevel(final VertxTestContext ctx, final Message msg, final ProtonQoS qos) {
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(qos.ordinal()));
+    }
+
     /**
      * Perform additional checks on a received message.
      * <p>
@@ -341,6 +345,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                             msg.getContentType(), MessageHelper.getPayloadAsString(msg));
                 }
                 assertMessageProperties(messageSending, msg);
+                assertQosLevel(messageSending, msg, senderQoS);
                 callback.handle(null);
             }).map(c -> {
                 consumer = c;
@@ -355,6 +360,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             msg.setAddress(getEndpointName());
             final Promise<?> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                replenishedSender.setQoS(senderQoS);
                 replenishedSender.sendQueueDrainHandler(null);
                 switch (senderQoS) {
                 case AT_LEAST_ONCE:

@@ -103,6 +103,7 @@ public class EventHttpIT extends HttpTestBase {
                         Buffer.buffer("hello " + count),
                         requestHeaders,
                         response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED),
-                1);
+                1,
+                QoS.AT_LEAST_ONCE);
     }
 }
