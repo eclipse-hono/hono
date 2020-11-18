@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.OutOfOrderSequenceException;
@@ -28,7 +27,6 @@ import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.UnsupportedForMessageFormatException;
 import org.apache.kafka.common.errors.UnsupportedVersionException;
 import org.eclipse.hono.kafka.client.test.FakeProducer;
-import org.eclipse.hono.kafka.client.test.TestHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -108,25 +106,24 @@ public class CachingKafkaProducerFactoryTest {
      */
     @Test
     public void testRemoveProducerClosesAndRemovesFromCache() {
+        final String producerName1 = "first-producer";
+        final String producerName2 = "second-producer";
 
         // GIVEN a factory that contains two producers
-        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(PRODUCER_NAME, config);
-        final MockProducer<String, Buffer> mockProducer = TestHelper.getUnderlyingMockProducer(producer1);
-
-        final String producerName2 = "second-producer";
+        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(producerName1, config);
         final KafkaProducer<String, Buffer> producer2 = factory.getOrCreateProducer(producerName2, config);
         assertThat(producer2).isNotNull();
 
         // WHEN removing one producer
-        factory.removeProducer(PRODUCER_NAME);
+        factory.removeProducer(producerName1);
 
         // THEN the producer is closed...
-        assertThat(mockProducer.closed()).isTrue();
+        assertThat(((FakeProducer<String, Buffer>) producer1).getMockProducer().closed()).isTrue();
         // ...AND removed from the cache
-        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+        assertThat(factory.getProducer(producerName1)).isEmpty();
         // ...AND the second producers is still present and open
         assertThat(factory.getProducer(producerName2)).isNotEmpty();
-        assertThat(TestHelper.getUnderlyingMockProducer(producer2).closed()).isFalse();
+        assertThat(((FakeProducer<String, Buffer>) producer2).getMockProducer().closed()).isFalse();
 
     }
 
@@ -135,23 +132,21 @@ public class CachingKafkaProducerFactoryTest {
      */
     @Test
     public void testRemoveAll() {
+        final String producerName1 = "first-producer";
         final String producerName2 = "second-producer";
 
         // GIVEN a factory that contains two producers
-        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(PRODUCER_NAME, config);
-        final MockProducer<String, Buffer> mockProducer1 = TestHelper.getUnderlyingMockProducer(producer1);
-
+        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(producerName1, config);
         final KafkaProducer<String, Buffer> producer2 = factory.getOrCreateProducer(producerName2, config);
-        final MockProducer<String, Buffer> mockProducer2 = TestHelper.getUnderlyingMockProducer(producer2);
 
         // WHEN invoking remove all
         factory.removeAll();
 
         // THEN both producers are closed...
-        assertThat(mockProducer1.closed()).isTrue();
-        assertThat(mockProducer2.closed()).isTrue();
+        assertThat(((FakeProducer<String, Buffer>) producer1).getMockProducer().closed()).isTrue();
+        assertThat(((FakeProducer<String, Buffer>) producer2).getMockProducer().closed()).isTrue();
         // ...AND removed from the cache
-        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+        assertThat(factory.getProducer(producerName1)).isEmpty();
         assertThat(factory.getProducer(producerName2)).isEmpty();
     }
 

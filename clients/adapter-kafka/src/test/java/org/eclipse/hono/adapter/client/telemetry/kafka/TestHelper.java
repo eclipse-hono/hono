@@ -11,12 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client.test;
+package org.eclipse.hono.adapter.client.telemetry.kafka;
 
 import java.util.NoSuchElementException;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
+import org.eclipse.hono.kafka.client.test.FakeProducer;
 
 import io.vertx.kafka.client.producer.KafkaProducer;
 
