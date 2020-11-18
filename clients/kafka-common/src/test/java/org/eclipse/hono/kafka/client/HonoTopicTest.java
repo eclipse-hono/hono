@@ -48,25 +48,23 @@ public class HonoTopicTest {
      */
     @Test
     public void testFromString() {
-        final HonoTopic telemetry = HonoTopic.fromString("hono.telemetry.foo");
+        final String tenantId = "the-tenant";
+
+        final HonoTopic telemetry = HonoTopic.fromString("hono.telemetry." + tenantId);
         assertThat(telemetry).isNotNull();
-        assertThat(telemetry.getType()).isEqualTo(HonoTopic.Type.TELEMETRY);
-        assertThat(telemetry.getTenantId()).isEqualTo("foo");
+        assertThat(telemetry.toString()).isEqualTo(HonoTopic.Type.TELEMETRY.prefix + tenantId);
 
-        final HonoTopic event = HonoTopic.fromString("hono.event.foo");
+        final HonoTopic event = HonoTopic.fromString("hono.event." + tenantId);
         assertThat(event).isNotNull();
-        assertThat(event.getType()).isEqualTo(HonoTopic.Type.EVENT);
-        assertThat(event.getTenantId()).isEqualTo("foo");
+        assertThat(event.toString()).isEqualTo(HonoTopic.Type.EVENT.prefix + tenantId);
 
-        final HonoTopic command = HonoTopic.fromString("hono.command.foo");
+        final HonoTopic command = HonoTopic.fromString("hono.command." + tenantId);
         assertThat(command).isNotNull();
-        assertThat(command.getType()).isEqualTo(HonoTopic.Type.COMMAND);
-        assertThat(command.getTenantId()).isEqualTo("foo");
+        assertThat(command.toString()).isEqualTo(HonoTopic.Type.COMMAND.prefix + tenantId);
 
-        final HonoTopic commandResponse = HonoTopic.fromString("hono.command_response.foo");
+        final HonoTopic commandResponse = HonoTopic.fromString("hono.command_response." + tenantId);
         assertThat(commandResponse).isNotNull();
-        assertThat(commandResponse.getType()).isEqualTo(HonoTopic.Type.COMMAND_RESPONSE);
-        assertThat(commandResponse.getTenantId()).isEqualTo("foo");
+        assertThat(commandResponse.toString()).isEqualTo(HonoTopic.Type.COMMAND_RESPONSE.prefix + tenantId);
 
     }
 

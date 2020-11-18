@@ -27,8 +27,6 @@ public final class HonoTopic {
     private static final String SEPARATOR = ".";
     private static final String NAMESPACE = "hono" + SEPARATOR;
 
-    private final Type type;
-    private final String tenantId;
     private final String topicString;
 
     /**
@@ -41,9 +39,6 @@ public final class HonoTopic {
     public HonoTopic(final Type type, final String tenantId) {
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
-
-        this.type = type;
-        this.tenantId = tenantId;
 
         topicString = type.prefix + tenantId;
     }
@@ -68,24 +63,6 @@ public final class HonoTopic {
     }
 
     /**
-     * Gets the type of the topic.
-     *
-     * @return The type.
-     */
-    public Type getType() {
-        return type;
-    }
-
-    /**
-     * Gets the tenant ID of the topic.
-     *
-     * @return The tenant ID.
-     */
-    public String getTenantId() {
-        return tenantId;
-    }
-
-    /**
      * Returns the string representation of the topic as used by the Kafka client.
      *
      * @return The topic as a string.
@@ -104,12 +81,12 @@ public final class HonoTopic {
             return false;
         }
         final HonoTopic honoTopic = (HonoTopic) o;
-        return type == honoTopic.type && tenantId.equals(honoTopic.tenantId);
+        return topicString.equals(honoTopic.topicString);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, tenantId);
+        return Objects.hash(topicString);
     }
 
     /**
