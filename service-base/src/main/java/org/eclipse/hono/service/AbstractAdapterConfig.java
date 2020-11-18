@@ -299,18 +299,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating producers for sending downstream messages via the Kafka cluster.
-     *
-     * @return The factory.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnKafkaMessaging
-    public CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
-        return CachingKafkaProducerFactory.sharedProducerFactory(vertx());
-    }
-
-    /**
      * Exposes a client for sending telemetry messages via the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
      * The client is initialized with the connection provided by {@link #downstreamConnection()}.
@@ -332,22 +320,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a client for sending telemetry messages via <em>Kafka</em> as a Spring bean.
-     *
-     * @return The client.
-     * @param kafkaProducerFactory The producer factory to use.
-     * @param kafkaProducerConfig The producer configuration to use.
-     */
-    @Bean
-    @ConditionalOnKafkaMessaging
-    @Scope("prototype")
-    public TelemetrySender downstreamTelemetryKafkaSender(
-            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory,
-            final KafkaProducerConfigProperties kafkaProducerConfig) {
-        return new KafkaBasedTelemetrySender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
-    }
-
-    /**
      * Exposes a client for sending events via the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
      * The client is initialized with the connection provided by {@link #downstreamConnection()}.
@@ -366,6 +338,34 @@ public abstract class AbstractAdapterConfig {
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
         return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+    }
+
+    /**
+     * Exposes a factory for creating producers for sending downstream messages via the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    @ConditionalOnKafkaMessaging
+    public CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return CachingKafkaProducerFactory.sharedProducerFactory(vertx());
+    }
+
+    /**
+     * Exposes a client for sending telemetry messages via <em>Kafka</em> as a Spring bean.
+     *
+     * @return The client.
+     * @param kafkaProducerFactory The producer factory to use.
+     * @param kafkaProducerConfig The producer configuration to use.
+     */
+    @Bean
+    @ConditionalOnKafkaMessaging
+    @Scope("prototype")
+    public TelemetrySender downstreamTelemetryKafkaSender(
+            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig) {
+        return new KafkaBasedTelemetrySender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
     }
 
     /**
