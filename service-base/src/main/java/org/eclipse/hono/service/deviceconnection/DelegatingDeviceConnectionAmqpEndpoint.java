@@ -38,8 +38,8 @@ import io.vertx.core.json.JsonObject;
  * An {@code AmqpEndpoint} for managing device connection information.
  * <p>
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device
- * Connection API</a>. It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
- * event bus for processing. The outcome is then returned to the peer in a response message.
+ * Connection API</a>. It receives AMQP 1.0 messages representing requests and forwards them to the device connection
+ * service implementation. The outcome is then returned to the peer in a response message.
  *
  * @param <S> The type of service this endpoint delegates to.
  */
@@ -66,6 +66,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
     protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress,
             final SpanContext spanContext) {
         Objects.requireNonNull(requestMessage);
+        Objects.requireNonNull(targetAddress);
 
         switch (DeviceConnectionConstants.DeviceConnectionAction.from(requestMessage.getSubject())) {
         case GET_LAST_GATEWAY:

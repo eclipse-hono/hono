@@ -36,7 +36,7 @@ import io.vertx.core.json.JsonObject;
  * An {@code AmqpEndpoint} for managing device credential information.
  * <p>
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
- * It receives AMQP 1.0 messages representing requests and forward them to the credential service implementation.
+ * It receives AMQP 1.0 messages representing requests and forwards them to the credential service implementation.
  * The outcome is then returned to the peer in a response message.
  *
  * @param <S> The type of service this endpoint delegates to.
@@ -66,6 +66,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
             final SpanContext spanContext) {
 
         Objects.requireNonNull(requestMessage);
+        Objects.requireNonNull(targetAddress);
 
         switch (CredentialsConstants.CredentialsAction.from(requestMessage.getSubject())) {
         case get:

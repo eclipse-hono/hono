@@ -34,7 +34,7 @@ import io.vertx.core.Vertx;
  * An {@code AmqpEndpoint} for managing device registration information.
  * <p>
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
- * It receives AMQP 1.0 messages representing requests and and forward them to the registration service implementation.
+ * It receives AMQP 1.0 messages representing requests and and forwards them to the registration service implementation.
  * The outcome is then returned to the peer in a response message.
  *
  * @param <S> The type of service this endpoint delegates to.
@@ -64,7 +64,12 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
             final SpanContext spanContext) {
 
         Objects.requireNonNull(requestMessage);
+        Objects.requireNonNull(targetAddress);
+
         final String operation = requestMessage.getSubject();
+        if (operation == null) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        }
 
         switch (operation) {
             case RegistrationConstants.ACTION_ASSERT:

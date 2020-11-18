@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -148,8 +148,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      *                     the client will not cache any results from the Tenant service.
      * @param connection The connection to the server.
      * @param sampler The sampler to use.
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters, except for senderCloseHook and receiverCloseHook are {@code null}.
      */

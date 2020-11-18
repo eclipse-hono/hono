@@ -66,9 +66,10 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
      * @param connection The connection to the Device Connection service.
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected DeviceConnectionClientImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
-        super(connection, tenantId, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sampler);
     }
 
     /**
@@ -79,6 +80,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected DeviceConnectionClientImpl(
             final HonoConnection connection,
@@ -87,7 +89,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
             final ProtonReceiver receiver,
             final SendMessageSampler sampler) {
 
-        super(connection, tenantId, sender, receiver, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sender, receiver, sampler);
     }
 
     /**

@@ -63,9 +63,10 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected RegistrationClientImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
-        super(connection, tenantId, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sampler);
     }
 
     /**
@@ -76,6 +77,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected RegistrationClientImpl(
             final HonoConnection connection,
@@ -84,7 +86,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             final ProtonReceiver receiver,
             final SendMessageSampler sampler) {
 
-        super(connection, tenantId, sender, receiver, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sender, receiver, sampler);
     }
 
     /**
@@ -138,10 +140,10 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param sampler The sampler to use.
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters other than cache provider is {@code null}.
+     * @throws NullPointerException if con, tenantId or sampler is {@code null}.
      */
     public static final Future<RegistrationClient> create(
             final CacheProvider cacheProvider,

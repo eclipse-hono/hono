@@ -70,6 +70,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
             final SpanContext spanContext) {
 
         Objects.requireNonNull(requestMessage);
+        Objects.requireNonNull(targetAddress);
 
         switch (TenantConstants.TenantAction.from(requestMessage.getSubject())) {
             case get:

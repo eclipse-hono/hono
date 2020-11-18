@@ -65,9 +65,10 @@ class ProtonBasedTenantCommandRouterClient extends AbstractRequestResponseClient
      * @param connection The connection to the Command Router service.
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected ProtonBasedTenantCommandRouterClient(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
-        super(connection, tenantId, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sampler);
     }
 
     /**
@@ -78,6 +79,7 @@ class ProtonBasedTenantCommandRouterClient extends AbstractRequestResponseClient
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected ProtonBasedTenantCommandRouterClient(
             final HonoConnection connection,
@@ -86,7 +88,7 @@ class ProtonBasedTenantCommandRouterClient extends AbstractRequestResponseClient
             final ProtonReceiver receiver,
             final SendMessageSampler sampler) {
 
-        super(connection, tenantId, sender, receiver, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sender, receiver, sampler);
     }
 
     /**
@@ -139,10 +141,10 @@ class ProtonBasedTenantCommandRouterClient extends AbstractRequestResponseClient
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param sampler The sampler to use.
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters except for the close hooks is {@code null}.
      */
     public static final Future<ProtonBasedTenantCommandRouterClient> create(
             final HonoConnection con,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -68,9 +68,10 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     CredentialsClientImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler sampler) {
-        super(connection, tenantId, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sampler);
     }
 
     /**
@@ -81,6 +82,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @param sender The AMQP link to use for sending requests to the service.
      * @param receiver The AMQP link to use for receiving responses from the service.
      * @param sampler The sampler to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     CredentialsClientImpl(
             final HonoConnection connection,
@@ -88,7 +90,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             final ProtonSender sender,
             final ProtonReceiver receiver,
             final SendMessageSampler sampler) {
-        super(connection, tenantId, sender, receiver, sampler);
+        super(connection, Objects.requireNonNull(tenantId), sender, receiver, sampler);
     }
 
     @Override
@@ -146,10 +148,10 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @param con The connection to the server.
      * @param tenantId The tenant for which credentials are handled.
      * @param sampler The sampler to use.
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters except for the close hooks is {@code null}.
      */
     public static final Future<CredentialsClient> create(
             final CacheProvider cacheProvider,

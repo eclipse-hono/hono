@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,7 +72,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             final String replyId,
             final SendMessageSampler sampler) {
 
-        super(connection, tenantId, replyId, sampler);
+        super(connection, Objects.requireNonNull(tenantId), replyId, sampler);
     }
 
     /**
@@ -250,10 +250,10 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * @param tenantId The tenant that the device belongs to.
      * @param replyId The replyId to use in the reply-to address.
      * @param sampler The sampler to use
-     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
      * @return A future indicating the outcome.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters except for the close hooks is {@code null}.
      */
     public static final Future<CommandClient> create(
             final HonoConnection con,
