@@ -29,6 +29,7 @@ public final class HonoTopic {
 
     private final Type type;
     private final String tenantId;
+    private final String topicString;
 
     /**
      * Creates a new topic from the given topic type and tenant ID.
@@ -43,6 +44,8 @@ public final class HonoTopic {
 
         this.type = type;
         this.tenantId = tenantId;
+
+        topicString = type.prefix + tenantId;
     }
 
     /**
@@ -89,7 +92,7 @@ public final class HonoTopic {
      */
     @Override
     public String toString() {
-        return type.prefix + tenantId;
+        return topicString;
     }
 
     @Override
