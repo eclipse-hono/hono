@@ -421,13 +421,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         final JsonArray searchDevicesAggregationPipeline = new JsonArray();
 
         // match documents based on the provided filters
-        if (!filters.isEmpty()) {
             final JsonObject matchDocument = MongoDbDocumentBuilder.builder()
                     .withTenantId(tenantId)
                     .withDeviceFilters(filters)
                     .document();
             searchDevicesAggregationPipeline.add(new JsonObject().put("$match", matchDocument));
-        }
 
         // sort documents based on the provided sort options
         if (!sortOptions.isEmpty()) {

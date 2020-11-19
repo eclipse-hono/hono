@@ -34,7 +34,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -61,11 +60,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     /**
      * Sets up the fixture.
      *
-     * @param testInfo Meta information about the currently running test case.
      * @param ctx The vert.x test context.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
+    public void setUp(final VertxTestContext ctx) {
 
         registry = getHelper().registry;
         tenantId = getHelper().getRandomTenantId();
@@ -403,7 +401,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
      *      Device Registry Management API - Search Devices</a>
      */
     @Nested
-    @EnabledIfSystemProperty(named = "hono.deviceregistry.supportsSearchDevices", matches = "true")
+    @EnabledIfSystemProperty(named = "deviceregistry.supportsSearchDevices", matches = "true")
     class SearchDevicesIT {
         /**
          * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND}
@@ -447,19 +445,20 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         public void testSearchDevicesWithValidPageSizeSucceeds(final VertxTestContext ctx) {
             final int pageSize = 1;
 
-            CompositeFuture.all(registry.registerDevice(tenantId, new Device()), registry
-                    .registerDevice(tenantId, new Device())
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.empty(), List.of(),
-                            List.of(), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchDevicesResult searchDevicesResult = httpResponse
-                                    .bodyAsJson(SearchDevicesResult.class);
-                            assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
-                            assertThat(searchDevicesResult.getResult()).hasSize(1);
-                        });
-                        ctx.completeNow();
-                    })));
+            CompositeFuture.all(
+                    registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device()),
+                    registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device())
+                            .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.empty(),
+                                    List.of(), List.of(), HttpURLConnection.HTTP_OK))
+                            .onComplete(ctx.succeeding(httpResponse -> {
+                                ctx.verify(() -> {
+                                    final SearchDevicesResult searchDevicesResult = httpResponse
+                                            .bodyAsJson(SearchDevicesResult.class);
+                                    assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                                    assertThat(searchDevicesResult.getResult()).hasSize(1);
+                                });
+                                ctx.completeNow();
+                            })));
         }
 
         /**
@@ -568,7 +567,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
             final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
             final Device device1 = new Device().setEnabled(false).setExtensions(Map.of("id", "$id:1"));
-            final Device device2 = new Device().setExtensions(Map.of("id", "$id:2"));
+            final Device device2 = new Device().setEnabled(true).setExtensions(Map.of("id", "$id:2"));
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id*", "eq");
 
@@ -603,7 +602,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
 
             registry.registerDevice(tenantId, deviceId, device)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.completing());
         }
 
@@ -618,7 +617,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String deviceId1 = getHelper().getRandomDeviceId(tenantId);
             final String deviceId2 = getHelper().getRandomDeviceId(tenantId);
             final Device device1 = new Device().setEnabled(false).setExtensions(Map.of("id", "$id:1"));
-            final Device device2 = new Device().setExtensions(Map.of("id", "$id:2"));
+            final Device device2 = new Device().setEnabled(true).setExtensions(Map.of("id", "$id:2"));
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id?2", "eq");
 
@@ -653,7 +652,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
 
             registry.registerDevice(tenantId, deviceId, device)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.completing());
         }
 
