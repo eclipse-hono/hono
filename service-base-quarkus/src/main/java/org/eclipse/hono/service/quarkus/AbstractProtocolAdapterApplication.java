@@ -186,6 +186,7 @@ public abstract class AbstractProtocolAdapterApplication {
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
         adapter.setCommandRouterClient(deviceConnectionClient);
+        adapter.setCommandResponseSender(commandResponseSender());
         adapter.setEventSender(downstreamSender());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
@@ -298,7 +299,7 @@ public abstract class AbstractProtocolAdapterApplication {
             final CommandHandlingAdapterInfoAccess commandRoutingInfoAccess) {
 
         return new ProtonBasedCommandConsumerFactory(
-                HonoConnection.newConnection(vertx, config.command),
+                commandConsumerConnection(),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 commandTargetMapper,

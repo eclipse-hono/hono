@@ -36,7 +36,6 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
@@ -762,42 +761,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             log.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
             return Future.failedFuture(t);
         });
-    }
-
-    /**
-     * Invoked when a connection for receiving commands and sending responses has been
-     * unexpectedly lost.
-     * <p>
-     * Subclasses may override this method in order to perform housekeeping and/or clear
-     * state that is associated with the connection. Implementors <em>must not</em> try
-     * to re-establish the connection, the adapter will try to re-establish the connection
-     * by default.
-     * <p>
-     * This default implementation does nothing.
-     *
-     * @param commandConnection The lost connection.
-     */
-    protected void onCommandConnectionLost(final HonoConnection commandConnection) {
-        // empty by default
-    }
-
-    /**
-     * Invoked when a connection for receiving commands and sending responses has been
-     * established.
-     * <p>
-     * Note that this method is invoked once the initial connection has been established
-     * but also when the connection has been re-established after a connection loss.
-     * <p>
-     * Subclasses may override this method in order to e.g. re-establish device specific
-     * links for receiving commands or to create a permanent link for receiving commands
-     * for all devices.
-     * <p>
-     * This default implementation does nothing.
-     *
-     * @param commandConnection The (re-)established connection.
-     */
-    protected void onCommandConnectionEstablished(final HonoConnection commandConnection) {
-        // empty by default
     }
 
     /**
