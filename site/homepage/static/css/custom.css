@@ -116,8 +116,18 @@ pre {
   font-size: 0.9rem;
 }
 
-/*Vertically align adopter logos */
-.customers .owl-wrapper-outer .owl-wrapper {
-  display: flex !important;
-  align-items: center;
+.eclipsefdn-adopters ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.eclipsefdn-adopters ul li {
+  display: inline-block;
+  padding: 2%;
+  width: 50%;
+  text-align: center;
+}
+
+.eclipsefdn-adopters ul li a img {
+  width: 80%;
 }
