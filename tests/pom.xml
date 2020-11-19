@@ -258,6 +258,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
         <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,${logging.profile}</hono.deviceregistry.spring.profiles>
         <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
+        <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
         <hono.h2.disabled>false</hono.h2.disabled>
         <hono.h2.host>hono-h2.hono</hono.h2.host>
         <hono.h2.port>9092</hono.h2.port>
