@@ -94,31 +94,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
-    private TelemetrySender telemetrySender;
-    private EventSender eventSender;
-    private DeviceRegistrationClient registrationClient;
-    private TenantClient tenantClient;
-    private CommandRouterClient commandRouterClient;
-    private CredentialsClient credentialsClient;
-    private CommandConsumerFactory commandConsumerFactory;
-    private CommandResponseSender commandResponseSender;
-    private ConnectionLimitManager connectionLimitManager;
-
-    private ConnectionEventProducer connectionEventProducer;
-    private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
     private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
 
         @Override
         public EventSender getMessageSenderClient() {
-            return AbstractProtocolAdapterBase.this.eventSender;
+            return AbstractProtocolAdapterBase.this.getEventSender();
         }
 
         @Override
         public TenantClient getTenantClient() {
-            return AbstractProtocolAdapterBase.this.tenantClient;
+            return AbstractProtocolAdapterBase.this.getTenantClient();
         }
 
     };
+
+    private CommandConsumerFactory commandConsumerFactory;
+    private CommandResponseSender commandResponseSender;
+    private CommandRouterClient commandRouterClient;
+    private ConnectionLimitManager connectionLimitManager;
+    private ConnectionEventProducer connectionEventProducer;
+    private CredentialsClient credentialsClient;
+    private DeviceRegistrationClient registrationClient;
+    private EventSender eventSender;
+    private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
+    private TelemetrySender telemetrySender;
+    private TenantClient tenantClient;
 
     /**
      * Adds a Micrometer sample to a command context.
@@ -173,7 +173,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for accessing the Device Connection or Command Router service.
+     * Sets the client to use for accessing the Command Router service.
+     * <p>
+     * Either this client or the Device Connection client needs to be set for
+     * the adapter to work properly.
      *
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.
@@ -420,7 +423,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (commandResponseSender == null) {
             result.fail(new IllegalStateException("Command & Control response sender must be set"));
         } else if (commandRouterClient == null) {
-            result.fail(new IllegalStateException("Device Connection client must be set"));
+            result.fail(new IllegalStateException("Command Router client must be set"));
         } else {
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
@@ -430,10 +433,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
             startServiceClient(credentialsClient, "Credentials service");
-            startServiceClient(commandRouterClient, "Device Connection service");
             startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
             startServiceClient(commandResponseSender, "Command & Control response sender");
-
+            startServiceClient(commandRouterClient, "Command Router service");
             doStart(result);
         }
         return result.future();
@@ -478,6 +480,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(stopServiceClient(registrationClient));
         results.add(stopServiceClient(credentialsClient));
         results.add(stopServiceClient(commandConsumerFactory));
+        results.add(stopServiceClient(commandResponseSender));
         results.add(stopServiceClient(commandRouterClient));
         results.add(stopServiceClient(eventSender));
         results.add(stopServiceClient(telemetrySender));
@@ -491,12 +494,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param client The client to stop.
      * @return A future indicating the outcome of stopping the client.
-     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected final Future<Void> stopServiceClient(final Lifecycle client) {
 
-        Objects.requireNonNull(client);
-        return client.stop();
+        return Optional.ofNullable(client)
+                .map(Lifecycle::stop)
+                .orElse(Future.succeededFuture());
     }
 
     /**
@@ -924,14 +927,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return Future.succeededFuture(registrationAssertion);
         }
 
-        final Future<String> gatewayIdFuture = getGatewayId(tenantId, deviceId, authenticatedDevice);
-        return gatewayIdFuture
-                .compose(gwId -> commandRouterClient.setLastKnownGatewayForDevice(
+        return getGatewayId(tenantId, deviceId, authenticatedDevice)
+            .compose(gwId -> commandRouterClient.setLastKnownGatewayForDevice(
                         tenantId,
                         deviceId,
-                        Optional.ofNullable(gatewayIdFuture.result()).orElse(deviceId),
+                        Optional.ofNullable(gwId).orElse(deviceId),
                         context))
-                .map(registrationAssertion);
+            .map(registrationAssertion);
     }
 
     private boolean isGatewaySupportedForDevice(final RegistrationAssertion registrationAssertion) {

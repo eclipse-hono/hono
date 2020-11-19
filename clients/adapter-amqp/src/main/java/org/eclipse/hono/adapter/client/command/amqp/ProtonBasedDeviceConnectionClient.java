@@ -106,6 +106,22 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
      * {@inheritDoc}
      */
     @Override
+    public Future<JsonObject> getLastKnownGatewayForDevice(
+            final String tenant,
+            final String deviceId,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+
+        return getOrCreateDeviceConnectionClient(tenant)
+                .compose(client -> client.getLastKnownGatewayForDevice(deviceId, context));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Future<Void> setLastKnownGatewayForDevice(
             final String tenant,
             final String deviceId,
@@ -122,25 +138,9 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
 
     /**
      * {@inheritDoc}
-     * <p>
-     * Simply delegates to {@link #registerCommandConsumer(String, String, String, Duration, SpanContext)}.
      */
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(
-            final String tenant,
-            final String deviceId,
-            final String adapterInstanceId,
-            final Duration lifespan,
-            final SpanContext context) {
-
-        return registerCommandConsumer(tenant, deviceId, adapterInstanceId, lifespan, context);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<Void> registerCommandConsumer(
             final String tenantId,
             final String deviceId,
             final String adapterInstanceId,
@@ -157,24 +157,9 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
 
     /**
      * {@inheritDoc}
-     * <p>
-     * Simply delegates to {@link #unregisterCommandConsumer(String, String, String, SpanContext)}.
      */
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(
-            final String tenant,
-            final String deviceId,
-            final String adapterInstanceId,
-            final SpanContext context) {
-
-        return unregisterCommandConsumer(tenant, deviceId, adapterInstanceId, context);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<Void> unregisterCommandConsumer(
             final String tenantId,
             final String deviceId,
             final String adapterInstanceId,

@@ -17,6 +17,9 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import com.google.common.base.Strings;
 
 import io.quarkus.arc.config.ConfigProperties;
 
@@ -27,6 +30,8 @@ import io.quarkus.arc.config.ConfigProperties;
 public class ProtocolAdapterConfig {
 
      public CommandConfig command;
+
+     public CommandRouterConfig commandRouter;
 
      public HealthCheckConfig healthCheck;
 
@@ -45,6 +50,13 @@ public class ProtocolAdapterConfig {
      public ResourceLimitChecksConfig resourceLimitChecks;
 
      public QuarkusConnectionEventProducerConfig connectionEvents;
+
+     @ConfigProperty(name = "hono.commandRouter.host")
+     protected String commandRouterHost;
+
+     public boolean isCommandRouterConfigured() {
+         return !Strings.isNullOrEmpty(commandRouterHost);
+     }
 
      /**
       * Command configuration.
@@ -75,6 +87,12 @@ public class ProtocolAdapterConfig {
       */
      @ConfigProperties(prefix = "hono.device-connection", failOnMismatchingMember = false)
      public static class DeviceConnectionConfig extends RequestResponseClientConfigProperties { }
+
+     /**
+      * Command Router client configuration.
+      */
+     @ConfigProperties(prefix = "hono.command-router", failOnMismatchingMember = false)
+     public static class CommandRouterConfig extends RequestResponseClientConfigProperties { }
 
      /**
       * Messaging client configuration.

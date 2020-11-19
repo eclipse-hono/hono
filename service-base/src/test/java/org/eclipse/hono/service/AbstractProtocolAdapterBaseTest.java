@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -149,8 +150,8 @@ public class AbstractProtocolAdapterBaseTest {
     private void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandResponseSender(commandResponseSender);
-        adapter.setCredentialsClient(credentialsClient);
         adapter.setCommandRouterClient(commandRouterClient);
+        adapter.setCredentialsClient(credentialsClient);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
@@ -243,14 +244,22 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter connected to a registration service
         final RegistrationAssertion assertionResult = newRegistrationAssertionResult("device");
+        assertionResult.setAuthorizedGateways(List.of("gw"));
         when(registrationClient.assertRegistration(eq("tenant"), eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
+        when(commandRouterClient.setLastKnownGatewayForDevice(anyString(), anyString(), anyString(), any())).thenReturn(Future.succeededFuture());
 
         // WHEN an assertion for the device is retrieved
-        adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
+        adapter.getRegistrationAssertion("tenant", "device", new Device("tenant", "gw"), mock(SpanContext.class))
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the result contains the registration assertion
                         assertThat(result.getDeviceId(), is("device"));
+                        // and the last known gateway has been updated
+                        verify(commandRouterClient).setLastKnownGatewayForDevice(
+                                eq("tenant"),
+                                eq("device"),
+                                eq("gw"),
+                                any());
                     });
                     ctx.completeNow();
                 }));

@@ -33,8 +33,8 @@ import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.Commands;
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -67,7 +67,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected T adapter;
 
     protected CredentialsClient credentialsClient;
-    protected DeviceConnectionClient deviceConnectionClient;
+    protected CommandRouterClient commandRouterClient;
     protected EventSender eventSender;
     protected CommandConsumerFactory commandConsumerFactory;
     protected CommandResponseSender commandResponseSender;
@@ -110,8 +110,8 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         return client;
     }
 
-    private DeviceConnectionClient createDeviceConnectionClientMock() {
-        final DeviceConnectionClient client = mock(DeviceConnectionClient.class);
+    private CommandRouterClient createCommandRouterClientMock() {
+        final CommandRouterClient client = mock(CommandRouterClient.class);
         when(client.start()).thenReturn(Future.succeededFuture());
         when(client.stop()).thenReturn(Future.succeededFuture());
         return client;
@@ -148,7 +148,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         this.commandConsumerFactory = createCommandConsumerFactory();
         this.commandResponseSender = createCommandResponseSender();
 
-        this.deviceConnectionClient = createDeviceConnectionClientMock();
+        this.commandRouterClient = createCommandRouterClientMock();
         this.tenantClient = createTenantClientMock();
         this.registrationClient = createDeviceRegistrationClientMock();
         this.credentialsClient = createCredentialsClientMock();
@@ -199,7 +199,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCredentialsClient(credentialsClient);
-        adapter.setCommandRouterClient(deviceConnectionClient);
+        adapter.setCommandRouterClient(commandRouterClient);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);

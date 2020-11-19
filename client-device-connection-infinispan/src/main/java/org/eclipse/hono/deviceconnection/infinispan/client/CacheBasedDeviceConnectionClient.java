@@ -39,6 +39,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public final class CacheBasedDeviceConnectionClient implements DeviceConnectionClient, ServiceClient {
 
+    private static final String SPAN_NAME_GET_LAST_GATEWAY = "get last known gateway";
     private static final String SPAN_NAME_SET_LAST_GATEWAY = "set last known gateway";
     private static final String SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES = "get command handling adapter instances";
     private static final String SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE = "set command handling adapter instance";
@@ -80,25 +81,24 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
 
     /**
      * {@inheritDoc}
-     * <p>
-     * Simply delegates to {@link #registerCommandConsumer(String, String, String, Duration, SpanContext)}.
      */
     @Override
-    public Future<Void> setCommandHandlingAdapterInstance(
+    public Future<JsonObject> getLastKnownGatewayForDevice(
             final String tenantId,
             final String deviceId,
-            final String adapterInstanceId,
-            final Duration lifespan,
             final SpanContext context) {
 
-        return registerCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, context);
+        final Span span = newSpan(context, SPAN_NAME_GET_LAST_GATEWAY);
+        TracingHelper.setDeviceTags(span, tenantId, deviceId);
+
+        return finishSpan(connectionInfoCache.getLastKnownGatewayForDevice(tenantId, deviceId, span), span);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> registerCommandConsumer(
+    public Future<Void> setCommandHandlingAdapterInstance(
             final String tenantId,
             final String deviceId,
             final String adapterInstanceId,
@@ -116,24 +116,9 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
 
     /**
      * {@inheritDoc}
-     * <p>
-     * Simply delegates to {@link #unregisterCommandConsumer(String, String, String, SpanContext)}.
      */
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(
-            final String tenantId,
-            final String deviceId,
-            final String adapterInstanceId,
-            final SpanContext context) {
-
-        return unregisterCommandConsumer(tenantId, deviceId, adapterInstanceId, context);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<Void> unregisterCommandConsumer(
             final String tenantId,
             final String deviceId,
             final String adapterInstanceId,

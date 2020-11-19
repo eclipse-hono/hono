@@ -12,9 +12,7 @@
  */
 package org.eclipse.hono.service.quarkus;
 
-import java.time.Duration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,9 +22,12 @@ import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -38,9 +39,7 @@ import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSende
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -51,18 +50,14 @@ import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
-import org.eclipse.hono.util.RegistrationAssertion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.quarkus.runtime.StartupEvent;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 /**
  * A Quarkus main application base class for Hono protocol adapters.
@@ -123,77 +118,28 @@ public abstract class AbstractProtocolAdapterApplication {
         Objects.requireNonNull(adapter);
 
         final DeviceRegistrationClient registrationClient = registrationClient();
-        final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient();
-        final CommandTargetMapper commandTargetMapper = commandTargetMapper();
 
-        commandTargetMapper.initialize(new CommandTargetMapperContext() {
+        if (config.isCommandRouterConfigured()) {
+            final CommandRouterClient commandRouterClient = commandRouterClient();
+            adapter.setCommandRouterClient(commandRouterClient);
+            adapter.setCommandConsumerFactory(commandConsumerFactory(commandRouterClient));
+        } else {
+            final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient();
+            adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
+            adapter.setCommandConsumerFactory(commandConsumerFactory(deviceConnectionClient, registrationClient));
+        }
 
-            @Override
-            public Future<List<String>> getViaGateways(
-                    final String tenant,
-                    final String deviceId,
-                    final SpanContext context) {
-
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-
-                return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                        .map(RegistrationAssertion::getAuthorizedGateways);
-            }
-
-            @Override
-            public Future<JsonObject> getCommandHandlingAdapterInstances(
-                    final String tenant,
-                    final String deviceId,
-                    final List<String> viaGateways,
-                    final SpanContext context) {
-
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-                Objects.requireNonNull(viaGateways);
-
-                return deviceConnectionClient.getCommandHandlingAdapterInstances(
-                        tenant, deviceId, viaGateways, context);
-            }
-        });
-
-        final CommandConsumerFactory commandConsumerFactory = commandConsumerFactory(
-                commandTargetMapper,
-                new CommandHandlingAdapterInfoAccess() {
-
-                    @Override
-                    public Future<Void> setCommandHandlingAdapterInstance(
-                            final String tenant,
-                            final String deviceId,
-                            final String adapterInstanceId,
-                            final Duration lifespan,
-                            final SpanContext context) {
-                        return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
-                    }
-
-                    @Override
-                    public Future<Void> removeCommandHandlingAdapterInstance(
-                            final String tenant,
-                            final String deviceId,
-                            final String adapterInstanceId,
-                            final SpanContext context) {
-                        return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
-                    }
-                });
-
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setCommandResponseSender(commandResponseSender());
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
-        adapter.setCommandRouterClient(deviceConnectionClient);
-        adapter.setCommandResponseSender(commandResponseSender());
         adapter.setEventSender(downstreamSender());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
+        adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.setTelemetrySender(downstreamSender());
         adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
-        adapter.setResourceLimitChecks(resourceLimitChecks);
     }
 
     /**
@@ -253,6 +199,18 @@ public abstract class AbstractProtocolAdapterApplication {
     }
 
     /**
+     * Creates a new client for Hono's Command Router service.
+     *
+     * @return The client.
+     */
+    protected CommandRouterClient commandRouterClient() {
+        return new ProtonBasedCommandRouterClient(
+                HonoConnection.newConnection(vertx, config.commandRouter),
+                messageSamplerFactory,
+                protocolAdapterProperties);
+    }
+
+    /**
      * Creates a new client for Hono's Device Connection service.
      *
      * @return The client.
@@ -286,24 +244,42 @@ public abstract class AbstractProtocolAdapterApplication {
     }
 
     /**
-     * Creates a new factory for command consumers.
+     * Creates a new factory for creating command consumers.
+     * <p>
+     * The returned factory will also take care of routing commands to target adapter instances.
      *
-     * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
-     *            protocol adapter instance that can handle it.
-     * @param commandRoutingInfoAccess The component for setting and clearing information that maps a device to
-     *                                 a protocol adapter instance.
+     * @param deviceConnectionClient The client to use for accessing the Device Connection service.
+     * @param deviceRegistrationClient The client to use for accessing the Device Registration service.
      * @return The factory.
      */
     protected CommandConsumerFactory commandConsumerFactory(
-            final CommandTargetMapper commandTargetMapper,
-            final CommandHandlingAdapterInfoAccess commandRoutingInfoAccess) {
+            final DeviceConnectionClient deviceConnectionClient,
+            final DeviceRegistrationClient deviceRegistrationClient) {
 
+        LOG.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
+                ProtonBasedCommandConsumerFactory.class.getName());
         return new ProtonBasedCommandConsumerFactory(
                 commandConsumerConnection(),
                 messageSamplerFactory,
                 protocolAdapterProperties,
-                commandTargetMapper,
-                commandRoutingInfoAccess);
+                deviceConnectionClient,
+                deviceRegistrationClient,
+                tracer);
+    }
+
+    /**
+     * Creates a new factory for creating command consumers.
+     * <p>
+     * The returned factory does not support routing commands to target adapter instances.
+     *
+     * @param commandRouterClient The client for accessing the Command Router service.
+     * @return The factory.
+     * @throws UnsupportedOperationException if the factory type is not supported yet
+     */
+    protected CommandConsumerFactory commandConsumerFactory(
+            final CommandRouterClient commandRouterClient) {
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [unknown]");
+        throw new UnsupportedOperationException("not supported yet");
     }
 
     /**

@@ -14,7 +14,6 @@
 package org.eclipse.hono.service;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -22,6 +21,7 @@ import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
@@ -35,10 +35,7 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.client.CommandTargetMapper;
-import org.eclipse.hono.client.CommandTargetMapper.CommandTargetMapperContext;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -60,10 +57,12 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -77,14 +76,11 @@ import org.springframework.context.annotation.Scope;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -92,6 +88,8 @@ import io.vertx.ext.web.client.WebClientOptions;
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
 public abstract class AbstractAdapterConfig {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractAdapterConfig.class);
 
     @Autowired
     private ApplicationContext context;
@@ -117,21 +115,29 @@ public abstract class AbstractAdapterConfig {
         Objects.requireNonNull(samplerFactory);
 
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, adapterProperties);
-        // look up client via bean factory in order to take advantage of conditional bean instantiation based
-        // on config properties
-        final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
-        final CommandConsumerFactory commandConsumerFactory = commandConsumerFactory(
-                adapterProperties,
-                samplerFactory,
-                registrationClient,
-                commandRouterClient);
+        try {
+            // look up client via bean factory in order to take advantage of conditional bean instantiation based
+            // on config properties
+            final DeviceConnectionClient deviceConnectionClient = context.getBean(DeviceConnectionClient.class);
+            adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
+            adapter.setCommandConsumerFactory(commandConsumerFactory(
+                    adapterProperties,
+                    samplerFactory,
+                    deviceConnectionClient,
+                    registrationClient));
+        } catch (final BeansException e) {
+            // try to look up a Command Router client instead
+            // no need to catch BeansException here because startup should fail if neither
+            // Device Connection nor Command Router client have been configured anyway
+            final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
+            adapter.setCommandRouterClient(commandRouterClient);
+            adapter.setCommandConsumerFactory(commandConsumerFactory(adapterProperties, samplerFactory, commandRouterClient));
+        }
 
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setCommandResponseSender(commandResponseSender(samplerFactory, adapterProperties));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient(samplerFactory, adapterProperties));
-        adapter.setCommandRouterClient(commandRouterClient);
         adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
@@ -627,75 +633,27 @@ public abstract class AbstractAdapterConfig {
     CommandConsumerFactory commandConsumerFactory(
             final ProtocolAdapterProperties adapterProperties,
             final SendMessageSampler.Factory samplerFactory,
-            final DeviceRegistrationClient registrationClient,
+            final DeviceConnectionClient deviceConnectionClient,
+            final DeviceRegistrationClient registrationClient) {
+
+        LOG.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
+                ProtonBasedCommandConsumerFactory.class.getName());
+        return new ProtonBasedCommandConsumerFactory(
+                commandConsumerConnection(),
+                samplerFactory,
+                adapterProperties,
+                deviceConnectionClient,
+                registrationClient,
+                getTracer());
+    }
+
+    CommandConsumerFactory commandConsumerFactory(
+            final ProtocolAdapterProperties adapterProperties,
+            final SendMessageSampler.Factory samplerFactory,
             final CommandRouterClient commandRouterClient) {
 
-        if (commandRouterClient instanceof DeviceConnectionClient) {
-
-            final DeviceConnectionClient deviceConnectionClient = (DeviceConnectionClient) commandRouterClient;
-            final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(getTracer());
-
-            commandTargetMapper.initialize(new CommandTargetMapperContext() {
-
-                @Override
-                public Future<List<String>> getViaGateways(
-                        final String tenant,
-                        final String deviceId,
-                        final SpanContext context) {
-
-                    Objects.requireNonNull(tenant);
-                    Objects.requireNonNull(deviceId);
-
-                    return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                            .map(RegistrationAssertion::getAuthorizedGateways);
-                }
-
-                @Override
-                public Future<JsonObject> getCommandHandlingAdapterInstances(
-                        final String tenant,
-                        final String deviceId,
-                        final List<String> viaGateways,
-                        final SpanContext context) {
-
-                    Objects.requireNonNull(tenant);
-                    Objects.requireNonNull(deviceId);
-                    Objects.requireNonNull(viaGateways);
-
-                    return deviceConnectionClient.getCommandHandlingAdapterInstances(
-                            tenant, deviceId, viaGateways, context);
-                }
-            });
-
-            return new ProtonBasedCommandConsumerFactory(
-                    commandConsumerConnection(),
-                    samplerFactory,
-                    adapterProperties,
-                    commandTargetMapper,
-                    new CommandHandlingAdapterInfoAccess() {
-
-                        @Override
-                        public Future<Void> setCommandHandlingAdapterInstance(
-                                final String tenant,
-                                final String deviceId,
-                                final String adapterInstanceId,
-                                final Duration lifespan,
-                                final SpanContext context) {
-                            return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
-                        }
-
-                        @Override
-                        public Future<Void> removeCommandHandlingAdapterInstance(
-                                final String tenant,
-                                final String deviceId,
-                                final String adapterInstanceId,
-                                final SpanContext context) {
-                            return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
-                        }
-                    });
-        } else {
-            throw new IllegalArgumentException("this adapter does not support the Command Router service yet");
-            // TODO add implementation based on Command Router service
-        }
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [unknown]");
+        throw new UnsupportedOperationException("not implemented yet");
     }
 
     /**
