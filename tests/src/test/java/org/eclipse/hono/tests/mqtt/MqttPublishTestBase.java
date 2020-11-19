@@ -72,7 +72,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      *
      * @return The QoS level.
      */
-    protected abstract MqttQoS getExpectedQos();
+    protected abstract MqttQoS getQos();
 
     /**
      * Sends a message on behalf of a device to the MQTT adapter.
@@ -85,7 +85,6 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      *         message. The future will succeed if the message has been
      *         published successfully.
      */
-    // here
     protected abstract Future<Void> send(
             String tenantId,
             String deviceId,
@@ -332,7 +331,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
-            assertThat(MessageHelper.getQoS(msg)).isEqualTo(getExpectedQos().ordinal());
+            assertThat(MessageHelper.getQoS(msg)).isEqualTo(getQos().ordinal());
             assertThat(msg.getCreationTime()).isGreaterThan(0);
         });
         assertAdditionalMessageProperties(ctx, msg);

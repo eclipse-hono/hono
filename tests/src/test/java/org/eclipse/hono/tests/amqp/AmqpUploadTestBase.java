@@ -81,8 +81,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertAdditionalMessageProperties(ctx, msg);
     }
 
-    private void assertQosLevel(final VertxTestContext ctx, final Message msg, final ProtonQoS qos) {
-        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(qos.ordinal()));
+    private void assertQosLevel(final VertxTestContext ctx, final Message msg, final ProtonQoS expectedQos) {
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
     }
 
     /**

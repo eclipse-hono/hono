@@ -1265,8 +1265,8 @@ public abstract class HttpTestBase {
         });
     }
 
-    private void  assertQosLevel(final VertxTestContext ctx, final Message msg, final QoS qos) {
-        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(qos.ordinal()));
+    private void  assertQosLevel(final VertxTestContext ctx, final Message msg, final QoS expectedQos) {
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
     }
 
     private boolean hasAccessControlExposedHeaders(final MultiMap responseHeaders) {

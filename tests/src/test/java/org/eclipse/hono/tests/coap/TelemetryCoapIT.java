@@ -81,7 +81,7 @@ public class TelemetryCoapIT extends CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-        public void testUploadUsingQoS1(final VertxTestContext ctx) throws InterruptedException {
+    public void testUploadUsingQoS1(final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
 

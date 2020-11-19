@@ -24,7 +24,6 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -90,14 +89,7 @@ public class EventHttpIT extends HttpTestBase {
         }
 
         testUploadMessages(ctx, tenantId,
-                msg -> {
-                    ctx.verify(() -> {
-                        assertThat(msg.getApplicationProperties().getValue().get(MessageHelper.APP_PROPERTY_QOS))
-                                .isEqualTo(QoS.AT_LEAST_ONCE.ordinal());
-                    });
-
-                    return Future.succeededFuture();
-                },
+                null,
                 count -> httpClient.create(
                         getEndpointUri(),
                         Buffer.buffer("hello " + count),
