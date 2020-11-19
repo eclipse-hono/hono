@@ -207,12 +207,9 @@ public final class MongoDbDocumentBuilder {
         filters.forEach(filter -> {
             if (filter.getValue() instanceof String) {
                 final String value = (String) filter.getValue();
-                if (value.contains("*") || value.contains("?")) {
-                    // if the value contains * and ? then use regex matching
-                    document.put(mapDeviceField(filter.getField()),
-                            new JsonObject().put("$regex",
-                                    DeviceRegistryUtils.getRegexExpressionForSearchOperation(value)));
-                }
+                document.put(mapDeviceField(filter.getField()),
+                        new JsonObject().put("$regex",
+                                DeviceRegistryUtils.getRegexExpressionForSearchOperation(value)));
             } else {
                 document.put(mapDeviceField(filter.getField()), filter.getValue());
             }
