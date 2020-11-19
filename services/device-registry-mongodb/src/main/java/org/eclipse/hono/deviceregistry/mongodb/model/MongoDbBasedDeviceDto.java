@@ -44,7 +44,7 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
      */
     public static DeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
-        return DeviceDto.forRead(tenantId,
+        return DeviceDto.forRead(DeviceDto::new, tenantId,
             deviceId,
             recordJson.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
             new DeviceStatus()

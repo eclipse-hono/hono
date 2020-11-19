@@ -73,7 +73,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedRegistrationService.class);
 
     // <tenantId, <deviceId, registrationData>>
-    private final ConcurrentMap<String, ConcurrentMap<String, DeviceDto>> identities = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ConcurrentMap<String, FileBasedDeviceDto>> identities = new ConcurrentHashMap<>();
     private final Vertx vertx;
 
     private AtomicBoolean running = new AtomicBoolean(false);
@@ -202,14 +202,14 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
         int count = 0;
         LOG.debug("loading devices for tenant [{}]", tenantId);
-        final ConcurrentMap<String, DeviceDto> deviceMap = new ConcurrentHashMap<>();
+        final ConcurrentMap<String, FileBasedDeviceDto> deviceMap = new ConcurrentHashMap<>();
         for (final Object deviceObj : tenant.getJsonArray(RegistryManagementConstants.FIELD_DEVICES)) {
             if (deviceObj instanceof JsonObject) {
                 final JsonObject entry = (JsonObject) deviceObj;
                 final String deviceId = entry.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID);
                 if (deviceId != null) {
                     LOG.trace("loading device [{}]", deviceId);
-                    final DeviceDto deviceDto = FileBasedDeviceDto.forRead(tenantId, deviceId, entry);
+                    final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forRead(tenantId, deviceId, entry);
                     deviceMap.put(deviceId, deviceDto);
                     count++;
                 }
@@ -262,9 +262,9 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         return checkFileExists(true).compose(s -> {
             final AtomicInteger idCount = new AtomicInteger();
             final JsonArray tenants = new JsonArray();
-            for (final Entry<String, ConcurrentMap<String, DeviceDto>> entry : identities.entrySet()) {
+            for (final Entry<String, ConcurrentMap<String, FileBasedDeviceDto>> entry : identities.entrySet()) {
                 final JsonArray devices = new JsonArray();
-                for (final Entry<String, DeviceDto> deviceEntry : entry.getValue().entrySet()) {
+                for (final Entry<String, FileBasedDeviceDto> deviceEntry : entry.getValue().entrySet()) {
                     devices.add(
                         new JsonObject()
                             .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
@@ -317,7 +317,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(span);
 
-        final Map<String, DeviceDto> devices = getDevicesForTenant(tenantId);
+        final Map<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         final Set<String> gatewaySet = devices.entrySet().stream()
                 .filter(entry -> entry.getValue().getData().getMemberOf().stream()
                         .anyMatch(group -> viaGroups.contains(group)))
@@ -375,7 +375,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
     private Versioned<Device> getRegistrationData(final String tenantId, final String deviceId) {
 
-        final ConcurrentMap<String, DeviceDto> devices = this.identities.get(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = this.identities.get(tenantId);
 
         if (devices == null || !devices.containsKey(deviceId)) {
             return null;
@@ -408,7 +408,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
 
-        final ConcurrentMap<String, DeviceDto> devices = identities.get(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
@@ -463,7 +463,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(tenantId);
         final String deviceIdValue = deviceId.orElseGet(() -> generateDeviceId(tenantId));
 
-        final ConcurrentMap<String, DeviceDto> devices = getDevicesForTenant(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         if (devices.size() >= getConfig().getMaxDevicesPerTenant()) {
             TracingHelper.logError(span, "Maximum devices number limit reached for tenant");
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
@@ -510,7 +510,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     private OperationResult<Id> doUpdateDevice(final String tenantId, final String deviceId, final Device device,
             final Optional<String> resourceVersion, final Span span) {
 
-        final ConcurrentMap<String, DeviceDto> devices = identities.get(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
@@ -538,7 +538,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                 Optional.ofNullable(newDevice.getVersion()));
     }
 
-    private ConcurrentMap<String, DeviceDto> getDevicesForTenant(final String tenantId) {
+    private ConcurrentMap<String, FileBasedDeviceDto> getDevicesForTenant(final String tenantId) {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
@@ -705,7 +705,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
      */
     private String generateDeviceId(final String tenantId) {
 
-        final ConcurrentMap<String, DeviceDto> devices = getDevicesForTenant(tenantId);
+        final ConcurrentMap<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         String tempDeviceId;
         do {
             tempDeviceId = UUID.randomUUID().toString();
@@ -718,10 +718,10 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         FileBasedDeviceDto() {
         }
 
-        public static DeviceDto forRead(final String tenantId, final String deviceId, final JsonObject entry) {
+        public static FileBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject entry) {
 
             final Device device = mapFromStoredJson(entry.getJsonObject(RegistrationConstants.FIELD_DATA));
-            return DeviceDto.forRead(tenantId,
+            return DeviceDto.forRead(FileBasedDeviceDto::new, tenantId,
                     deviceId,
                     device,
                     new DeviceStatus()

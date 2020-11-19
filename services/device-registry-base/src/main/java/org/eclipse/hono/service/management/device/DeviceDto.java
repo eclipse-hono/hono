@@ -73,6 +73,7 @@ public class DeviceDto extends BaseDto<Device> {
     /**
      * Constructs a new DTO to be returned by a read operation.
      *
+     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      * @param device The data of the DTO.
@@ -81,11 +82,13 @@ public class DeviceDto extends BaseDto<Device> {
      * @param updated The instant of the most recent update.
      * @param version The version of the DTO
      *
+     * @param <T> The type of the DTO subclass.
+     *
      * @return A DTO instance for reading an entry.
      */
-    public static DeviceDto forRead(final String tenantId, final String deviceId, final Device device,
+    public static <T extends DeviceDto> T forRead(final Supplier<T> supplier, final String tenantId, final String deviceId, final Device device,
                                     final DeviceStatus deviceStatus, final Instant created, final Instant updated, final String version) {
-        final DeviceDto deviceDto = BaseDto.forRead(DeviceDto::new, device, created, updated, version);
+        final T deviceDto = BaseDto.forRead(supplier, device, created, updated, version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
         deviceDto.setDeviceStatus(deviceStatus);

@@ -57,7 +57,7 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      */
     public static DeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
-        return DeviceDto.forRead(tenantId,
+        return DeviceDto.forRead(DeviceDto::new, tenantId,
                 deviceId,
                 Json.decodeValue(recordJson.getString("data"), Device.class),
                 new DeviceStatus()
