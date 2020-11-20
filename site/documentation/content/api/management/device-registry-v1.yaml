@@ -424,7 +424,9 @@ paths:
                                  "status": {
                                     "created": "2019-10-03T13:45:16Z"
                                     "updated": "2020-05-04T10:11:12Z"
-                                    "last-user": "Bob"
+                                    "last-user": "Bob",
+                                    "autoProvisioned": false,
+                                    "autoProvisioningNotificationSent": false
                                  }
                                  "ext": {
                                     "manufacturer": "ACME",
@@ -1030,6 +1032,13 @@ components:
             "last-user":
                type: string
                description: The user who made the last edit on this device.
+            "autoProvisioned":
+               type: string
+               description: Indicates if the device was created via auto-provisioning.
+            "autoProvisioningNotificationSent":
+               type: string
+               description: Indicates if the northbound application was notified of the auto-provisioned device via an
+                  empty event.
 
       SearchDevicesResult:
          type: object

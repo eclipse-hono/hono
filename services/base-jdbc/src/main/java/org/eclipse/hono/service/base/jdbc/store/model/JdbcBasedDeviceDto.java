@@ -55,9 +55,9 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      *
      * @return A DTO instance for reading an entry.
      */
-    public static DeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
+    public static JdbcBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
-        return DeviceDto.forRead(DeviceDto::new, tenantId,
+        return DeviceDto.forRead(JdbcBasedDeviceDto::new, tenantId,
                 deviceId,
                 Json.decodeValue(recordJson.getString("data"), Device.class),
                 new DeviceStatus()
