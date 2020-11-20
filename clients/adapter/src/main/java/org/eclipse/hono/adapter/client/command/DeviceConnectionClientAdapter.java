@@ -107,9 +107,9 @@ public final class DeviceConnectionClientAdapter implements CommandRouterClient,
     @Override
     public String toString() {
         return new StringBuilder(getClass().getSimpleName())
-                .append("{deviceConnectionClient: ")
+                .append("[deviceConnectionClient: ")
                 .append(deviceConnectionClient)
-                .append("]}")
+                .append("]")
                 .toString();
     }
 }

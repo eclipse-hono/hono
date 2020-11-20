@@ -16,10 +16,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
-import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-
-import com.google.common.base.Strings;
 
 import io.quarkus.arc.config.ConfigProperties;
 
@@ -29,99 +25,83 @@ import io.quarkus.arc.config.ConfigProperties;
 @ConfigProperties(prefix = "hono", namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
 public class ProtocolAdapterConfig {
 
-     public CommandConfig command;
+    public CommandConfig command;
 
-     public CommandRouterConfig commandRouter;
+    public CommandRouterConfig commandRouter;
 
-     public HealthCheckConfig healthCheck;
+    public HealthCheckConfig healthCheck;
 
-     public ApplicationConfig app;
+    public ApplicationConfig app;
 
-     public CredentialsClientConfig credentials;
+    public CredentialsClientConfig credentials;
 
-     public DeviceConnectionConfig deviceConnection;
+    public DeviceConnectionConfig deviceConnection;
 
-     public DownstreamSenderConfig messaging;
+    public DownstreamSenderConfig messaging;
 
-     public RegistrationClientConfig registration;
+    public RegistrationClientConfig registration;
 
-     public TenantClientConfig tenant;
+    public TenantClientConfig tenant;
 
-     public ResourceLimitChecksConfig resourceLimitChecks;
+    public QuarkusConnectionEventProducerConfig connectionEvents;
 
-     public QuarkusConnectionEventProducerConfig connectionEvents;
+    /**
+     * Command configuration.
+     */
+    public static class CommandConfig extends RequestResponseClientConfigProperties {
+    }
 
-     @ConfigProperty(name = "hono.commandRouter.host")
-     protected String commandRouterHost;
+    /**
+     * Health check configuration.
+     */
+    public static class HealthCheckConfig extends ServerConfig {
+    }
 
-     public boolean isCommandRouterConfigured() {
-         return !Strings.isNullOrEmpty(commandRouterHost);
-     }
+    /**
+     * Application configuration.
+     */
+    public static class ApplicationConfig extends ApplicationConfigProperties {
+    }
 
-     /**
-      * Command configuration.
-      */
-     @ConfigProperties(prefix = "hono.command", failOnMismatchingMember = false)
-     public static class CommandConfig extends RequestResponseClientConfigProperties { }
+    /**
+     * Credentials client configuration.
+     */
+    public static class CredentialsClientConfig extends RequestResponseClientConfigProperties {
+    }
 
-     /**
-      * Health check configuration.
-      */
-     @ConfigProperties(prefix = "hono.health-check", failOnMismatchingMember = false)
-     public static class HealthCheckConfig extends ServerConfig { }
+    /**
+     * Device connection client configuration.
+     */
+    public static class DeviceConnectionConfig extends RequestResponseClientConfigProperties {
+    }
 
-     /**
-      * Application configuration.
-      */
-     @ConfigProperties(prefix = "hono.app", failOnMismatchingMember = false)
-     public static class ApplicationConfig extends ApplicationConfigProperties { }
+    /**
+     * Command Router client configuration.
+     */
+    public static class CommandRouterConfig extends RequestResponseClientConfigProperties {
+    }
 
-     /**
-      * Credentials client configuration.
-      */
-     @ConfigProperties(prefix = "hono.credentials", failOnMismatchingMember = false)
-     public static class CredentialsClientConfig extends RequestResponseClientConfigProperties { }
+    /**
+     * Messaging client configuration.
+     */
+    public static class DownstreamSenderConfig extends RequestResponseClientConfigProperties {
+    }
 
-     /**
-      * Device connection client configuration.
-      */
-     @ConfigProperties(prefix = "hono.device-connection", failOnMismatchingMember = false)
-     public static class DeviceConnectionConfig extends RequestResponseClientConfigProperties { }
+    /**
+     * Device registration client configuration.
+     */
+    public static class RegistrationClientConfig extends RequestResponseClientConfigProperties {
+    }
 
-     /**
-      * Command Router client configuration.
-      */
-     @ConfigProperties(prefix = "hono.command-router", failOnMismatchingMember = false)
-     public static class CommandRouterConfig extends RequestResponseClientConfigProperties { }
+    /**
+     * Tenant client configuration.
+     */
+    public static class TenantClientConfig extends RequestResponseClientConfigProperties {
+    }
 
-     /**
-      * Messaging client configuration.
-      */
-     @ConfigProperties(prefix = "hono.messaging", failOnMismatchingMember = false)
-     public static class DownstreamSenderConfig extends RequestResponseClientConfigProperties { }
-
-     /**
-      * Device registration client configuration.
-      */
-     @ConfigProperties(prefix = "hono.registration", failOnMismatchingMember = false)
-     public static class RegistrationClientConfig extends RequestResponseClientConfigProperties { }
-
-     /**
-      * Tenant client configuration.
-      */
-     @ConfigProperties(prefix = "hono.tenant", failOnMismatchingMember = false)
-     public static class TenantClientConfig extends RequestResponseClientConfigProperties { }
-
-     /**
-      * Resource Limit Checks configuration.
-      */
-     @ConfigProperties(prefix = "hono.resource-limits.prometheus-based", failOnMismatchingMember = false)
-     public static class ResourceLimitChecksConfig extends PrometheusBasedResourceLimitChecksConfig { }
-
-     /**
-      * Connection event producer configuration.
-      */
-     @ConfigProperties(prefix = "hono.connection-events", failOnMismatchingMember = false)
-     public static class QuarkusConnectionEventProducerConfig extends ConnectionEventProducerConfig { }
-
+    /**
+     * Connection event producer configuration.
+     */
+    public static class QuarkusConnectionEventProducerConfig extends ConnectionEventProducerConfig {
+    }
 }

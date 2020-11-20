@@ -16,7 +16,6 @@ import java.time.Duration;
 
 import javax.enterprise.inject.Produces;
 
-import org.eclipse.hono.service.quarkus.ProtocolAdapterConfig;
 import org.eclipse.hono.service.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
@@ -38,29 +37,33 @@ public class ResourceLimitChecksProducer {
     @Produces
     @IfBuildProperty(name = "hono.metrics", stringValue = "prometheus")
     ResourceLimitChecks prometheusResourceLimitChecks(
-            final ProtocolAdapterConfig config,
+            final ResourceLimitChecksConfig config,
             final Vertx vertx,
             final Tracer tracer) {
 
-        final WebClientOptions webClientOptions = new WebClientOptions();
-        webClientOptions.setDefaultHost(config.resourceLimitChecks.getHost());
-        webClientOptions.setDefaultPort(config.resourceLimitChecks.getPort());
-        webClientOptions.setTrustOptions(config.resourceLimitChecks.getTrustOptions());
-        webClientOptions.setKeyCertOptions(config.resourceLimitChecks.getKeyCertOptions());
-        webClientOptions.setSsl(config.resourceLimitChecks.isTlsEnabled());
+        if (config.isHostConfigured()) {
+            final WebClientOptions webClientOptions = new WebClientOptions();
+            webClientOptions.setDefaultHost(config.getHost());
+            webClientOptions.setDefaultPort(config.getPort());
+            webClientOptions.setTrustOptions(config.getTrustOptions());
+            webClientOptions.setKeyCertOptions(config.getKeyCertOptions());
+            webClientOptions.setSsl(config.isTlsEnabled());
 
-        final Caffeine<Object, Object> builder = Caffeine.newBuilder()
-                .initialCapacity(config.resourceLimitChecks.getCacheMinSize())
-                .maximumSize(config.resourceLimitChecks.getCacheMaxSize())
-                .expireAfterWrite(Duration.ofSeconds(config.resourceLimitChecks.getCacheTimeout()));
+            final Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                    .initialCapacity(config.getCacheMinSize())
+                    .maximumSize(config.getCacheMaxSize())
+                    .expireAfterWrite(Duration.ofSeconds(config.getCacheTimeout()));
 
-        return new PrometheusBasedResourceLimitChecks(
-                WebClient.create(vertx, webClientOptions),
-                config.resourceLimitChecks,
-                builder.buildAsync(),
-                builder.buildAsync(),
-                builder.buildAsync(),
-                tracer);
+            return new PrometheusBasedResourceLimitChecks(
+                    WebClient.create(vertx, webClientOptions),
+                    config,
+                    builder.buildAsync(),
+                    builder.buildAsync(),
+                    builder.buildAsync(),
+                    tracer);
+        } else {
+            return new NoopResourceLimitChecks();
+        }
     }
 
     @Produces

@@ -119,7 +119,7 @@ public abstract class AbstractProtocolAdapterApplication {
 
         final DeviceRegistrationClient registrationClient = registrationClient();
 
-        if (config.isCommandRouterConfigured()) {
+        if (config.commandRouter.isHostConfigured()) {
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
             adapter.setCommandConsumerFactory(commandConsumerFactory(commandRouterClient));

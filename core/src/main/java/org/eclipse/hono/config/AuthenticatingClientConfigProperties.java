@@ -36,9 +36,9 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
     private String password = null;
     private int port = Constants.PORT_AMQPS;
     private String serverRole = SERVER_ROLE_UNKNOWN;
-
     private boolean tlsEnabled = false;
     private String username = null;
+    private boolean hostConfigured = false;
 
     /**
      * Creates new properties with default values.
@@ -85,6 +85,16 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
      */
     public final void setHost(final String host) {
         this.host = Objects.requireNonNull(host);
+        this.hostConfigured = true;
+    }
+
+    /**
+     * Checks if the host property has been explicitly set.
+     *
+     * @return {@code true} if the host property has been set via {@link #setHost(String)}.
+     */
+    public boolean isHostConfigured() {
+        return hostConfigured;
     }
 
     /**
