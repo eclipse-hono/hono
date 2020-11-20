@@ -25,9 +25,10 @@ import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterCommandConsumerFactoryImpl;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -282,8 +283,8 @@ public abstract class AbstractProtocolAdapterApplication {
             final DeviceRegistrationClient deviceRegistrationClient) {
 
         LOG.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
-                ProtonBasedCommandConsumerFactory.class.getName());
-        return new ProtonBasedCommandConsumerFactory(
+                ProtonBasedDelegatingCommandConsumerFactory.class.getName());
+        return new ProtonBasedDelegatingCommandConsumerFactory(
                 commandConsumerConnection(),
                 messageSamplerFactory,
                 protocolAdapterProperties,
@@ -299,12 +300,15 @@ public abstract class AbstractProtocolAdapterApplication {
      *
      * @param commandRouterClient The client for accessing the Command Router service.
      * @return The factory.
-     * @throws UnsupportedOperationException if the factory type is not supported yet
      */
-    protected CommandConsumerFactory commandConsumerFactory(
-            final CommandRouterClient commandRouterClient) {
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [unknown]");
-        throw new UnsupportedOperationException("not supported yet");
+    protected CommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
+                ProtonBasedCommandRouterCommandConsumerFactoryImpl.class.getName());
+        return new ProtonBasedCommandRouterCommandConsumerFactoryImpl(
+                commandConsumerConnection(),
+                messageSamplerFactory,
+                protocolAdapterProperties,
+                commandRouterClient);
     }
 
     /**

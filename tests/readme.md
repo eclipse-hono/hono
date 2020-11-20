@@ -97,8 +97,14 @@ In order to stop and remove the Docker containers started by a test run, use:
 ### Running the Tests with the Quarkus based Protocol Adapters
 
 By default, the integration tests are run using the Spring Boot based protocol adapters. For some protocol adapters there are
-Quarkus based alternative implememtations. The tests can be run using these Quarkus based adapters by means of activating
+Quarkus based alternative implementations. The tests can be run using these Quarkus based adapters by means of activating
 the `protocol-adapters-quarkus` maven profile:
 
     $ mvn verify -Prun-tests,protocol-adapters-quarkus
 
+### Running the Tests with the Command Router component
+
+By default, the integration tests are run using the Device Connection service component. In order to use the Command
+Router service component instead, the `command-router` maven profile can be set:
+
+    $ mvn verify -Prun-tests,command-router

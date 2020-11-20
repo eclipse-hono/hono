@@ -14,7 +14,7 @@
 # The job uses a matrix for the distinct device registry implementations. Thus,
 # for each registry implementation, the workflow is run on a separate VM.
 
-name: Build Hono's 'container images and run integration tests
+name: Build and run integration tests
 
 on: [push,pull_request]
 
@@ -25,7 +25,12 @@ jobs:
     strategy:
       matrix:
         device-registry: [file,jdbc,mongodb]
+        include:
+          # let the jdbc test-run use the command-router component
+          - device-registry: jdbc
+            commandrouting-mode: commandrouter
 
+    name: Use ${{ matrix.device-registry }}-registry [${{ matrix.commandrouting-mode }}]
     steps:
     - uses: actions/checkout@v2
     - name: Cache local Maven repository
@@ -47,4 +52,4 @@ jobs:
       with:
         java-version: '11'
     - name: Build all components (incl. unit tests) and run integration tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests

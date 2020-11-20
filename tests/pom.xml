@@ -39,6 +39,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     -->
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
     <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
+    <hono.commandrouter.host>hono-service-command-router.hono</hono.commandrouter.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
 
@@ -69,6 +70,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <adapter.sendMessageToDeviceTimeout>1000</adapter.sendMessageToDeviceTimeout>
     <!-- use minimum cost factor in order to speed up test execution -->
     <max.bcrypt.costFactor>4</max.bcrypt.costFactor>
+
+    <!--
+     Properties defining whether the Device Connection service (now deprecated) or the Command Router service
+     shall be used for Command & Control. The default here lets the Device Connection service be used.
+     See the 'command-router' maven profile below for the Command Router values.
+     -->
+    <hono.command-related-service.configname>deviceConnection</hono.command-related-service.configname>
+    <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
+    <hono.commandrouter.disabled>true</hono.commandrouter.disabled>
+    <hono.device-connection.disabled>false</hono.device-connection.disabled>
 
     <!--
       Device Registry related properties
@@ -249,6 +260,21 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <max.event-loop.execute-time>20000</max.event-loop.execute-time>
         <request.timeout>3000</request.timeout>
         <service.startup.timeout>240000</service.startup.timeout>
+      </properties>
+    </profile>
+    <profile>
+      <id>command-router</id>
+      <activation>
+        <property>
+          <name>hono.commandrouting.mode</name>
+          <value>commandrouter</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.command-related-service.configname>commandRouter</hono.command-related-service.configname>
+        <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
+        <hono.commandrouter.disabled>false</hono.commandrouter.disabled>
+        <hono.device-connection.disabled>true</hono.device-connection.disabled>
       </properties>
     </profile>
     <profile>
@@ -477,6 +503,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.repository}/hono-jaeger-all-in-one-test</name>
                   <alias>jaeger</alias>
                   <build>
+                    <skip>${jaeger.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${jaeger.image.name}</from>
                   </build>
@@ -808,6 +835,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.repository}/hono-service-device-connection-test</name>
                   <alias>device-connection</alias>
                   <build>
+                    <skip>${hono.device-connection.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/hono-service-device-connection:${project.version}</from>
                     <assembly>
@@ -837,6 +865,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.device-connection.disabled}</skip>
                     <ports>
                       <port>+deviceconnection.ip:deviceconnection.amqp.port:5672</port>
                       <port>+deviceconnection.ip:deviceconnection.health.port:${vertx.health.port}</port>
@@ -870,6 +899,80 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <http>
                         <method>GET</method>
                         <url>http://${deviceconnection.ip}:${deviceconnection.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### Command Router service (may also act as Device Connection service via 'enable-device-connection-endpoint') ##### -->
+                <image>
+                  <name>${docker.repository}/hono-service-command-router-test</name>
+                  <alias>command-router</alias>
+                  <build>
+                    <skip>${hono.commandrouter.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${docker.repository}/hono-service-command-router:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/commandrouter</directory>
+                            <outputDirectory>etc/hono</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <includes>
+                              <include>command-router-*.pem</include>
+                              <include>auth-server-cert.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.commandrouter.disabled}</skip>
+                    <ports>
+                      <port>+commandrouter.ip:commandrouter.amqp.port:5672</port>
+                      <port>+commandrouter.ip:commandrouter.health.port:${vertx.health.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/commandrouter.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-service-command-router.hono</alias>
+                    </network>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache,enable-device-connection-endpoint</SPRING_PROFILES_ACTIVE>
+                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>command-router</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                    </env>
+                    <log>
+                      <prefix>CMDROUTER</prefix>
+                      <color>${log.color.hono-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${commandrouter.ip}:${commandrouter.health.port}/readiness</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1247,8 +1350,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
+                <deviceconnection.enabled>${hono.commandrouter.disabled}</deviceconnection.enabled>
                 <deviceconnection.host>${deviceconnection.ip}</deviceconnection.host>
                 <deviceconnection.amqp.port>${deviceconnection.amqp.port}</deviceconnection.amqp.port>
+                <commandrouter.host>${commandrouter.ip}</commandrouter.host>
+                <commandrouter.amqp.port>${commandrouter.amqp.port}</commandrouter.amqp.port>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
@@ -1307,6 +1413,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
                     <file>${project.build.directory}/docker/deviceconnection.port.properties</file>
+                    <file>${project.build.directory}/docker/commandrouter.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.http.port.properties</file>

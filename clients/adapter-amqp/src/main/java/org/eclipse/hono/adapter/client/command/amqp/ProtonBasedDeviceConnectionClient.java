@@ -52,7 +52,7 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
      * @param connection The connection to the Device Connection service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @throws NullPointerException if any of the parameters other than the cache provider are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedDeviceConnectionClient(
             final HonoConnection connection,

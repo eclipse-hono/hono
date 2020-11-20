@@ -1029,7 +1029,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
         }
         if (eventSender instanceof ServiceClient) {
-            ((ServiceClient ) eventSender).registerReadinessChecks(handler);
+            ((ServiceClient) eventSender).registerReadinessChecks(handler);
         }
     }
 
@@ -1065,7 +1065,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             ((ServiceClient) telemetrySender).registerLivenessChecks(handler);
         }
         if (eventSender instanceof ServiceClient) {
-            ((ServiceClient ) eventSender).registerLivenessChecks(handler);
+            ((ServiceClient) eventSender).registerLivenessChecks(handler);
         }
     }
 

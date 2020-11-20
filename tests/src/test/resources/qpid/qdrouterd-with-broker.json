@@ -110,7 +110,7 @@
       "maxConnections": 40,
       "groups": {
         "Hono": {
-          "users": "Eclipse IoT;Hono;http-adapter,Eclipse IoT;Hono;mqtt-adapter,Eclipse IoT;Hono;amqp-adapter,Eclipse IoT;Hono;coap-adapter",
+          "users": "Eclipse IoT;Hono;http-adapter,Eclipse IoT;Hono;mqtt-adapter,Eclipse IoT;Hono;amqp-adapter,Eclipse IoT;Hono;coap-adapter,Eclipse IoT;Hono;command-router",
           "remoteHosts": "*",
           "maxSessions": 2,
           "maxMessageSize": 131072,

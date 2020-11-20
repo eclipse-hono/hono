@@ -15,6 +15,7 @@
 package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
@@ -23,7 +24,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.DeviceConnectionClient;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
@@ -39,6 +42,11 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
+
+    @BeforeAll
+    public static void setup() {
+        assumeTrue(IntegrationTestSupport.isDeviceConnectionServiceEnabled());
+    }
 
     /**
      * Gets a client for interacting with the Device Connection service.

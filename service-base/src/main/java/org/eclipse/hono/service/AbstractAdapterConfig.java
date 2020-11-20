@@ -22,8 +22,10 @@ import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterCommandConsumerFactoryImpl;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -53,6 +55,7 @@ import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitCheck
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -581,11 +584,75 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
     public DeviceConnectionClient deviceConnectionClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedDeviceConnectionClient(
                 deviceConnectionServiceConnection(),
+                samplerFactory,
+                adapterConfig);
+    }
+
+    /**
+     * Exposes configuration properties for accessing the command router service as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @Qualifier(CommandRouterConstants.COMMAND_ROUTER_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.command-router")
+    @ConditionalOnProperty(prefix = "hono.command-router", name = "host")
+    public RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
+        final RequestResponseClientConfigProperties config = Optional.ofNullable(getCommandRouterClientConfigDefaults())
+                .orElseGet(RequestResponseClientConfigProperties::new);
+        setConfigServerRoleIfUnknown(config, "Command Router");
+        setDefaultConfigNameIfNotSet(config);
+        return config;
+    }
+
+    /**
+     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
+     * via {@link #commandRouterServiceClientConfig()}.
+     * <p>
+     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
+     * properties.
+     *
+     * @return The properties.
+     */
+    protected RequestResponseClientConfigProperties getCommandRouterClientConfigDefaults() {
+        return new RequestResponseClientConfigProperties();
+    }
+
+    /**
+     * Exposes the connection used for accessing the command router service as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Qualifier(CommandRouterConstants.COMMAND_ROUTER_ENDPOINT)
+    @Scope("prototype")
+    @ConditionalOnProperty(prefix = "hono.command-router", name = "host")
+    public HonoConnection commandRouterServiceConnection() {
+        return HonoConnection.newConnection(vertx(), commandRouterServiceClientConfig());
+    }
+
+    /**
+     * Exposes a client for accessing the <em>Command Router</em> API as a Spring bean.
+     *
+     * @param samplerFactory The sampler factory to use.
+     * @param adapterConfig The protocol adapter's configuration properties.
+     * @return The client.
+     */
+    @Bean
+    @Qualifier(CommandRouterConstants.COMMAND_ROUTER_ENDPOINT)
+    @Scope("prototype")
+    @ConditionalOnProperty(prefix = "hono.command-router", name = "host")
+    public CommandRouterClient commandRouterClient(
+            final SendMessageSampler.Factory samplerFactory,
+            final ProtocolAdapterProperties adapterConfig) {
+
+        return new ProtonBasedCommandRouterClient(
+                commandRouterServiceConnection(),
                 samplerFactory,
                 adapterConfig);
     }
@@ -637,8 +704,8 @@ public abstract class AbstractAdapterConfig {
             final DeviceRegistrationClient registrationClient) {
 
         LOG.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
-                ProtonBasedCommandConsumerFactory.class.getName());
-        return new ProtonBasedCommandConsumerFactory(
+                ProtonBasedDelegatingCommandConsumerFactory.class.getName());
+        return new ProtonBasedDelegatingCommandConsumerFactory(
                 commandConsumerConnection(),
                 samplerFactory,
                 adapterProperties,
@@ -652,8 +719,13 @@ public abstract class AbstractAdapterConfig {
             final SendMessageSampler.Factory samplerFactory,
             final CommandRouterClient commandRouterClient) {
 
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [unknown]");
-        throw new UnsupportedOperationException("not implemented yet");
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
+                ProtonBasedCommandRouterCommandConsumerFactoryImpl.class.getName());
+        return new ProtonBasedCommandRouterCommandConsumerFactoryImpl(
+                commandConsumerConnection(),
+                samplerFactory,
+                adapterProperties,
+                commandRouterClient);
     }
 
     /**
@@ -666,7 +738,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public CommandResponseSender commandResponseSender(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedCommandResponseSender(
