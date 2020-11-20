@@ -11,16 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.adapter.client.command.amqp;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
-import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -33,27 +30,27 @@ import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.SendMessageSampler.Factory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationAssertion;
 
-import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonHelper;
 
 
 /**
  * A vertx-proton based factory for creating consumers of command messages received via the
  * AMQP 1.0 Messaging Network.
  * <p>
- * This implementation wraps a {@link ProtocolAdapterCommandConsumerFactory} and thus also supports
- * routing of commands to a target protocol adapter instance.
+ * This implementation supports delegation of command message handling to another protocol adapter instance
+ * by routing the message on an adapter-instance specific address.
+ * <p>
+ * This functionality is implemented via the wrapped default {@link ProtocolAdapterCommandConsumerFactory}
+ * implementation.
  *
  */
-public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient implements CommandConsumerFactory {
+public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractServiceClient implements CommandConsumerFactory {
 
     private final ProtocolAdapterCommandConsumerFactory factory;
 
@@ -68,7 +65,7 @@ public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient imp
      * @param tracer The OpenTracing tracer to use for tracking the processing of messages.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public ProtonBasedCommandConsumerFactory(
+    public ProtonBasedDelegatingCommandConsumerFactory(
             final HonoConnection connection,
             final Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig,
@@ -153,7 +150,7 @@ public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient imp
                 tenantId,
                 deviceId,
                 ctx -> {
-                    commandHandler.handle(new CommandContextAdapter(ctx));
+                    commandHandler.handle(new ProtonBasedCommandContext(ctx));
                 },
                 lifespan,
                 context)
@@ -185,7 +182,7 @@ public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient imp
                 deviceId,
                 gatewayId,
                 ctx -> {
-                    commandHandler.handle(new CommandContextAdapter(ctx));
+                    commandHandler.handle(new ProtonBasedCommandContext(ctx));
                 },
                 lifespan,
                 context)
@@ -200,108 +197,4 @@ public class ProtonBasedCommandConsumerFactory extends AbstractServiceClient imp
                 });
     }
 
-    private static class CommandContextAdapter implements CommandContext {
-
-        private final org.eclipse.hono.client.CommandContext ctx;
-        private final ProtonBasedCommand command;
-
-        /**
-         * Creates a new adapter for a context.
-         *
-         * @throws NullPointerException if context is {@code null}.
-         */
-        CommandContextAdapter(final org.eclipse.hono.client.CommandContext context) {
-            this.ctx = Objects.requireNonNull(context);
-            this.command = new ProtonBasedCommand(context.getCommand());
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void logCommandToSpan(final Span span) {
-            command.logToSpan(span);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Command getCommand() {
-            return command;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void accept() {
-            ctx.accept();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void release() {
-            ctx.release();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
-            ctx.modify(deliveryFailed, undeliverableHere);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void reject(final String cause) {
-            final ErrorCondition error = ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, cause);
-            ctx.reject(error);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public <T> T get(final String key) {
-            return ctx.get(key);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public <T> T get(final String key, final T defaultValue) {
-            return ctx.get(key, defaultValue);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void put(final String key, final Object value) {
-            ctx.put(key, value);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public SpanContext getTracingContext() {
-            return ctx.getTracingContext();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Span getTracingSpan() {
-            return ctx.getTracingSpan();
-        }
-    }
 }

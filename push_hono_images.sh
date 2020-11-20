@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -22,6 +22,7 @@ IMAGES="hono-adapter-amqp-vertx \
         hono-adapter-mqtt-vertx \
         hono-adapter-sigfox-vertx \
         hono-service-auth \
+        hono-service-command-router \
         hono-service-device-connection \
         hono-service-device-registry-file \
         hono-service-device-registry-jdbc \

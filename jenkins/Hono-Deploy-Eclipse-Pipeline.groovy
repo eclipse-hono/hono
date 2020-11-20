@@ -57,7 +57,7 @@ def buildAndDeploy(def utils) {
                 jdk: utils.getJDKVersion(),
                 mavenLocalRepo: '.repository',
                 options: [artifactsPublisher(disabled: true)]) {
-            sh "mvn --projects :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"
+            sh "mvn --projects :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"
         }
     }
 }

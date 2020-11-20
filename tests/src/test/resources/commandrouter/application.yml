@@ -1,0 +1,43 @@
+hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 90
+  healthCheck:
+    insecurePortBindAddress: 0.0.0.0
+    insecurePort: ${vertx.health.port}
+  auth:
+    host: ${hono.auth.host}
+    port: 5672
+    name: command-router
+    validation:
+      certPath: /etc/hono/certs/auth-server-cert.pem
+  commandRouter:
+    amqp:
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+  registration:
+    name: 'Hono Command Router'
+    host: ${hono.registration.host}
+    port: 5672
+    username: command-router@HONO
+    password: cmd-router-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  command:
+    name: 'Hono Command Router'
+    host: ${hono.amqp-network.host}
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/command-router-key.pem
+    certPath: /etc/hono/certs/command-router-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+
+spring:
+  jmx:
+    enabled: false

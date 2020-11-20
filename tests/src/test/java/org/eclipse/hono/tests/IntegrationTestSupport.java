@@ -170,6 +170,10 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_TENANT_ADMIN_PASSWORD = "tenant.admin.password";
     /**
+     * The name of the system property to use for indicating whether the Device Connection service is enabled.
+     */
+    public static final String PROPERTY_DEVICECONNECTION_SERVICE_ENABLED = "deviceconnection.enabled";
+    /**
      * The name of the system property to use for setting the IP address of the Device Connection service.
      */
     public static final String PROPERTY_DEVICECONNECTION_HOST = "deviceconnection.host";
@@ -323,6 +327,11 @@ public final class IntegrationTestSupport {
      */
     public static final int HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
 
+    /**
+     * The boolean value indicating whether the Device Connection service is enabled.
+     */
+    public static final boolean HONO_DEVICECONNECTION_SERVICE_ENABLED = Boolean.parseBoolean(System.getProperty(
+            PROPERTY_DEVICECONNECTION_SERVICE_ENABLED, "true"));
     /**
      * The IP address of the Device Connection service.
      */
@@ -539,6 +548,17 @@ public final class IntegrationTestSupport {
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
                 username,
                 password);
+    }
+
+    /**
+     * Checks if the Device Connection service is enabled.
+     * <p>
+     * Evaluates the system property <em>deviceconnection.enabled</em>. Returns {@code true} if it doesn't exist.
+     *
+     * @return {@code true} if the Device Connection service is enabled.
+     */
+    public static boolean isDeviceConnectionServiceEnabled() {
+        return HONO_DEVICECONNECTION_SERVICE_ENABLED;
     }
 
     /**

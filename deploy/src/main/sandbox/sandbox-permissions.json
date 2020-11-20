@@ -38,6 +38,14 @@
         "activities": [ "EXECUTE" ]
       },
       {
+        "resource": "cmd_router/*",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "cmd_router/*:*",
+        "activities": [ "EXECUTE" ]
+      },
+      {
         "resource": "device_con/*",
         "activities": [ "READ", "WRITE" ]
       },
