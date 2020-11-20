@@ -24,13 +24,11 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
@@ -54,7 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.Timer;
-import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -140,7 +137,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         prepareClients();
 
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
@@ -423,11 +420,11 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testPostTelemetryWithTtdSucceedsWithCommandInResponse(final VertxTestContext ctx) {
 
         // GIVEN an device for which a command is pending
+        givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        final Message msg = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
-        final Command pendingCommand = Command.from(msg, "DEFAULT_TENANT", "device_1");
-        final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(Span.class));
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        final CommandContext commandContext = givenARequestResponseCommandContext(
+                "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null);
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(), any()))
                 .thenAnswer(invocation -> {
@@ -460,6 +457,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                                 any(Handler.class), any(), any());
                         // and the command consumer has been closed again
                         verify(commandConsumer).close(any());
+                        verify(commandContext).accept();
                     });
                     ctx.completeNow();
                 }));
@@ -533,7 +531,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPostCmdResponseForNotExistingCommandResponseLinkResultsIn503(final VertxTestContext ctx) {
 
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         outcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
         givenACommandResponseSenderForAnyTenant(outcome);
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
@@ -573,17 +571,6 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
     private String getCommandResponsePath(final String wrongCommandRequestId) {
         return String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, wrongCommandRequestId);
-    }
-
-    private static Message newMockMessage(final String tenantId, final String deviceId, final String name) {
-        final Message msg = mock(Message.class);
-        when(msg.getAddress()).thenReturn(String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
-        when(msg.getSubject()).thenReturn(name);
-        when(msg.getCorrelationId()).thenReturn("the-correlation-id");
-        when(msg.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
-                tenantId, deviceId, "the-reply-to-id"));
-        return msg;
     }
 
     @SuppressWarnings("unchecked")

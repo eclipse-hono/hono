@@ -94,6 +94,9 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         return finishSpan(connectionInfoCache.getLastKnownGatewayForDevice(tenantId, deviceId, span), span);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(
             final String tenantId,
@@ -111,6 +114,9 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         return finishSpan(connectionInfoCache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span), span);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(
             final String tenantId,

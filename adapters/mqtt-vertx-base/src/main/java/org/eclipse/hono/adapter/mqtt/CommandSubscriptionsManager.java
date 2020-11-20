@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
@@ -43,7 +43,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
     /**
      * Map of the current subscriptions. Key is the topic name.
      */
-    private final Map<String, Pair<CommandSubscription, ProtocolAdapterCommandConsumer>> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, Pair<CommandSubscription, CommandConsumer>> subscriptions = new ConcurrentHashMap<>();
     /**
      * Map of the requests waiting for an acknowledgement. Key is the command message id.
      */
@@ -121,7 +121,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public void addSubscription(final CommandSubscription subscription,
-            final ProtocolAdapterCommandConsumer commandConsumer) {
+            final CommandConsumer commandConsumer) {
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandConsumer);
         subscriptions.put(subscription.getTopic(), Pair.of(subscription, commandConsumer));
@@ -136,12 +136,12 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
      *         if no subscription entry was found for the given topic.
      * @throws NullPointerException if topic or span is {@code null}.
      **/
-    public Future<Pair<CommandSubscription, ProtocolAdapterCommandConsumer>> removeSubscription(final String topic,
+    public Future<Pair<CommandSubscription, CommandConsumer>> removeSubscription(final String topic,
             final Span span) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(span);
 
-        final Pair<CommandSubscription, ProtocolAdapterCommandConsumer> removed = subscriptions.remove(topic);
+        final Pair<CommandSubscription, CommandConsumer> removed = subscriptions.remove(topic);
         if (removed != null) {
             return Future.succeededFuture(removed);
         } else {
@@ -163,7 +163,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
      * @throws NullPointerException if onSubscriptionRemovedFunction or span is {@code null}.
      **/
     public CompositeFuture removeAllSubscriptions(
-            final Function<Pair<CommandSubscription, ProtocolAdapterCommandConsumer>, Future<Void>> onSubscriptionRemovedFunction,
+            final Function<Pair<CommandSubscription, CommandConsumer>, Future<Void>> onSubscriptionRemovedFunction,
             final Span span) {
 
         Objects.requireNonNull(onSubscriptionRemovedFunction);

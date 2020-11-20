@@ -38,7 +38,7 @@ import io.vertx.core.json.JsonObject;
 
 
 /**
- * A ProtonBasedDeviceConnectionClient.
+ * A vertx-proton based client for accessing Hono's <em>Device Connection</em> API.
  *
  */
 public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseClient<DeviceConnectionResult>
@@ -106,6 +106,22 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
      * {@inheritDoc}
      */
     @Override
+    public Future<JsonObject> getLastKnownGatewayForDevice(
+            final String tenant,
+            final String deviceId,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+
+        return getOrCreateDeviceConnectionClient(tenant)
+                .compose(client -> client.getLastKnownGatewayForDevice(deviceId, context));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Future<Void> setLastKnownGatewayForDevice(
             final String tenant,
             final String deviceId,
@@ -124,34 +140,18 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
      * {@inheritDoc}
      */
     @Override
-    public Future<JsonObject> getLastKnownGatewayForDevice(
-            final String tenant,
-            final String deviceId,
-            final SpanContext context) {
-
-        Objects.requireNonNull(tenant);
-        Objects.requireNonNull(deviceId);
-
-        return getOrCreateDeviceConnectionClient(tenant)
-                .compose(client -> client.getLastKnownGatewayForDevice(deviceId, context));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public Future<Void> setCommandHandlingAdapterInstance(
-            final String tenant,
+            final String tenantId,
             final String deviceId,
             final String adapterInstanceId,
             final Duration lifespan,
             final SpanContext context) {
 
-        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return getOrCreateDeviceConnectionClient(tenant)
+        return getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, lifespan, context));
     }
 
@@ -160,16 +160,16 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
      */
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(
-            final String tenant,
+            final String tenantId,
             final String deviceId,
             final String adapterInstanceId,
             final SpanContext context) {
 
-        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return getOrCreateDeviceConnectionClient(tenant)
+        return getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context));
     }
 

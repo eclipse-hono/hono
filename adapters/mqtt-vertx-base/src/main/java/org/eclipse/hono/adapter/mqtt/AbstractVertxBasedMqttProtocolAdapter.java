@@ -26,12 +26,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -758,14 +758,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
     }
 
-    private Function<Pair<CommandSubscription, ProtocolAdapterCommandConsumer>, Future<Void>> getOnSubscriptionRemovedFunction(
+    private Function<Pair<CommandSubscription, CommandConsumer>, Future<Void>> getOnSubscriptionRemovedFunction(
             final Device authenticatedDevice,
             final MqttEndpoint endpoint,
             final Span span) {
 
         return subscriptionConsumerPair -> {
             final CommandSubscription subscription = subscriptionConsumerPair.one();
-            final ProtocolAdapterCommandConsumer commandConsumer = subscriptionConsumerPair.two();
+            final CommandConsumer commandConsumer = subscriptionConsumerPair.two();
             return commandConsumer.close(span.context())
                     .recover(thr -> {
                         TracingHelper.logError(span, thr);
@@ -783,7 +783,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         };
     }
 
-    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
+    private Future<CommandConsumer> createCommandConsumer(
             final MqttEndpoint mqttEndpoint,
             final CommandSubscription subscription,
             final CommandSubscriptionsManager<T> cmdHandler,
@@ -809,7 +809,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 return Future.succeededFuture();
             }).onFailure(t -> {
                 if (t instanceof ClientErrorException) {
-                    commandContext.reject(getErrorCondition(t));
+                    commandContext.reject(t.getMessage());
                 } else {
                     TracingHelper.logError(commandContext.getTracingSpan(), t);
                     commandContext.release();
@@ -1117,7 +1117,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
             if (status != null) {
                 reqId = addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
-                final CommandResponse commandResponse = CommandResponse.from(reqId, targetAddress.getTenantId(),
+                final CommandResponse commandResponse = CommandResponse.fromRequestId(reqId, targetAddress.getTenantId(),
                         targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
 
                 commandResponseTracker = commandResponse != null ? Future.succeededFuture(commandResponse)
@@ -1154,7 +1154,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         return CompositeFuture.all(tenantTracker, commandResponseTracker)
                 .compose(success -> CompositeFuture.all(tokenTracker, tenantValidationTracker))
-                .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseTracker.result(),
+                .compose(ok -> sendCommandResponse(commandResponseTracker.result(),
                         currentSpan.context()))
                 .compose(delivery -> {
                     log.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",

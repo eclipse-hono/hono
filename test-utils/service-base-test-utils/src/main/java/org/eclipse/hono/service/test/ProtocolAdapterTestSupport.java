@@ -19,7 +19,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,16 +28,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.CommandRouterClient;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.EventConstants;
@@ -49,11 +50,10 @@ import org.eclipse.hono.util.TenantObject;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
-import io.vertx.core.AsyncResult;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.proton.ProtonDelivery;
+import io.vertx.core.buffer.Buffer;
 
 /**
  * A base class for implementing tests for protocol adapters.
@@ -67,12 +67,27 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected T adapter;
 
     protected CredentialsClient credentialsClient;
-    protected DeviceConnectionClient deviceConnectionClient;
+    protected CommandRouterClient commandRouterClient;
     protected EventSender eventSender;
-    protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
+    protected CommandConsumerFactory commandConsumerFactory;
+    protected CommandResponseSender commandResponseSender;
     protected DeviceRegistrationClient registrationClient;
     protected TenantClient tenantClient;
     protected TelemetrySender telemetrySender;
+
+    private CommandConsumerFactory createCommandConsumerFactory() {
+        final CommandConsumerFactory factory = mock(CommandConsumerFactory.class);
+        when(factory.start()).thenReturn(Future.succeededFuture());
+        when(factory.stop()).thenReturn(Future.succeededFuture());
+        return factory;
+    }
+
+    private CommandResponseSender createCommandResponseSender() {
+        final CommandResponseSender client = mock(CommandResponseSender.class);
+        when(client.start()).thenReturn(Future.succeededFuture());
+        when(client.stop()).thenReturn(Future.succeededFuture());
+        return client;
+    }
 
     private TenantClient createTenantClientMock() {
         final TenantClient client = mock(TenantClient.class);
@@ -95,8 +110,8 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         return client;
     }
 
-    private DeviceConnectionClient createDeviceConnectionClientMock() {
-        final DeviceConnectionClient client = mock(DeviceConnectionClient.class);
+    private CommandRouterClient createCommandRouterClientMock() {
+        final CommandRouterClient client = mock(CommandRouterClient.class);
         when(client.start()).thenReturn(Future.succeededFuture());
         when(client.stop()).thenReturn(Future.succeededFuture());
         return client;
@@ -128,19 +143,12 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * <p>
      * All factories are configured to successfully connect/disconnect to/from their peer.
      */
-    @SuppressWarnings("unchecked")
     protected void createClientFactories() {
 
-        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
-            shutdownHandler.handle(Future.succeededFuture());
-            return null;
-        }).when(commandConsumerFactory).disconnect(any(Handler.class));
+        this.commandConsumerFactory = createCommandConsumerFactory();
+        this.commandResponseSender = createCommandResponseSender();
 
-        this.deviceConnectionClient = createDeviceConnectionClientMock();
+        this.commandRouterClient = createCommandRouterClientMock();
         this.tenantClient = createTenantClientMock();
         this.registrationClient = createDeviceRegistrationClientMock();
         this.credentialsClient = createCredentialsClientMock();
@@ -189,12 +197,99 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      */
     protected void setServiceClients(final T adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCredentialsClient(credentialsClient);
-        adapter.setDeviceConnectionClient(deviceConnectionClient);
+        adapter.setCommandRouterClient(commandRouterClient);
         adapter.setEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
         adapter.setTenantClient(tenantClient);
+    }
+
+    /**
+     * Creates a mocked context for a one-way command.
+     *
+     * @param tenantId The tenant that the command's target device belongs to.
+     * @param deviceId The target device's identifier.
+     * @param name The command name.
+     * @param contentType The type of the payload or {@code null} if the command has no payload.
+     * @param payload The command's payload.
+     * @return The mocked context.
+     */
+    protected CommandContext givenAOneWayCommandContext(
+            final String tenantId,
+            final String deviceId,
+            final String name,
+            final String contentType,
+            final Buffer payload) {
+
+        final Command command = newOneWayCommand(tenantId, deviceId, name, contentType, payload);
+
+        final CommandContext context = mock(CommandContext.class);
+        when(context.getCommand()).thenReturn(command);
+        when(context.getTracingSpan()).thenReturn(NoopSpan.INSTANCE);
+        return context;
+    }
+
+    /**
+     * Creates a mocked context for a request-response command.
+     *
+     * @param tenantId The tenant that the command's target device belongs to.
+     * @param deviceId The target device's identifier.
+     * @param name The command name.
+     * @param contentType The type of the payload or {@code null} if the command has no payload.
+     * @param payload The command's payload.
+     * @param replyToId The reply-to-id to use.
+     * @return The mocked context.
+     */
+    protected CommandContext givenARequestResponseCommandContext(
+            final String tenantId,
+            final String deviceId,
+            final String name,
+            final String replyToId,
+            final String contentType,
+            final Buffer payload) {
+
+        final Command command = newRequestResponseCommand(tenantId, deviceId, name, replyToId, contentType, payload);
+
+        final CommandContext context = mock(CommandContext.class);
+        when(context.getCommand()).thenReturn(command);
+        when(context.getTracingSpan()).thenReturn(NoopSpan.INSTANCE);
+        return context;
+    }
+
+    private Command newOneWayCommand(
+            final String tenantId,
+            final String deviceId,
+            final String name,
+            final String contentType,
+            final Buffer payload) {
+
+        final Command command = mock(Command.class);
+        when(command.getTenant()).thenReturn(tenantId);
+        when(command.getDeviceId()).thenReturn(deviceId);
+        when(command.getOriginalDeviceId()).thenReturn(deviceId);
+        when(command.getName()).thenReturn(name);
+        when(command.getContentType()).thenReturn(contentType);
+        when(command.getPayload()).thenReturn(payload);
+        when(command.getPayloadSize()).thenReturn(Optional.ofNullable(payload).map(Buffer::length).orElse(0));
+        when(command.isOneWay()).thenReturn(true);
+        when(command.isValid()).thenReturn(true);
+        return command;
+    }
+
+    private Command newRequestResponseCommand(
+            final String tenantId,
+            final String deviceId,
+            final String name,
+            final String replyToId,
+            final String contentType,
+            final Buffer payload) {
+
+        final Command command = newOneWayCommand(tenantId, deviceId, name, contentType, payload);
+        when(command.isOneWay()).thenReturn(false);
+        when(command.getRequestId()).thenReturn(Commands.getRequestId("correlation-id", replyToId, deviceId));
+        return command;
     }
 
     /**
@@ -270,8 +365,8 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * @return The sender that the factory will create.
      */
     protected CommandResponseSender givenACommandResponseSenderForAnyTenant() {
-        final Promise<ProtonDelivery> delivery = Promise.promise();
-        delivery.complete(mock(ProtonDelivery.class));
+        final Promise<Void> delivery = Promise.promise();
+        delivery.complete();
         return givenACommandResponseSenderForAnyTenant(delivery);
     }
 
@@ -285,13 +380,9 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      * @param outcome The outcome of sending a response using the returned sender.
      * @return The sender that the factory will create.
      */
-    protected CommandResponseSender givenACommandResponseSenderForAnyTenant(final Promise<ProtonDelivery> outcome) {
-        final CommandResponseSender responseSender = mock(CommandResponseSender.class);
-        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome.future());
-
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
-                .thenReturn(Future.succeededFuture(responseSender));
-        return responseSender;
+    protected CommandResponseSender givenACommandResponseSenderForAnyTenant(final Promise<Void> outcome) {
+        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome.future());
+        return commandResponseSender;
     }
 
     /**
@@ -494,5 +585,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(),
                 any(),
                 any());
+    }
+
+    /**
+     * Asserts that no command response message has been sent using the command response sender.
+     *
+     * @throws AssertionError if a message has been sent.
+     */
+    protected void assertNoCommandResponseHasBeenSentDownstream() {
+        verify(commandResponseSender, never()).sendCommandResponse(any(CommandResponse.class), any());
     }
 }

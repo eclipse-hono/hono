@@ -23,15 +23,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
@@ -664,7 +662,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         return effectiveTtd;
                     });
                 });
-        final Future<ProtocolAdapterCommandConsumer> commandConsumerTracker = ttdTracker
+        final Future<CommandConsumer> commandConsumerTracker = ttdTracker
                 .compose(ttd -> createCommandConsumer(
                         ttd,
                         tenantTracker.result(),
@@ -867,7 +865,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     private void setTtdRequestConnectionCloseHandler(
             final RoutingContext ctx,
-            final ProtocolAdapterCommandConsumer messageConsumer,
+            final CommandConsumer messageConsumer,
             final String tenantId,
             final String deviceId,
             final Span currentSpan) {
@@ -968,7 +966,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *         message consumer could not be created.
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
-    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
+    protected final Future<CommandConsumer> createCommandConsumer(
             final Integer ttdSecs,
             final TenantObject tenantObject,
             final String deviceId,
@@ -1005,8 +1003,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
+            commandContext.logCommandToSpan(waitForCommandSpan);
             final Command command = commandContext.getCommand();
-            CommandConsumer.logReceivedCommandToSpan(command, waitForCommandSpan);
             final Sample commandSample = getMetrics().startTimer();
             if (isCommandValid(command, waitForCommandSpan)) {
 
@@ -1018,7 +1016,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             // put command context to routing context and notify
                             ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                         } else {
-                            commandContext.reject(getErrorCondition(result.cause()));
+                            commandContext.reject(result.cause().getMessage());
                             TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
                             metrics.reportCommand(
                                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -1056,11 +1054,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         command.getPayloadSize(),
                         commandSample);
                 log.debug("command message is invalid: {}", command);
-                commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
+                commandContext.reject("malformed command message");
             }
         };
 
-        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
+        final Future<CommandConsumer> commandConsumerFuture;
         if (gatewayId != null) {
             // gateway scenario
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
@@ -1085,7 +1083,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
                     }
                     // wrap the consumer so that when it is closed, the waitForCommandSpan will be finished as well
-                    return new ProtocolAdapterCommandConsumer() {
+                    return new CommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext ignored) {
                             return consumer.close(waitForCommandSpan.context())
@@ -1202,7 +1200,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                 .start();
 
-        final CommandResponse cmdResponseOrNull = CommandResponse.from(commandRequestId, tenant, deviceId, payload,
+        final CommandResponse cmdResponseOrNull = CommandResponse.fromRequestId(commandRequestId, tenant, deviceId, payload,
                 contentType, responseStatus);
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context());
         final Future<CommandResponse> commandResponseTracker = cmdResponseOrNull != null
@@ -1225,7 +1223,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             .map(ok -> null);
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
-                            .compose(ok -> sendCommandResponse(tenant, commandResponseTracker.result(),
+                            .compose(ok -> sendCommandResponse(commandResponseTracker.result(),
                                     currentSpan.context()))
                             .map(delivery -> {
                                 log.trace("delivered command response [command-request-id: {}] to application",

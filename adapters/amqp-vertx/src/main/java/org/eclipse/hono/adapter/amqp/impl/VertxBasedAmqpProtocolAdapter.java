@@ -42,12 +42,13 @@ import org.eclipse.hono.adapter.amqp.AmqpAdapterSaslAuthenticatorFactory;
 import org.eclipse.hono.adapter.amqp.SaslExternalAuthHandler;
 import org.eclipse.hono.adapter.amqp.SaslPlainAuthHandler;
 import org.eclipse.hono.adapter.amqp.SaslResponseContext;
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -88,7 +89,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonQoS;
@@ -781,7 +781,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return span;
     }
 
-    private Future<ProtocolAdapterCommandConsumer> openCommandSenderLink(
+    private Future<CommandConsumer> openCommandSenderLink(
             final ProtonConnection connection,
             final ProtonSender sender,
             final ResourceIdentifier address,
@@ -820,7 +820,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private Future<Void> closeCommandConsumer(
-            final ProtocolAdapterCommandConsumer consumer,
+            final CommandConsumer consumer,
             final String tenantId,
             final String deviceId,
             final Device authenticatedDevice,
@@ -842,7 +842,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .mapEmpty();
     }
 
-    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
+    private Future<CommandConsumer> createCommandConsumer(
             final ProtonSender sender,
             final ResourceIdentifier sourceAddress,
             final Device authenticatedDevice,
@@ -872,7 +872,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
-                    commandContext.reject(getErrorCondition(failure));
+                    final ErrorCondition error = getErrorCondition(failure);
+                    commandContext.reject(error.getDescription());
                 } else {
                     TracingHelper.logError(commandContext.getTracingSpan(), failure);
                     commandContext.release();
@@ -889,8 +890,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         };
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
-            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, null, span.context());
+            return getCommandConsumerFactory().createCommandConsumer(
+                    sourceAddress.getTenantId(),
+                    sourceAddress.getResourceId(),
+                    authenticatedDevice.getDeviceId(),
+                    commandHandler,
+                    null,
+                    span.context());
         } else {
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(), commandHandler, null, span.context());
@@ -909,7 +915,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param commandContext The context in which the adapter receives the command message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected void onCommandReceived(final TenantObject tenantObject, final ProtonSender sender,
+    protected void onCommandReceived(
+            final TenantObject tenantObject,
+            final ProtonSender sender,
             final CommandContext commandContext) {
 
         Objects.requireNonNull(tenantObject);
@@ -917,14 +925,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         Objects.requireNonNull(commandContext);
 
         final Command command = commandContext.getCommand();
-        final Message msg = command.getCommandMessage();
-        if (msg.getCorrelationId() == null) {
-            // fall back to message ID
-            msg.setCorrelationId(msg.getMessageId());
-        }
-        if (command.isTargetedAtGateway()) {
-            MessageHelper.addDeviceId(msg, command.getOriginalDeviceId());
-        }
 
         final AtomicBoolean isCommandSettled = new AtomicBoolean(false);
 
@@ -936,6 +936,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             commandContext.release();
             reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
         } else {
+
+            final Message msg = ProtonHelper.message();
+            msg.setCorrelationId(command.getCorrelationId());
+            msg.setSubject(command.getName());
+            MessageHelper.setPayload(msg, command.getContentType(), command.getPayload());
+
+            if (command.isTargetedAtGateway()) {
+                MessageHelper.addDeviceId(msg, command.getOriginalDeviceId());
+            }
+            if (!command.isOneWay()) {
+                msg.setReplyTo(String.format("%s/%s/%s",
+                        CommandConstants.COMMAND_RESPONSE_ENDPOINT,
+                        command.getTenant(),
+                        Commands.getDeviceFacingReplyToId(command.getReplyToId(), command.getOriginalDeviceId())));
+            }
+
             final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
                     : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
                 log.debug("waiting for delivery update timed out after {}ms [{}]",
@@ -966,16 +982,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     final DeliveryState remoteState = delivery.getRemoteState();
                     ProcessingOutcome outcome = null;
                     if (delivery.remotelySettled()) {
-                        commandContext.disposition(remoteState);
                         if (Accepted.class.isInstance(remoteState)) {
                             outcome = ProcessingOutcome.FORWARDED;
+                            commandContext.accept();
                         } else if (Rejected.class.isInstance(remoteState)) {
                             outcome = ProcessingOutcome.UNPROCESSABLE;
+                            final String cause = Optional.ofNullable(((Rejected) remoteState).getError())
+                                    .map(ErrorCondition::getDescription)
+                                    .orElse(null);
+                            commandContext.reject(cause);
                         } else if (Released.class.isInstance(remoteState)) {
                             outcome = ProcessingOutcome.UNDELIVERABLE;
+                            commandContext.release();
                         } else if (Modified.class.isInstance(remoteState)) {
                             final Modified modified = (Modified) remoteState;
                             outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
+                            commandContext.modify(modified.getDeliveryFailed(), modified.getUndeliverableHere());
                         }
                     } else {
                         log.debug("device did not settle command message [remote state: {}, {}]", remoteState, command);
@@ -1001,8 +1023,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
-    private void reportSentCommand(final TenantObject tenantObject, final CommandContext commandContext,
+    private void reportSentCommand(
+            final TenantObject tenantObject,
+            final CommandContext commandContext,
             final ProcessingOutcome outcome) {
+
         metrics.reportCommand(
                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                 commandContext.getCommand().getTenant(),
@@ -1142,13 +1167,23 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 });
     }
 
-    private Future<ProtonDelivery> doUploadCommandResponseMessage(
+    private CommandResponse getCommandResponse(final Message message) {
+
+        return CommandResponse.fromCorrelationId(
+                message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null,
+                message.getAddress(),
+                MessageHelper.getPayload(message),
+                message.getContentType(),
+                MessageHelper.getStatus(message));
+    }
+
+    private Future<Void> doUploadCommandResponseMessage(
             final AmqpContext context,
             final ResourceIdentifier resource,
             final Span currentSpan) {
 
-        final Future<CommandResponse> responseTracker = Optional.ofNullable(CommandResponse.from(context.getMessage()))
-                .map(r -> Future.succeededFuture(r))
+        final Future<CommandResponse> responseTracker = Optional.ofNullable(getCommandResponse(context.getMessage()))
+                .map(Future::succeededFuture)
                 .orElseGet(() -> {
                     TracingHelper.logError(currentSpan,
                             String.format("invalid message (correlationId: %s, address: %s, status: %s)",
@@ -1185,8 +1220,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             .map(success -> tenantTracker.result());
 
                     return CompositeFuture.all(tenantValidationTracker, tokenFuture)
-                            .compose(success -> sendCommandResponse(resource.getTenantId(), commandResponse,
-                                    currentSpan.context()));
+                            .compose(success -> sendCommandResponse(commandResponse, currentSpan.context()));
                 }).map(delivery -> {
 
                     log.trace("forwarded command response from device [tenant: {}, device-id: {}]",

@@ -33,8 +33,6 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.qpid.proton.amqp.messaging.Released;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP.Code;
@@ -48,13 +46,13 @@ import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -85,7 +83,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedCoapAdapter}.
@@ -98,7 +95,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private ProtocolAdapterCommandConsumer commandConsumer;
+    private CommandConsumer commandConsumer;
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
     private Span span;
@@ -123,7 +120,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         createClientFactories();
         prepareClients();
 
-        commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
@@ -604,12 +601,12 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
-     * Verifies that the adapter will release an incoming command delivery if the delivery of the preceding telemetry
-     * message hasn't been accepted.
+     * Verifies that the adapter releases an incoming command if the forwarding of the preceding telemetry
+     * message did not succeed.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testUploadTelemetryWithFailedDeliveryReleasesCommand() {
+    public void testUploadTelemetryReleasesCommandForFailedDownstreamSender() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
         givenAnAdapter(properties);
@@ -617,16 +614,13 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
-        final Message commandMessage = newMockedCommandMessage("tenant", "device", "doThis");
-        final Command pendingCommand = Command.from(commandMessage, "tenant", "device");
-        final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
-        final CommandContext commandContext = CommandContext.from(pendingCommand, commandDelivery, mock(Span.class));
+        final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
         when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any(), any()))
-        .thenAnswer(invocation -> {
-            final Handler<CommandContext> consumer = invocation.getArgument(2);
-            consumer.handle(commandContext);
-            return Future.succeededFuture(commandConsumer);
-        });
+            .thenAnswer(invocation -> {
+                final Handler<CommandContext> consumer = invocation.getArgument(2);
+                consumer.handle(commandContext);
+                return Future.succeededFuture(commandConsumer);
+            });
 
         // WHEN a device publishes a telemetry message with a hono-ttd parameter
         final Buffer payload = Buffer.buffer("some payload");
@@ -663,23 +657,23 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 eq(TtdStatus.COMMAND),
                 any());
         // and the command delivery is released
-        verify(commandDelivery).disposition(eq(Released.getInstance()), eq(true));
+        verify(commandContext).release();
     }
 
     /**
-     * Verifies that the adapter waits for a command response being settled and accepted
-     * by a downstream peer before responding with a 2.04 status to the device.
+     * Verifies that the adapter waits for a command response being successfully sent
+     * downstream before responding with a 2.04 status to the device.
      */
     @Test
     public void testUploadCommandResponseWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream application attached
         givenAnAdapter(properties);
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an command response
-        final String reqId = Command.getRequestId("correlation", "replyToId", "device");
+        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
         options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
@@ -705,7 +699,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 any());
 
         // until the message has been accepted
-        outcome.complete(mock(ProtonDelivery.class));
+        outcome.complete();
 
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
         verify(metrics).reportCommand(
@@ -725,12 +719,12 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     public void testUploadCommandResponseFailsForRejectedOutcome() {
 
         // GIVEN an adapter with a downstream application attached
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
 
         // WHEN a device publishes an command response
-        final String reqId = Command.getRequestId("correlation", "replyToId", "device");
+        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
         options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
@@ -769,12 +763,12 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         to.addAdapter(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
 
-        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final Promise<Void> outcome = Promise.promise();
         final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
         givenAnAdapter(properties);
 
         // WHEN a device publishes an command response
-        final String reqId = Command.getRequestId("correlation", "replyToId", "device");
+        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
         options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
@@ -916,17 +910,6 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         return server;
     }
 
-    private static Message newMockedCommandMessage(final String tenantId, final String deviceId, final String name) {
-        final Message msg = mock(Message.class);
-        when(msg.getAddress()).thenReturn(String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
-        when(msg.getSubject()).thenReturn(name);
-        when(msg.getCorrelationId()).thenReturn("the-correlation-id");
-        when(msg.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
-                tenantId, deviceId, "the-reply-to-id"));
-        return msg;
-    }
-
     /**
      * Creates a new adapter instance to be tested.
      * <p>
@@ -993,7 +976,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
             adapter.setCredentialsClient(credentialsClient);
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setDeviceConnectionClient(deviceConnectionClient);
+        adapter.setCommandResponseSender(commandResponseSender);
+        adapter.setCommandRouterClient(commandRouterClient);
         adapter.init(vertx, mock(Context.class));
 
         return adapter;

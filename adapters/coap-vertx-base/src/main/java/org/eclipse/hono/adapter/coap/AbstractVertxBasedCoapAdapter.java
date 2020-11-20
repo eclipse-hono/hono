@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
@@ -47,13 +46,12 @@ import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
@@ -719,7 +717,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                     return effectiveTtd;
                                 });
                     });
-            final Future<ProtocolAdapterCommandConsumer> commandConsumerTracker = ttdTracker
+            final Future<CommandConsumer> commandConsumerTracker = ttdTracker
                     .compose(ttd -> createCommandConsumer(
                             ttd,
                             tenantTracker.result(),
@@ -901,7 +899,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      *         created.
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
-    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
+    protected final Future<CommandConsumer> createCommandConsumer(
             final Integer ttdSecs,
             final TenantObject tenantObject,
             final String deviceId,
@@ -938,8 +936,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
+            commandContext.logCommandToSpan(waitForCommandSpan);
             final Command command = commandContext.getCommand();
-            CommandConsumer.logReceivedCommandToSpan(command, waitForCommandSpan);
             final Sample commandSample = getMetrics().startTimer();
             if (isCommandValid(command, waitForCommandSpan)) {
 
@@ -951,7 +949,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                     // put command context to routing context and notify
                                     context.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 } else {
-                                    commandContext.reject(getErrorCondition(result.cause()));
+                                    commandContext.reject(result.cause().getMessage());
                                     TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
                                     metrics.reportCommand(
                                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -989,11 +987,11 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         command.getPayloadSize(),
                         commandSample);
                 log.debug("command message is invalid: {}", command);
-                commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
+                commandContext.reject("malformed command message");
             }
         };
 
-        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
+        final Future<CommandConsumer> commandConsumerFuture;
         if (gatewayId != null) {
             // gateway scenario
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
@@ -1019,7 +1017,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         context.startAcceptTimer(vertx, tenantObject, getConfig().getTimeoutToAck());
                     }
                     // wrap the consumer so that when it is closed, the waitForCommandSpan will be finished as well
-                    return new ProtocolAdapterCommandConsumer() {
+                    return new CommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext ignored) {
                             return consumer.close(waitForCommandSpan.context())
@@ -1141,7 +1139,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 .start();
 
         final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(), currentSpan.context());
-        final Optional<CommandResponse> cmdResponse = Optional.ofNullable(CommandResponse.from(
+        final Optional<CommandResponse> cmdResponse = Optional.ofNullable(CommandResponse.fromRequestId(
                 commandRequestId,
                 device.getTenantId(),
                 device.getDeviceId(),
@@ -1169,7 +1167,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker);
                 })
-                .compose(ok -> sendCommandResponse(device.getTenantId(), commandResponseTracker.result(), currentSpan.context()))
+                .compose(ok -> sendCommandResponse(commandResponseTracker.result(), currentSpan.context()))
                 .map(delivery -> {
                     log.trace("delivered command response [command-request-id: {}] to application",
                             commandRequestId);
