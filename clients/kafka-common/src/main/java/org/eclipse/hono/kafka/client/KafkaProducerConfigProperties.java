@@ -25,10 +25,10 @@ import org.slf4j.LoggerFactory;
  * Configuration properties for Kafka producers.
  * <p>
  * This class is intended to be as agnostic to the provided properties as possible in order to be forward-compatible
- * with changes in new versions of the Kafka client. It only sets a couple of properties which are important for Hono to
+ * with changes in new versions of the Kafka client. It only sets a couple of properties that are important for Hono to
  * provide the expected quality of service.
  *
- * @see <a href="https://kafka.apache.org/documentation/#producerconfigs">Kafka Producer Config</a>
+ * @see <a href="https://kafka.apache.org/documentation/#producerconfigs">Kafka Producer Configs</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/kafka">Documentation of Hono's Kafka-based APIs</a>
  */
 // TODO check link to Hono documentation after the API specs are on master
@@ -37,7 +37,7 @@ public class KafkaProducerConfigProperties {
     private final Logger log = LoggerFactory.getLogger(KafkaProducerConfigProperties.class);
 
     private Map<String, String> producerConfig;
-    private String clientId = null;
+    private String clientId;
 
     /**
      * Sets the Kafka producer config properties to be used.
@@ -50,93 +50,52 @@ public class KafkaProducerConfigProperties {
     }
 
     /**
-     * Gets the client ID that is passed to the Kafka server to allow application specific server-side request logging.
-     * <p>
-     * If the config set in {@link #setProducerConfig(Map)} already contains a value for key {@code client.id}, that
-     * will be used instead of this property here.
-     *
-     * @return The client ID or {@code null} if no client ID has been set.
-     */
-    public final String getClientId() {
-        return clientId;
-    }
-
-    /**
      * Sets the client ID that is passed to the Kafka server to allow application specific server-side request logging.
      * <p>
-     * If the config set in {@link #setProducerConfig(Map)} already contains a value for key {@code client.id}, that
+     * If the config set in {@link #setProducerConfig(Map)} already contains a value for key {@code client.id}, that one
      * will be used and the parameter here will be ignored.
      *
      * @param clientId The client ID to set.
+     * @throws NullPointerException if the client ID is {@code null}.
      */
     public final void setClientId(final String clientId) {
-        this.clientId = clientId;
+        this.clientId = Objects.requireNonNull(clientId);
     }
 
     /**
-     * Returns the Kafka producer configuration with additional properties applied to enable idempotence, by setting
-     * {@code enable.idempotence=true}. This ensures that message order is maintained while enabling retries and
-     * "EXACTLY ONCE delivery semantics. It allows <code>max.in.flight.requests.per.connection</code> to be
-     * <code>5</code> (and provides therefore a better performance than "AT LEAST ONCE" delivery semantics provided by
-     * setting <code>acks=all</code> and <code>max.in.flight.requests.per.connection=1</code>).
-     *
-     * @return a copy of the producer configuration with the properties applied or {@code null} if no producer config
-     *         has been set with{@link #setProducerConfig(Map)}.
-     * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation - section
-     *      "Producer Configs"</a>
-     */
-    public Map<String, String> getAtLeastOnceConfig() {
-
-        if (producerConfig == null) {
-            return null;
-        }
-
-        final Map<String, String> standardConfig = getStandardConfiguration();
-
-        overrideProducerConfigProperty(standardConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
-
-        return standardConfig;
-    }
-
-    /**
-     * Returns the Kafka producer configuration with additional properties applied to enable "AT MOST ONCE" delivery
-     * semantics with guaranteed message order.
-     * <p>
-     * The result contains the following properties:
+     * Gets the Kafka producer configuration to which additional properties were applied. The following properties are
+     * set here to the given configuration:
      * <ul>
-     * <li><code>acks=0</code> - enables "fire-and-forget" semantics: the producer will not wait for any
-     * acknowledgments</li>
-     * <li><code>retries=0</code> - the producer will not retry failed sends (which the client won't notice anyway
-     * without receiving acknowledgements)</li>
+     * <li>{@code enable.idempotence=true}: enables idempotent producer behavior</li>
+     * <li>{@code key.serializer=org.apache.kafka.common.serialization.StringSerializer}: defines how message keys are
+     * serialized</li>
+     * <li>{@code value.serializer=io.vertx.kafka.client.serialization.BufferSerializer}: defines how message values are
+     * serialized</li>
+     *
+     * <li>{@code client.id} if the property is not already present in the configuration and a value has been set with
+     * {@link #setClientId(String)}, this value will be taken</li>
      * </ul>
      *
-     * @return a copy of the producer configuration with the properties applied or {@code null} if no producer config
-     *         has been set with{@link #setProducerConfig(Map)}.
-     * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation - section
-     *      "Producer Configs"</a>
+     * @return a copy of the producer configuration with the applied properties or {@code null} if no producer
+     *         configuration was set with {@link #setProducerConfig(Map)}.
+     * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation -
+     *      "Producer Configs" - enable.idempotence</a>
      */
-    public Map<String, String> getAtMostOnceConfig() {
+    public Map<String, String> getProducerConfig() {
 
         if (producerConfig == null) {
             return null;
         }
-
-        final Map<String, String> standardConfig = getStandardConfiguration();
-
-        overrideProducerConfigProperty(standardConfig, ProducerConfig.ACKS_CONFIG, "0");
-        overrideProducerConfigProperty(standardConfig, ProducerConfig.RETRIES_CONFIG, "0");
-
-        return standardConfig;
-    }
-
-    private Map<String, String> getStandardConfiguration() {
 
         final HashMap<String, String> newConfig = new HashMap<>(producerConfig);
 
         overrideProducerConfigProperty(newConfig, ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.StringSerializer");
+
         overrideProducerConfigProperty(newConfig, ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.vertx.kafka.client.serialization.BufferSerializer");
+
+        overrideProducerConfigProperty(newConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
 
         if (clientId != null) {
             newConfig.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, clientId);
@@ -156,4 +115,5 @@ public class KafkaProducerConfigProperties {
         }
 
     }
+
 }

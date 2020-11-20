@@ -48,7 +48,7 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
 
         super(producerFactory,
                 TelemetryConstants.TELEMETRY_ENDPOINT,
-                Objects.requireNonNull(kafkaProducerConfig).getAtLeastOnceConfig(),
+                Objects.requireNonNull(kafkaProducerConfig).getProducerConfig(),
                 tracer);
     }
 

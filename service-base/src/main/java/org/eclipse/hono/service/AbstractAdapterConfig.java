@@ -142,7 +142,7 @@ public abstract class AbstractAdapterConfig {
         }
 
         final KafkaProducerConfigProperties kafkaProducerConfig = kafkaProducerConfig();
-        if (kafkaProducerConfig.getAtLeastOnceConfig() == null) {
+        if (kafkaProducerConfig.getProducerConfig() == null) {
             // look up via bean factory is not possible because EventSender and TelemetrySender are implemented by
             // ProtonBasedDownstreamSender
             adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
