@@ -21,9 +21,9 @@ import java.util.Map;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
-import org.eclipse.hono.config.KafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
+import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;

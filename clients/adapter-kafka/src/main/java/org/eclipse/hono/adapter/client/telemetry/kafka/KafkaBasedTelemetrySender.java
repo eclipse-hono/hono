@@ -17,9 +17,9 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.config.KafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
+import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryConstants;

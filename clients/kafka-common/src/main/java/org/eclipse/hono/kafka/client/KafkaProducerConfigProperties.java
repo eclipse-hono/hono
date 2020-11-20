@@ -11,12 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.config;
+package org.eclipse.hono.kafka.client;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,7 @@ public class KafkaProducerConfigProperties {
 
         final Map<String, String> standardConfig = getStandardConfiguration();
 
-        overrideProducerConfigProperty(standardConfig, "enable.idempotence", "true");
+        overrideProducerConfigProperty(standardConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
 
         return standardConfig;
     }
@@ -122,8 +123,8 @@ public class KafkaProducerConfigProperties {
 
         final Map<String, String> standardConfig = getStandardConfiguration();
 
-        overrideProducerConfigProperty(standardConfig, "acks", "0");
-        overrideProducerConfigProperty(standardConfig, "retries", "0");
+        overrideProducerConfigProperty(standardConfig, ProducerConfig.ACKS_CONFIG, "0");
+        overrideProducerConfigProperty(standardConfig, ProducerConfig.RETRIES_CONFIG, "0");
 
         return standardConfig;
     }
@@ -132,13 +133,13 @@ public class KafkaProducerConfigProperties {
 
         final HashMap<String, String> newConfig = new HashMap<>(producerConfig);
 
-        overrideProducerConfigProperty(newConfig, "key.serializer",
+        overrideProducerConfigProperty(newConfig, ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.StringSerializer");
-        overrideProducerConfigProperty(newConfig, "value.serializer",
+        overrideProducerConfigProperty(newConfig, ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.vertx.kafka.client.serialization.BufferSerializer");
 
         if (clientId != null) {
-            newConfig.putIfAbsent("client.id", clientId);
+            newConfig.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, clientId);
         }
 
         return newConfig;
