@@ -55,13 +55,9 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
 
     @Override
     protected Span startSpan(final SpanContext parent, final Message message) {
-        if (connection.getTracer() == null) {
-            throw new IllegalStateException("no tracer configured");
-        } else {
-            final Span span = newFollowingSpan(parent, "sending async command");
-            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
-            return span;
-        }
+        final Span span = newFollowingSpan(parent, "sending async command");
+        Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
+        return span;
     }
 
     @Override

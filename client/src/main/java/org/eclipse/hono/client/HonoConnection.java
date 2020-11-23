@@ -83,6 +83,25 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
     }
 
     /**
+     * Creates a new connection using the default implementation.
+     * <p>
+     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable.
+     * They must therefore not be modified after calling this method.
+     *
+     * @param vertx The vert.x instance to use.
+     * @param clientConfigProperties The client properties to use.
+     * @param tracer The OpenTracing tracer.
+     * @return The newly created connection. Note that the underlying AMQP connection will not be established
+     *         until one of its <em>connect</em> methods is invoked.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    static HonoConnection newConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties, final Tracer tracer) {
+        final HonoConnectionImpl connection = new HonoConnectionImpl(vertx, clientConfigProperties);
+        connection.setTracer(tracer);
+        return connection;
+    }
+
+    /**
      * Gets the vert.x instance used by this connection.
      * <p>
      * The returned instance may be used to e.g. schedule timers.
