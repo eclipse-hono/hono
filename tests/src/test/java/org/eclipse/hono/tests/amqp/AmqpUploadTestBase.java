@@ -81,8 +81,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertAdditionalMessageProperties(ctx, msg);
     }
 
-    private void assertQosLevel(final VertxTestContext ctx, final Message msg, final ProtonQoS expectedQos) {
-        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
+    private void assertQosLevel(final VertxTestContext ctx, final Message msg) {
+        // AMQP adapter only supports opening links with sender-settle-mode unsettled.
+        // Thus all messages will be sent as AT_LEAST_ONCE.
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(ProtonQoS.AT_LEAST_ONCE.ordinal()));
     }
 
     /**
@@ -345,7 +347,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                             msg.getContentType(), MessageHelper.getPayloadAsString(msg));
                 }
                 assertMessageProperties(messageSending, msg);
-                assertQosLevel(messageSending, msg, senderQoS);
+                assertQosLevel(messageSending, msg);
                 callback.handle(null);
             }).map(c -> {
                 consumer = c;
@@ -360,7 +362,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             msg.setAddress(getEndpointName());
             final Promise<?> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
-                replenishedSender.setQoS(senderQoS);
                 replenishedSender.sendQueueDrainHandler(null);
                 switch (senderQoS) {
                 case AT_LEAST_ONCE:
