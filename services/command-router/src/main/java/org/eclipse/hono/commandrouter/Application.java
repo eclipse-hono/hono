@@ -15,7 +15,6 @@ package org.eclipse.hono.commandrouter;
 
 import java.util.Objects;
 
-import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.infinispan.EmbeddedCacheConfig;
 import org.eclipse.hono.commandrouter.infinispan.RemoteCacheConfig;
 import org.eclipse.hono.service.AbstractApplication;
@@ -28,7 +27,6 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
@@ -45,20 +43,7 @@ import io.vertx.core.Verticle;
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 
-    private CommandRouterServiceImpl serviceImplementation;
     private AuthenticationService authService;
-
-    /**
-     * Sets the Command Router service implementation.
-     *
-     * @param service The service implementation.
-     * @throws NullPointerException if service is {@code null}.
-     */
-    @Autowired
-    public void setServiceImplementation(final CommandRouterServiceImpl service) {
-        this.serviceImplementation = Objects.requireNonNull(service);
-        log.info("using service implementation [{}]", service.getClass().getName());
-    }
 
     /**
      * Sets the service to use for authenticating clients.
@@ -82,7 +67,7 @@ public class Application extends AbstractApplication {
     @Override
     protected Future<?> deployRequiredVerticles(final int maxInstances) {
 
-        return CompositeFuture.all(deployVerticle(serviceImplementation), deployVerticle(authService));
+        return deployVerticle(authService);
     }
 
     private Future<String> deployVerticle(final Object component) {

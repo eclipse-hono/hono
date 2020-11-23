@@ -31,7 +31,6 @@ import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -48,7 +47,6 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -57,8 +55,7 @@ import io.vertx.ext.healthchecks.Status;
 /**
  * An implementation of Hono's <em>Command Router</em> API.
  */
-public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<CommandRouterServiceConfigProperties>
-        implements CommandRouterService, HealthCheckProvider {
+public class CommandRouterServiceImpl implements CommandRouterService, HealthCheckProvider, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandRouterServiceImpl.class);
 
@@ -67,11 +64,16 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
     private CommandConsumerFactory commandConsumerFactory;
     private CommandTargetMapper commandTargetMapper;
     private Tracer tracer = NoopTracerFactory.create();
+    /**
+     * Vert.x context that this service has been started in.
+     */
+    private Context context;
+
+    private CommandRouterServiceConfigProperties config;
 
     @Autowired
-    @Override
     public void setConfig(final CommandRouterServiceConfigProperties configuration) {
-        setSpecificConfig(configuration);
+        this.config = configuration;
     }
 
     /**
@@ -136,62 +138,64 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
     }
 
     @Override
-    public void start(final Promise<Void> startPromise) throws Exception {
-
-        if (registrationClient == null) {
-            startPromise.fail(new IllegalStateException("Device Registration client must be set"));
-        } else if (deviceConnectionInfo == null) {
-            startPromise.fail(new IllegalStateException("Device Connection info client must be set"));
-        } else {
-            startServiceClient(registrationClient, "Device Registration service");
-            if (deviceConnectionInfo instanceof Lifecycle) {
-                startServiceClient((Lifecycle) deviceConnectionInfo, "Device Connection info");
-            }
-            startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
-
-            // initialize components dependent on the above clientFactories
-            commandTargetMapper.initialize(new CommandTargetMapper.CommandTargetMapperContext() {
-
-                @Override
-                public Future<List<String>> getViaGateways(
-                        final String tenant,
-                        final String deviceId,
-                        final SpanContext context) {
-
-                    Objects.requireNonNull(tenant);
-                    Objects.requireNonNull(deviceId);
-
-                    return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                            .map(RegistrationAssertion::getAuthorizedGateways);
-                }
-
-                @Override
-                public Future<JsonObject> getCommandHandlingAdapterInstances(
-                        final String tenant,
-                        final String deviceId,
-                        final List<String> viaGateways,
-                        final SpanContext context) {
-
-                    Objects.requireNonNull(tenant);
-                    Objects.requireNonNull(deviceId);
-                    Objects.requireNonNull(viaGateways);
-
-                    final Span span = TracingHelper.buildChildSpan(tracer, context, "getCommandHandlingAdapterInstances",
-                                    getClass().getSimpleName())
-                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                            .start();
-                    return deviceConnectionInfo
-                            .getCommandHandlingAdapterInstances(tenant, deviceId, new HashSet<>(viaGateways), span);
-                }
-            });
-            commandConsumerFactory.initialize(commandTargetMapper);
-
-            startPromise.complete();
+    public Future<Void> start() {
+        context = Vertx.currentContext();
+        if (context == null) {
+            return Future.failedFuture(new IllegalStateException("Service must be started in a Vert.x context"));
         }
+        if (registrationClient == null) {
+            return Future.failedFuture(new IllegalStateException("Device Registration client must be set"));
+        } else if (deviceConnectionInfo == null) {
+            return Future.failedFuture(new IllegalStateException("Device Connection info client must be set"));
+        }
+
+        startServiceClient(registrationClient, "Device Registration service");
+        if (deviceConnectionInfo instanceof Lifecycle) {
+            startServiceClient((Lifecycle) deviceConnectionInfo, "Device Connection info");
+        }
+        startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
+
+        // initialize components dependent on the above clientFactories
+        commandTargetMapper.initialize(new CommandTargetMapper.CommandTargetMapperContext() {
+
+            @Override
+            public Future<List<String>> getViaGateways(
+                    final String tenant,
+                    final String deviceId,
+                    final SpanContext context) {
+
+                Objects.requireNonNull(tenant);
+                Objects.requireNonNull(deviceId);
+
+                return registrationClient.assertRegistration(tenant, deviceId, null, context)
+                        .map(RegistrationAssertion::getAuthorizedGateways);
+            }
+
+            @Override
+            public Future<JsonObject> getCommandHandlingAdapterInstances(
+                    final String tenant,
+                    final String deviceId,
+                    final List<String> viaGateways,
+                    final SpanContext context) {
+
+                Objects.requireNonNull(tenant);
+                Objects.requireNonNull(deviceId);
+                Objects.requireNonNull(viaGateways);
+
+                final Span span = TracingHelper.buildChildSpan(tracer, context, "getCommandHandlingAdapterInstances",
+                        getClass().getSimpleName())
+                        .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                        .start();
+                return deviceConnectionInfo
+                        .getCommandHandlingAdapterInstances(tenant, deviceId, new HashSet<>(viaGateways), span);
+            }
+        });
+        commandConsumerFactory.initialize(commandTargetMapper);
+        return Future.succeededFuture();
     }
 
     @Override
-    public void stop(final Promise<Void> stopPromise) throws Exception {
+    public Future<Void> stop() {
         LOG.info("stopping command router");
 
         @SuppressWarnings("rawtypes")
@@ -202,7 +206,7 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
         }
         results.add(stopServiceClient(commandConsumerFactory));
 
-        CompositeFuture.all(results)
+        return CompositeFuture.all(results)
                 .recover(t -> {
                     LOG.info("error while stopping command router", t);
                     return Future.failedFuture(t);
@@ -210,8 +214,7 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
                 .map(ok -> {
                     LOG.info("successfully stopped command router");
                     return (Void) null;
-                })
-                .onComplete(stopPromise);
+                });
     }
 
     /**
@@ -327,9 +330,9 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
     }
 
     /**
-     * Registers a health check which tries to run an action on the protocol adapter context.
+     * Registers a health check which tries to run an action on the context that this service was started in.
      * <p>
-     * If the protocol adapter vert.x event loop is blocked, the health check procedure will not complete
+     * If the vert.x event loop of that context is blocked, the health check procedure will not complete
      * with OK status within the defined timeout.
      *
      * @param handler The health check handler to register the checks with.
@@ -338,7 +341,7 @@ public class CommandRouterServiceImpl extends ConfigurationSupportingVerticle<Co
 
         handler.register(
                 "event-loop-blocked-check",
-                getConfig().getEventLoopBlockedCheckTimeout(),
+                config.getEventLoopBlockedCheckTimeout(),
                 procedure -> {
                     final Context currentContext = Vertx.currentContext();
 

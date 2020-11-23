@@ -33,6 +33,7 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -63,6 +64,7 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
  * Spring Boot configuration for the Command Router service.
@@ -172,13 +174,28 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Command Router</em> API.
      *
-     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    public AmqpEndpoint commandRouterAmqpEndpoint(final CommandRouterService service) {
-        return new DelegatingCommandRouterAmqpEndpoint<>(vertx(), service);
+    public AmqpEndpoint commandRouterAmqpEndpoint() {
+        final CommandRouterService commandRouterService = commandRouterService();
+        return new DelegatingCommandRouterAmqpEndpoint<>(vertx(), commandRouterService) {
+
+            @Override
+            public void registerLivenessChecks(final HealthCheckHandler handler) {
+                if (commandRouterService instanceof HealthCheckProvider) {
+                    ((HealthCheckProvider) commandRouterService).registerLivenessChecks(handler);
+                }
+            }
+
+            @Override
+            public void registerReadinessChecks(final HealthCheckHandler handler) {
+                if (commandRouterService instanceof HealthCheckProvider) {
+                    ((HealthCheckProvider) commandRouterService).registerReadinessChecks(handler);
+                }
+            }
+        };
     }
 
     /**
@@ -198,7 +215,8 @@ public class ApplicationConfig {
      * @return The service implementation.
      */
     @Bean
-    public CommandRouterServiceImpl commandRouterService() {
+    @Scope("prototype")
+    public CommandRouterService commandRouterService() {
         return new CommandRouterServiceImpl();
     }
 
