@@ -2,6 +2,13 @@
 title = "Release Notes"
 +++
 
+## 1.3.2
+
+### Fixes & Enhancements
+
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+or set to AT_MOST_ONCE. This has been fixed.
+  
 ## 1.3.1
 
 ### Fixes & Enhancements
