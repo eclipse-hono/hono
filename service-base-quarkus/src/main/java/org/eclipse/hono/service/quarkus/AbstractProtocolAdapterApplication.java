@@ -166,7 +166,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected TenantClient tenantClient() {
         return new ProtonBasedTenantClient(
-                HonoConnection.newConnection(vertx, config.tenant),
+                HonoConnection.newConnection(vertx, config.tenant, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 newCaffeineCache(config.tenant));
@@ -179,7 +179,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected DeviceRegistrationClient registrationClient() {
         return new ProtonBasedDeviceRegistrationClient(
-                HonoConnection.newConnection(vertx, config.registration),
+                HonoConnection.newConnection(vertx, config.registration, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 newCaffeineCache(config.registration));
@@ -192,7 +192,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CredentialsClient credentialsClient() {
         return new ProtonBasedCredentialsClient(
-                HonoConnection.newConnection(vertx, config.credentials),
+                HonoConnection.newConnection(vertx, config.credentials, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 newCaffeineCache(config.credentials));
@@ -205,7 +205,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CommandRouterClient commandRouterClient() {
         return new ProtonBasedCommandRouterClient(
-                HonoConnection.newConnection(vertx, config.commandRouter),
+                HonoConnection.newConnection(vertx, config.commandRouter, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
     }
@@ -217,7 +217,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected DeviceConnectionClient deviceConnectionClient() {
         return new ProtonBasedDeviceConnectionClient(
-                HonoConnection.newConnection(vertx, config.deviceConnection),
+                HonoConnection.newConnection(vertx, config.deviceConnection, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
     }
@@ -229,7 +229,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected ProtonBasedDownstreamSender downstreamSender() {
         return new ProtonBasedDownstreamSender(
-                HonoConnection.newConnection(vertx, config.messaging),
+                HonoConnection.newConnection(vertx, config.messaging, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
     }
@@ -240,7 +240,7 @@ public abstract class AbstractProtocolAdapterApplication {
      * @return The connection.
      */
     protected HonoConnection commandConsumerConnection() {
-        return HonoConnection.newConnection(vertx, config.command);
+        return HonoConnection.newConnection(vertx, config.command, tracer);
     }
 
     /**
@@ -298,7 +298,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CommandResponseSender commandResponseSender() {
         return new ProtonBasedCommandResponseSender(
-                HonoConnection.newConnection(vertx, config.command),
+                HonoConnection.newConnection(vertx, config.command, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
     }

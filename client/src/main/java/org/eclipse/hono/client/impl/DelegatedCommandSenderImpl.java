@@ -261,12 +261,8 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
     @Override
     protected Span startSpan(final SpanContext parent, final Message rawMessage) {
 
-        if (connection.getTracer() == null) {
-            throw new IllegalStateException("no tracer configured");
-        } else {
-            final Span span = newChildSpan(parent, "delegate Command request");
-            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_CLIENT);
-            return span;
-        }
+        final Span span = newChildSpan(parent, "delegate Command request");
+        Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_CLIENT);
+        return span;
     }
 }
