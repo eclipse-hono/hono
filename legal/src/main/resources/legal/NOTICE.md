@@ -22,6 +22,7 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 * Copyright 2019 Thiyagarajan B
 * Copyright 2019 Microsoft Corporation
 * Copyright 2020 pragmatic industries GmbH
+* Copyright 2020 Lari Hotari
 
 # Third-party Content
 
