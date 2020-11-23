@@ -236,7 +236,7 @@ public class ApplicationConfig {
     @Bean
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER + " & " + Profiles.PROFILE_TENANT_SERVICE)
     public AdapterStore tenantAdapterStore() throws IOException {
-        return Stores.adapterStore(vertx(), tracer(), tenantsProperties().getManagement());
+        return Stores.adapterStore(vertx(), tracer(), tenantsProperties().getAdapter());
     }
 
     /**
