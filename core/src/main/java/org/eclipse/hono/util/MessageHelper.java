@@ -296,6 +296,17 @@ public final class MessageHelper {
     }
 
     /**
+     * Gets the value of a message's {@link #APP_PROPERTY_QOS} application property.
+     *
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    public static int getQoS(final Message msg) {
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_QOS, Integer.class);
+    }
+
+    /**
      * Gets the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
      * The assertion is expected to be contained in the messages's <em>application-properties</em> under key

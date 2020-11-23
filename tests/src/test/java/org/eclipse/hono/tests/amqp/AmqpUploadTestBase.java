@@ -82,6 +82,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertAdditionalMessageProperties(ctx, msg);
     }
 
+    private void assertQosLevel(final VertxTestContext ctx, final Message msg, final ProtonQoS expectedQos) {
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
+    }
+
     /**
      * Perform additional checks on a received message.
      * <p>
@@ -355,6 +359,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                             msg.getContentType(), MessageHelper.getPayloadAsString(msg));
                 }
                 assertMessageProperties(messageSending, msg);
+                assertQosLevel(messageSending, msg, senderQoS);
                 callback.handle(null);
             }).map(c -> {
                 return null;
