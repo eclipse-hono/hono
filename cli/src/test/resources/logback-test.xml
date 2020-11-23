@@ -33,4 +33,6 @@
     <logger name="org.eclipse.hono.cli" level="INFO"/>
     <logger name="org.eclipse.hono.client" level="INFO"/>
     <logger name="org.eclipse.hono.util" level="INFO"/>
+
+    <logger name="org.apache.kafka" level="ERROR"/>
 </configuration>

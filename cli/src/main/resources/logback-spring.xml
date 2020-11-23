@@ -44,4 +44,7 @@
 
     <logger name="io.vertx.proton.impl" level="INFO"/>
     <logger name="io.vertx.core.net.impl" level="INFO"/>
+
+    <logger name="org.apache.kafka.common" level="WARN"/>
+    <logger name="org.apache.kafka.clients" level="ERROR"/>
 </configuration>

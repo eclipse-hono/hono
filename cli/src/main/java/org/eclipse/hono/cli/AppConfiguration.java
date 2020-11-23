@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,9 +16,11 @@ package org.eclipse.hono.cli;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.kafka.client.KafkaConsumerConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -65,6 +67,18 @@ public class AppConfiguration {
     public ClientConfigProperties honoClientConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
         return config;
+    }
+
+    /**
+     * Exposes Kafka consumer configuration properties as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Profile("receiver-kafka")
+    @Bean
+    public KafkaConsumerConfigProperties honoKafkaClientConfig() {
+        return new KafkaConsumerConfigProperties();
     }
 
     /**
