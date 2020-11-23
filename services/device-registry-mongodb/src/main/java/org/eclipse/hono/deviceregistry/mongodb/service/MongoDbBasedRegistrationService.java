@@ -235,7 +235,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                         .orElseGet(() -> RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
-    private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
+    private Future<MongoDbBasedDeviceDto> findDevice(final String tenantId, final String deviceId) {
         return findDeviceDocument(tenantId, deviceId)
                 .compose(result -> Optional.ofNullable(result)
                         .map(ok -> MongoDbBasedDeviceDto.forRead(tenantId, deviceId, result))

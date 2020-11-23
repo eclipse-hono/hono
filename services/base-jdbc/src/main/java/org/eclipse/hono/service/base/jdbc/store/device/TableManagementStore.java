@@ -38,7 +38,6 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CommonCredentials;
 import org.eclipse.hono.service.management.credentials.CommonSecret;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -447,7 +446,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                             return Future.succeededFuture((Optional.empty()));
                         case 1:
                             final var entry = entries.get(0);
-                            final DeviceDto deviceDto = JdbcBasedDeviceDto.forRead(key.getTenantId(), key.getDeviceId(), entry);
+                            final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(key.getTenantId(), key.getDeviceId(), entry);
                             return Future.succeededFuture(Optional.of(new DeviceReadResult(deviceDto.getDeviceWithStatus(), Optional.of(deviceDto.getVersion()))));
                         default:
                             return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
