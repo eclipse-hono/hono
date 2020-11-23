@@ -19,13 +19,12 @@ import java.util.Map.Entry;
 
 import io.opentracing.propagation.TextMap;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import io.vertx.kafka.client.producer.impl.KafkaHeaderImpl;
 
 /**
  * An adapter for injecting properties as a new {@link KafkaHeader} to a list of Vert.x Kafka producer headers.
  *
  */
-public class KafkaHeaderInjectAdapter implements TextMap {
+public final class KafkaHeaderInjectAdapter implements TextMap {
 
     private final List<KafkaHeader> headers;
 
@@ -45,6 +44,6 @@ public class KafkaHeaderInjectAdapter implements TextMap {
 
     @Override
     public void put(final String key, final String value) {
-        headers.add(new KafkaHeaderImpl(key, value));
+        headers.add(KafkaHeader.header(key, value));
     }
 }
