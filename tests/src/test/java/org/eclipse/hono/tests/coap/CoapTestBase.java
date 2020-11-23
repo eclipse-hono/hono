@@ -63,6 +63,7 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -106,9 +107,9 @@ public abstract class CoapTestBase {
      */
     protected static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
 
-    private static final Vertx VERTX = Vertx.vertx();
+    protected static final int MESSAGES_TO_SEND = 60;
 
-    private static final int MESSAGES_TO_SEND = 60;
+    private static final Vertx VERTX = Vertx.vertx();
 
     private static final String COMMAND_TO_SEND = "setDarkness";
     private static final String COMMAND_JSON_KEY = "darkness";
@@ -457,7 +458,7 @@ public abstract class CoapTestBase {
             final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
-        testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND);
+        testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
     }
 
     /**
@@ -470,6 +471,7 @@ public abstract class CoapTestBase {
      * @param messageConsumer Consumer that is invoked when a message was received.
      * @param requestSender The test device that will publish the data.
      * @param numberOfMessages The number of messages that are uploaded.
+     * @param expectedQos The expected QoS level, may be {@code null} leading to expecting the default for event or telemetry.
      * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
@@ -478,7 +480,8 @@ public abstract class CoapTestBase {
             final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender,
-            final int numberOfMessages) throws InterruptedException {
+            final int numberOfMessages,
+            final QoS expectedQos) throws InterruptedException {
 
         final CountDownLatch received = new CountDownLatch(numberOfMessages);
 
@@ -486,6 +489,7 @@ public abstract class CoapTestBase {
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
+            assertQosLevel(ctx, msg, getExpectedQoS(expectedQos));
             if (messageConsumer != null) {
                 messageConsumer.accept(msg);
             }
@@ -920,6 +924,25 @@ public abstract class CoapTestBase {
             assertThat(msg.getCreationTime()).isGreaterThan(0);
         });
         assertAdditionalMessageProperties(ctx, msg);
+    }
+
+    private QoS getExpectedQoS(final QoS qos) {
+        if (qos != null) {
+            return qos;
+        }
+
+        switch (getMessageType()) {
+            case CON:
+                return QoS.AT_LEAST_ONCE;
+            case NON:
+                return QoS.AT_MOST_ONCE;
+            default:
+                throw new IllegalArgumentException("Either QoS must be non-null or message type must be CON or NON!");
+        }
+    }
+
+    private void  assertQosLevel(final VertxTestContext ctx, final Message msg, final QoS expectedQos) {
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
     }
 
     /**

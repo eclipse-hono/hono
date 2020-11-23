@@ -24,6 +24,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,13 +84,14 @@ public class TelemetryHttpIT extends HttpTestBase {
             return;
         }
 
-        testUploadMessages(ctx, tenantId, count -> {
-            return httpClient.create(
-                    getEndpointUri(),
-                    Buffer.buffer("hello " + count),
-                    requestHeaders,
-                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
-        });
+        testUploadMessages(ctx, tenantId, null,
+            count -> httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello " + count),
+                requestHeaders,
+                response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED),
+            MESSAGES_TO_SEND,
+            QoS.AT_LEAST_ONCE);
     }
 
     /**
