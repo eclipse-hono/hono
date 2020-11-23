@@ -38,6 +38,11 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
     @Override
+    protected MqttQoS getQos() {
+        return MqttQoS.AT_MOST_ONCE;
+    }
+
+    @Override
     protected Future<Void> send(
             final String tenantId,
             final String deviceId,
@@ -55,7 +60,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
             mqttClient.publish(
                     topic,
                     payload,
-                    MqttQoS.AT_MOST_ONCE,
+                    getQos(),
                     false, // is duplicate
                     false, // is retained
                     sendAttempt -> {

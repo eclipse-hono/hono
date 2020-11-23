@@ -81,6 +81,12 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertAdditionalMessageProperties(ctx, msg);
     }
 
+    private void assertQosLevel(final VertxTestContext ctx, final Message msg) {
+        // AMQP adapter only supports opening links with sender-settle-mode unsettled.
+        // Thus all messages will be sent as AT_LEAST_ONCE.
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(ProtonQoS.AT_LEAST_ONCE.ordinal()));
+    }
+
     /**
      * Perform additional checks on a received message.
      * <p>
@@ -354,6 +360,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                             msg.getContentType(), MessageHelper.getPayloadAsString(msg));
                 }
                 assertMessageProperties(messageSending, msg);
+                assertQosLevel(messageSending, msg);
                 callback.handle(null);
             }).map(c -> {
                 consumer = c;

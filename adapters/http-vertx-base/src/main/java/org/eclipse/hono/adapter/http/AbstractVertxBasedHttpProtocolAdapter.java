@@ -675,7 +675,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     .map(c -> ttdTracker.result())
                     .orElse(null);
             final Message downstreamMessage = newMessage(
-                    ctx.getRequestedQos(),
+                    org.eclipse.hono.util.QoS.valueOf(qos.name()),
                     ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
                     ctx.request().uri(),
                     contentType,
