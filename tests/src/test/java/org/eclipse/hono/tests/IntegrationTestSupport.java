@@ -74,6 +74,10 @@ import io.vertx.junit5.VertxTestContext;
 public final class IntegrationTestSupport {
 
     /**
+     * The default number of milliseconds to wait for a response to an AMQP 1.0 performative.
+     */
+    public static final int DEFAULT_AMQP_TIMEOUT = 1000;
+    /**
      * The default port exposed by the AMQP adapter.
      */
     public static final int DEFAULT_AMQP_PORT = 5672;
@@ -130,6 +134,11 @@ public final class IntegrationTestSupport {
      */
     public static final int DEFAULT_MQTTS_PORT = 8883;
 
+    /**
+     * The name of the system property to use for setting the time to wait for a response
+     * to an AMQP 1.0 performative.
+     */
+    public static final String PROPERTY_AMQP_TIMEOUT = "amqp.timeout";
     /**
      * The name of the system property to use for setting the IP address of the Auth service.
      */
@@ -395,6 +404,10 @@ public final class IntegrationTestSupport {
     public static final int MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPERTY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
 
     /**
+     * The time to wait for the response to an AMQP 1.0 performative.
+     */
+    public static final int AMQP_TIMEOUT = Integer.getInteger(PROPERTY_AMQP_TIMEOUT, DEFAULT_AMQP_TIMEOUT);
+    /**
      * The absolute path to the trust store to use for establishing secure connections with Hono.
      */
     public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
@@ -464,6 +477,9 @@ public final class IntegrationTestSupport {
         props.setPort(port);
         props.setUsername(username);
         props.setPassword(password);
+        props.setLinkEstablishmentTimeout(AMQP_TIMEOUT);
+        props.setRequestTimeout(AMQP_TIMEOUT);
+        props.setFlowLatency(AMQP_TIMEOUT);
         return props;
     }
 
