@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.kafka.client;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -74,13 +75,13 @@ public class KafkaConsumerConfigProperties {
      * {@link #setClientId(String)}, this value will be taken</li>
      * </ul>
      *
-     * @return a copy of the consumer configuration with the applied properties or {@code null} if no consumer
+     * @return a copy of the consumer configuration with the applied properties an empty map if no consumer
      *         configuration was set with {@link #setConsumerConfig(Map)}.
      */
     public Map<String, String> getConsumerConfig() {
 
         if (consumerConfig == null) {
-            return null;
+            return Collections.emptyMap();
         }
 
         final HashMap<String, String> newConfig = new HashMap<>(consumerConfig);

@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.kafka.client;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -76,7 +77,7 @@ public class KafkaProducerConfigProperties {
      * {@link #setClientId(String)}, this value will be taken</li>
      * </ul>
      *
-     * @return a copy of the producer configuration with the applied properties or {@code null} if no producer
+     * @return a copy of the producer configuration with the applied properties or an empty map if no producer
      *         configuration was set with {@link #setProducerConfig(Map)}.
      * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation -
      *      "Producer Configs" - enable.idempotence</a>
@@ -84,7 +85,7 @@ public class KafkaProducerConfigProperties {
     public Map<String, String> getProducerConfig() {
 
         if (producerConfig == null) {
-            return null;
+            return Collections.emptyMap();
         }
 
         final HashMap<String, String> newConfig = new HashMap<>(producerConfig);

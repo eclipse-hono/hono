@@ -46,10 +46,7 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
     public KafkaBasedEventSender(final CachingKafkaProducerFactory<String, Buffer> producerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfig, final Tracer tracer) {
 
-        super(producerFactory,
-                EventConstants.EVENT_ENDPOINT,
-                Objects.requireNonNull(kafkaProducerConfig).getProducerConfig(),
-                tracer);
+        super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig.getProducerConfig(), tracer);
     }
 
     /**
