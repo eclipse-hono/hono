@@ -73,7 +73,7 @@ public final class IntegrationTestSupport {
     /**
      * The default number of milliseconds to wait for a response to an AMQP 1.0 performative.
      */
-    public static final int DEFAULT_AMQP_TIMEOUT = 1000;
+    public static final int DEFAULT_AMQP_TIMEOUT = 400;
     /**
      * The default port exposed by the AMQP adapter.
      */
