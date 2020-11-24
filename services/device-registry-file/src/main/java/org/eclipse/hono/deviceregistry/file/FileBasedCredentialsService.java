@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -608,6 +609,17 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
                 .map(CommonCredential::stripPrivateInfo)
                 .collect(Collectors.toList());
 
+        // resolve cache directive for results.
+        // Limit caching to the case when cache directives are the same for all results
+        final Set<CacheDirective> cacheDirectives = result.stream().map(CommonCredential::getType)
+                .distinct()
+                .map(this::getCacheDirective)
+                .collect(Collectors.collectingAndThen(Collectors.toUnmodifiableSet(),
+                        // use cache options for hashed password when results is empty so that empty result gets cached
+                        set -> set.isEmpty() ? Set.of(getCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) : set));
+        final Optional<CacheDirective> cacheDirective = cacheDirectives.size() == 1 ?
+                cacheDirectives.stream().findFirst() : Optional.empty();
+
         // note that the result set might be empty
         // however, in this case an empty set of credentials has been
         // registered for the device explicitly and we return
@@ -615,8 +627,7 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
         return Future.succeededFuture(
                 OperationResult.ok(HttpURLConnection.HTTP_OK,
                         result,
-                        // TODO check cache directive
-                        Optional.empty(),
+                        cacheDirective,
                         Optional.of(currentVersion)));
     }
 

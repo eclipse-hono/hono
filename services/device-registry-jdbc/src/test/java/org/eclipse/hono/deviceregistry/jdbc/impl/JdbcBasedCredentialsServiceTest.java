@@ -13,7 +13,25 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
+import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CredentialsConstants;
 
 class JdbcBasedCredentialsServiceTest extends AbstractJdbcRegistryTest implements AbstractCredentialsServiceTest {
+    private final CacheDirective expectedCacheDirective = CacheDirective.maxAgeDirective(new DeviceServiceProperties().getCredentialsTtl());
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CacheDirective getExpectedCacheDirective(final String credentialsType) {
+        switch (credentialsType) {
+            case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+            case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+                return expectedCacheDirective;
+            default:
+                return CacheDirective.noCacheDirective();
+        }
+    }
 }

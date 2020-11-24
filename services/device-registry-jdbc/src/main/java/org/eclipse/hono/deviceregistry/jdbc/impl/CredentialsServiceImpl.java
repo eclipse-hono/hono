@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
@@ -43,14 +44,17 @@ import io.vertx.core.json.JsonObject;
 public class CredentialsServiceImpl extends AbstractCredentialsService {
 
     private final TableAdapterStore store;
+    private final CacheDirective ttl;
 
     /**
      * Create a new instance.
      *
      * @param store The backing service to use.
+     * @param properties The service properties.
      */
-    public CredentialsServiceImpl(final TableAdapterStore store) {
+    public CredentialsServiceImpl(final TableAdapterStore store, final DeviceServiceProperties properties) {
         this.store = store;
+        this.ttl = CacheDirective.maxAgeDirective(properties.getCredentialsTtl());
     }
 
     @Override
@@ -86,7 +90,7 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                             .put(CredentialsConstants.FIELD_AUTH_ID, key.getAuthId())
                             .put(CredentialsConstants.FIELD_SECRETS, new JsonArray(secrets));
 
-                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, CacheDirective.noCacheDirective());
+                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, ttl);
 
                 });
     }

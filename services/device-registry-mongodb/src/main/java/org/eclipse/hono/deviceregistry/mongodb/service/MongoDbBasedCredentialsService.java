@@ -16,6 +16,8 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -209,11 +211,26 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         Objects.requireNonNull(span);
 
         return getCredentialsDto(deviceKey)
-                .map(credentialsDto -> OperationResult.ok(
-                        HttpURLConnection.HTTP_OK,
-                        credentialsDto.getCredentials(),
-                        Optional.empty(),
-                        Optional.of(credentialsDto.getVersion())))
+                .map(credentialsDto -> {
+                    final List<CommonCredential> credentials = credentialsDto.getCredentials();
+
+                    // resolve cache directive for results.
+                    // Limit caching to the case when cache directives are the same for all results
+                    final Set<CacheDirective> cacheDirectives = credentials.stream().map(CommonCredential::getType)
+                            .distinct()
+                            .map(this::getCacheDirective)
+                            .collect(Collectors.collectingAndThen(Collectors.toUnmodifiableSet(),
+                                    // use cache options for hashed password when results is empty so that empty result gets cached
+                                    set -> set.isEmpty() ? Set.of(getCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) : set));
+                    final Optional<CacheDirective> cacheDirective = cacheDirectives.size() == 1 ?
+                            cacheDirectives.stream().findFirst() : Optional.empty();
+
+                    return OperationResult.ok(
+                            HttpURLConnection.HTTP_OK,
+                            credentials,
+                            cacheDirective,
+                            Optional.of(credentialsDto.getVersion()));
+                })
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 

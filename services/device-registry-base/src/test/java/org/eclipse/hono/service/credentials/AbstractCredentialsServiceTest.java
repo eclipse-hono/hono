@@ -325,6 +325,7 @@ public interface AbstractCredentialsServiceTest {
                         assertNotNull(s3.getCacheDirective());
                         if (s3.isOk()) {
                             assertResourceVersion(s3);
+                            assertEquals(Optional.of(getExpectedCacheDirective(type)), s3.getCacheDirective());
                         }
 
                         mangementValidation.accept(s3);
@@ -345,6 +346,9 @@ public interface AbstractCredentialsServiceTest {
                                     ctx.verify(() -> {
 
                                         adapterValidation.accept(s4);
+                                        if (s4.isOk()) {
+                                            assertEquals(getExpectedCacheDirective(type), s4.getCacheDirective());
+                                        }
 
                                         whenComplete.apply();
                                     });

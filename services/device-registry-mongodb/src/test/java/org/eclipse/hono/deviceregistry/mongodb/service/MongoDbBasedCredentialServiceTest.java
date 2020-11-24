@@ -22,6 +22,8 @@ import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -142,5 +144,19 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     @Override
     public DeviceManagementService getDeviceManagementService() {
         return this.deviceBackendService;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public CacheDirective getExpectedCacheDirective(final String credentialsType) {
+        switch (credentialsType) {
+            case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+            case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+                return CacheDirective.maxAgeDirective(credentialsServiceConfig.getCacheMaxAge());
+            default:
+                return CacheDirective.noCacheDirective();
+        }
     }
 }

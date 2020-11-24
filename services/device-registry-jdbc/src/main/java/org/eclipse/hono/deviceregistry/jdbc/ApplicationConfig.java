@@ -371,7 +371,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
     public CredentialsService credentialsService() throws IOException {
-        return new CredentialsServiceImpl(devicesAdapterStore());
+        return new CredentialsServiceImpl(devicesAdapterStore(), deviceRegistryServiceProperties());
     }
 
     /**
