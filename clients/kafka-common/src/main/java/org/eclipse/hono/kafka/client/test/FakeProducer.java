@@ -213,7 +213,7 @@ public class FakeProducer<K, V> implements KafkaProducer<K, V> {
                     handler.handle(Future.succeededFuture(Helper.from(metadata)));
                 }
             });
-        } catch (Exception e) {
+        } catch (final Exception e) {
             if (exceptionHandler != null) {
                 exceptionHandler.handle(e);
             }

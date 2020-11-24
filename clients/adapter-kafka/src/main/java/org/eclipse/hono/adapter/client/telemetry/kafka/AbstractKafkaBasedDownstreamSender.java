@@ -214,7 +214,7 @@ public abstract class AbstractKafkaBasedDownstreamSender implements Lifecycle {
                         : Buffer.buffer(Json.encode(v));
 
                 headers.add(new KafkaHeaderImpl(k, headerValue));
-            } catch (EncodeException e) {
+            } catch (final EncodeException e) {
                 log.info("failed to serialize property with key [{}] to Kafka header", k);
                 span.log("failed to create Kafka header from property: " + k);
             }
