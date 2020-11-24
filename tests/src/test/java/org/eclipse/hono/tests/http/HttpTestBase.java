@@ -37,6 +37,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -44,6 +45,7 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -93,12 +95,13 @@ public abstract class HttpTestBase {
      */
     protected static IntegrationTestSupport helper;
 
+    protected static final int MESSAGES_TO_SEND = 60;
+
     private static final String COMMAND_TO_SEND = "setBrightness";
     private static final String COMMAND_JSON_KEY = "brightness";
 
     private static final String ORIGIN_WILDCARD = "*";
     private static final long  TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
-    private static final int MESSAGES_TO_SEND = 60;
 
     /**
      * The default options to use for creating HTTP clients.
@@ -477,7 +480,24 @@ public abstract class HttpTestBase {
             final String tenantId,
             final Function<Message, Future<?>> messageConsumer,
             final Function<Integer, Future<HttpResponse<Buffer>>> requestSender) throws InterruptedException {
-        testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND);
+        testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
+    }
+
+    private QoS getExpectedQoS(final QoS qos) {
+        if (qos != null) {
+            return qos;
+        }
+
+        final MetricsTags.EndpointType endpointType = MetricsTags.EndpointType.fromString(getEndpointUri().replaceFirst("/", ""));
+
+        switch (endpointType) {
+            case EVENT:
+                return QoS.AT_LEAST_ONCE;
+            case TELEMETRY:
+                return QoS.AT_MOST_ONCE;
+            default:
+                throw new IllegalArgumentException("Either QoS must be non-null or endpoint type must be telemetry or event!");
+        }
     }
 
     /**
@@ -488,6 +508,7 @@ public abstract class HttpTestBase {
      * @param messageConsumer Consumer that is invoked when a message was received.
      * @param requestSender The test device that will publish the data.
      * @param numberOfMessages The number of messages that are uploaded.
+     * @param expectedQos The expected QoS level, may be {@code null} leading to expecting the default for event or telemetry.
      * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
@@ -495,7 +516,8 @@ public abstract class HttpTestBase {
             final String tenantId,
             final Function<Message, Future<?>> messageConsumer,
             final Function<Integer, Future<HttpResponse<Buffer>>> requestSender,
-            final int numberOfMessages) throws InterruptedException {
+            final int numberOfMessages,
+            final QoS expectedQos) throws InterruptedException {
 
         final VertxTestContext messageSending = new VertxTestContext();
         final Checkpoint messageSent = messageSending.checkpoint(numberOfMessages);
@@ -507,6 +529,7 @@ public abstract class HttpTestBase {
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
+            assertQosLevel(ctx, msg, getExpectedQoS(expectedQos));
             Optional.ofNullable(messageConsumer)
             .map(consumer -> consumer.apply(msg))
             .orElseGet(() -> Future.succeededFuture())
@@ -935,7 +958,8 @@ public abstract class HttpTestBase {
                                 return responseHeaders;
                             });
                 },
-                5);
+                5,
+                null);
     }
 
     /**
@@ -1196,6 +1220,10 @@ public abstract class HttpTestBase {
             assertThat(msg.getCreationTime()).isGreaterThan(0);
             assertAdditionalMessageProperties(msg);
         });
+    }
+
+    private void  assertQosLevel(final VertxTestContext ctx, final Message msg, final QoS expectedQos) {
+        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
     }
 
     private <T> Future<HttpResponse<T>> verifyAccessControlExposedHeaders(final HttpResponse<T> response) {
