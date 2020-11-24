@@ -35,6 +35,7 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -65,6 +66,13 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
     // <MQTT message ID, PUBACK handler>
     private final Map<Integer, Handler<Integer>> pendingMessages = new HashMap<>();
+
+    /**
+     * Gets the QoS level with which the MQTT message shall be sent.
+     *
+     * @return The QoS level.
+     */
+    protected abstract MqttQoS getQos();
 
     /**
      * Sends a message on behalf of a device to the MQTT adapter.
@@ -323,6 +331,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
+            assertThat(MessageHelper.getQoS(msg)).isEqualTo(getQos().ordinal());
             assertThat(msg.getCreationTime()).isGreaterThan(0);
         });
         assertAdditionalMessageProperties(ctx, msg);
