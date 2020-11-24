@@ -33,7 +33,8 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrati
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedEventSender;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedTelemetrySender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -56,9 +57,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -275,13 +274,12 @@ public abstract class AbstractAdapterConfig {
      * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
-    @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
     @Bean
     @Scope("prototype")
     public TelemetrySender downstreamTelemetrySender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
-        return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+        return new ProtonBasedTelemetrySender(downstreamConnection(), samplerFactory, adapterConfig);
     }
 
     /**
@@ -295,13 +293,12 @@ public abstract class AbstractAdapterConfig {
      * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
-    @Qualifier(EventConstants.EVENT_ENDPOINT)
     @Bean
     @Scope("prototype")
     public EventSender downstreamEventSender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
-        return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+        return new ProtonBasedEventSender(downstreamConnection(), samplerFactory, adapterConfig);
     }
 
     /**
@@ -344,7 +341,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public DeviceRegistrationClient registrationClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedDeviceRegistrationClient(
@@ -492,7 +489,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClient tenantClient(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedTenantClient(
@@ -666,7 +663,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public CommandResponseSender commandResponseSender(
-            final SendMessageSampler.Factory samplerFactory, 
+            final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
         return new ProtonBasedCommandResponseSender(

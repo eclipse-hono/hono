@@ -35,7 +35,10 @@ import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedEventSender;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedTelemetrySender;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
@@ -141,11 +144,11 @@ public abstract class AbstractProtocolAdapterApplication {
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
-        adapter.setEventSender(downstreamSender());
+        adapter.setEventSender(eventSender());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
         adapter.setResourceLimitChecks(resourceLimitChecks);
-        adapter.setTelemetrySender(downstreamSender());
+        adapter.setTelemetrySender(telemetrySender());
         adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
     }
@@ -248,12 +251,24 @@ public abstract class AbstractProtocolAdapterApplication {
     }
 
     /**
-     * Creates a new downstream sender for telemetry and event messages.
+     * Creates a new sender for events.
      *
      * @return The sender.
      */
-    protected ProtonBasedDownstreamSender downstreamSender() {
-        return new ProtonBasedDownstreamSender(
+    protected EventSender eventSender() {
+        return new ProtonBasedEventSender(
+                HonoConnection.newConnection(vertx, config.messaging, tracer),
+                messageSamplerFactory,
+                protocolAdapterProperties);
+    }
+
+    /**
+     * Creates a new sender for telemetry messages.
+     *
+     * @return The sender.
+     */
+    protected TelemetrySender telemetrySender() {
+        return new ProtonBasedTelemetrySender(
                 HonoConnection.newConnection(vertx, config.messaging, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);

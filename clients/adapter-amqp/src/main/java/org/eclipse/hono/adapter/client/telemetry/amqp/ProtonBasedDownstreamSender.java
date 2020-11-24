@@ -21,31 +21,21 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.SenderCachingServiceClient;
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.impl.EventSenderImpl;
-import org.eclipse.hono.client.impl.TelemetrySenderImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.AddressHelper;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 
-import io.opentracing.SpanContext;
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A vertx-proton based sender for telemetry messages and events.
+ * A vertx-proton based base class for telemetry and event senders.
  */
-public class ProtonBasedDownstreamSender extends SenderCachingServiceClient implements TelemetrySender, EventSender {
+public abstract class ProtonBasedDownstreamSender extends SenderCachingServiceClient {
 
     /**
      * Creates a new sender for a connection.
@@ -55,111 +45,34 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
      * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public ProtonBasedDownstreamSender(
+    protected ProtonBasedDownstreamSender(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
         super(connection, samplerFactory, adapterConfig);
     }
 
-    private Future<DownstreamSender> getOrCreateTelemetrySender(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return connection
-                .isConnected(getDefaultConnectionCheckTimeout())
-                .compose(v -> connection.executeOnContext(result -> {
-                    final String key = AddressHelper.getTargetAddress(
-                            TelemetryConstants.TELEMETRY_ENDPOINT,
-                            tenantId,
-                            null,
-                            connection.getConfig());
-                    getOrCreateSender(
-                            key,
-                            () -> TelemetrySenderImpl.create(
-                                    connection,
-                                    tenantId,
-                                    samplerFactory.create(TelemetryConstants.TELEMETRY_ENDPOINT),
-                                    onSenderClosed -> removeClient(key)),
-                            result);
-                }));
-    }
-
-    private Future<DownstreamSender> getOrCreateEventSender(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return connection
-                .isConnected(getDefaultConnectionCheckTimeout())
-                .compose(v -> connection.executeOnContext(result -> {
-                    final String key = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, connection.getConfig());
-                    getOrCreateSender(
-                            key,
-                            () -> EventSenderImpl.create(
-                                    connection,
-                                    tenantId,
-                                    samplerFactory.create(EventConstants.EVENT_ENDPOINT),
-                                    onSenderClosed -> removeClient(key)),
-                            result);
-                }));
-    }
-
     /**
-     * {@inheritDoc}
+     * Creates a new downstream message.
+     * <p>
+     * It sets <em>qos</em> and <em>device_id</em> to the <em>application properties</em> of the message.
+     *
+     * @param tenant The tenant that the device belongs to.
+     * @param device The registration assertion for the device that the data originates from.
+     * @param qos The delivery semantics to use for sending the data.
+     * @param target The target address of the message.
+     * @param contentType The content type of the data.
+     * @param payload The data to send.
+     * @param properties Additional meta data that should be included in the downstream message.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the event has been sent downstream.
+     *         <p>
+     *         The future will be failed with a {@code org.eclipse.hono.client.ServerErrorException} if the data could
+     *         not be sent. The error code contained in the exception indicates the cause of the failure.
+     * @throws NullPointerException if tenant, device, qos, target or contentType are {@code null}.
      */
-    @Override
-    public Future<Void> sendTelemetry(
-            final TenantObject tenant,
-            final RegistrationAssertion device,
-            final QoS qos,
-            final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties,
-            final SpanContext context) {
-
-        Objects.requireNonNull(tenant);
-        Objects.requireNonNull(device);
-        Objects.requireNonNull(qos);
-        Objects.requireNonNull(contentType);
-
-        return getOrCreateTelemetrySender(tenant.getTenantId())
-            .compose(sender -> {
-                final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
-                final Message message = createMessage(tenant, device, qos, target, contentType, payload, properties);
-                switch (qos) {
-                case AT_MOST_ONCE:
-                    return sender.send(message, context);
-                default:
-                    return sender.sendAndWaitForOutcome(message, context);
-                }
-            })
-            .mapEmpty();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<Void> sendEvent(
-            final TenantObject tenant,
-            final RegistrationAssertion device,
-            final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties,
-            final SpanContext context) {
-
-        Objects.requireNonNull(tenant);
-        Objects.requireNonNull(device);
-        Objects.requireNonNull(contentType);
-
-        return getOrCreateEventSender(tenant.getTenantId())
-                .compose(sender -> {
-                    final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
-                    final Message message = createMessage(tenant, device, QoS.AT_LEAST_ONCE, target, contentType, payload, properties);
-                    return sender.sendAndWaitForOutcome(message, context);
-                })
-                .mapEmpty();
-    }
-
-    private Message createMessage(
+    protected Message createMessage(
             final TenantObject tenant,
             final RegistrationAssertion device,
             final QoS qos,
@@ -167,6 +80,12 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
             final String contentType,
             final Buffer payload,
             final Map<String, Object> properties) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(device);
+        Objects.requireNonNull(qos);
+        Objects.requireNonNull(target);
+        Objects.requireNonNull(contentType);
 
         final Map<String, Object> props = Optional.ofNullable(properties)
                 .orElseGet(HashMap::new);
@@ -184,13 +103,4 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
                 adapterConfig.isJmsVendorPropsEnabled());
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
-        return new StringBuilder(ProtonBasedDownstreamSender.class.getName())
-                .append(" via AMQP 1.0 Messaging Network")
-                .toString();
-    }
 }
