@@ -49,8 +49,6 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.client.KafkaProducerFactory;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
-import org.eclipse.hono.service.conditions.ConditionalOnAmqpMessaging;
-import org.eclipse.hono.service.conditions.ConditionalOnKafkaMessaging;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
@@ -245,7 +243,6 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
-    @ConditionalOnAmqpMessaging
     public ClientConfigProperties downstreamSenderFactoryConfig() {
         final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderFactoryConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
@@ -292,7 +289,6 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Bean
-    @ConditionalOnAmqpMessaging
     @Scope("prototype")
     public HonoConnection downstreamConnection() {
         return HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig());
@@ -311,7 +307,6 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(TelemetryConstants.TELEMETRY_ENDPOINT)
     @Bean
-    @ConditionalOnAmqpMessaging
     @Scope("prototype")
     public TelemetrySender downstreamTelemetrySender(
             final SendMessageSampler.Factory samplerFactory,
@@ -332,7 +327,6 @@ public abstract class AbstractAdapterConfig {
      */
     @Qualifier(EventConstants.EVENT_ENDPOINT)
     @Bean
-    @ConditionalOnAmqpMessaging
     @Scope("prototype")
     public EventSender downstreamEventSender(
             final SendMessageSampler.Factory samplerFactory,
@@ -347,7 +341,6 @@ public abstract class AbstractAdapterConfig {
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnKafkaMessaging
     public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
         return KafkaProducerFactory.sharedProducerFactory(vertx());
     }
@@ -360,7 +353,6 @@ public abstract class AbstractAdapterConfig {
      * @param kafkaProducerConfig The producer configuration to use.
      */
     @Bean
-    @ConditionalOnKafkaMessaging
     @Scope("prototype")
     public TelemetrySender downstreamTelemetryKafkaSender(
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
@@ -376,7 +368,6 @@ public abstract class AbstractAdapterConfig {
      * @param kafkaProducerConfig The producer configuration to use.
      */
     @Bean
-    @ConditionalOnKafkaMessaging
     @Scope("prototype")
     public EventSender downstreamEventKafkaSender(
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
