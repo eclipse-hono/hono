@@ -27,8 +27,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
 import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +47,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     private static final String TENANT_ID = "the-tenant";
     private static final String DEVICE_ID = "the-device";
+    private static final QoS qos = QoS.AT_LEAST_ONCE;
     private static final String CONTENT_TYPE = "the-content-type";
     private static final String PRODUCER_NAME = "test-producer";
 
@@ -92,7 +91,6 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     public void testSendCreatesCorrectRecord() {
 
         // GIVEN a sender
-        final QoS qos = QoS.AT_LEAST_ONCE;
         final String payload = "the-payload";
         final Map<String, Object> properties = Collections.singletonMap("foo", "bar");
 
@@ -124,8 +122,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     public void testThatSendCompletes() {
 
         // GIVEN a sender sending a message
-        final Future<Void> sendFuture = sender.send(topic, TENANT_ID, DEVICE_ID, QoS.AT_LEAST_ONCE, CONTENT_TYPE, null,
-                null, null);
+        final Future<Void> sendFuture = sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null);
 
         // WHEN the send operation completes successfully
         TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME).completeNext();
@@ -142,8 +139,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     public void testSenderClosesWhenSendFails() {
 
         // GIVEN a sender sending a message
-        final Future<Void> future = sender.send(topic, TENANT_ID, DEVICE_ID, QoS.AT_LEAST_ONCE, CONTENT_TYPE, null,
-                null, null);
+        final Future<Void> future = sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null);
 
         // WHEN the send operation fails
         final AuthorizationException expectedError = new AuthorizationException("go away");
@@ -173,7 +169,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("ttd", ttd);
 
         // WHEN sending the message
-        sender.send(topic, TENANT_ID, DEVICE_ID, QoS.AT_LEAST_ONCE, CONTENT_TYPE, null, properties, null);
+        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, properties, null);
 
         // THEN the producer record contains a creation time
         final ProducerRecord<String, Buffer> record = TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME)
@@ -197,7 +193,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("creation-time", creationTime);
 
         // WHEN sending the message
-        sender.send(topic, TENANT_ID, DEVICE_ID, QoS.AT_LEAST_ONCE, CONTENT_TYPE, null, properties, null);
+        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, properties, null);
 
         // THEN the creation time is preserved
         final ProducerRecord<String, Buffer> record = TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME)
@@ -234,13 +230,11 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     /**
      * Verifies that
-     * {@link KafkaBasedTelemetrySender#sendTelemetry(TenantObject, RegistrationAssertion, QoS, String, Buffer, Map, SpanContext)}
+     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, String, String, QoS, String, Buffer, Map, SpanContext)}
      * throws a nullpointer exception if a mandatory parameter is {@code null}.
      */
     @Test
-    public void testThatSendTelemetryThrowsOnMissingMandatoryParameter() {
-        final QoS qos = QoS.AT_LEAST_ONCE;
-
+    public void testThatSendThrowsOnMissingMandatoryParameter() {
         assertThrows(NullPointerException.class,
                 () -> sender.send(null, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null));
 
