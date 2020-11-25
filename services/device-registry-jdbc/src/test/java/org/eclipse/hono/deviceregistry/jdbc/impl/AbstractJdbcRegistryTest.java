@@ -197,14 +197,15 @@ abstract class AbstractJdbcRegistryTest {
             RunScript.execute(connection, script);
         }
 
+        final TenantServiceProperties tenantServiceProperties = new TenantServiceProperties();
         this.tenantAdapter = new TenantServiceImpl(
                 Stores.adapterStore(vertx, TRACER, jdbc),
-                new TenantServiceProperties()
+                tenantServiceProperties
         );
 
         this.tenantManagement = new TenantManagementServiceImpl(
-                Stores.managementStore(vertx, TRACER, jdbc)
-        );
+                Stores.managementStore(vertx, TRACER, jdbc),
+                tenantServiceProperties);
     }
 
     public RegistrationService getRegistrationService() {

@@ -423,7 +423,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT + " & " + Profiles.PROFILE_TENANT_SERVICE)
     public TenantManagementService tenantManagementService() throws IOException {
-        return new TenantManagementServiceImpl(tenantManagementStore());
+        return new TenantManagementServiceImpl(tenantManagementStore(), tenantServiceProperties());
     }
 
     /**

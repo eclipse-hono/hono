@@ -16,12 +16,14 @@ package org.eclipse.hono.deviceregistry.jdbc.impl;
 import java.net.HttpURLConnection;
 import java.util.Optional;
 
+import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.service.base.jdbc.store.tenant.ManagementStore;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.util.CacheDirective;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -32,14 +34,17 @@ import io.vertx.core.Future;
 public class TenantManagementServiceImpl extends AbstractTenantManagementService {
 
     private final ManagementStore store;
+    private final CacheDirective ttl;
 
     /**
      * Create a new instance.
      *
      * @param store The backing store to use.
+     * @param properties The service properties.
      */
-    public TenantManagementServiceImpl(final ManagementStore store) {
+    public TenantManagementServiceImpl(final ManagementStore store, final TenantServiceProperties properties) {
         this.store = store;
+        this.ttl = CacheDirective.maxAgeDirective(properties.getTenantTtl());
     }
 
     @Override
@@ -69,7 +74,7 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
                         .map(tenant -> OperationResult.ok(
                                 HttpURLConnection.HTTP_OK,
                                 tenant.getTenant(),
-                                Optional.empty(),
+                                Optional.of(ttl),
                                 tenant.getResourceVersion()
                         ))
 

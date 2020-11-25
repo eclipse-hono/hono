@@ -20,10 +20,12 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceProperties;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -40,6 +42,7 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 class TenantServiceTest extends AbstractJdbcRegistryTest {
+    private final CacheDirective expectedCacheDirective = CacheDirective.maxAgeDirective(new TenantServiceProperties().getTenantTtl());
 
     private Handler<AsyncResult<TenantResult<JsonObject>>> assertNotFound(final VertxTestContext context) {
 
@@ -115,6 +118,9 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
                             assertThat(result.isOk())
                                     .isTrue();
 
+                            assertThat(result.getCacheDirective())
+                                    .isEqualTo(expectedCacheDirective);
+
                             final var json = result.getPayload();
                             assertThat(json)
                                     .isNotNull();
@@ -150,6 +156,9 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
 
                             assertThat(result.isOk())
                                     .isTrue();
+
+                            assertThat(result.getCacheDirective())
+                                    .hasValue(expectedCacheDirective);
 
                             readManagement.flag();
                         });
