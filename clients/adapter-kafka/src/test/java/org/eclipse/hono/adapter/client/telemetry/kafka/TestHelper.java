@@ -17,7 +17,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
-import org.eclipse.hono.kafka.client.test.FakeProducer;
+import org.eclipse.hono.kafka.test.FakeProducer;
 
 import io.vertx.kafka.client.producer.KafkaProducer;
 
@@ -48,23 +48,23 @@ public class TestHelper {
         final KafkaProducer<K, V> kafkaProducer = producerFactory.getProducer(producerName)
                 .orElseThrow(() -> new NoSuchElementException("no producer present in producer factory"));
 
-        return getUnderlyingMockProducer(kafkaProducer);
+        return getMockProducerFromFakeProducer(kafkaProducer);
     }
 
     /**
      * Gets the {@link MockProducer} from a given {@link FakeProducer}.
      *
-     * @param kafkaProducer The fake producer to get the mock producer from.
+     * @param fakeProducer The fake producer to get the mock producer from.
      * @param <K> The type for the record key serialization.
      * @param <V> The type for the record value serialization.
      * @return The mock producer.
      *
      * @throws ClassCastException if the provided producer implementation is not an instance of {@link FakeProducer}.
      */
-    public static <K, V> MockProducer<K, V> getUnderlyingMockProducer(
-            final KafkaProducer<K, V> kafkaProducer) {
+    public static <K, V> MockProducer<K, V> getMockProducerFromFakeProducer(
+            final KafkaProducer<K, V> fakeProducer) {
 
-        return ((FakeProducer<K, V>) kafkaProducer).getMockProducer();
+        return ((FakeProducer<K, V>) fakeProducer).getMockProducer();
     }
 
 }

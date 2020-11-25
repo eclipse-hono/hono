@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client.test;
+package org.eclipse.hono.kafka.test;
 
 import java.util.List;
 import java.util.stream.Collectors;
