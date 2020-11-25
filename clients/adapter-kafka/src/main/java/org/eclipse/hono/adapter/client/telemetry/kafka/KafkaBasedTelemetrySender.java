@@ -17,9 +17,9 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
 import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
+import org.eclipse.hono.kafka.client.KafkaProducerFactory;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -43,7 +43,7 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public KafkaBasedTelemetrySender(final CachingKafkaProducerFactory<String, Buffer> producerFactory,
+    public KafkaBasedTelemetrySender(final KafkaProducerFactory<String, Buffer> producerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfig, final Tracer tracer) {
 
         super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig.getProducerConfig(), tracer);

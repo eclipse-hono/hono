@@ -46,8 +46,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
-import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
+import org.eclipse.hono.kafka.client.KafkaProducerFactory;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.conditions.ConditionalOnAmqpMessaging;
 import org.eclipse.hono.service.conditions.ConditionalOnKafkaMessaging;
@@ -148,7 +148,7 @@ public abstract class AbstractAdapterConfig {
             adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
             adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
         } else {
-            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory();
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory();
             adapter.setEventSender(downstreamEventKafkaSender(kafkaProducerFactory, kafkaProducerConfig));
             adapter.setTelemetrySender(downstreamTelemetryKafkaSender(kafkaProducerFactory, kafkaProducerConfig));
         }
@@ -348,8 +348,8 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     @ConditionalOnKafkaMessaging
-    public CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
-        return CachingKafkaProducerFactory.sharedProducerFactory(vertx());
+    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return KafkaProducerFactory.sharedProducerFactory(vertx());
     }
 
     /**
@@ -363,7 +363,7 @@ public abstract class AbstractAdapterConfig {
     @ConditionalOnKafkaMessaging
     @Scope("prototype")
     public TelemetrySender downstreamTelemetryKafkaSender(
-            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfig) {
         return new KafkaBasedTelemetrySender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
     }
@@ -379,7 +379,7 @@ public abstract class AbstractAdapterConfig {
     @ConditionalOnKafkaMessaging
     @Scope("prototype")
     public EventSender downstreamEventKafkaSender(
-            final CachingKafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfig) {
         return new KafkaBasedEventSender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
     }

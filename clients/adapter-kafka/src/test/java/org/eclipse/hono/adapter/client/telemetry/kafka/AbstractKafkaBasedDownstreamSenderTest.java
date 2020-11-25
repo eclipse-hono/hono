@@ -26,6 +26,7 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
+import org.eclipse.hono.kafka.client.test.FakeProducer;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     public void setUp() {
         config.put("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092");
 
-        factory = CachingKafkaProducerFactory.testProducerFactory();
+        factory = new CachingKafkaProducerFactory<>((n, c) -> new FakeProducer<>());
 
         sender = new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, tracer) {
         };

@@ -23,7 +23,6 @@ import org.apache.kafka.common.errors.OutOfOrderSequenceException;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.UnsupportedForMessageFormatException;
 import org.apache.kafka.common.errors.UnsupportedVersionException;
-import org.eclipse.hono.kafka.client.test.FakeProducer;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -31,11 +30,10 @@ import io.vertx.core.Vertx;
 import io.vertx.kafka.client.producer.KafkaProducer;
 
 /**
- * A factory for creating Kafka producers.
+ * A factory for creating Kafka producers. Created producers are being cached.
  * <p>
- * This implementation provides no synchronization and should not be used by multiple threads.
- * <p>
- * Created producers are being cached.
+ * This implementation provides no synchronization and should not be used by multiple threads. To create producers that
+ * can safely be shared between verticle instances, use {@link KafkaProducerFactory#sharedProducerFactory(Vertx)}.
  * <p>
  * Producers are closed and removed from the cache if they throw a {@link #isFatalError(Throwable) fatal exception}. A
  * following invocation of {@link #getOrCreateProducer(String, Map)} will then return a new instance.
@@ -43,47 +41,22 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * @param <K> The type for the record key serialization.
  * @param <V> The type for the record value serialization.
  */
-public class CachingKafkaProducerFactory<K, V> {
+public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K, V> {
 
     private final Map<String, KafkaProducer<K, V>> activeProducers = new HashMap<>();
     private final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier;
 
     /**
      * Creates a new producer factory.
+     * <p>
+     * Use {@link KafkaProducerFactory#sharedProducerFactory(Vertx)} to create producers that can safely be shared
+     * between verticle instances.
      *
      * @param producerInstanceSupplier The function that provides new producer instances.
      */
-    private CachingKafkaProducerFactory(
+    public CachingKafkaProducerFactory(
             final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {
         this.producerInstanceSupplier = producerInstanceSupplier;
-    }
-
-    /**
-     * Creates an instance of the factory which produces {@link KafkaProducer#createShared(Vertx, String, Map) shared
-     * producers}.
-     * <p>
-     * Config must always be the same for the same key in {@link #getOrCreateProducer(String, Map)}.
-     *
-     * @param vertx The Vert.x instance to use.
-     * @param <K> The type for the record key serialization.
-     * @param <V> The type for the record value serialization.
-     * @return An instance of the factory.
-     */
-    public static <K, V> CachingKafkaProducerFactory<K, V> sharedProducerFactory(final Vertx vertx) {
-        return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.createShared(vertx, name, config));
-    }
-
-    /**
-     * Creates an instance of the factory which produces {@link FakeProducer}s.
-     * <p>
-     * This is intended for tests only.
-     *
-     * @param <K> The type for the record key serialization.
-     * @param <V> The type for the record value serialization.
-     * @return An instance of the factory.
-     */
-    public static <K, V> CachingKafkaProducerFactory<K, V> testProducerFactory() {
-        return new CachingKafkaProducerFactory<>((name, config) -> new FakeProducer<>());
     }
 
     /**
@@ -98,13 +71,14 @@ public class CachingKafkaProducerFactory<K, V> {
      * @param config The Kafka configuration with which the producer is to be created.
      * @return an existing or new producer.
      */
+    @Override
     public KafkaProducer<K, V> getOrCreateProducer(final String producerName, final Map<String, String> config) {
 
         activeProducers.computeIfAbsent(producerName, (name) -> {
             final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, config);
             return producer.exceptionHandler(t -> {
                 if (isFatalError(t)) {
-                    removeProducer(name);
+                    closeProducer(name);
                 }
             });
         });
@@ -123,12 +97,12 @@ public class CachingKafkaProducerFactory<K, V> {
     }
 
     /**
-     * Removes a producer from the cache. If a producer exists with the given name, it will be closed.
-     *
-     * @param producerName The name of the producer to remove.
-     * @return A future that is completed when the close operation completed.
+     * {@inheritDoc}
+     * <p>
+     * If a producer with the given name exists, it is removed from the cache.
      */
-    public Future<Void> removeProducer(final String producerName) {
+    @Override
+    public Future<Void> closeProducer(final String producerName) {
         final KafkaProducer<K, V> producer = activeProducers.remove(producerName);
         if (producer == null) {
             return Future.succeededFuture();
@@ -137,14 +111,6 @@ public class CachingKafkaProducerFactory<K, V> {
             producer.close(promise);
             return promise.future();
         }
-    }
-
-    /**
-     * Removes all producers from the cache. The producers will be closed.
-     */
-    public void removeAll() {
-        activeProducers.forEach((k, v) -> v.close());
-        activeProducers.clear();
     }
 
     /**

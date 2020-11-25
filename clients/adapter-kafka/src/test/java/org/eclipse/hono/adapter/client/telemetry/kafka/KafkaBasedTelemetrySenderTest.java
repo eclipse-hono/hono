@@ -24,6 +24,7 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
 import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
+import org.eclipse.hono.kafka.client.test.FakeProducer;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -58,7 +59,7 @@ public class KafkaBasedTelemetrySenderTest {
         kafkaProducerConfig = new KafkaProducerConfigProperties();
         kafkaProducerConfig.setProducerConfig(new HashMap<>());
 
-        factory = CachingKafkaProducerFactory.testProducerFactory();
+        factory = new CachingKafkaProducerFactory<>((name, config) -> new FakeProducer<>());
         sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, tracer);
     }
 

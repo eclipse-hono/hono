@@ -14,7 +14,6 @@
 package org.eclipse.hono.kafka.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,11 +29,8 @@ import org.eclipse.hono.kafka.client.test.FakeProducer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.impl.VertxInternal;
 import io.vertx.kafka.client.producer.KafkaProducer;
-import io.vertx.kafka.client.producer.impl.KafkaProducerImpl;
 
 /**
  * Verifies behavior of {@link CachingKafkaProducerFactory}.
@@ -49,7 +45,7 @@ public class CachingKafkaProducerFactoryTest {
 
     @BeforeEach
     void setUp() {
-        factory = CachingKafkaProducerFactory.testProducerFactory();
+        factory = new CachingKafkaProducerFactory<>((name, config1) -> new FakeProducer<>());
 
         config.put("bootstrap.servers", "localhost:9092");
         config.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
@@ -64,8 +60,7 @@ public class CachingKafkaProducerFactoryTest {
 
         assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
 
-        final KafkaProducer<String, Buffer> createProducer = factory.getOrCreateProducer(PRODUCER_NAME,
-                config);
+        final KafkaProducer<String, Buffer> createProducer = factory.getOrCreateProducer(PRODUCER_NAME, config);
         assertThat(createProducer).isNotNull();
 
         final Optional<KafkaProducer<String, Buffer>> actual = factory.getProducer(PRODUCER_NAME);
@@ -75,33 +70,7 @@ public class CachingKafkaProducerFactoryTest {
     }
 
     /**
-     * Verifies that {@link CachingKafkaProducerFactory#sharedProducerFactory(Vertx)} creates producers that are
-     * instances of {@link KafkaProducerImpl}.
-     */
-    @Test
-    public void testThatSharedProducerFactoryCreatesVertxKafkaProducers() {
-
-        final CachingKafkaProducerFactory<String, Buffer> productiveFactory = CachingKafkaProducerFactory
-                .sharedProducerFactory(mock(VertxInternal.class));
-        assertThat(productiveFactory.getOrCreateProducer(PRODUCER_NAME, config)).isInstanceOf(KafkaProducerImpl.class);
-
-    }
-
-    /**
-     * Verifies that {@link CachingKafkaProducerFactory#testProducerFactory()} (Vertx)} creates producers that are
-     * instances of {@link FakeProducer}.
-     */
-    @Test
-    public void testThatSharedProducerFactoryCreatesFakeProducers() {
-
-        final CachingKafkaProducerFactory<String, Buffer> fakeProducerFactory = CachingKafkaProducerFactory
-                .testProducerFactory();
-        assertThat(fakeProducerFactory.getOrCreateProducer(PRODUCER_NAME, config)).isInstanceOf(FakeProducer.class);
-
-    }
-
-    /**
-     * Verifies that {@link CachingKafkaProducerFactory#removeProducer(String)} closes the producer and removes it from
+     * Verifies that {@link CachingKafkaProducerFactory#closeProducer(String)} closes the producer and removes it from
      * the cache.
      */
     @Test
@@ -115,7 +84,7 @@ public class CachingKafkaProducerFactoryTest {
         assertThat(producer2).isNotNull();
 
         // WHEN removing one producer
-        factory.removeProducer(producerName1);
+        factory.closeProducer(producerName1);
 
         // THEN the producer is closed...
         assertThat(((FakeProducer<String, Buffer>) producer1).getMockProducer().closed()).isTrue();
@@ -125,29 +94,6 @@ public class CachingKafkaProducerFactoryTest {
         assertThat(factory.getProducer(producerName2)).isNotEmpty();
         assertThat(((FakeProducer<String, Buffer>) producer2).getMockProducer().closed()).isFalse();
 
-    }
-
-    /**
-     * Verifies that {@link CachingKafkaProducerFactory#removeAll()} closes and removes all producers.
-     */
-    @Test
-    public void testRemoveAll() {
-        final String producerName1 = "first-producer";
-        final String producerName2 = "second-producer";
-
-        // GIVEN a factory that contains two producers
-        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(producerName1, config);
-        final KafkaProducer<String, Buffer> producer2 = factory.getOrCreateProducer(producerName2, config);
-
-        // WHEN invoking remove all
-        factory.removeAll();
-
-        // THEN both producers are closed...
-        assertThat(((FakeProducer<String, Buffer>) producer1).getMockProducer().closed()).isTrue();
-        assertThat(((FakeProducer<String, Buffer>) producer2).getMockProducer().closed()).isTrue();
-        // ...AND removed from the cache
-        assertThat(factory.getProducer(producerName1)).isEmpty();
-        assertThat(factory.getProducer(producerName2)).isEmpty();
     }
 
     /**

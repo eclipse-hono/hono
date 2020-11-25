@@ -23,8 +23,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
+import org.eclipse.hono.kafka.client.KafkaProducerFactory;
 import org.eclipse.hono.kafka.client.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
@@ -59,7 +59,7 @@ public abstract class AbstractKafkaBasedDownstreamSender implements Lifecycle {
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final CachingKafkaProducerFactory<String, Buffer> producerFactory;
+    private final KafkaProducerFactory<String, Buffer> producerFactory;
     private final String producerName;
     private final Map<String, String> config;
     private final Tracer tracer;
@@ -74,7 +74,7 @@ public abstract class AbstractKafkaBasedDownstreamSender implements Lifecycle {
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
 
-    public AbstractKafkaBasedDownstreamSender(final CachingKafkaProducerFactory<String, Buffer> producerFactory,
+    public AbstractKafkaBasedDownstreamSender(final KafkaProducerFactory<String, Buffer> producerFactory,
             final String producerName, final Map<String, String> config, final Tracer tracer) {
 
         Objects.requireNonNull(producerFactory);
@@ -161,11 +161,11 @@ public abstract class AbstractKafkaBasedDownstreamSender implements Lifecycle {
     /**
      * {@inheritDoc}
      * <p>
-     * Stops the producer.
+     * Closes the producer.
      */
     @Override
     public Future<Void> stop() {
-        return producerFactory.removeProducer(producerName);
+        return producerFactory.closeProducer(producerName);
     }
 
     private KafkaProducer<String, Buffer> getOrCreateProducer() {
