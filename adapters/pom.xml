@@ -43,11 +43,7 @@
   </modules>
 
   <name>Hono Protocol Adapters</name>
-  <description>An arbitrary collection of example protocol adapters for Hono. These adapters are mainly intended to be used for demonstration or PoCs. </description>
-
-  <properties>
-    <maven.compiler.release>11</maven.compiler.release>
-  </properties>
+  <description>Hono's standard protocol adapters supporting common transport protocols.</description>
 
   <dependencies>
     <dependency>

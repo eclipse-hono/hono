@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -30,8 +30,7 @@
   <url>https://www.eclipse.org/hono</url>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.release>8</maven.compiler.release>
   </properties>
 
   <dependencies>
@@ -154,9 +153,6 @@
             <Include-Resource>
               META-INF=${project.build.outputDirectory}/META-INF
             </Include-Resource>
-            <Require-Capability>
-              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${maven.compiler.target}))"
-            </Require-Capability>
           </instructions>
         </configuration>
       </plugin>
