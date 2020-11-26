@@ -169,6 +169,7 @@
   </developers>
 
   <properties>
+    <run-java-sh.version>1.3.8</run-java-sh.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -249,6 +250,13 @@
               </goals>
             </execution>
           </executions>
+          <dependencies>
+            <dependency>
+              <groupId>io.fabric8</groupId>
+              <artifactId>run-java-sh</artifactId>
+              <version>${run-java-sh.version}</version>
+            </dependency>
+          </dependencies>
           <configuration>
             <images>
               <image>
@@ -263,6 +271,7 @@
                     <tag>${docker.image.additional.tag}</tag>
                   </tags>
                   <imagePullPolicy>Always</imagePullPolicy>
+                  <from>${java-base-image.name}</from>
                 </build>
               </image>
             </images>

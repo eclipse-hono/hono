@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -11,7 +11,8 @@
    
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -36,19 +37,6 @@
     </dependency>
   </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-
   <profiles>
     <profile>
       <id>build-docker-image</id>
@@ -66,39 +54,14 @@
               <images>
                 <image>
                   <build>
-                    <from>${java-base-image.name}</from>
                     <ports>
                       <port>1883</port>
                       <port>8883</port>
                       <port>${vertx.health.port}</port>
                     </ports>
-                    <cmd>
-                      <exec>
-                        <arg>java</arg>
-                        <arg>--illegal-access=permit</arg>
-                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
-                        <arg>-Dloader.home=/opt/hono</arg>
-                        <arg>-Dloader.path=extensions</arg>
-                        <arg>-cp</arg>
-                        <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
-                        <arg>org.springframework.boot.loader.PropertiesLauncher</arg>
-                      </exec>
-                    </cmd>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}</directory>
-                            <outputDirectory>opt/hono</outputDirectory>
-                            <includes>
-                              <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
+                    <env>
+                      <JAVA_MAIN_CLASS>org.eclipse.hono.adapter.kura.impl.Application</JAVA_MAIN_CLASS>
+                    </env>
                   </build>
                 </image>
               </images>
@@ -107,26 +70,6 @@
         </plugins>
       </build>
     </profile>
-    <profile>
-      <id>docker-push-image</id>
-      <build>
-          <plugins>
-              <plugin>
-                  <groupId>io.fabric8</groupId>
-                  <artifactId>docker-maven-plugin</artifactId>
-                  <executions>
-                      <execution>
-                          <id>docker-push-image</id>
-                          <phase>install</phase>
-                          <goals>
-                              <goal>push</goal>
-                          </goals>
-                      </execution>
-                  </executions>
-              </plugin>
-          </plugins>
-      </build>
-  </profile>
   </profiles>
 
 </project>

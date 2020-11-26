@@ -322,6 +322,16 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/infinispan/protostream/tree/${protostream.version}).
 
+### run-java.sh ${run-java-sh.version}
+
+This product includes software developed by the [run-java.sh project](https://github.com/fabric8io-images/run-java-sh).
+
+Your use of *run-java.sh* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/fabric8io-images/run-java-sh/tree/${run-java-sh.version}).
+
 ### RxJava ${rxjava.version}
 
 This product includes software developed by the [RxJava project](https://github.com/ReactiveX/RxJava).

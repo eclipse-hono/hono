@@ -11,20 +11,19 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>hono-adapters</artifactId>
-        <groupId>org.eclipse.hono</groupId>
-        <version>1.5.0-SNAPSHOT</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
-    <packaging>pom</packaging>
-    <artifactId>hono-adapter-base-spring</artifactId>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>hono-adapters</artifactId>
+    <groupId>org.eclipse.hono</groupId>
+    <version>1.5.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>pom</packaging>
+  <artifactId>hono-adapter-base-spring</artifactId>
 
-    <name>Hono Protocol Adapter Base (Spring)</name>
-    <description>Defines common dependencies for Spring-based protocol adapter implementations</description>
+  <name>Hono Protocol Adapter Base (Spring)</name>
+  <description>Defines common dependencies for Spring-based protocol adapter implementations</description>
 
     <dependencies>
       <dependency>
@@ -49,4 +48,109 @@
       </dependency>
     </dependencies>
 
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-dependency-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>copy_libs</id>
+                  <phase>prepare-package</phase>
+                  <goals>
+                    <goal>copy-dependencies</goal>
+                  </goals>
+                  <configuration>
+                    <includeScope>runtime</includeScope>
+                    <outputDirectory>${project.build.directory}/rt-libs</outputDirectory>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <configuration>
+                <images>
+                  <image>
+                    <build>
+                      <env>
+                        <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
+                        <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
+                        <JAVA_LIB_DIR>/opt/hono/extensions/*</JAVA_LIB_DIR>
+                        <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp</JAVA_OPTIONS>
+                      </env>
+                      <entryPoint>
+                        <arg>/opt/hono/run-java.sh</arg>
+                      </entryPoint>
+                      <assembly>
+                        <mode>dir</mode>
+                        <basedir>/</basedir>
+                        <inline>
+                          <fileSets>
+                            <fileSet>
+                              <directory>${project.build.directory}/docker-extra/run-java</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>run-java.sh</include>
+                              </includes>
+                              <fileMode>755</fileMode>
+                            </fileSet>
+                            <fileSet>
+                              <directory>${project.build.directory}/rt-libs</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>*.jar</include>
+                              </includes>
+                            </fileSet>
+                            <fileSet>
+                              <directory>${project.build.directory}</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>${project.artifactId}-${project.version}.jar</include>
+                              </includes>
+                            </fileSet>
+                          </fileSets>
+                        </inline>
+                      </assembly>
+                    </build>
+                  </image>
+                </images>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
+    <profile>
+      <id>docker-push-image</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>docker-push-image</id>
+                <phase>install</phase>
+                <goals>
+                  <goal>push</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
