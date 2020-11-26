@@ -41,10 +41,10 @@ import io.vertx.core.json.Json;
 import io.vertx.junit5.VertxExtension;
 
 /**
- * Verifies behavior of {@link AbstractKafkaBasedDownstreamSender}.
+ * Verifies behavior of {@link AbstractKafkaBasedMessageSender}.
  */
 @ExtendWith(VertxExtension.class)
-public class AbstractKafkaBasedDownstreamSenderTest {
+public class AbstractKafkaBasedMessageSenderTest {
 
     private static final String TENANT_ID = "the-tenant";
     private static final String DEVICE_ID = "the-device";
@@ -57,7 +57,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, "foo");
 
     private CachingKafkaProducerFactory<String, Buffer> factory;
-    private AbstractKafkaBasedDownstreamSender sender;
+    private AbstractKafkaBasedMessageSender sender;
 
     /**
      * Sets up the downstream sender.
@@ -68,13 +68,13 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
         factory = new CachingKafkaProducerFactory<>((n, c) -> new FakeProducer<>());
 
-        sender = new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, tracer) {
+        sender = new AbstractKafkaBasedMessageSender(factory, PRODUCER_NAME, config, tracer) {
         };
     }
 
     /**
-     * Verifies that {@link AbstractKafkaBasedDownstreamSender#start()} creates a producer and
-     * {@link AbstractKafkaBasedDownstreamSender#stop()} closes it.
+     * Verifies that {@link AbstractKafkaBasedMessageSender#start()} creates a producer and
+     * {@link AbstractKafkaBasedMessageSender#stop()} closes it.
      */
     @Test
     public void testLifecycle() {
@@ -116,7 +116,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     /**
      * Verifies that the future returned by
-     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, String, String, QoS, String, Buffer, Map, SpanContext)}
+     * {@link AbstractKafkaBasedMessageSender#send(HonoTopic, String, String, QoS, String, Buffer, Map, SpanContext)}
      * completes successfully when the send operation of the Kafka client succeeds.
      */
     @Test
@@ -213,25 +213,25 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     public void testThatConstructorThrowsOnMissingParameter() {
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, tracer) {
+                () -> new AbstractKafkaBasedMessageSender(null, PRODUCER_NAME, config, tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, null, config, tracer) {
+                () -> new AbstractKafkaBasedMessageSender(factory, null, config, tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, null, tracer) {
+                () -> new AbstractKafkaBasedMessageSender(factory, PRODUCER_NAME, null, tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, null) {
+                () -> new AbstractKafkaBasedMessageSender(factory, PRODUCER_NAME, config, null) {
                 });
     }
 
     /**
      * Verifies that
-     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, String, String, QoS, String, Buffer, Map, SpanContext)}
+     * {@link AbstractKafkaBasedMessageSender#send(HonoTopic, String, String, QoS, String, Buffer, Map, SpanContext)}
      * throws a nullpointer exception if a mandatory parameter is {@code null}.
      */
     @Test

@@ -52,7 +52,7 @@ import io.vertx.kafka.client.producer.impl.KafkaHeaderImpl;
 /**
  * A client for publishing messages to a Kafka cluster.
  */
-public abstract class AbstractKafkaBasedDownstreamSender implements Lifecycle {
+public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
 
     /**
      * A logger to be shared with subclasses.
@@ -74,7 +74,7 @@ public abstract class AbstractKafkaBasedDownstreamSender implements Lifecycle {
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
 
-    public AbstractKafkaBasedDownstreamSender(final KafkaProducerFactory<String, Buffer> producerFactory,
+    public AbstractKafkaBasedMessageSender(final KafkaProducerFactory<String, Buffer> producerFactory,
             final String producerName, final Map<String, String> config, final Tracer tracer) {
 
         Objects.requireNonNull(producerFactory);

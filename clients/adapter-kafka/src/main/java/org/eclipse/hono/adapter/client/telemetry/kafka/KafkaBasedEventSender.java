@@ -33,7 +33,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A client for publishing event messages to a Kafka cluster.
  */
-public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender implements EventSender {
+public class KafkaBasedEventSender extends AbstractKafkaBasedMessageSender implements EventSender {
 
     /**
      * Creates a new Kafka-based event sender.

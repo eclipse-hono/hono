@@ -33,7 +33,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A client for publishing telemetry messages to a Kafka cluster.
  */
-public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSender implements TelemetrySender {
+public class KafkaBasedTelemetrySender extends AbstractKafkaBasedMessageSender implements TelemetrySender {
 
     /**
      * Creates a new Kafka-based telemetry sender.
