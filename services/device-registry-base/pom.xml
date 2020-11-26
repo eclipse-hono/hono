@@ -26,6 +26,10 @@
   <description>Base classes for implementing a Hono device registry.</description>
   <url>https://www.eclipse.org/hono</url>
 
+  <properties>
+    <docker.skip>true</docker.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.hamcrest</groupId>
