@@ -156,6 +156,16 @@
         <role>Committer</role>
       </roles>
     </developer>
+    <developer>
+      <id>kaniyan</id>
+      <name>Kartheeswaran Kalidass</name>
+      <email>Kartheeswaran.Kalidass@bosch.io</email>
+      <organization>Bosch.IO GmbH</organization>
+      <organizationUrl>https://www.bosch.io</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
   </developers>
 
   <properties>
