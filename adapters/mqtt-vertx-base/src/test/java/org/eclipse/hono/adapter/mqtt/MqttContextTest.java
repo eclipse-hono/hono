@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -32,7 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -49,9 +49,7 @@ public class MqttContextTest {
      */
     @BeforeEach
     public void setup() {
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
     }
 
     /**

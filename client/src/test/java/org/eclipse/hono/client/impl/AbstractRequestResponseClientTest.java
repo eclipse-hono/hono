@@ -43,6 +43,7 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -53,7 +54,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -89,10 +89,7 @@ public class AbstractRequestResponseClientTest  {
     @BeforeEach
     public void setUp() {
 
-        final SpanContext spanContext = mock(SpanContext.class);
-
-        span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
 
         vertx = mock(Vertx.class);
         receiver = HonoClientUnitTestHelper.mockProtonReceiver();
@@ -452,9 +449,7 @@ public class AbstractRequestResponseClientTest  {
         request.setApplicationProperties(new ApplicationProperties(applicationProps));
         MessageHelper.setPayload(request, "application/json", payload.toBuffer());
 
-        final SpanContext spanContext = mock(SpanContext.class);
-        final Span span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
+        final Span span = TracingMockSupport.mockSpan();
 
         client.sendRequest(request, ctx.succeeding(t -> {
             // THEN the result handler is succeeded

@@ -35,6 +35,7 @@ import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -129,7 +130,6 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      *
      * @param testInfo The test meta data.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void configureServiceClients(final TestInfo testInfo) {
 
@@ -139,14 +139,14 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any())).
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), VertxMockSupport.anyHandler());
         doAnswer(invocation -> {
             final JsonObject authInfo = invocation.getArgument(0);
             final String username = JsonHelper.getValue(authInfo, CredentialsConstants.FIELD_USERNAME, String.class, null);
@@ -219,7 +219,6 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testPostTelemetryFailsForUnreachableCredentialsService(final VertxTestContext ctx) {
 
@@ -227,7 +226,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "service down")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), VertxMockSupport.anyHandler());
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
@@ -415,7 +414,6 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testPostTelemetryWithTtdSucceedsWithCommandInResponse(final VertxTestContext ctx) {
 
@@ -426,7 +424,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null);
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), VertxMockSupport.anyHandler(), any(), any()))
                 .thenAnswer(invocation -> {
                     final Handler<CommandContext> consumer = invocation.getArgument(2);
                     consumer.handle(commandContext);
@@ -454,7 +452,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                                any(Handler.class), any(), any());
+                                VertxMockSupport.anyHandler(), any(), any());
                         // and the command consumer has been closed again
                         verify(commandConsumer).close(any());
                         verify(commandContext).accept();
@@ -573,13 +571,12 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         return String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, wrongCommandRequestId);
     }
 
-    @SuppressWarnings("unchecked")
     private void mockSuccessfulAuthentication(final String tenantId, final String deviceId) {
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
             resultHandler.handle(Future.succeededFuture(new DeviceUser(tenantId, deviceId)));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), VertxMockSupport.anyHandler());
     }
 
     private ResponsePredicateResult assertCorsHeaders(final HttpResponse<?> response) {

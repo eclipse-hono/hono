@@ -20,13 +20,11 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -39,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
@@ -56,7 +56,6 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.log.Fields;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -87,7 +86,6 @@ public class PrometheusBasedResourceLimitChecksTest {
     private AsyncCache<String, LimitedResource<Long>> connectionCountCache;
     private AsyncCache<String, LimitedResource<Duration>> connectionDurationCache;
     private AsyncCache<String, LimitedResource<Long>> dataVolumeCache;
-    private SpanContext spanContext;
     private Span span;
     private Tracer tracer;
 
@@ -126,16 +124,8 @@ public class PrometheusBasedResourceLimitChecksTest {
             return provider.apply(invocation.getArgument(0), mock(Executor.class));
         });
 
-        spanContext = mock(SpanContext.class);
-
-        span = mock(Span.class);
-        when(span.context()).thenReturn(spanContext);
-
-        final SpanBuilder builder = mock(SpanBuilder.class, withSettings().defaultAnswer(RETURNS_SELF));
-        when(builder.start()).thenReturn(span);
-
-        tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(builder);
+        span = TracingMockSupport.mockSpan();
+        tracer = TracingMockSupport.mockTracer(span);
 
         config = new PrometheusBasedResourceLimitChecksConfig();
 
@@ -154,7 +144,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testExecuteQuerySetsAuthHeader(final VertxTestContext ctx) {
 
@@ -179,7 +168,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         assertFalse(response);
                         verify(request).basicAuthentication(eq("hono"), eq("hono-secret"));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -191,7 +180,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionLimitCheckSucceedsIfNoResourceLimitsAreSet(final VertxTestContext ctx) {
 
@@ -202,7 +190,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request, never()).send(any(Handler.class));
+                        verify(request, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -214,7 +202,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionLimitCheckSucceedsIfUnlimited(final VertxTestContext ctx) {
 
@@ -226,7 +213,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request, never()).send(any(Handler.class));
+                        verify(request, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -238,7 +225,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionLimitCheckSucceeds(final VertxTestContext ctx) {
 
@@ -253,7 +239,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedConnectionNumberQuery(tenant));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -266,7 +252,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void testConnectionLimitCheckFails(final VertxTestContext ctx) {
 
         givenCurrentConnections(10);
@@ -280,7 +265,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedConnectionNumberQuery(tenant));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -293,7 +278,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void testConnectionLimitCheckSucceedsIfQueryTimesOut(final VertxTestContext ctx) {
 
         givenFailResponseWithTimeoutException();
@@ -307,7 +291,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedConnectionNumberQuery(tenant));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -319,7 +303,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitNotExceeded(final VertxTestContext ctx) {
 
@@ -341,7 +324,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -352,7 +335,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitExceeded(final VertxTestContext ctx) {
 
@@ -378,7 +360,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -390,7 +372,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitNotExceededForMissingMetrics(final VertxTestContext ctx) {
 
@@ -403,12 +384,12 @@ public class PrometheusBasedResourceLimitChecksTest {
                                 new ResourceLimitsPeriod(ResourceLimitsPeriod.PERIOD_MODE_DAYS).setNoOfDays(30),
                                 100L)));
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, span.context())
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                         // AND the span is not marked as erroneous
                         verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
@@ -534,7 +515,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitNotExceededWhenNotConfigured(final VertxTestContext ctx) {
 
@@ -544,7 +524,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request, never()).send(any(Handler.class));
+                        verify(request, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -562,7 +542,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         when(dataVolumeCache.get(anyString(), any(BiFunction.class)))
             .then(invocation -> {
                 final CompletableFuture<LimitedResource<Long>> result = new CompletableFuture<>();
-                result.complete(new LimitedResource<Long>(60L, 100L));
+                result.complete(new LimitedResource<>(60L, 100L));
                 return result;
             });
         final long incomingMessageSize = 20;
@@ -573,11 +553,11 @@ public class PrometheusBasedResourceLimitChecksTest {
                                 new ResourceLimitsPeriod(ResourceLimitsPeriod.PERIOD_MODE_DAYS).setNoOfDays(30),
                                 100L)));
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, span.context())
                 .onComplete(ctx.succeeding(exceeded -> {
                     ctx.verify(() -> {
                         assertTrue(exceeded);
-                        verify(request, never()).send(any(Handler.class));
+                        verify(request, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -609,7 +589,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -621,7 +601,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionDurationLimitNotExceeded(final VertxTestContext ctx) {
 
@@ -642,7 +621,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -654,7 +633,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionDurationLimitExceeded(final VertxTestContext ctx) {
 
@@ -675,7 +653,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -686,7 +664,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitNotExceededWhenTimeoutOccurred(final VertxTestContext ctx) {
 
@@ -702,7 +679,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -714,7 +691,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionDurationLimitNotExceededForMissingMetrics(final VertxTestContext ctx) {
 
@@ -736,7 +712,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         verify(req).addQueryParam(
                                 "query",
                                 getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                         // AND the span is not marked as erroneous
                         verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
@@ -750,7 +726,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionDurationLimitNotExceededWhenTimeoutOccurred(final VertxTestContext ctx) {
 
@@ -765,7 +740,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request).send(any(Handler.class));
+                        verify(request).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -791,16 +766,15 @@ public class PrometheusBasedResourceLimitChecksTest {
             when(response.body()).thenReturn(createPrometheusResponse(value));
             responseHandler.handle(Future.succeededFuture(response));
             return null;
-        }).when(request).send(any(Handler.class));
+        }).when(request).send(VertxMockSupport.anyHandler());
     }
 
-    @SuppressWarnings("unchecked")
     private void givenFailResponseWithTimeoutException() {
         doAnswer(invocation -> {
             final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
             responseHandler.handle(Future.failedFuture(new TimeoutException()));
             return null;
-        }).when(request).send(any(Handler.class));
+        }).when(request).send(VertxMockSupport.anyHandler());
     }
 
     private static JsonObject createPrometheusResponse(final Integer value) {

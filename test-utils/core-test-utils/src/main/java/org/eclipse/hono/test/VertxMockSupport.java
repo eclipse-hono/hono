@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.test;
 
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -50,6 +51,21 @@ public final class VertxMockSupport {
             return null;
         }).when(context).runOnContext(VertxMockSupport.anyHandler());
         return context;
+    }
+
+    /**
+     * Ensures that timers set on the given vert.x instance run immediately.
+     *
+     * @param vertx The mocked vert.x instance.
+     */
+    public static void runTimersImmediately(final Vertx vertx) {
+
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            final long timerId = 1;
+            handler.handle(timerId);
+            return timerId;
+        });
     }
 
     /**

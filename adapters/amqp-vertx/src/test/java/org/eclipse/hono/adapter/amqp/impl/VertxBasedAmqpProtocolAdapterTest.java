@@ -69,6 +69,8 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -136,16 +138,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         metrics = mock(AmqpAdapterMetrics.class);
         vertx = mock(Vertx.class);
-        context = mock(Context.class);
-        doAnswer(invocation -> {
-            final Handler<Void> codeToRun = invocation.getArgument(0);
-            codeToRun.handle(null);
-            return null;
-        }).when(context).runOnContext(any());
+        context = VertxMockSupport.mockContext(vertx);
 
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
 
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
@@ -179,7 +174,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      *
      * @param ctx The test context to use for running asynchronous tests.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testStartUsesClientProvidedAmqpServer(final VertxTestContext ctx) {
         // GIVEN an adapter with a client provided Amqp Server
@@ -192,8 +186,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         startupTracker.future().onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the client provided server is started
-                verify(server).connectHandler(any(Handler.class));
-                verify(server).listen(any(Handler.class));
+                verify(server).connectHandler(VertxMockSupport.anyHandler());
+                verify(server).listen(VertxMockSupport.anyHandler());
             });
             ctx.completeNow();
         }));
@@ -461,7 +455,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * <em>EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION</em> event a with TTD -1. An unauthenticated device is used in
      * this test setup to simulate the client device.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testAdapterOpensSenderLinkAndNotifyDownstreamApplication() {
         // GIVEN an AMQP adapter configured to use a user-defined server
@@ -471,7 +464,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), VertxMockSupport.anyHandler(), any(), any()))
             .thenReturn(Future.succeededFuture(mock(CommandConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
@@ -501,7 +494,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // and a device that wants to receive commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), VertxMockSupport.anyHandler(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
@@ -596,7 +589,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // that wants to receive commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), VertxMockSupport.anyHandler(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
@@ -647,7 +640,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // that wants to receive commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), VertxMockSupport.anyHandler(), any(), any()))
                 .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
@@ -1144,7 +1137,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             final Handler<Long> task =  invocation.getArgument(1);
             task.handle(1L);
             return 1L;
-        }).when(vertx).setTimer(anyLong(), any(Handler.class));
+        }).when(vertx).setTimer(anyLong(), VertxMockSupport.anyHandler());
 
         adapter.onCommandReceived(tenantObject, deviceLink, context);
         // THEN the adapter releases the command
@@ -1405,13 +1398,12 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      *
      * @return The configured server instance.
      */
-    @SuppressWarnings("unchecked")
     private ProtonServer getAmqpServer() {
 
         final ProtonServer server = mock(ProtonServer.class);
         when(server.actualPort()).thenReturn(0, Constants.PORT_AMQP);
-        when(server.connectHandler(any(Handler.class))).thenReturn(server);
-        when(server.listen(any(Handler.class))).then(invocation -> {
+        when(server.connectHandler(VertxMockSupport.anyHandler())).thenReturn(server);
+        when(server.listen(VertxMockSupport.anyHandler())).then(invocation -> {
             final Handler<AsyncResult<ProtonServer>> handler = invocation.getArgument(0);
             handler.handle(Future.succeededFuture(server));
             return server;

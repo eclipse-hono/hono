@@ -60,6 +60,8 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -112,9 +114,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         startupHandler = mock(Handler.class);
         metrics = mock(CoapAdapterMetrics.class);
 
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
 
         this.properties = givenDefaultConfigurationProperties();
         createClientFactories();
@@ -122,9 +122,9 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -604,7 +604,6 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
      * Verifies that the adapter releases an incoming command if the forwarding of the preceding telemetry
      * message did not succeed.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryReleasesCommandForFailedDownstreamSender() {
 
@@ -615,7 +614,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
         final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), VertxMockSupport.anyHandler(), any(), any()))
             .thenAnswer(invocation -> {
                 final Handler<CommandContext> consumer = invocation.getArgument(2);
                 consumer.handle(commandContext);

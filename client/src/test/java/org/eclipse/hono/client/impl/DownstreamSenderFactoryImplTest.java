@@ -36,7 +36,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
@@ -63,12 +62,7 @@ public class DownstreamSenderFactoryImplTest {
     @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
-        // run timers immediately
-        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            final Handler<Void> task = invocation.getArgument(1);
-            task.handle(null);
-            return 1L;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());

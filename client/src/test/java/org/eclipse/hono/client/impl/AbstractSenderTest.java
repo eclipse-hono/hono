@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,6 +30,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +40,6 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
@@ -120,12 +119,7 @@ public class AbstractSenderTest {
         // GIVEN a sender that won't receive a delivery update on sending a message 
         // and directly triggers the timeout handler
         when(protonSender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
-        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            final Handler<Long> handler = invocation.getArgument(1);
-            final long timerId = 1;
-            handler.handle(timerId);
-            return timerId;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
         final AbstractSender sender = newSender("tenant", "endpoint");
 
         // WHEN sending a message
@@ -197,10 +191,7 @@ public class AbstractSenderTest {
 
             @Override
             protected Span startSpan(final SpanContext context, final Message rawMessage) {
-                final SpanContext spanContext = mock(SpanContext.class);
-                final Span span = mock(Span.class);
-                when(span.context()).thenReturn(spanContext);
-                return span;
+                return TracingMockSupport.mockSpan();
             }
         };
     }

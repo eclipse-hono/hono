@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -60,9 +60,7 @@ public class KuraProtocolAdapterTest {
         adapter = new KuraProtocolAdapter();
         adapter.setConfig(config);
 
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
     }
 
     /**

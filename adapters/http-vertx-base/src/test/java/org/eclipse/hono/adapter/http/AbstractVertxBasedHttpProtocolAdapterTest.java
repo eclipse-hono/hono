@@ -45,6 +45,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -107,12 +108,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         startupHandler = mock(Handler.class);
         context = mock(Context.class);
         vertx = mock(Vertx.class);
-        // run timers immediately
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<Void> task = invocation.getArgument(1);
-            task.handle(null);
-            return 1L;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
 
         metrics = mock(HttpAdapterMetrics.class);
 
@@ -122,7 +118,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -146,7 +142,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testStartUsesClientProvidedHttpServer(final VertxTestContext ctx) {
 
@@ -158,8 +153,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         startupTracker.future().onComplete(ctx.succeeding(s -> {
             // THEN the client provided HTTP server has been configured and started
             ctx.verify(() -> {
-                verify(server).requestHandler(any(Handler.class));
-                verify(server).listen(any(Handler.class));
+                verify(server).requestHandler(VertxMockSupport.anyHandler());
+                verify(server).listen(VertxMockSupport.anyHandler());
             });
             ctx.completeNow();
         }));
@@ -218,7 +213,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * result if the device belongs to a tenant for which the adapter is
      * disabled.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryFailsForDisabledTenant() {
 
@@ -240,7 +234,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any());
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and has not been reported as processed
@@ -262,7 +256,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Also verifies that the adapter does not open a command consumer for
      * the device in this case.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryFailsForUnknownDevice() {
 
@@ -292,7 +285,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any());
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(
@@ -310,7 +303,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Verifies that the adapter waits for an event being settled and accepted
      * by a downstream peer before responding with a 202 status to the device.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadEventWaitsForAcceptedOutcome() {
 
@@ -323,7 +315,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpContext ctx = newHttpContext(payload, "application/text", newEventRequest(), response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
@@ -396,7 +388,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     /**
      * Verifies that the adapter uses the time to live value set in the down stream event message.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadEventWithTimeToLive() {
         // GIVEN an adapter with a downstream event consumer attached
@@ -411,7 +402,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(request.uri()).thenReturn("/" + EventConstants.EVENT_ENDPOINT);
         when(request.getHeader(eq(Constants.HEADER_TIME_TO_LIVE))).thenReturn("10");
         final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
@@ -427,7 +418,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Verifies that the adapter waits for a command response being settled and accepted
      * by a downstream peer before responding with a 202 status to the device.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadCommandResponseWaitsForAcceptedOutcome() {
 
@@ -440,7 +430,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpContext ctx = newHttpContext(payload, "application/text", mock(HttpServerRequest.class), response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
@@ -475,7 +465,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     /**
      * Verifies that the adapter accepts a command response message with an empty body.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadEmptyCommandResponseSucceeds() {
 
@@ -487,7 +476,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final Buffer payload = null;
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpContext ctx = newHttpContext(payload, "application/text", mock(HttpServerRequest.class), response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
@@ -613,7 +602,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Verifies that the adapter does not wait for a telemetry message being settled and accepted
      * by a downstream peer before responding with a 202 status to the device.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryDoesNotWaitForAcceptedOutcome() {
 
@@ -625,7 +613,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpContext ctx = newHttpContext(payload, "application/text", mock(HttpServerRequest.class), response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
@@ -656,7 +644,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * handling a request with a TTD parameter if sending of the telemetry
      * message fails.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryWithTtdClosesCommandConsumerIfSendingFails() {
 
@@ -673,14 +660,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
         final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
         });
         // and the creation of the command consumer completes at a later point
         final Promise<CommandConsumer> commandConsumerPromise = Promise.promise();
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
                 .thenReturn(commandConsumerPromise.future());
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device");
@@ -818,7 +805,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
      * Verifies that a command response message is rejected due to the limit exceeded.
      *
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitExceededForACommandResponseMessage() {
 
@@ -834,7 +820,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpContext ctx = newHttpContext(payload, "application/text", mock(HttpServerRequest.class),
                 response);
-        when(ctx.getRoutingContext().addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
@@ -934,8 +920,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         final HttpServer server = mock(HttpServer.class);
         when(server.actualPort()).thenReturn(0, 8080);
-        when(server.requestHandler(any(Handler.class))).thenReturn(server);
-        when(server.listen(any(Handler.class))).then(invocation -> {
+        when(server.requestHandler(VertxMockSupport.anyHandler())).thenReturn(server);
+        when(server.listen(VertxMockSupport.anyHandler())).then(invocation -> {
             final Handler<AsyncResult<HttpServer>> handler = (Handler<AsyncResult<HttpServer>>) invocation
                     .getArgument(0);
             if (startupShouldFail) {

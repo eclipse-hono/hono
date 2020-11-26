@@ -19,13 +19,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttAuth;
@@ -49,10 +49,7 @@ public class ConnectPacketAuthHandlerTest {
     @BeforeEach
     public void setUp() {
         authHandler = new ConnectPacketAuthHandler(mock(DeviceCredentialsAuthProvider.class));
-
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
     }
 
     /**

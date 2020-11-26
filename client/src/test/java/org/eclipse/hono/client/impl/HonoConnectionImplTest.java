@@ -97,12 +97,7 @@ public class HonoConnectionImplTest {
         vertx = mock(Vertx.class);
         final Context context = VertxMockSupport.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
-        // run any timer immediately
-        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(1);
-            handler.handle(null);
-            return 0L;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
         session = mock(ProtonSession.class);
         con = mock(ProtonConnection.class);
         when(con.getRemoteContainer()).thenReturn("server");

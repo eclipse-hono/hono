@@ -32,6 +32,7 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.MapperEndpoint;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -44,7 +45,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -84,9 +84,7 @@ public class HttpBasedMessageMappingTest {
         config = new MqttProtocolAdapterProperties();
         messageMapping = new HttpBasedMessageMapping(mapperWebClient, config);
 
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
     }
 
     /**

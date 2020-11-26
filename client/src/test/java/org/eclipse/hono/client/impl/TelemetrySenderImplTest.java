@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -125,12 +124,7 @@ public class TelemetrySenderImplTest {
         // GIVEN a sender that won't receive a delivery update on sending a message 
         // and directly triggers the timeout handler
         when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
-        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            final Handler<Long> handler = invocation.getArgument(1);
-            final long timerId = 1;
-            handler.handle(timerId);
-            return timerId;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
         final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant", SendMessageSampler.noop());
 
         // WHEN sending a message

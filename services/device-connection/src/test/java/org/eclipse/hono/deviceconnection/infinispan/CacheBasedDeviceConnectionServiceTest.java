@@ -26,6 +26,7 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ public class CacheBasedDeviceConnectionServiceTest {
             blockingCode.handle(result.future());
             resultHandler.handle(result.future());
             return null;
-        }).when(vertx).executeBlocking(any(Handler.class), any(Handler.class));
+        }).when(vertx).executeBlocking(VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
         final EventBus eventBus = mock(EventBus.class);
         when(eventBus.consumer(anyString())).thenReturn(mock(MessageConsumer.class));
         when(vertx.eventBus()).thenReturn(eventBus);

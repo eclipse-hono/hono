@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,7 +50,6 @@ class AbstractApplicationTest {
     private Vertx vertx;
     private AbstractApplication application;
 
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
@@ -57,14 +57,14 @@ class AbstractApplicationTest {
             final Handler<AsyncResult<String>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture("id"));
             return null;
-        }).when(vertx).deployVerticle(any(Verticle.class), any(Handler.class));
+        }).when(vertx).deployVerticle(any(Verticle.class), VertxMockSupport.anyHandler());
         application = new AbstractApplication() {
         };
         application.setVertx(vertx);
     }
 
     private AbstractServiceBase<ServiceConfigProperties> newServiceInstance() {
-        return new AbstractServiceBase<ServiceConfigProperties>() {
+        return new AbstractServiceBase<>() {
 
             @Override
             public void setConfig(final ServiceConfigProperties configuration) {
@@ -107,7 +107,7 @@ class AbstractApplicationTest {
         application.deployVerticles()
         .onComplete(ctx.succeeding(ok -> {
             verify(factory, times(2)).getObject();
-            verify(vertx, times(2)).deployVerticle(any(Verticle.class), any(Handler.class));
+            verify(vertx, times(2)).deployVerticle(any(Verticle.class), VertxMockSupport.anyHandler());
             ctx.completeNow();
         }));
     }

@@ -50,6 +50,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -101,7 +102,6 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setup() {
 
@@ -137,12 +137,7 @@ public class AbstractProtocolAdapterBaseTest {
         setCollaborators(adapter);
 
         vertx = mock(Vertx.class);
-        // run timers immediately
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<Void> task = invocation.getArgument(1);
-            task.handle(null);
-            return 1L;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
         context = mock(Context.class);
         adapter.init(vertx, context);
     }

@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -50,6 +49,8 @@ import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.test.ProtocolAdapterTestSupport;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -120,16 +121,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @SuppressWarnings("unchecked")
     public void setup() {
 
-        context = mock(Context.class);
-        doAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(any(Handler.class));
+        context = VertxMockSupport.mockContext(vertx);
 
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
 
         metrics = mock(MqttAdapterMetrics.class);
 
@@ -174,12 +168,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         return MqttContext.fromPublishPacket(message, endpoint, span);
     }
 
-    @SuppressWarnings("unchecked")
     private static MqttEndpoint mockEndpoint() {
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.clientIdentifier()).thenReturn("test-device");
-        when(endpoint.subscribeHandler(any(Handler.class))).thenReturn(endpoint);
-        when(endpoint.unsubscribeHandler(any(Handler.class))).thenReturn(endpoint);
+        when(endpoint.subscribeHandler(VertxMockSupport.anyHandler())).thenReturn(endpoint);
+        when(endpoint.unsubscribeHandler(VertxMockSupport.anyHandler())).thenReturn(endpoint);
         return endpoint;
     }
 
@@ -189,7 +182,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testStartup(final VertxTestContext ctx) {
 
@@ -199,8 +191,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.start(startupTracker);
         startupTracker.future().onComplete(ctx.succeeding(s -> {
             ctx.verify(() -> {
-                verify(server).listen(any(Handler.class));
-                verify(server).endpointHandler(any(Handler.class));
+                verify(server).listen(VertxMockSupport.anyHandler());
+                verify(server).endpointHandler(VertxMockSupport.anyHandler());
             });
             ctx.completeNow();
         }));
@@ -356,7 +348,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      * Verifies that on successful authentication the adapter sets appropriate message and close handlers on the client
      * endpoint.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testAuthenticatedMqttAdapterCreatesMessageHandlersForAuthenticatedDevices() {
 
@@ -373,8 +364,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // are registered
         verify(authHandler).authenticateDevice(any(MqttConnectContext.class));
         verify(endpoint).accept(false);
-        verify(endpoint).publishHandler(any(Handler.class));
-        verify(endpoint, times(2)).closeHandler(any(Handler.class));
+        verify(endpoint).publishHandler(VertxMockSupport.anyHandler());
+        verify(endpoint, times(2)).closeHandler(VertxMockSupport.anyHandler());
         verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.SUCCEEDED, Constants.DEFAULT_TENANT);
     }
 
@@ -411,7 +402,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      * Verifies that the adapter registers message handlers on client connections when device authentication is
      * disabled.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUnauthenticatedMqttAdapterCreatesMessageHandlersForAllDevices() {
 
@@ -425,8 +415,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // THEN the connection is established and handlers are registered
         verify(authHandler, never()).authenticateDevice(any(MqttConnectContext.class));
-        verify(endpoint).publishHandler(any(Handler.class));
-        verify(endpoint, times(2)).closeHandler(any(Handler.class));
+        verify(endpoint).publishHandler(VertxMockSupport.anyHandler());
+        verify(endpoint, times(2)).closeHandler(VertxMockSupport.anyHandler());
         verify(endpoint).accept(false);
     }
 
@@ -891,7 +881,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // WHEN a device subscribes to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), qos));
@@ -905,7 +895,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.onSubscribe(endpoint, null, msg, cmdSubscriptionsManager, OptionalInt.empty());
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(endpoint).closeHandler(closeHookCaptor.capture());
@@ -935,7 +925,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // WHEN a device subscribes to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any()))
                 .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), MqttQoS.AT_MOST_ONCE));
@@ -949,7 +939,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.onSubscribe(endpoint, null, msg, cmdSubscriptionsManager, OptionalInt.empty());
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(endpoint).closeHandler(closeHookCaptor.capture());
@@ -984,7 +974,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // and for subscribing to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), VertxMockSupport.anyHandler(), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         subscriptions.add(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-A"), MqttQoS.AT_MOST_ONCE));
@@ -1362,12 +1352,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         return CommandConstants.COMMAND_ENDPOINT;
     }
 
-    @SuppressWarnings("unchecked")
     private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
-        when(endpoint.subscribeHandler(any(Handler.class))).thenReturn(endpoint);
-        when(endpoint.unsubscribeHandler(any(Handler.class))).thenReturn(endpoint);
+        when(endpoint.subscribeHandler(VertxMockSupport.anyHandler())).thenReturn(endpoint);
+        when(endpoint.unsubscribeHandler(VertxMockSupport.anyHandler())).thenReturn(endpoint);
         when(endpoint.isCleanSession()).thenReturn(Boolean.FALSE);
         return endpoint;
     }
@@ -1398,13 +1387,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         return adapter;
     }
 
-    @SuppressWarnings("unchecked")
     private static MqttServer getMqttServer(final boolean startupShouldFail) {
 
         final MqttServer server = mock(MqttServer.class);
         when(server.actualPort()).thenReturn(0, 1883);
-        when(server.endpointHandler(any(Handler.class))).thenReturn(server);
-        when(server.listen(any(Handler.class))).then(invocation -> {
+        when(server.endpointHandler(VertxMockSupport.anyHandler())).thenReturn(server);
+        when(server.listen(VertxMockSupport.anyHandler())).then(invocation -> {
             final Handler<AsyncResult<MqttServer>> handler = invocation.getArgument(0);
             if (startupShouldFail) {
                 handler.handle(Future.failedFuture("MQTT server intentionally failed to start"));

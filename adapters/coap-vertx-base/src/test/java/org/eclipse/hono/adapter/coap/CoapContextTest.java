@@ -14,16 +14,16 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
@@ -33,8 +33,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 
@@ -53,16 +51,12 @@ public class CoapContextTest {
     @BeforeEach
     void setUp() {
         vertx = mock(Vertx.class);
-
-        span = mock(Span.class);
-        final SpanContext spanContext = mock(SpanContext.class);
-        when(span.context()).thenReturn(spanContext);
+        span = TracingMockSupport.mockSpan();
     }
 
     /**
      * Verifies that no ACK timer is started for a timeout value &lt;= 0.
      */
-    @SuppressWarnings("unchecked")
     @ParameterizedTest
     @ValueSource(longs = {-1L, 0L})
     void testStartAckTimerDoesNotStartTimer(final long timeout) {
@@ -73,14 +67,13 @@ public class CoapContextTest {
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, timeout);
-        verify(vertx, never()).setTimer(anyLong(), any(Handler.class));
+        verify(vertx, never()).setTimer(anyLong(), VertxMockSupport.anyHandler());
     }
 
     /**
      * Verifies that the tenant specific value set for the ACK timeout gets
      * precedence over the global adapter configuration.
      */
-    @SuppressWarnings("unchecked")
     @Test
     void testStartAckTimerUsesTenantSpecificTimeout() {
         final CoapExchange exchange = mock(CoapExchange.class);
@@ -90,13 +83,12 @@ public class CoapContextTest {
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
-        verify(vertx).setTimer(eq(200L), any(Handler.class));
+        verify(vertx).setTimer(eq(200L), VertxMockSupport.anyHandler());
     }
 
     /**
      * Verifies that the global ACK timeout is used if no tenant specific value is configured.
      */
-    @SuppressWarnings("unchecked")
     @Test
     void testStartAckTimerFallsBackToGlobalTimeout() {
         final CoapExchange exchange = mock(CoapExchange.class);
@@ -105,13 +97,12 @@ public class CoapContextTest {
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
-        verify(vertx).setTimer(eq(500L), any(Handler.class));
+        verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
     }
 
     /**
      * Verifies that the global ACK timeout is used if a tenant specific value is configured that is not a number.
      */
-    @SuppressWarnings("unchecked")
     @Test
     void testStartAckTimerHandlesNonNumberPropertyValue() {
         final CoapExchange exchange = mock(CoapExchange.class);
@@ -121,6 +112,6 @@ public class CoapContextTest {
         final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
-        verify(vertx).setTimer(eq(500L), any(Handler.class));
+        verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
     }
 }

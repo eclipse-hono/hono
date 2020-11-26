@@ -54,12 +54,7 @@ public class CachingClientFactoryTest {
     @BeforeEach
     public void setup() {
         vertx = mock(Vertx.class);
-        // run timers immediately
-        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            final Handler<Void> task = invocation.getArgument(1);
-            task.handle(null);
-            return 1L;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
     }
 
     /**
@@ -143,8 +138,8 @@ public class CachingClientFactoryTest {
         // and the first 'setTimer' invocation finishes the first creation attempt.
         when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             clientInstancePromise.tryComplete(new Object());
-            final Handler<Void> task = invocation.getArgument(1);
-            task.handle(null);
+            final Handler<Long> task = invocation.getArgument(1);
+            task.handle(1L);
             return 1L;
         });
         // THEN the additional attempt finishes after one retry
