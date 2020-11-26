@@ -14,10 +14,9 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -34,10 +33,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 /**
- * An abstract base class for implementing caches.
+ * An abstract base class for implementing caches based on an
+ * Infinispan {@link org.infinispan.commons.api.BasicCache}.
  *
  * @param <K> The type of the key.
  * @param <V> The type of the value.
@@ -48,30 +47,18 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     protected final Vertx vertx;
     private final BasicCacheContainer cacheManager;
-    private final K connectionCheckKey;
-    private final V connectionCheckValue;
 
     private org.infinispan.commons.api.BasicCache<K, V> cache;
 
     /**
-     * Create a new instance.
+     * Creates a new instance.
      *
      * @param vertx The vert.x instance to run on.
      * @param cacheManager The cache manager.
-     * @param connectionCheckKey The key to use for checking the connection
-     *        to the cache.
-     * @param connectionCheckValue The value to use for checking the connection
-     *        to the cache.
      */
-    public BasicCache(
-            final Vertx vertx,
-            final BasicCacheContainer cacheManager,
-            final K connectionCheckKey,
-            final V connectionCheckValue) {
+    public BasicCache(final Vertx vertx, final BasicCacheContainer cacheManager) {
         this.vertx = Objects.requireNonNull(vertx);
         this.cacheManager = Objects.requireNonNull(cacheManager);
-        this.connectionCheckKey = Objects.requireNonNull(connectionCheckKey);
-        this.connectionCheckValue = Objects.requireNonNull(connectionCheckValue);
     }
 
     /**
@@ -79,7 +66,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      *
      * @return A future tracking the progress, never returns {@code null}.
      */
-    protected abstract Future<Void> connectToGrid();
+    protected abstract Future<Void> connectToCache();
 
     /**
      * Checks if the cache manager is started.
@@ -93,7 +80,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      */
     @Override
     public Future<Void> start() {
-        return connectToGrid();
+        return connectToCache();
     }
 
     /**
@@ -129,28 +116,39 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     /**
-     * Perform a task with a connected cache.
+     * Performs a task with a connected cache.
      * <p>
-     * The method checks if the cache is connected. If it is, then it will call the
-     * supplier, providing a <em>non-null</em> cache instance.
+     * The method checks if the cache instance has been set. If that is the case, then the
+     * supplier will be invoked, providing a <em>non-null</em> cache instance.
      * <p>
-     * If the cache is not connected, the supplier will not be called and instead
-     * it will return a failed future, provided be {@link #noConnectionFailure()}.
+     * If the cache has not been set (yet), the supplier will not be called and a failed
+     * future will be returned, provided by {@link #noConnectionFailure()}.
      *
      * @param <T> The type of the return value.
-     * @param futureSupplier The supplier, providing the operation which should be performed.
+     * @param futureSupplier The supplier, providing the operation which should be invoked.
      * @return The future, tracking the result of the operation.
      */
-    protected <T> Future<T> withCache(final Function<org.infinispan.commons.api.BasicCache<K, V>, CompletionStage<T>> futureSupplier) {
+    protected final <T> Future<T> withCache(final Function<org.infinispan.commons.api.BasicCache<K, V>, CompletionStage<T>> futureSupplier) {
 
         final var cache = this.cache;
+        return Optional.ofNullable(cache)
+                .map(c -> Futures.create(() -> futureSupplier.apply(cache)))
+                .orElseGet(BasicCache::noConnectionFailure)
+                .onComplete(this::postCacheAccess);
+    }
 
-        if (cache == null) {
-            return noConnectionFailure();
-        } else {
-            return Futures.create(() -> futureSupplier.apply(cache));
-        }
-
+    /**
+     * Performs extra processing on the result of a cache operation returned by {@link #withCache(Function)}.
+     * <p>
+     * Subclasses should override this method if needed.
+     * <p>
+     * This default implementation does nothing.
+     *
+     * @param <T> The type of the return value.
+     * @param cacheOperationResult The result of the cache operation.
+     */
+    protected  <T> void postCacheAccess(final AsyncResult<T> cacheOperationResult) {
+        // nothing done by default
     }
 
     /**
@@ -195,7 +193,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     /**
-     * Remove a key/value mapping from the cache.
+     * Removes a key/value mapping from the cache.
      *
      * @param key The key.
      * @param value The value.
@@ -250,42 +248,11 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      * @param <V> The value type of the returned future.
      * @return A failed future, never returns {@code null}.
      */
-    private static <V> Future<V> noConnectionFailure() {
+    protected static <V> Future<V> noConnectionFailure() {
 
         return Future.failedFuture(new ServerErrorException(
                 HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
 
-    }
-
-    /**
-     * Checks if the cache is connected.
-     *
-     * @return A future that is completed with information about a successful check's result.
-     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
-     */
-    @Override
-    public Future<JsonObject> checkForCacheAvailability() {
-
-        final Promise<JsonObject> result = Promise.promise();
-
-        if (isStarted()) {
-            final Instant start = Instant.now();
-            put(connectionCheckKey, connectionCheckValue)
-                    .onComplete(r -> {
-                        if (r.succeeded()) {
-                            final long requestDuration = Duration.between(start, Instant.now()).toMillis();
-                            result.complete(new JsonObject().put("grid-response-time", requestDuration));
-                        } else {
-                            LOG.debug("failed to put test value to cache", r.cause());
-                            result.fail(r.cause());
-                        }
-                    });
-        } else {
-            // try to (re-)establish connection
-            connectToGrid();
-            result.fail("not connected to data grid");
-        }
-        return result.future();
     }
 
 }

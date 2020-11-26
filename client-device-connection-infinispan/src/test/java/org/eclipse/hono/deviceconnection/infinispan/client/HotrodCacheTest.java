@@ -32,10 +32,12 @@ import org.infinispan.client.hotrod.configuration.Configuration;
 import org.infinispan.client.hotrod.impl.MetadataValueImpl;
 import org.infinispan.commons.api.BasicCache;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
@@ -64,6 +66,7 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> result = mock(org.infinispan.client.hotrod.RemoteCache.class);
         when(remoteCacheManager.getCache(anyString(), anyBoolean())).thenReturn(result);
         when(remoteCacheManager.getConfiguration()).thenReturn(configuration);
+        when(remoteCacheManager.isStarted()).thenReturn(true);
         when(configuration.forceReturnValues()).thenReturn(false);
         when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
         return result;
@@ -93,5 +96,29 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
         if (expectedRemoveOperationResult) {
             verify(remoteCache).removeWithVersionAsync(eq(key), anyLong());
         }
+    }
+
+
+    /**
+     * Verifies that the <em>checkForCacheAvailability</em> check uses a cached connection
+     * check result value if invoked shortly after a previous invocation.
+     *
+     * @param ctx The vert.x text context.
+     */
+    @Test
+    void testCheckForCacheAvailabilityUsesCachedResult(final VertxTestContext ctx) {
+        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
+        when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
+        cache.start()
+                .compose(c -> cache.checkForCacheAvailability())
+                // 2nd invocation is supposed to use cached value
+                .compose(c -> cache.checkForCacheAvailability())
+                .onComplete(ctx.succeeding(v -> {
+                    ctx.verify(() -> {
+                        // putAsync() must have only been called once
+                        verify(grid).putAsync(anyString(), anyString());
+                    });
+                    ctx.completeNow();
+                }));
     }
 }
