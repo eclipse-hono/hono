@@ -98,8 +98,8 @@ The following table provides an overview of the configuration variables and corr
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_DEVICECONNECTION_COMMON_CACHENAME`<br>`--hono.deviceConnection.common.cacheName` | no | `device-connection` | The name of the cache |
-| `HONO_DEVICECONNECTION_COMMON_CHECKKEY`<br>`--hono.deviceConnection.common.checkKey` | no | `KEY_CONNECTION_CHECK` | The key used to check the health of the cache. |
-| `HONO_DEVICECONNECTION_COMMON_CHECKVALUE`<br>`--hono.deviceConnection.common.checkValue` | no | `VALUE_CONNECTION_CHECK` | The value used to check the health of the cache. |
+| `HONO_DEVICECONNECTION_COMMON_CHECKKEY`<br>`--hono.deviceConnection.common.checkKey` | no | `KEY_CONNECTION_CHECK` | The key used to check the health of the cache. This is only used in case of a remote cache. |
+| `HONO_DEVICECONNECTION_COMMON_CHECKVALUE`<br>`--hono.deviceConnection.common.checkValue` | no | `VALUE_CONNECTION_CHECK` | The value used to check the health of the cache. This is only used in case of a remote cache. |
 
 The type of the cache is selected on startup by enabling or disabling the
 profile `embedded-cache`. If the profile is enabled the embedded cache is

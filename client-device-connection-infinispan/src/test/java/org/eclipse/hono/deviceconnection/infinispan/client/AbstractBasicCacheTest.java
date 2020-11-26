@@ -44,7 +44,7 @@ import io.vertx.junit5.VertxTestContext;
 
 
 /**
- * Tests verifying behavior of the {@link HotrodCache}.
+ * Tests verifying behavior of the {@link BasicCache}.
  *
  */
 @ExtendWith(VertxExtension.class)

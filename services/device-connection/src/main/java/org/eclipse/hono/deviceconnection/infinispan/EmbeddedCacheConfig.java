@@ -58,13 +58,11 @@ public class EmbeddedCacheConfig {
         return new EmbeddedCache<>(
                 vertx,
                 embeddedCacheManager(cacheConfig),
-                cacheConfig.getCacheName(),
-                cacheConfig.getCheckKey(),
-                cacheConfig.getCheckValue());
+                cacheConfig.getCacheName());
     }
 
     /**
-     * Create a new configuration, either from a configured file, or with some reasonable defaults.
+     * Creates a new configuration, either from a configured file, or with some reasonable defaults.
      *
      * @param cacheConfig Common cache configuration options.
      * @return A new configuration.

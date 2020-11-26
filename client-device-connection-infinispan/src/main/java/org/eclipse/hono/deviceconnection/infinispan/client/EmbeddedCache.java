@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * An embedded cache.
@@ -41,23 +42,17 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
     private final String cacheName;
 
     /**
-     * Create a new embedded cache instance.
+     * Creates a new embedded cache instance.
      *
      * @param vertx The vert.x instance to run on.
-     * @param cacheManager The connection to the remote cache.
-     * @param cacheName The name of the (remote) cache.
-     * @param connectionCheckKey The key to use for checking the connection
-     *        to the data grid.
-     * @param connectionCheckValue The value to use for checking the connection
-     *        to the data grid.
+     * @param cacheManager The connection to the cache.
+     * @param cacheName The name of the cache.
      */
     public EmbeddedCache(
             final Vertx vertx,
             final EmbeddedCacheManager cacheManager,
-            final String cacheName,
-            final K connectionCheckKey,
-            final V connectionCheckValue) {
-        super(vertx, cacheManager, connectionCheckKey, connectionCheckValue);
+            final String cacheName) {
+        super(vertx, cacheManager);
         this.cacheManager = Objects.requireNonNull(cacheManager);
         this.cacheName = Objects.requireNonNull(cacheName);
     }
@@ -68,7 +63,7 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
     }
 
     @Override
-    protected Future<Void> connectToGrid() {
+    protected Future<Void> connectToCache() {
 
         final Promise<Void> result = Promise.promise();
 
@@ -104,10 +99,22 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
                 connecting.set(false);
             });
         } else {
-            LOG.info("already trying to establish connection to data grid");
-            result.fail("already trying to establish connection to data grid");
+            LOG.info("already trying to establish connection to cache");
+            result.fail("already trying to establish connection to cache");
         }
         return result.future();
+    }
+
+    @Override
+    public Future<JsonObject> checkForCacheAvailability() {
+
+        if (isStarted()) {
+            return Future.succeededFuture(new JsonObject());
+        } else {
+            // try to (re-)establish connection
+            connectToCache();
+            return Future.failedFuture("not connected to cache");
+        }
     }
 
 }

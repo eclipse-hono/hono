@@ -30,6 +30,8 @@ public interface Cache<K, V> {
 
     /**
      * Checks if the cache is connected to the data grid.
+     * <p>
+     * If a cache is found to be not connected here, this method may trigger a connection (re)establishment.
      *
      * @return A future that is completed with information about a successful check's result.
      *         Otherwise, the future will be failed with a

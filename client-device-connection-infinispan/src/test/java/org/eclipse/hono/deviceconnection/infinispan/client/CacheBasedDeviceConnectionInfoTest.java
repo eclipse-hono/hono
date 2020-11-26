@@ -100,7 +100,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final var cacheManager = new DefaultCacheManager(false);
         cacheManager.defineConfiguration("cache-name", new ConfigurationBuilder()
                 .build());
-        cache = new EmbeddedCache<>(vertx, cacheManager, "cache-name", "foo", "bar");
+        cache = new EmbeddedCache<>(vertx, cacheManager, "cache-name");
         cache.start().onComplete(testContext.completing());
 
         span = TracingMockSupport.mockSpan();
