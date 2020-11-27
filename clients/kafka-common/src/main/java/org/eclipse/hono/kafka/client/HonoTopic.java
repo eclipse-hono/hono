@@ -28,6 +28,7 @@ public final class HonoTopic {
     private static final String NAMESPACE = "hono" + SEPARATOR;
 
     private final String topicString;
+    private final String tenantId;
 
     /**
      * Creates a new topic from the given topic type and tenant ID.
@@ -40,6 +41,7 @@ public final class HonoTopic {
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
 
+        this.tenantId = tenantId;
         topicString = type.prefix + tenantId;
     }
 
@@ -56,10 +58,30 @@ public final class HonoTopic {
             return new HonoTopic(Type.EVENT, topicString.substring(Type.EVENT.prefix.length()));
         } else if (topicString.startsWith(Type.COMMAND.prefix)) {
             return new HonoTopic(Type.COMMAND, topicString.substring(Type.COMMAND.prefix.length()));
+        } else if (topicString.startsWith(Type.COMMAND_INTERNAL.prefix)) {
+            return new HonoTopic(Type.COMMAND_INTERNAL, topicString.substring(Type.COMMAND_INTERNAL.prefix.length()));
         } else if (topicString.startsWith(Type.COMMAND_RESPONSE.prefix)) {
             return new HonoTopic(Type.COMMAND_RESPONSE, topicString.substring(Type.COMMAND_RESPONSE.prefix.length()));
         }
         return null;
+    }
+
+    /**
+     * Get the tenantId from the HonoTopic.
+     *
+     * @return The tenantId from the HonoTopic.
+     */
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * Get the separator used for the HonoTopic.
+     *
+     * @return the topic separator.
+     */
+    public static String getSeparator() {
+        return SEPARATOR;
     }
 
     /**
@@ -97,6 +119,7 @@ public final class HonoTopic {
         TELEMETRY(NAMESPACE + TelemetryConstants.TELEMETRY_ENDPOINT + SEPARATOR),
         EVENT(NAMESPACE + EventConstants.EVENT_ENDPOINT + SEPARATOR),
         COMMAND(NAMESPACE + CommandConstants.COMMAND_ENDPOINT + SEPARATOR),
+        COMMAND_INTERNAL(NAMESPACE + CommandConstants.INTERNAL_COMMAND_ENDPOINT + SEPARATOR),
         COMMAND_RESPONSE(NAMESPACE + CommandConstants.COMMAND_RESPONSE_ENDPOINT + SEPARATOR);
 
         final String prefix;

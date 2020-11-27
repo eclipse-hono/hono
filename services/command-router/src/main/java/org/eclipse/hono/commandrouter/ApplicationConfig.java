@@ -24,6 +24,7 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
+import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -33,6 +34,10 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.kafka.client.KafkaConsumerConfigProperties;
+import org.eclipse.hono.kafka.client.KafkaConsumerFactory;
+import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
+import org.eclipse.hono.kafka.client.KafkaProducerFactory;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -50,6 +55,7 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -65,6 +71,7 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
@@ -84,7 +91,7 @@ public class ApplicationConfig {
     public static final String PROFILE_ENABLE_DEVICE_CONNECTION_ENDPOINT = "enable-device-connection-endpoint";
 
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
-    private static final String COMPONENT_NAME = "Command Router";
+    private static final String COMPONENT_NAME = "Command_Router";
 
     /**
      * Exposes an OpenTracing {@code Tracer} as a Spring Bean.
@@ -247,6 +254,7 @@ public class ApplicationConfig {
         return commonCacheConfig;
     }
 
+    //TODO. to follow the adapter style to use Kafka or AMQP 1.0 based messaging infrastructure.
     /**
      * Exposes configuration properties for the command consumer factory.
      *
@@ -254,6 +262,7 @@ public class ApplicationConfig {
      */
     @Qualifier(CommandConstants.COMMAND_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.command")
+    @ConditionalOnProperty(name = "hono.command.type", havingValue = "amqp", matchIfMissing = true)
     @Bean
     public ClientConfigProperties commandConsumerFactoryConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
@@ -282,6 +291,7 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
+    @ConditionalOnProperty(name = "hono.command.type", havingValue = "amqp", matchIfMissing = true)
     public CommandConsumerFactory commandConsumerFactory(final CommandRouterServiceConfigProperties config) {
         return new ProtonBasedCommandConsumerFactoryImpl(
                 commandConsumerConnection(),
@@ -462,5 +472,78 @@ public class ApplicationConfig {
     @Profile(PROFILE_ENABLE_DEVICE_CONNECTION_ENDPOINT)
     public CacheBasedDeviceConnectionService deviceConnectionService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo) {
         return new CacheBasedDeviceConnectionService(deviceConnectionInfo);
+    }
+
+    //Kafka based
+    /**
+     * Exposes configuration properties for accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The Kafka producer configuration to use.
+     */
+    @ConfigurationProperties(prefix = "hono.command")
+    @ConditionalOnProperty(name = "hono.command.type", havingValue = "kafka")
+    @Bean
+    public KafkaProducerConfigProperties kafkaProducerConfig() {
+        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+            configProperties.setClientId(COMPONENT_NAME);
+        return configProperties;
+    }
+
+    /**
+     * Exposes a factory for creating producers for sending messages via the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return KafkaProducerFactory.sharedProducerFactory(vertx());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the Kafka cluster as a Spring bean.
+     *
+     * @return  The Kafka consumer configuration to use.
+     */
+    @ConfigurationProperties(prefix = "hono.command")
+    @ConditionalOnProperty(name = "hono.command.type", havingValue = "kafka")
+    @Bean
+    public KafkaConsumerConfigProperties kafkaConsumerConfig() {
+        final KafkaConsumerConfigProperties configProperties = new KafkaConsumerConfigProperties();
+        configProperties.setClientId(COMPONENT_NAME);
+        return configProperties;
+    }
+
+    /**
+     * Exposes a factory for creating consumers for sending consuming messages from the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public KafkaConsumerFactory<String, Buffer> kafkaConsumerFactory() {
+        return KafkaConsumerFactory.consumerFactory(vertx());
+    }
+
+    /**
+     * Exposes a factory for creating clients for receiving upstream commands and forwarding
+     * those commands via the Kafka cluster.
+     *
+     * @param kafkaProducerFactory The producer factory for creating Kafka producers for sending messages.
+     * @param kafkaProducerConfig The Kafka producer configuration.
+     * @param kafkaConsumerFactory The consumer factory for creating Kafka consumers for consuming messages.
+     * @param kafkaConsumerConfig The Kafka Consumer configuration.
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public CommandConsumerFactory kafkaCommandConsumerFactory(
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig,
+            final KafkaConsumerFactory<String, Buffer> kafkaConsumerFactory,
+            final KafkaConsumerConfigProperties kafkaConsumerConfig) {
+
+        return new KafkaBasedCommandConsumerFactoryImpl(COMPONENT_NAME, kafkaProducerFactory, kafkaProducerConfig,
+                kafkaConsumerFactory, kafkaConsumerConfig, getTracer());
     }
 }

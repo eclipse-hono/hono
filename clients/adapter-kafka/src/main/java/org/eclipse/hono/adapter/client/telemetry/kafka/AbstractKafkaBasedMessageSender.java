@@ -58,11 +58,11 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
      * A logger to be shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+    protected final Tracer tracer;
 
     private final KafkaProducerFactory<String, Buffer> producerFactory;
     private final String producerName;
     private final Map<String, String> config;
-    private final Tracer tracer;
 
     /**
      * Creates a new Kafka-based telemetry sender.
