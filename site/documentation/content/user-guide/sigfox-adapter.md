@@ -54,7 +54,7 @@ a username of `sigfox` and a password of `test12`:
   "enabled": true,
   "secrets": [
     {
-      "pwd-plain": "test12",
+      "pwd-plain": "test12"
     }
   ],
   "type": "hashed-password"
