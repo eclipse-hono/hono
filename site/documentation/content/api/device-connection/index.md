@@ -11,7 +11,7 @@ resources:
 The *Device Connection API* is used by *Protocol Adapters* to set and retrieve information about the connections from devices or gateways to the protocol adapters.
 <!--more-->
 
-The Device Connection API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
+The Device Connection API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to the Device Connection service component using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
 <a name="preconditions"></a>
 ## Preconditions for invoking the Device Connection API
@@ -128,7 +128,7 @@ The following table provides an overview of the properties a client needs to set
 | :-------------------- | :-------: | :----------------------- | :-------- | :---------- |
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `set-cmd-handling-adapter-instance`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance that currently handles commands for the device or gateway identified by the *device_id* property. |
-| *lifespan*            | no        | *application-properties* | *int*     | The lifespan of the mapping entry in seconds. After that period, the mapping entry shall be treated as non-existent by the *Device Registration API* methods. A negative value, as well as an omitted property, is interpreted as an unlimited lifespan. |
+| *lifespan*            | no        | *application-properties* | *int*     | The lifespan of the mapping entry in seconds. After that period, the mapping entry shall be treated as non-existent by the *Device Connection API* methods. A negative value, as well as an omitted property, is interpreted as an unlimited lifespan. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 

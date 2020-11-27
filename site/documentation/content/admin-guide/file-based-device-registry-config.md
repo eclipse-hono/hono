@@ -146,14 +146,13 @@ In test setups and some production scenarios Hono server may be configured to op
  
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has it's own binding address
+Since the secure port may need different visibility in the network setup compared to the secure port, it has its own binding address
 `HONO_REGISTRY_AMQP_INSECURE_PORT_BIND_ADDRESS`.
 This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
 
 ### Ephemeral Ports
 
-The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above.
-For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
+Both the secure as well as the insecure port numbers may be explicitly set to `0`. The Device Registry will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
 ## Authentication Service Connection Configuration
 
