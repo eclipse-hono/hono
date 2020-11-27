@@ -307,19 +307,36 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
-      <id>protocol-adapters-quarkus</id>
+      <id>protocol-adapters-quarkus-jvm</id>
       <activation>
         <property>
           <name>hono.adapters.type</name>
-          <value>quarkus</value>
+          <value>quarkus-jvm</value>
         </property>
       </activation>
       <properties>
-        <hono.http-adapter.config-dir>deployments/config</hono.http-adapter.config-dir>
+        <hono.http-adapter.config-dir>opt/hono/config</hono.http-adapter.config-dir>
         <hono.http-adapter.image>hono-adapter-http-vertx-quarkus</hono.http-adapter.image>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
-        <hono.mqtt-adapter.config-dir>deployments/config</hono.mqtt-adapter.config-dir>
+        <hono.mqtt-adapter.config-dir>opt/hono/config</hono.mqtt-adapter.config-dir>
         <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus</hono.mqtt-adapter.image>
+      </properties>
+    </profile>
+    <profile>
+      <id>protocol-adapters-quarkus-native</id>
+      <activation>
+        <property>
+          <name>hono.adapters.type</name>
+          <value>quarkus-native</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.http-adapter.config-dir>opt/hono/config</hono.http-adapter.config-dir>
+        <hono.http-adapter.image>hono-adapter-http-vertx-quarkus-native</hono.http-adapter.image>
+        <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
+        <hono.mqtt-adapter.config-dir>opt/hono/config</hono.mqtt-adapter.config-dir>
+        <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus-native</hono.mqtt-adapter.image>
+        <hono.mqtt-adapter.useNativeTransport>false</hono.mqtt-adapter.useNativeTransport>
       </properties>
     </profile>
     <profile>
@@ -1029,11 +1046,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
-                      <!--
-                        disable -Xmx calculation done by the runJava.sh script
-                        used by the Quarkus based images
-                      -->
-                      <JAVA_MAX_MEM_RATIO>0</JAVA_MAX_MEM_RATIO>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>

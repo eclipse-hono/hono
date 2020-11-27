@@ -26,6 +26,10 @@
   <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP.</description>
   <url>https://www.eclipse.org/hono</url>
 
+  <properties>
+    <hono.skip-image-build>false</hono.skip-image-build>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -35,4 +39,27 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <configuration>
+            <images>
+              <image>
+                <build>
+                  <ports>
+                    <port>8080</port>
+                    <port>8443</port>
+                    <port>${vertx.health.port}</port>
+                  </ports>
+                </build>
+              </image>
+            </images>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>
