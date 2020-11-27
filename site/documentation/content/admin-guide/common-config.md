@@ -36,7 +36,7 @@ have a high I/O throughput. Especially when the application supports an
 asynchronous I/O model. This is true for most Hono components and applications using Hono.
 
 The *Netty* framework supports using `epoll()` on Linux x86_64 based systems.
-Hono provides the a Maven build profile for enabling
+Hono provides a Maven build profile for enabling
 support for *epoll* during the build process.
 
 In order to use *epoll*

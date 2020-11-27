@@ -93,7 +93,7 @@ Both the secure as well as the insecure port numbers may be explicitly set to `0
 ## Custom Message Mapping
 
 This protocol adapter supports transformation of messages that have been uploaded by devices before forwarding them
- to downstream consumers. This message mapping can be used to overwrite the deviceID, add additional propeties and
+ to downstream consumers. This message mapping can be used to overwrite the deviceID, add additional properties and
   change the payload.
 
 {{% note title="Experimental" %}}
