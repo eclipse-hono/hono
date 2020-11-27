@@ -71,12 +71,17 @@ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metri
 
 #### Building native Images
 
-You can create _native_ Docker images for some of the Hono services. In order to do so, you need to use `native` Maven profile:
+The build process supports building *native* Docker images using the GraalVM for some of Hono's components.
+In order to do so, the `build-native-image` Maven profile needs to be activated:
 
 ```sh
 # in the "hono" folder containing the source code
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,native
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-native-image,metrics-prometheus
 ```
+
+{{% note title="Experimental" %}}
+Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are mutually exclusive.
+{{% /note %}}
 
 #### Pushing Images
 

@@ -26,20 +26,15 @@
   <name>Hono Protocol Adapter Base (Quarkus)</name>
   <description>Defines common dependencies for Quarkus-based protocol adapter implementations</description>
 
-
   <properties>
-    <quarkus.container-image.group>${docker.image.org-name}</quarkus.container-image.group>
-    <quarkus.container-image.additional-tags>latest,${docker.image.additional.tag}</quarkus.container-image.additional-tags>
-    <quarkus.container-image.registry>${docker.registry-name}</quarkus.container-image.registry>
-    <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
+    <hono.skip-image-build>true</hono.skip-image-build>
   </properties>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>${quarkus.platform.group-id}</groupId>
-        <artifactId>${quarkus.platform.artifact-id}</artifactId>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-bom</artifactId>
         <version>${quarkus.platform.version}</version>
         <type>pom</type>
         <scope>import</scope>
@@ -51,6 +46,7 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -65,16 +61,6 @@
       <artifactId>quarkus-config-yaml</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-container-image-docker</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
       <version>${log4j.version}</version>
@@ -84,8 +70,8 @@
       <artifactId>log4j2-jboss-logmanager</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>commons-logging-jboss-logging</artifactId>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>commons-logging-jboss-logging</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -122,6 +108,12 @@
           <artifactId>spring-beans</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 
@@ -178,24 +170,91 @@
           <name>docker.host</name>
         </property>
       </activation>
-      <properties>
-        <quarkus.container-image.build>true</quarkus.container-image.build>
-      </properties>
-    </profile>
-    <profile>
-      <id>docker-push-image</id>
-      <properties>
-        <quarkus.container-image.push>true</quarkus.container-image.push>
-      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <skip>${hono.skip-image-build}</skip>
+              <images>
+                <image>
+                  <name>${docker.repository}/%a:%v</name>
+                  <build>
+                    <env>
+                      <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
+                      <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
+                      <JAVA_LIB_DIR>/opt/hono/lib/*:/opt/hono/extensions/*</JAVA_LIB_DIR>
+                      <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
+                      <JAVA_APP_JAR>${project.artifactId}-${project.version}-runner.jar</JAVA_APP_JAR>
+                    </env>
+                    <entryPoint>
+                      <arg>/opt/hono/run-java.sh</arg>
+                    </entryPoint>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/docker-extra/run-java</directory>
+                            <outputDirectory>opt/hono</outputDirectory>
+                            <includes>
+                              <include>run-java.sh</include>
+                            </includes>
+                            <fileMode>755</fileMode>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/lib</directory>
+                            <outputDirectory>opt/hono/lib</outputDirectory>
+                            <includes>
+                              <include>*.jar</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <outputDirectory>opt/hono</outputDirectory>
+                            <includes>
+                              <include>${project.artifactId}-${project.version}-runner.jar</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
-      <id>native</id>
-      <activation>
-        <property>
-          <name>native</name>
-        </property>
-      </activation>
+      <id>build-native-image</id>
+      <properties>
+        <quarkus.native.additional-build-args>--initialize-at-run-time=io.netty.internal.tcnative.SSL, -H:ResourceConfigurationFiles=resources-config.json, -H:ReflectionConfigurationFiles=reflection-config.json</quarkus.native.additional-build-args>
+        <!-- build native image inside of a container, doesn't require GraalVM SDK to be installed locally -->
+        <quarkus.native.container-build>true</quarkus.native.container-build>
+        <quarkus.package.type>native</quarkus.package.type>
+        <!--  include all JSSE related classes -->
+        <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
+      </properties>
+
       <dependencies>
         <dependency>
           <groupId>io.netty</groupId>
@@ -213,28 +272,71 @@
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-failsafe-plugin</artifactId>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <skip>${hono.skip-image-build}</skip>
+              <images>
+                <image>
+                  <name>${docker.repository}/%a-native:%v</name>
+                  <build>
+                    <maintainer>The Eclipse Hono project</maintainer>
+                    <labels>
+                      <project>Eclipse Hono</project>
+                    </labels>
+                    <tags>
+                      <tag>latest</tag>
+                      <tag>${docker.image.additional.tag}</tag>
+                    </tags>
+                    <imagePullPolicy>Always</imagePullPolicy>
+                    <from>registry.access.redhat.com/ubi8/ubi-minimal:8.1</from>
+                    <workdir>/opt/hono</workdir>
+                    <entryPoint>
+                      <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
+                    </entryPoint>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <outputDirectory>opt/hono</outputDirectory>
+                            <includes>
+                              <include>${project.artifactId}-${project.version}-runner</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>docker-push-image</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>docker-push-image</id>
+                <phase>install</phase>
                 <goals>
-                  <goal>integration-test</goal>
-                  <goal>verify</goal>
+                  <goal>push</goal>
                 </goals>
-                <configuration>
-                  <systemProperties>
-                    <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
-                  </systemProperties>
-                </configuration>
               </execution>
             </executions>
           </plugin>
         </plugins>
       </build>
-      <properties>
-        <quarkus.native.additional-build-args>--initialize-at-run-time=io.netty.internal.tcnative.SSL, -H:ResourceConfigurationFiles=resources-config.json, -H:ReflectionConfigurationFiles=reflection-config.json</quarkus.native.additional-build-args>
-        <quarkus.native.container-build>true</quarkus.native.container-build>
-        <quarkus.package.type>native</quarkus.package.type>
-      </properties>
     </profile>
 
     <profile>

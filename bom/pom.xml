@@ -31,7 +31,7 @@
     <artemis.image.name>quay.io/enmasse/artemis-base:2.13.0</artemis.image.name>
     <assertj-core.version>3.17.2</assertj-core.version>
     <c3p0.version>0.9.5.4</c3p0.version>
-    <caffeine.version>2.8.4</caffeine.version>
+    <caffeine.version>2.8.6</caffeine.version>
     <californium.version>2.3.1</californium.version>
     <commons-cli.version>1.2</commons-cli.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.14.0</dispatch-router.image.name>
@@ -70,7 +70,7 @@
     <protostream.version>4.3.2.Final</protostream.version>
     <proton.version>0.33.6</proton.version>
     <qpid-jms.version>0.55.0</qpid-jms.version>
-    <quarkus.platform.version>1.8.3.Final</quarkus.platform.version>
+    <quarkus.platform.version>1.9.2.Final</quarkus.platform.version>
     <reactive-streams.version>1.0.3</reactive-streams.version>
     <rxjava.version>2.2.12</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>

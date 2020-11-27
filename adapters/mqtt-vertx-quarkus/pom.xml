@@ -11,7 +11,8 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+    xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -26,6 +27,10 @@
   <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via MQTT.</description>
   <url>https://www.eclipse.org/hono</url>
 
+  <properties>
+    <hono.skip-image-build>false</hono.skip-image-build>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -35,4 +40,27 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <configuration>
+            <images>
+              <image>
+                <build>
+                  <ports>
+                    <port>1883</port>
+                    <port>8883</port>
+                    <port>${vertx.health.port}</port>
+                  </ports>
+                </build>
+              </image>
+            </images>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>
