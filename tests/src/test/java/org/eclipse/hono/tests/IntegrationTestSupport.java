@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.service.credentials.Credentials;
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.device.Device;

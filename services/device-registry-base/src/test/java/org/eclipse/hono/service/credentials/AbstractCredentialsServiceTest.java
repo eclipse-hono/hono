@@ -38,6 +38,7 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PasswordSecret;

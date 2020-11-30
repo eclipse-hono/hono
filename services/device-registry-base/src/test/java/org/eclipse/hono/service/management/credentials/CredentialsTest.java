@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 

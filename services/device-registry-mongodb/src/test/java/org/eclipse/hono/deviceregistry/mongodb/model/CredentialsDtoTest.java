@@ -22,7 +22,7 @@ import java.time.Instant;
 import java.util.List;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.service.credentials.Credentials;
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.junit.jupiter.api.BeforeEach;

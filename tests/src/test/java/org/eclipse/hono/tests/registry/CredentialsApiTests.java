@@ -33,8 +33,8 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.service.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.IntegrationTestSupport;

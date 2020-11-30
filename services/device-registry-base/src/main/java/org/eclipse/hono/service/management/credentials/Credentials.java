@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.credentials;
+package org.eclipse.hono.service.management.credentials;
 
 import java.util.Base64;
 import java.util.List;
@@ -19,10 +19,6 @@ import java.util.OptionalInt;
 
 import org.eclipse.hono.auth.EncodedPassword;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PasswordSecret;
-import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.PskSecret;
 
 /**
  * Helper methods for working with credentials.
