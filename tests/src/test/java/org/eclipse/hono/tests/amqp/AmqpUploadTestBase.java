@@ -15,6 +15,7 @@ package org.eclipse.hono.tests.amqp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,6 +34,7 @@ import org.apache.qpid.proton.message.Message;
 import org.assertj.core.api.Assertions;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -41,6 +43,7 @@ import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -239,6 +242,76 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         }));
 
 
+    }
+
+    /**
+     * Verifies that an edge device is auto-provisioned if it connects via a gateway equipped with the corresponding
+     * authority.
+     *
+     * @param senderQos The delivery semantics to use for the device.
+     * @throws InterruptedException if test is interrupted while running.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("senderQoSTypes")
+    public void testAutoProvisioningViaGateway(final ProtonQoS senderQos) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final Device gateway = new Device()
+                .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+
+        final String username = IntegrationTestSupport.getUsername(gatewayId, tenantId);
+        final VertxTestContext emptyEventReceived = new VertxTestContext();
+        helper.applicationClientFactory.createEventConsumer(tenantId,
+                msg -> emptyEventReceived.verify( () -> {
+                    assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+                    assertThat(MessageHelper.getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
+                    emptyEventReceived.completeNow();
+                }),
+                close -> {});
+
+        final VertxTestContext telemetryReceived = new VertxTestContext();
+        createConsumer(tenantId, msg -> {
+            telemetryReceived.verify( () -> {
+                assertThat(msg.getContentType()).isEqualTo("text/plain");
+                assertMessageProperties(telemetryReceived, msg);
+            });
+            telemetryReceived.completeNow();
+        });
+
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry
+                .addDeviceForTenant(tenantId, new Tenant(), gatewayId, gateway, DEVICE_PASSWORD)
+                .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
+                .compose(con -> createProducer(null, senderQos))
+                .recover(t -> {
+                    log.error("error setting up AMQP protocol adapter", t);
+                    return Future.failedFuture(t);
+                })
+                .onComplete(setup.succeeding(s -> {
+                    sender = s;
+                    setup.completeNow();
+                }));
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.failed())
+                .as("successfully connect to adapter")
+                .isFalse();
+
+        final VertxTestContext messageSent = new VertxTestContext();
+        final Message msg = ProtonHelper.message("apFoobar");
+        msg.setContentType("text/plain");
+
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        msg.setAddress(String.format("%s/%s/%s", getEndpointName(), tenantId, deviceId));
+        sender.send(msg, delivery -> {
+            messageSent.verify(() -> assertThat(delivery.getRemoteState()).isInstanceOf(Accepted.class));
+            messageSent.completeNow();
+        });
+
+        assertThat(messageSent.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(emptyEventReceived.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(telemetryReceived.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
     }
 
     /**

@@ -301,6 +301,17 @@ public final class MessageHelper {
     }
 
     /**
+     * Gets the value of a message's {@link #APP_PROPERTY_REGISTRATION_STATUS} application property.
+     *
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    public static String getRegistrationStatus(final Message msg) {
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_REGISTRATION_STATUS, String.class);
+    }
+
+    /**
      * Gets the value of a message's {@link #APP_PROPERTY_QOS} application property.
      *
      * @param msg The message.

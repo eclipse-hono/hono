@@ -44,8 +44,10 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -855,6 +857,64 @@ public abstract class HttpTestBase {
         })
         // THEN the message gets rejected by the HTTP adapter with a 403
         .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that an edge device is auto-provisioned if it connects via a gateway equipped with the corresponding
+     * authority.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final Device gateway = new Device()
+                .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, PWD)
+                .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        final String uri = String.format("%s/%s/%s", getEndpointUri(), tenantId, helper.getRandomDeviceId(tenantId));
+
+        helper.applicationClientFactory.createEventConsumer(tenantId, msg -> {
+            ctx.verify(() -> {
+                assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+                assertThat(MessageHelper.getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
+            });
+        }, remoteClose -> {});
+
+        testUploadMessages(
+                ctx,
+                tenantId,
+                msg -> {
+                    ctx.verify(()  -> {
+                        assertThat(msg.getContentType()).isEqualTo("text/plain");
+                        assertMessageProperties(ctx, msg);
+                    });
+                    return Future.succeededFuture();
+                },
+                count -> httpClient.update( // GW uses PUT when acting on behalf of a device
+                    uri,
+                    Buffer.buffer("hello " + count),
+                    requestHeaders,
+                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)),
+                1,
+                getExpectedQoS(null));
     }
 
     /**
