@@ -26,23 +26,18 @@ The vert.x framework instance used to run Hono's components on can be configured
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_VERTX_DNS_QUERY_TIMEOUT`<br>`--hono.vertx.dnsQueryTimeout` | no | `5000` | The amount of time (in milliseconds) after which a DNS query is considered to be failed. Setting this variable to a smaller value may help to reduce the time required to establish connections to the services this adapter depends on. However, setting it to a value that is too small for any DNS query to succeed will effectively prevent any connections to be established at all. |
 | `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME_MILLIS`<br>`--hono.vertx.maxEventLoopExecuteTimeMillis` | no | `2000` | The maximum number of milliseconds that a task on the event loop may run without being considered to block the event loop. |
-| `HONO_VERTX_PREFER_NATIVE`<br>`--hono.vertx.preferNative`| no | `false` | Tries to enable *epoll()* support on Linux (if available). See the [notes below](./#epoll) for an explanation of the benefits of enabling *epoll*. |
+| `HONO_VERTX_PREFER_NATIVE`<br>`--hono.vertx.preferNative`| no | `false` | Enables/disables *epoll()* support on Linux/MacOS. See the [notes below](./#epoll) for an explanation of the benefits of enabling *epoll*. It is generally safe to set this property to `true` because Netty will disable native transport if the platform doesn't support it. |
 
 <a name="epoll"></a>
-### Using epoll() on Linux 
+### Using Native Transport on Linux/MacOS
 
-Using `epoll()` on Linux may provide better performance for applications which
+Using `epoll()` on Linux/MacOS may provide better performance for applications which
 have a high I/O throughput. Especially when the application supports an
 asynchronous I/O model. This is true for most Hono components and applications using Hono.
 
-The *Netty* framework supports using `epoll()` on Linux x86_64 based systems.
-Hono provides a Maven build profile for enabling
-support for *epoll* during the build process.
+The *Netty* framework supports using `epoll()` on Linux/MacOS x86_64 based systems.
 
-In order to use *epoll*
-
-* Hono needs to be built with the `netty-native-linux-x86_64` Maven profile enabled and
-* the `HONO_VERTX_PREFER_NATIVE` environment variable needs to be set to `true` on startup.
+In order to use *epoll*, the `HONO_VERTX_PREFER_NATIVE` environment variable needs to be set to `true` on startup.
 
 ## Protocol Adapter Options
 

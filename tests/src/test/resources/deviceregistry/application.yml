@@ -32,6 +32,7 @@ hono:
       saveToFile: false
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
 
 spring:
   jmx:

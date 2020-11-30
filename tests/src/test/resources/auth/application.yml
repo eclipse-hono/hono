@@ -18,6 +18,7 @@ hono:
         tokenExpiration: 3600
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
 
 spring:
   jmx:

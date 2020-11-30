@@ -17,6 +17,7 @@ hono:
       insecurePortBindAddress: 0.0.0.0
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
 
 spring:
   jmx:
