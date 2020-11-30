@@ -1,7 +1,7 @@
 <?xml version='1.0'?>
 
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -143,6 +143,7 @@
             <auto-create-addresses>true</auto-create-addresses>
             <auto-create-jms-queues>true</auto-create-jms-queues>
             <auto-create-jms-topics>true</auto-create-jms-topics>
+            <default-address-routing-type>ANYCAST</default-address-routing-type>
          </address-setting>
       </address-settings>
 
