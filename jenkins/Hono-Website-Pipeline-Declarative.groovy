@@ -34,10 +34,10 @@ spec:
       value: "/home/jenkins"
     resources:
       limits:
-        memory: "256Mi"
+        memory: "512Mi"
         cpu: "1"
       requests:
-        memory: "128Mi"
+        memory: "512Mi"
         cpu: "1"
   - name: hugo
     image: eclipsecbi/hugo:0.58.3
@@ -46,7 +46,7 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "512Mi"
+        memory: "256Mi"
         cpu: "1"
       requests:
         memory: "256Mi"
