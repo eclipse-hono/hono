@@ -235,14 +235,14 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     protected final Future<Void> checkPortConfiguration() {
 
         if (vertx != null) {
-            log.info("Vertx native support: {}", vertx.isNativeTransportEnabled());
+            log.info("vert.x uses native transport: {}", vertx.isNativeTransportEnabled());
         }
 
         final Promise<Void> result = Promise.promise();
 
         if (getConfig().getKeyCertOptions() == null) {
             if (getConfig().getPort() >= 0) {
-                log.warn("Secure port number configured, but the certificate setup is not correct. No secure port will be opened - please check your configuration!");
+                log.warn("secure port number set but no key/certificate configured, secure port will not be opened");
             }
             if (!getConfig().isInsecurePortEnabled()) {
                 log.error("configuration must have at least one of key & certificate or insecure port set to start up");
