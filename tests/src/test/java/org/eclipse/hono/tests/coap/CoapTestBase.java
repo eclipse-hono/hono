@@ -127,8 +127,10 @@ public abstract class CoapTestBase {
      * The random device identifier created for each test case.
      */
     protected String deviceId;
-
-    private final Vertx vertx = Vertx.vertx();
+    /**
+     * The vert.xt instance to run on.
+     */
+    protected final Vertx vertx = Vertx.vertx();
 
     /**
      * Creates the endpoint configuration variants for Command &amp; Control scenarios.

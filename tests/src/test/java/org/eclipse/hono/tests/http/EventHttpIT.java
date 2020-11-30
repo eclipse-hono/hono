@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -95,5 +97,57 @@ public class EventHttpIT extends HttpTestBase {
                 requestHeaders,
                 ResponsePredicate.status(HttpURLConnection.HTTP_BAD_REQUEST))
                 .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that an event message from a device has been successfully sent and a north bound application, 
+     * which connects after the event has been sent, can successfully receive those event message.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @Test
+    public void testEventMessageAlreadySentIsDeliveredWhenConsumerConnects(final VertxTestContext ctx)
+            throws InterruptedException {
+        final VertxTestContext setup = new VertxTestContext();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD).onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        // WHEN a device that belongs to the tenant publishes an event
+        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
+        httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello"),
+                requestHeaders,
+                ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
+                .compose(eventSent -> {
+                    //THEN create a consumer once the event message has been successfully sent
+                    final Promise<MessageConsumer> consumerCreated = Promise.promise();
+                    vertx.setTimer(4000, tid -> {
+                        logger.info("opening event consumer for tenant [{}]", tenantId);
+                        createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
+                                .onComplete(consumerCreated);
+                    });
+                    return consumerCreated.future();
+                })
+                .compose(consumer -> {
+                    final Promise<Void> done = Promise.promise();
+                    vertx.setTimer(1000, tid -> {
+                        //THEN verify if the message is received by the consumer
+                        assertThat(receivedMessageCount.get()).isEqualTo(1);
+                        done.complete();
+                    });
+                    return done.future();
+                }).onComplete(ctx.completing());
     }
 }

@@ -138,8 +138,10 @@ public abstract class HttpTestBase {
      * The self-signed certificate that a device may use for authentication.
      */
     protected SelfSignedCertificate deviceCert;
-
-    private final Vertx vertx = Vertx.vertx();
+    /**
+     * The vert.xt instance to run on.
+     */
+    protected final Vertx vertx = Vertx.vertx();
 
     private long testStartTimeMillis;
 
