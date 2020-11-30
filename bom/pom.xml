@@ -69,7 +69,7 @@
     <protoparser.version>4.0.3</protoparser.version>
     <protostream.version>4.3.2.Final</protostream.version>
     <proton.version>0.33.6</proton.version>
-    <qpid-jms.version>0.52.0</qpid-jms.version>
+    <qpid-jms.version>0.55.0</qpid-jms.version>
     <quarkus.platform.version>1.8.1.Final</quarkus.platform.version>
     <reactive-streams.version>1.0.3</reactive-streams.version>
     <rxjava.version>2.2.12</rxjava.version>
