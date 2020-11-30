@@ -22,23 +22,21 @@ import io.vertx.core.metrics.MetricsOptions;
  */
 public class VertxProperties {
 
-    private boolean preferNative = VertxOptions.DEFAULT_PREFER_NATIVE_TRANSPORT;
+    private boolean preferNative = false;
     private boolean enableMetrics = MetricsOptions.DEFAULT_METRICS_ENABLED;
     private long maxEventLoopExecuteTimeMillis = 2000L;
     private long dnsQueryTimeout = 5000L;
 
     /**
-     * Prefer to use native networking, or not.
+     * Prefer to use native networking or not.
      * <p>
      * Also see {@link VertxOptions#setPreferNativeTransport(boolean)}.
-     * </p>
      * <p>
-     * The default is to not prefer native networking.
-     * </p>
+     * The default value of this property is {@code false}.
      *
      * @param preferNative {@code true} to prefer native networking, {@code false} otherwise.
      */
-    public void setPreferNative(final boolean preferNative) {
+    public final void setPreferNative(final boolean preferNative) {
         this.preferNative = preferNative;
     }
 
@@ -55,7 +53,7 @@ public class VertxProperties {
      *
      * @param enableMetrics {@code true} to enable the metrics system, {@code false} otherwise.
      */
-    public void setEnableMetrics(final boolean enableMetrics) {
+    public final void setEnableMetrics(final boolean enableMetrics) {
         this.enableMetrics = enableMetrics;
     }
 
@@ -68,7 +66,7 @@ public class VertxProperties {
      * @param executeTime The number of milliseconds.
      * @throws IllegalArgumentException if execute time is less than 1.
      */
-    public void setMaxEventLoopExecuteTime(final long executeTime) {
+    public final void setMaxEventLoopExecuteTime(final long executeTime) {
         if (executeTime < 1) {
             throw new IllegalArgumentException("maxEventLoopExecuteTime must be > 0");
           }
@@ -84,7 +82,7 @@ public class VertxProperties {
      * @param timeout The timeout in milliseconds.
      * @throws IllegalArgumentException if timeout is less than 100ms.
      */
-    public void setDnsQueryTimeout(final long timeout) {
+    public final void setDnsQueryTimeout(final long timeout) {
         if (timeout < 100) {
             throw new IllegalArgumentException("DNS query timeout must be at least 100ms");
           }
@@ -97,7 +95,7 @@ public class VertxProperties {
      * @param options The options to configure.
      * @return The (updated) options.
      */
-    public VertxOptions configureVertx(final VertxOptions options) {
+    public final VertxOptions configureVertx(final VertxOptions options) {
 
         options.setPreferNativeTransport(this.preferNative);
 

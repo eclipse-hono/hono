@@ -75,6 +75,7 @@ hono:
     requestTimeout: ${request.timeout}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
 
 quarkus:
   log:
@@ -86,6 +87,8 @@ quarkus:
         level: INFO
       "org.eclipse.hono.adapter":
         level: INFO
+  vertx:
+    prefer-native-transport: true
 
 spring:
   jmx:

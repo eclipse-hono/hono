@@ -74,6 +74,7 @@ hono:
     requestTimeout: ${request.timeout}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
 
 spring:
   jmx:
