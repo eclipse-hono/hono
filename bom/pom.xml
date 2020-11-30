@@ -41,7 +41,7 @@
     <h2.version>1.4.200</h2.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
     <infinispan.version>10.1.8.Final</infinispan.version>
-    <jackson.version>2.10.5</jackson.version>
+    <jackson.version>2.11.3</jackson.version>
     <jaeger.image.name>jaegertracing/all-in-one:1.17</jaeger.image.name>
     <jaeger.version>1.2.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
@@ -70,7 +70,7 @@
     <protostream.version>4.3.2.Final</protostream.version>
     <proton.version>0.33.6</proton.version>
     <qpid-jms.version>0.55.0</qpid-jms.version>
-    <quarkus.platform.version>1.8.3.Final</quarkus.platform.version>
+    <quarkus.platform.version>1.9.2.Final</quarkus.platform.version>
     <reactive-streams.version>1.0.3</reactive-streams.version>
     <rxjava.version>2.2.12</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
@@ -78,7 +78,7 @@
     <spring.version>5.2.11.RELEASE</spring.version>
     <spring-boot.version>2.2.11.RELEASE</spring-boot.version>
     <spring-security-crypto.version>5.2.7.RELEASE</spring-security-crypto.version>
-    <vertx.version>3.9.3</vertx.version>
+    <vertx.version>3.9.4</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
     <wildfly-elytron.version>1.10.4.Final</wildfly-elytron.version>
     <wiremock.version>2.24.1</wiremock.version>
