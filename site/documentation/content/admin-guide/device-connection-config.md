@@ -10,6 +10,11 @@ Protocol adapters use this API to store and retrieve information about the gatew
 
 <!--more-->
 
+{{% note title="Deprecation" %}}
+The Device Connection service is deprecated and will be replaced by the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}), implementing the [Command Router API]({{< relref "/api/command-router" >}}).
+For now, either the Device Connection service or the Command Router service may be used by protocol adapters.
+{{% /note %}}
+
 The Device Connection component provides a production grade implementation of the Device Connection API which uses a remote *data grid* for storing information about device connections. The data grid can be scaled out independently from the Device Connection service components to meet the storage demands at hand.
 
 The Device Connection component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-connection/) created from it.
@@ -122,8 +127,6 @@ In general, the service supports all configuration properties of the [Infinispan
 ### Embedded cache
 
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the embedded cache:
-
-hono.device-connection.embedded.configuration-file
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
