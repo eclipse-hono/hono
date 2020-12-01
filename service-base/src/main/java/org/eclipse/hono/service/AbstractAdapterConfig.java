@@ -243,7 +243,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     /**
      * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
-     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}
+     * The connection is configured with the properties provided by {@link #downstreamSenderConfig()}
      * and is already trying to establish the connection to the configured peer.
      *
      * @return The connection.
