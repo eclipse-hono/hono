@@ -41,6 +41,7 @@ import io.vertx.ext.web.client.WebClient;
 public class Application extends AbstractProtocolAdapterApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+    private static final String CONTAINER_ID = "Hono MQTT Adapter";
 
     @Inject
     MqttAdapterMetrics metrics;
@@ -48,8 +49,16 @@ public class Application extends AbstractProtocolAdapterApplication {
     @Inject
     MqttProtocolAdapterProperties adapterProperties;
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getAdapterName() {
+        return CONTAINER_ID;
+    }
+
     void onStart(final @Observes StartupEvent ev) {
-        LOG.info("deploying {} MQTT adapter instances ...", config.app.getMaxInstances());
+        LOG.info("deploying {} {} instances ...", config.app.getMaxInstances(), getAdapterName());
 
         final CompletableFuture<Void> startup = new CompletableFuture<>();
         final Promise<String> deploymentTracker = Promise.promise();
@@ -66,7 +75,7 @@ public class Application extends AbstractProtocolAdapterApplication {
     }
 
     void onStop(final @Observes ShutdownEvent ev) {
-        LOG.info("shutting down HTTP adapter");
+        LOG.info("shutting down {}", getAdapterName());
         final CompletableFuture<Void> shutdown = new CompletableFuture<>();
         healthCheckServer.stop()
             .onComplete(ok -> {

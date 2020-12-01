@@ -41,7 +41,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -90,7 +89,7 @@ import io.vertx.ext.web.client.WebClientOptions;
 /**
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
-public abstract class AbstractAdapterConfig {
+public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractAdapterConfig.class);
 
@@ -180,17 +179,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Gets the name of this protocol adapter.
-     * <p>
-     * This name will be used as part of the <em>container-id</em> in the AMQP <em>Open</em> frame sent by the
-     * clients defined in this adapter config.
-     * <p>
-     *
-     * @return The protocol adapter name.
-     */
-    protected abstract String getAdapterName();
-
-    /**
      * Creates properties for configuring the Connection Event producer.
      *
      * @return The properties.
@@ -224,15 +212,15 @@ public abstract class AbstractAdapterConfig {
      * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
      * <p>
      * A default set of properties, on top of which the configured properties will by loaded, can be set in subclasses
-     * by means of overriding the {@link #getDownstreamSenderFactoryConfigDefaults()} method.
+     * by means of overriding the {@link #getDownstreamSenderConfigDefaults()} method.
      *
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
-    public ClientConfigProperties downstreamSenderFactoryConfig() {
-        final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderFactoryConfigDefaults())
+    public ClientConfigProperties downstreamSenderConfig() {
+        final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
         setConfigServerRoleIfUnknown(config, "AMQP Messaging Network");
         setDefaultConfigNameIfNotSet(config);
@@ -241,14 +229,14 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
-     * via {@link #downstreamSenderFactoryConfig()}.
+     * via {@link #downstreamSenderConfig()}.
      * <p>
      * This method returns an empty set of properties by default. Subclasses may override this method to set specific
      * properties.
      *
      * @return The properties.
      */
-    protected ClientConfigProperties getDownstreamSenderFactoryConfigDefaults() {
+    protected ClientConfigProperties getDownstreamSenderConfigDefaults() {
         return new ClientConfigProperties();
     }
 
@@ -264,7 +252,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public HonoConnection downstreamConnection() {
-        return HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig());
+        return HonoConnection.newConnection(vertx(), downstreamSenderConfig());
     }
 
     /**
@@ -756,19 +744,6 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public VertxProperties vertxProperties() {
         return new VertxProperties();
-    }
-
-    private static void setConfigServerRoleIfUnknown(final AuthenticatingClientConfigProperties config,
-            final String serverRole) {
-        if (config.getServerRole().equals(AuthenticatingClientConfigProperties.SERVER_ROLE_UNKNOWN)) {
-            config.setServerRole(serverRole);
-        }
-    }
-
-    private void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
-        if (config.getName() == null && getAdapterName() != null) {
-            config.setName(getAdapterName());
-        }
     }
 
     /**

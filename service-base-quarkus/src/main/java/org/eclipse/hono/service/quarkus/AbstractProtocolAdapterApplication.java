@@ -42,6 +42,7 @@ import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionClient;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
@@ -49,6 +50,7 @@ import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.DeviceConnectionCacheConfig;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.AdapterConfigurationSupport;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
@@ -71,7 +73,7 @@ import io.vertx.core.Vertx;
  * This class provides helper methods for creating clients for Hono's service APIs
  * which to be used with protocol adapter instances.
  */
-public abstract class AbstractProtocolAdapterApplication {
+public abstract class AbstractProtocolAdapterApplication extends AdapterConfigurationSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
 
@@ -168,6 +170,12 @@ public abstract class AbstractProtocolAdapterApplication {
         }
     }
 
+    private RequestResponseClientConfigProperties tenantServiceClientConfig() {
+        setConfigServerRoleIfUnknown(config.tenant, "Tenant");
+        setDefaultConfigNameIfNotSet(config.tenant);
+        return config.tenant;
+    }
+
     /**
      * Creates a new client for Hono's Tenant service.
      *
@@ -175,10 +183,16 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected TenantClient tenantClient() {
         return new ProtonBasedTenantClient(
-                HonoConnection.newConnection(vertx, config.tenant, tracer),
+                HonoConnection.newConnection(vertx, tenantServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 newCaffeineCache(config.tenant));
+    }
+
+    private RequestResponseClientConfigProperties registrationServiceClientConfig() {
+        setConfigServerRoleIfUnknown(config.registration, "Device Registration");
+        setDefaultConfigNameIfNotSet(config.registration);
+        return config.registration;
     }
 
     /**
@@ -188,10 +202,16 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected DeviceRegistrationClient registrationClient() {
         return new ProtonBasedDeviceRegistrationClient(
-                HonoConnection.newConnection(vertx, config.registration, tracer),
+                HonoConnection.newConnection(vertx, registrationServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 newCaffeineCache(config.registration));
+    }
+
+    private RequestResponseClientConfigProperties credentialsServiceClientConfig() {
+        setConfigServerRoleIfUnknown(config.credentials, "Credentials");
+        setDefaultConfigNameIfNotSet(config.credentials);
+        return config.credentials;
     }
 
     /**
@@ -201,10 +221,16 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CredentialsClient credentialsClient() {
         return new ProtonBasedCredentialsClient(
-                HonoConnection.newConnection(vertx, config.credentials, tracer),
+                HonoConnection.newConnection(vertx, credentialsServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
                 newCaffeineCache(config.credentials));
+    }
+
+    private RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
+        setConfigServerRoleIfUnknown(config.commandRouter, "Command Router");
+        setDefaultConfigNameIfNotSet(config.commandRouter);
+        return config.commandRouter;
     }
 
     /**
@@ -214,9 +240,15 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CommandRouterClient commandRouterClient() {
         return new ProtonBasedCommandRouterClient(
-                HonoConnection.newConnection(vertx, config.commandRouter, tracer),
+                HonoConnection.newConnection(vertx, commandRouterServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
+    }
+
+    private RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
+        setConfigServerRoleIfUnknown(config.deviceConnection, "Device Connection");
+        setDefaultConfigNameIfNotSet(config.deviceConnection);
+        return config.deviceConnection;
     }
 
     /**
@@ -228,7 +260,7 @@ public abstract class AbstractProtocolAdapterApplication {
 
         if (config.deviceConnection.isHostConfigured()) {
             return new ProtonBasedDeviceConnectionClient(
-                    HonoConnection.newConnection(vertx, config.deviceConnection, tracer),
+                    HonoConnection.newConnection(vertx, deviceConnectionServiceClientConfig(), tracer),
                     messageSamplerFactory,
                     protocolAdapterProperties);
         } else {
@@ -248,6 +280,12 @@ public abstract class AbstractProtocolAdapterApplication {
         }
     }
 
+    private ClientConfigProperties downstreamSenderConfig() {
+        setConfigServerRoleIfUnknown(config.messaging, "Downstream");
+        setDefaultConfigNameIfNotSet(config.messaging);
+        return config.messaging;
+    }
+
     /**
      * Creates a new downstream sender for telemetry and event messages.
      *
@@ -255,9 +293,16 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected ProtonBasedDownstreamSender downstreamSender() {
         return new ProtonBasedDownstreamSender(
-                HonoConnection.newConnection(vertx, config.messaging, tracer),
+                HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
+    }
+
+    private ClientConfigProperties commandConsumerFactoryConfig() {
+        final ClientConfigProperties props = new ClientConfigProperties(config.command);
+        setConfigServerRoleIfUnknown(props, "Command & Control");
+        setDefaultConfigNameIfNotSet(props);
+        return props;
     }
 
     /**
@@ -266,7 +311,7 @@ public abstract class AbstractProtocolAdapterApplication {
      * @return The connection.
      */
     protected HonoConnection commandConsumerConnection() {
-        return HonoConnection.newConnection(vertx, config.command, tracer);
+        return HonoConnection.newConnection(vertx, commandConsumerFactoryConfig(), tracer);
     }
 
     /**
@@ -311,6 +356,13 @@ public abstract class AbstractProtocolAdapterApplication {
                 commandRouterClient);
     }
 
+    private ClientConfigProperties commandResponseSenderConfig() {
+        final ClientConfigProperties props = new ClientConfigProperties(config.messaging);
+        setConfigServerRoleIfUnknown(props, "Command Response");
+        setDefaultConfigNameIfNotSet(props);
+        return props;
+    }
+
     /**
      * Creates a new client for sending command response messages downstream.
      *
@@ -318,7 +370,7 @@ public abstract class AbstractProtocolAdapterApplication {
      */
     protected CommandResponseSender commandResponseSender() {
         return new ProtonBasedCommandResponseSender(
-                HonoConnection.newConnection(vertx, config.command, tracer),
+                HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
     }
@@ -352,5 +404,4 @@ public abstract class AbstractProtocolAdapterApplication {
             }
         };
     }
-
 }
