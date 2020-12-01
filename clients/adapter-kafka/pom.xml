@@ -44,7 +44,7 @@
         <!-- Testing -->
         <dependency>
             <groupId>org.eclipse.hono</groupId>
-            <artifactId>kafka-test-utils</artifactId>
+            <artifactId>core-test-utils</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

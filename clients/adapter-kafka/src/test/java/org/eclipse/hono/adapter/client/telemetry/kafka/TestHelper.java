@@ -13,13 +13,31 @@
 
 package org.eclipse.hono.adapter.client.telemetry.kafka;
 
-import java.util.NoSuchElementException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.kafka.clients.producer.MockProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
-import org.eclipse.hono.kafka.test.FakeProducer;
+import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.QoS;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.kafka.client.producer.KafkaProducer;
+import io.vertx.kafka.client.serialization.BufferSerializer;
 
 /**
  * A helper class for writing tests with the Kafka client.
@@ -30,41 +48,65 @@ public class TestHelper {
     }
 
     /**
-     * Gets the {@link MockProducer} for the given producer name from a factory.
+     * Returns a new {@link org.eclipse.hono.client.impl.CachingClientFactory} for the given native {@link Producer}.
+     * <p>
+     * All producers returned by this factory will use the given native producer instance wrapped in a
+     * {@link KafkaProducer}.
      *
-     * @param producerFactory The factory containing the {@link FakeProducer}.
-     * @param producerName The name under which the fake producer is cached in the factory.
-     * @param <K> The type for the record key serialization.
-     * @param <V> The type for the record value serialization.
-     * @return The mock producer.
-     *
-     * @throws NoSuchElementException if the given factory does not contain the expected producer (e.g. when the
-     *             producer got closed after a fatal error).
-     * @throws ClassCastException if the provided producer implementation is not an instance of {@link FakeProducer}.
+     * @param producer The (mock) producer to be wrapped.
+     * @return The producer factory.
      */
-    public static <K, V> MockProducer<K, V> getUnderlyingMockProducer(
-            final CachingKafkaProducerFactory<K, V> producerFactory, final String producerName) {
+    public static CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
+            final Producer<String, Buffer> producer) {
 
-        final KafkaProducer<K, V> kafkaProducer = producerFactory.getProducer(producerName)
-                .orElseThrow(() -> new NoSuchElementException("no producer present in producer factory"));
+        final Vertx vertxMock = mock(Vertx.class);
+        final Context context = VertxMockSupport.mockContext(vertxMock);
+        when(vertxMock.getOrCreateContext()).thenReturn(context);
 
-        return getMockProducerFromFakeProducer(kafkaProducer);
+        doAnswer(invocation -> {
+            final Promise<RecordMetadata> result = Promise.promise();
+            final Handler<Future<RecordMetadata>> blockingCode = invocation.getArgument(0);
+            blockingCode.handle(result.future());
+            return null;
+        }).when(context).executeBlocking(VertxMockSupport.anyHandler(), any());
+
+        return new CachingKafkaProducerFactory<>((n, c) -> KafkaProducer.create(vertxMock, producer));
     }
 
     /**
-     * Gets the {@link MockProducer} from a given {@link FakeProducer}.
+     * Returns a new {@link MockProducer}.
      *
-     * @param fakeProducer The fake producer to get the mock producer from.
-     * @param <K> The type for the record key serialization.
-     * @param <V> The type for the record value serialization.
-     * @return The mock producer.
-     *
-     * @throws ClassCastException if the provided producer implementation is not an instance of {@link FakeProducer}.
+     * @param autoComplete If true, the producer automatically completes all requests successfully and executes the
+     *            callback. Otherwise the {@link MockProducer#completeNext()} or
+     *            {@link MockProducer#errorNext(RuntimeException)} must be invoked after sending a message.
+     * @return the mock producer.
      */
-    public static <K, V> MockProducer<K, V> getMockProducerFromFakeProducer(
-            final KafkaProducer<K, V> fakeProducer) {
+    public static MockProducer<String, Buffer> newMockProducer(final boolean autoComplete) {
+        return new MockProducer<>(autoComplete, new StringSerializer(), new BufferSerializer());
+    }
 
-        return ((FakeProducer<K, V>) fakeProducer).getMockProducer();
+    /**
+     * Asserts that a given Kafka producer record contains the standard headers only once and with the expected values.
+     * The following headers are expected:
+     * <ul>
+     * <li><em>content-type</em></li>
+     * <li><em>device_id</em></li>
+     * <li><em>qos</em></li>
+     * </ul>
+     *
+     * @param actual The record to be checked.
+     * @param deviceId The expected device ID.
+     * @param contentType The expected content type.
+     * @param qos The expected QoS level.
+     */
+    public static void assertStandardHeaders(final ProducerRecord<String, Buffer> actual, final String deviceId,
+            final String contentType, final QoS qos) {
+
+        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("content-type", contentType.getBytes()));
+
+        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("device_id", deviceId.getBytes()));
+
+        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("qos", Json.encode(qos.ordinal()).getBytes()));
     }
 
 }

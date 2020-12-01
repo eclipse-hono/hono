@@ -20,25 +20,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
 import org.eclipse.hono.kafka.client.HonoTopic;
-import org.eclipse.hono.kafka.test.FakeProducer;
 import org.eclipse.hono.util.QoS;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Verifies behavior of {@link AbstractKafkaBasedDownstreamSender}.
@@ -52,25 +51,11 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private static final String CONTENT_TYPE = "the-content-type";
     private static final String PRODUCER_NAME = "test-producer";
 
-    private final Tracer tracer = NoopTracerFactory.create();
-    private final HashMap<String, String> config = new HashMap<>();
-    private final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, "foo");
+    protected final Tracer tracer = NoopTracerFactory.create();
+    private final Map<String, String> config = Collections.singletonMap("hono.kafka.producerConfig.bootstrap.servers",
+            "localhost:9092");
+    private final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, TENANT_ID);
 
-    private CachingKafkaProducerFactory<String, Buffer> factory;
-    private AbstractKafkaBasedDownstreamSender sender;
-
-    /**
-     * Sets up the downstream sender.
-     */
-    @BeforeEach
-    public void setUp() {
-        config.put("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092");
-
-        factory = new CachingKafkaProducerFactory<>((n, c) -> new FakeProducer<>());
-
-        sender = new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, tracer) {
-        };
-    }
 
     /**
      * Verifies that {@link AbstractKafkaBasedDownstreamSender#start()} creates a producer and
@@ -78,6 +63,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
      */
     @Test
     public void testLifecycle() {
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = TestHelper.newProducerFactory(mockProducer);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(factory);
+
         assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
         sender.start();
         assertThat(factory.getProducer(PRODUCER_NAME)).isNotEmpty();
@@ -87,82 +76,132 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     /**
      * Verifies that the Kafka record is created as expected.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSendCreatesCorrectRecord() {
+    public void testSendCreatesCorrectRecord(final VertxTestContext ctx) {
 
         // GIVEN a sender
         final String payload = "the-payload";
         final Map<String, Object> properties = Collections.singletonMap("foo", "bar");
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
 
         // WHEN sending a message
-        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, Buffer.buffer(payload), properties, null);
+        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, Buffer.buffer(payload), properties, null)
+                .onComplete(ctx.succeeding(v -> {
 
-        // THEN the producer record is created from the given values...
-        final ProducerRecord<String, Buffer> actual = TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME)
-                .history().get(0);
+                    final ProducerRecord<String, Buffer> actual = mockProducer.history().get(0);
+                    ctx.verify(() -> {
+                        // THEN the producer record is created from the given values...
+                        assertThat(actual.key()).isEqualTo(DEVICE_ID);
+                        assertThat(actual.topic()).isEqualTo(topic.toString());
+                        assertThat(actual.value().toString()).isEqualTo(payload);
+                        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("foo", "bar".getBytes()));
 
-        assertThat(actual.key()).isEqualTo(DEVICE_ID);
-        assertThat(actual.topic()).isEqualTo(topic.toString());
-        assertThat(actual.value().toString()).isEqualTo(payload);
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("foo", "bar".getBytes()));
-
-        // ...AND contains the standard headers
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("content-type", CONTENT_TYPE.getBytes()));
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("device_id", DEVICE_ID.getBytes()));
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("qos", Json.encode(qos.ordinal()).getBytes()));
-
+                        // ...AND contains the standard headers
+                        TestHelper.assertStandardHeaders(actual, DEVICE_ID, CONTENT_TYPE, qos);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
-     * Verifies that the future returned by
-     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, String, String, QoS, String, Buffer, Map, SpanContext)}
-     * completes successfully when the send operation of the Kafka client succeeds.
+     * Verifies that the send method returns the underlying error wrapped in a {@link ServerErrorException}.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testThatSendCompletes() {
+    public void testSendFailsWithTheExpectedError(final VertxTestContext ctx) {
 
         // GIVEN a sender sending a message
-        final Future<Void> sendFuture = sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null);
+        final RuntimeException expectedError = new RuntimeException("boom");
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(false);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
 
-        // WHEN the send operation completes successfully
-        TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME).completeNext();
+        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN it fails with the expected error
+                        assertThat(t).isInstanceOf(ServerErrorException.class);
+                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(503);
+                        assertThat(t.getCause()).isEqualTo(expectedError);
+                    });
+                    ctx.completeNow();
+                }));
 
-        // THEN the returned future also succeeds
-        assertThat(sendFuture.isComplete()).isTrue();
-        assertThat(sendFuture.succeeded()).isTrue();
+        // WHEN the send operation fails
+        mockProducer.errorNext(expectedError);
+
     }
 
     /**
      * Verifies that the producer is closed when sending of a message fails with a fatal error.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSenderClosesWhenSendFails() {
+    public void testProducerIsClosedOnFatalError(final VertxTestContext ctx) {
+
+        final AuthorizationException expectedError = new AuthorizationException("go away");
 
         // GIVEN a sender sending a message
-        final Future<Void> future = sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null);
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(false);
+        final CachingKafkaProducerFactory<String, Buffer> factory = TestHelper.newProducerFactory(mockProducer);
+        newSender(factory).send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the producer is removed and closed
+                        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+                        assertThat(mockProducer.closed()).isTrue();
+                    });
+                    ctx.completeNow();
+                }));
 
         // WHEN the send operation fails
-        final AuthorizationException expectedError = new AuthorizationException("go away");
-        TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME).errorNext(expectedError);
+        mockProducer.errorNext(expectedError);
 
-        // THEN the returned future is failed...
-        assertThat(future.isComplete()).isTrue();
-        assertThat(future.failed()).isTrue();
-        assertThat(future.cause()).isInstanceOf(ServerErrorException.class);
-        assertThat(future.cause().getCause()).isEqualTo(expectedError);
+    }
 
-        // ... AND the producer is closed
-        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+    /**
+     * Verifies that the producer is not closed when sending of a message fails with a non-fatal error.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testProducerIsNotClosedOnNonFatalError(final VertxTestContext ctx) {
+
+        final RuntimeException expectedError = new RuntimeException("foo");
+
+        // GIVEN a sender sending a message
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(false);
+        final CachingKafkaProducerFactory<String, Buffer> factory = TestHelper.newProducerFactory(mockProducer);
+        newSender(factory).send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the producer is present and still open
+                        assertThat(factory.getProducer(PRODUCER_NAME)).isNotEmpty();
+                        assertThat(mockProducer.closed()).isFalse();
+                    });
+                    ctx.completeNow();
+                }));
+
+        // WHEN the send operation fails
+        mockProducer.errorNext(expectedError);
 
     }
 
     /**
      * Verifies that if the properties contain a <em>ttd</em> property but no <em>creation-time</em> then the later is
      * added.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testThatCreationTimeIsAddedWhenNotPresentAndTtdIsSet() {
+    public void testThatCreationTimeIsAddedWhenNotPresentAndTtdIsSet(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
 
         // GIVEN properties that contain a TTD
         final long ttd = 99L;
@@ -170,22 +209,29 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("ttd", ttd);
 
         // WHEN sending the message
-        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, properties, null);
-
-        // THEN the producer record contains a creation time
-        final ProducerRecord<String, Buffer> record = TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME)
-                .history().get(0);
-
-        assertThat(record.headers()).containsOnlyOnce(new RecordHeader("ttd", Json.encode(ttd).getBytes()));
-        assertThat(record.headers().headers("creation-time")).isNotNull();
+        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, properties, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the producer record contains a creation time
+                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
+                        assertThat(record.headers())
+                                .containsOnlyOnce(new RecordHeader("ttd", Json.encode(ttd).getBytes()));
+                        assertThat(record.headers().headers("creation-time")).isNotNull();
+                    });
+                    ctx.completeNow();
+                }));
 
     }
 
     /**
      * Verifies that if the properties contain a <em>creation-time</em> property then it is preserved.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testThatCreationTimeIsNotChangedWhenPresentAndTtdIsSet() {
+    public void testThatCreationTimeIsNotChangedWhenPresentAndTtdIsSet(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
 
         // GIVEN properties that contain creation-time
         final long creationTime = 12345L;
@@ -194,15 +240,17 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("creation-time", creationTime);
 
         // WHEN sending the message
-        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, properties, null);
-
-        // THEN the creation time is preserved
-        final ProducerRecord<String, Buffer> record = TestHelper.getUnderlyingMockProducer(factory, PRODUCER_NAME)
-                .history().get(0);
-
-        final RecordHeader expectedHeader = new RecordHeader("creation-time", Json.encode(creationTime).getBytes());
-
-        assertThat(record.headers()).containsOnlyOnce(expectedHeader);
+        sender.send(topic, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, properties, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the creation time is preserved
+                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
+                        final RecordHeader expectedHeader = new RecordHeader("creation-time",
+                                Json.encode(creationTime).getBytes());
+                        assertThat(record.headers()).containsOnlyOnce(expectedHeader);
+                    });
+                    ctx.completeNow();
+                }));
 
     }
 
@@ -211,6 +259,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = TestHelper.newProducerFactory(mockProducer);
 
         assertThrows(NullPointerException.class,
                 () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, tracer) {
@@ -236,6 +286,9 @@ public class AbstractKafkaBasedDownstreamSenderTest {
      */
     @Test
     public void testThatSendThrowsOnMissingMandatoryParameter() {
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
+
         assertThrows(NullPointerException.class,
                 () -> sender.send(null, TENANT_ID, DEVICE_ID, qos, CONTENT_TYPE, null, null, null));
 
@@ -252,4 +305,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 () -> sender.send(topic, TENANT_ID, DEVICE_ID, qos, null, null, null, null));
 
     }
+
+    private AbstractKafkaBasedDownstreamSender newSender(final CachingKafkaProducerFactory<String, Buffer> factory) {
+        return new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, tracer) {
+        };
+    }
+
 }

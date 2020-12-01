@@ -30,7 +30,6 @@
   <modules>
     <module>core-test-utils</module>
     <module>service-base-test-utils</module>
-      <module>kafka-test-utils</module>
   </modules>
 
   <properties>
