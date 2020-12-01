@@ -12,38 +12,24 @@
  */
 package org.eclipse.hono.adapter.http.quarkus;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.service.quarkus.AbstractProtocolAdapterApplication;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Promise;
 
 /**
  * The Hono HTTP adapter main application class.
  */
 @ApplicationScoped
-public class Application extends AbstractProtocolAdapterApplication {
+public class Application extends AbstractProtocolAdapterApplication<HttpProtocolAdapterProperties> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Application.class);
     private static final String CONTAINER_ID = "Hono HTTP Adapter";
 
     @Inject
     HttpAdapterMetrics metrics;
-
-    @Inject
-    HttpProtocolAdapterProperties adapterProperties;
 
     /**
      * {@inheritDoc}
@@ -53,43 +39,14 @@ public class Application extends AbstractProtocolAdapterApplication {
         return CONTAINER_ID;
     }
 
-    void onStart(final @Observes StartupEvent ev) {
-        LOG.info("deploying {} {} instances ...", config.app.getMaxInstances(), getAdapterName());
-
-        final CompletableFuture<Void> startup = new CompletableFuture<>();
-        final Promise<String> deploymentTracker = Promise.promise();
-        vertx.deployVerticle(
-                () -> adapter(),
-                new DeploymentOptions().setInstances(config.app.getMaxInstances()),
-                deploymentTracker);
-        deploymentTracker.future()
-            .compose(s -> healthCheckServer.start())
-            .onSuccess(ok -> startup.complete(null))
-            .onFailure(t -> startup.completeExceptionally(t));
-        startup.join();
-
-    }
-
-    void onStop(final @Observes ShutdownEvent ev) {
-        LOG.info("shutting down {}", getAdapterName());
-        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        healthCheckServer.stop()
-            .onComplete(ok -> {
-                vertx.close(attempt -> {
-                    if (attempt.succeeded()) {
-                        shutdown.complete(null);
-                    } else {
-                        shutdown.completeExceptionally(attempt.cause());
-                    }
-                });
-            });
-        shutdown.join();
-    }
-
-    private VertxBasedHttpProtocolAdapter adapter() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected VertxBasedHttpProtocolAdapter adapter() {
 
         final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
-        adapter.setConfig(adapterProperties);
+        adapter.setConfig(protocolAdapterProperties);
         adapter.setMetrics(metrics);
         setCollaborators(adapter);
         return adapter;

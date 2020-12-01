@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -64,7 +65,10 @@ import org.slf4j.LoggerFactory;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
+import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -72,8 +76,10 @@ import io.vertx.core.Vertx;
  * <p>
  * This class provides helper methods for creating clients for Hono's service APIs
  * which to be used with protocol adapter instances.
+ *
+ * @param <C> The type of configuration properties the adapter uses.
  */
-public abstract class AbstractProtocolAdapterApplication extends AdapterConfigurationSupport {
+public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> extends AdapterConfigurationSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
 
@@ -99,7 +105,47 @@ public abstract class AbstractProtocolAdapterApplication extends AdapterConfigur
     protected DeviceConnectionCacheConfig deviceConnectionCacheConfig;
 
     @Inject
-    protected ProtocolAdapterProperties protocolAdapterProperties;
+    protected C protocolAdapterProperties;
+
+    /**
+     * Creates an instance of the protocol adapter.
+     *
+     * @return The adapter instance.
+     */
+    protected abstract AbstractProtocolAdapterBase<C> adapter();
+
+    void onStart(final @Observes StartupEvent ev) {
+        LOG.info("deploying {} {} instances ...", config.app.getMaxInstances(), getAdapterName());
+
+        final CompletableFuture<Void> startup = new CompletableFuture<>();
+        final Promise<String> deploymentTracker = Promise.promise();
+        vertx.deployVerticle(
+                () -> adapter(),
+                new DeploymentOptions().setInstances(config.app.getMaxInstances()),
+                deploymentTracker);
+        deploymentTracker.future()
+            .compose(s -> healthCheckServer.start())
+            .onSuccess(ok -> startup.complete(null))
+            .onFailure(t -> startup.completeExceptionally(t));
+        startup.join();
+
+    }
+
+    void onStop(final @Observes ShutdownEvent ev) {
+        LOG.info("shutting down {}", getAdapterName());
+        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
+        healthCheckServer.stop()
+            .onComplete(ok -> {
+                vertx.close(attempt -> {
+                    if (attempt.succeeded()) {
+                        shutdown.complete(null);
+                    } else {
+                        shutdown.completeExceptionally(attempt.cause());
+                    }
+                });
+            });
+        shutdown.join();
+    }
 
     /**
      * Logs information about the JVM.
