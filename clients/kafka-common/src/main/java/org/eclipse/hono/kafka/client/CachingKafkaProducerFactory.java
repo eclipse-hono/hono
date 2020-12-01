@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.OutOfOrderSequenceException;
 import org.apache.kafka.common.errors.ProducerFencedException;
@@ -25,6 +26,7 @@ import org.apache.kafka.common.errors.UnsupportedForMessageFormatException;
 import org.apache.kafka.common.errors.UnsupportedVersionException;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.kafka.client.producer.KafkaProducer;
@@ -35,8 +37,10 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * This implementation provides no synchronization and should not be used by multiple threads. To create producers that
  * can safely be shared between verticle instances, use {@link KafkaProducerFactory#sharedProducerFactory(Vertx)}.
  * <p>
- * Producers are closed and removed from the cache if they throw a {@link #isFatalError(Throwable) fatal exception}. A
- * following invocation of {@link #getOrCreateProducer(String, Map)} will then return a new instance.
+ * Producers are closed and removed from the cache if they throw a {@link #isFatalError(Throwable) fatal exception}.
+ * This is triggered by {@link KafkaProducer#exceptionHandler(Handler)} and run asynchronously after the
+ * {@link io.vertx.kafka.client.producer.impl.KafkaWriteStreamImpl#send(ProducerRecord, Handler) send operation} has
+ * finished. A following invocation of {@link #getOrCreateProducer(String, Map)} will then return a new instance.
  *
  * @param <K> The type for the record key serialization.
  * @param <V> The type for the record value serialization.
@@ -76,14 +80,20 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
 
         activeProducers.computeIfAbsent(producerName, (name) -> {
             final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, config);
-            return producer.exceptionHandler(t -> {
-                if (isFatalError(t)) {
-                    closeProducer(name);
-                }
-            });
+            return producer.exceptionHandler(getExceptionHandler(name, producer));
         });
 
         return activeProducers.get(producerName);
+    }
+
+    private Handler<Throwable> getExceptionHandler(final String producerName, final KafkaProducer<K, V> producer) {
+        return t -> {
+            // this is executed asynchronously after the send operation has finished
+            if (isFatalError(t)) {
+                activeProducers.remove(producerName);
+                producer.close();
+            }
+        };
     }
 
     /**
