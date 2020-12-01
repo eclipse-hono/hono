@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.mqtt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -125,7 +126,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         // WHEN a device that belongs to the tenant publishes an event
         final AtomicInteger receivedMessageCount = new AtomicInteger(0);
         connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
-        .compose(connack -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
+        .compose(connAck -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
             if (sendAttempt.succeeded()) {
                 LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
                 result.complete();
@@ -154,5 +155,49 @@ public class EventMqttIT extends MqttPublishTestBase {
             });
             return done.future();
         }).onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that an event message from a device has been successfully sent and a north bound application, 
+     * which connects after the event has been sent, can successfully receive those event message.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @Test
+    public void testEventMessageAlreadySentIsDeliveredWhenConsumerConnects(final VertxTestContext ctx)
+            throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String messagePayload = UUID.randomUUID().toString();
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        // WHEN a device that belongs to the tenant publishes an event
+        send(tenantId, deviceId, Buffer.buffer(messagePayload), false, (sendAttempt, result) -> {
+            if (sendAttempt.succeeded()) {
+                LOGGER.debug("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
+                // THEN create a consumer once the event message has been successfully sent
+                LOGGER.debug("opening event consumer for tenant [{}]", tenantId);
+                createConsumer(tenantId, msg -> {
+                    // THEN verify that the event message has been received by the consumer
+                    LOGGER.debug("event message has been received by the consumer");
+                    ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                    ctx.completeNow();
+                });
+            } else {
+                ctx.failNow(sendAttempt.cause());
+            }
+        });
     }
 }

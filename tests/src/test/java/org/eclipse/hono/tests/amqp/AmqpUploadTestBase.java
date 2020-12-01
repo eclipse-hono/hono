@@ -63,13 +63,16 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
-    private static final long DEFAULT_TEST_TIMEOUT = 15000; // ms
-    private static final String DEVICE_PASSWORD = "device-password";
+    /**
+     * The default password of devices.
+     */
+    protected static final String DEVICE_PASSWORD = "device-password";
 
+    private static final long DEFAULT_TEST_TIMEOUT = 15000; // ms
     /**
      * The sender link to use for uploading messages to the adapter.
      */
-    private ProtonSender sender;
+    protected ProtonSender sender;
 
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
         ctx.verify(() -> {
@@ -496,7 +499,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      *
      * @return A future succeeding with the created sender.
      */
-    private Future<ProtonSender> setupProtocolAdapter(
+    protected Future<ProtonSender> setupProtocolAdapter(
             final String tenantId,
             final String deviceId,
             final ProtonQoS senderQos,

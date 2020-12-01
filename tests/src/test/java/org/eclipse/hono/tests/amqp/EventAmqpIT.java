@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,16 +14,25 @@ package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.AmqpErrorException;
+import org.eclipse.hono.util.MessageHelper;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 
 /**
@@ -54,6 +63,52 @@ public class EventAmqpIT extends AmqpUploadTestBase {
         // assert that events are marked as "durable"
         ctx.verify(() -> {
             assertThat(msg.isDurable()).isTrue();
+        });
+    }
+
+    /**
+     * Verifies that an event message from a device has been successfully sent and a north bound application, 
+     * which connects after the event has been sent, can successfully receive this event message.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @Test
+    public void testEventMessageAlreadySentIsDeliveredWhenConsumerConnects(final VertxTestContext ctx)
+            throws InterruptedException {
+        final VertxTestContext setup = new VertxTestContext();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String messagePayload = UUID.randomUUID().toString();
+        final Message event = ProtonHelper.message();
+
+        setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false)
+                .map(s -> sender = s)
+                .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        // WHEN a device that belongs to the tenant publishes an event
+        MessageHelper.setPayload(event, "opaque/binary", Buffer.buffer(messagePayload));
+        event.setAddress(getEndpointName());
+        sender.send(event, delivery -> {
+            if (delivery.getRemoteState() instanceof Accepted) {
+                log.debug("event message has been sent");
+                // THEN create a consumer once the event message has been successfully sent
+                log.debug("opening event consumer for tenant [{}]", tenantId);
+                createConsumer(tenantId, msg -> {
+                    // THEN verify that the event message has been received by the consumer
+                    log.debug("event message has been received by the consumer");
+                    ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                    ctx.completeNow();
+                });
+            } else {
+                ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+            }
         });
     }
 }

@@ -61,8 +61,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * The number of messages to send as part of the test cases.
      */
     protected static final int MESSAGES_TO_SEND = IntegrationTestSupport.MSG_COUNT;
-
-    private final String password = "secret";
+    /**
+     * The default password of devices.
+     */
+    protected final String password = "secret";
 
     // <MQTT message ID, PUBACK handler>
     private final Map<Integer, Handler<Integer>> pendingMessages = new HashMap<>();
