@@ -101,11 +101,14 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * Gets the content type of the AMQP 1.0 message.
+     * <p>
+     * If the message does not contain a content type, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
+     * content type} is returned.
      *
      * @return The content type of the AMQP 1.0 message.
      */
     final String getMessageContentType() {
-        return message.getContentType();
+        return Optional.ofNullable(message.getContentType()).orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
     }
 
     /**
