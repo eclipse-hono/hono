@@ -16,22 +16,23 @@ package org.eclipse.hono.tests.http;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -110,6 +111,7 @@ public class EventHttpIT extends HttpTestBase {
     public void testEventMessageAlreadySentIsDeliveredWhenConsumerConnects(final VertxTestContext ctx)
             throws InterruptedException {
         final VertxTestContext setup = new VertxTestContext();
+        final String messagePayload = UUID.randomUUID().toString();
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
@@ -117,37 +119,27 @@ public class EventHttpIT extends HttpTestBase {
 
         helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD).onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
         httpClient.create(
                 getEndpointUri(),
-                Buffer.buffer("hello"),
+                Buffer.buffer(messagePayload),
                 requestHeaders,
                 ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .compose(eventSent -> {
-                    //THEN create a consumer once the event message has been successfully sent
-                    final Promise<MessageConsumer> consumerCreated = Promise.promise();
-                    vertx.setTimer(4000, tid -> {
-                        logger.info("opening event consumer for tenant [{}]", tenantId);
-                        createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
-                                .onComplete(consumerCreated);
+                .onSuccess(eventSent -> {
+                    // THEN create a consumer once the event message has been successfully sent
+                    createConsumer(tenantId, msg -> {
+                        // THEN verify that the event message has been received by the consumer
+                        logger.debug("event message has been received by the consumer");
+                        ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                        ctx.completeNow();
                     });
-                    return consumerCreated.future();
                 })
-                .compose(consumer -> {
-                    final Promise<Void> done = Promise.promise();
-                    vertx.setTimer(1000, tid -> {
-                        //THEN verify if the message is received by the consumer
-                        assertThat(receivedMessageCount.get()).isEqualTo(1);
-                        done.complete();
-                    });
-                    return done.future();
-                }).onComplete(ctx.completing());
+                .onFailure(ctx::failNow);
     }
 }

@@ -15,8 +15,8 @@ package org.eclipse.hono.tests.coap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -27,7 +27,9 @@ import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -87,10 +89,11 @@ public class EventCoapIT extends CoapTestBase {
     public void testEventMessageAlreadySentIsDeliveredWhenConsumerConnects(final VertxTestContext ctx)
             throws InterruptedException {
         final VertxTestContext setup = new VertxTestContext();
+        final String messagePayload = UUID.randomUUID().toString();
 
         helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET).onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -99,29 +102,22 @@ public class EventCoapIT extends CoapTestBase {
         // WHEN a device that belongs to the tenant publishes an event
         final Promise<OptionSet> sendEvent = Promise.promise();
         final CoapClient client = getCoapClient();
-        final Request eventRequest =  createCoapRequest(CoAP.Code.PUT, getPutResource(tenantId, deviceId), 1);
+        final Request eventRequest = createCoapRequest(CoAP.Code.PUT, Type.CON, getPutResource(tenantId, deviceId),
+                messagePayload.getBytes());
         client.advanced(getHandler(sendEvent), eventRequest);
 
-        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
         sendEvent.future()
-                .compose(eventSent -> {
-                    //THEN create a consumer once the event message has been successfully sent
-                    final Promise<MessageConsumer> consumerCreated = Promise.promise();
-                    vertx.setTimer(4000, tid -> {
-                        logger.info("opening event consumer for tenant [{}]", tenantId);
-                        createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
-                                .onComplete(consumerCreated);
+                .onSuccess(eventSent -> {
+                    logger.debug("event message has been sent");
+                    // THEN create a consumer once the event message has been successfully sent
+                    logger.debug("opening event consumer for tenant [{}]", tenantId);
+                    createConsumer(tenantId, msg -> {
+                        // THEN verify that the event message has been received by the consumer
+                        logger.debug("event message has been received by the consumer");
+                        ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                        ctx.completeNow();
                     });
-                    return consumerCreated.future();
                 })
-                .compose(consumer -> {
-                    final Promise<Void> done = Promise.promise();
-                    vertx.setTimer(1000, tid -> {
-                        //THEN verify if the message is received by the consumer
-                        assertThat(receivedMessageCount.get()).isEqualTo(1);
-                        done.complete();
-                    });
-                    return done.future();
-                }).onComplete(ctx.completing());
+                .onFailure(ctx::failNow);
     }
 }

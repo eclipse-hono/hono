@@ -14,21 +14,21 @@ package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -68,7 +68,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
 
     /**
      * Verifies that an event message from a device has been successfully sent and a north bound application, 
-     * which connects after the event has been sent, can successfully receive those event message.
+     * which connects after the event has been sent, can successfully receive this event message.
      *
      * @param ctx The vert.x test context.
      * @throws InterruptedException if test execution gets interrupted.
@@ -79,51 +79,36 @@ public class EventAmqpIT extends AmqpUploadTestBase {
         final VertxTestContext setup = new VertxTestContext();
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String messagePayload = UUID.randomUUID().toString();
+        final Message event = ProtonHelper.message();
 
         setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false)
                 .map(s -> sender = s)
                 .onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
-        final Message event = ProtonHelper.message();
-        MessageHelper.setPayload(event, "opaque/binary", Buffer.buffer("hello"));
+        MessageHelper.setPayload(event, "opaque/binary", Buffer.buffer(messagePayload));
         event.setAddress(getEndpointName());
-        final Promise<?> sendingComplete = Promise.promise();
         sender.send(event, delivery -> {
-            if (Accepted.class.isInstance(delivery.getRemoteState())) {
-                sendingComplete.complete();
+            if (delivery.getRemoteState() instanceof Accepted) {
+                log.debug("event message has been sent");
+                // THEN create a consumer once the event message has been successfully sent
+                log.debug("opening event consumer for tenant [{}]", tenantId);
+                createConsumer(tenantId, msg -> {
+                    // THEN verify that the event message has been received by the consumer
+                    log.debug("event message has been received by the consumer");
+                    ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                    ctx.completeNow();
+                });
             } else {
-                sendingComplete.fail(AmqpErrorException.from(delivery.getRemoteState()));
+                ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
             }
         });
-
-        sendingComplete
-                .future()
-                .compose(eventSent -> {
-                    //THEN create a consumer once the event message has been successfully sent
-                    final Promise<MessageConsumer> consumerCreated = Promise.promise();
-                    vertx.setTimer(4000, tid -> {
-                        log.info("opening event consumer for tenant [{}]", tenantId);
-                        createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
-                                .onComplete(consumerCreated);
-                    });
-                    return consumerCreated.future();
-                })
-                .compose(consumer -> {
-                    final Promise<Void> done = Promise.promise();
-                    vertx.setTimer(1000, tid -> {
-                        //THEN verify if the message is received by the consumer
-                        assertThat(receivedMessageCount.get()).isEqualTo(1);
-                        done.complete();
-                    });
-                    return done.future();
-                }).onComplete(ctx.completing());
     }
 }

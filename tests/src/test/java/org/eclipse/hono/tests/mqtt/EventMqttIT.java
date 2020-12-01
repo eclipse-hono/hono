@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.mqtt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -125,7 +126,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         // WHEN a device that belongs to the tenant publishes an event
         final AtomicInteger receivedMessageCount = new AtomicInteger(0);
         connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
-        .compose(connack -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
+        .compose(connAck -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
             if (sendAttempt.succeeded()) {
                 LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
                 result.complete();
@@ -169,9 +170,12 @@ public class EventMqttIT extends MqttPublishTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String messagePayload = UUID.randomUUID().toString();
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, "secret").onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -180,34 +184,20 @@ public class EventMqttIT extends MqttPublishTestBase {
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
-        connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
-                .compose(connack -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
-                    if (sendAttempt.succeeded()) {
-                        LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
-                        result.complete();
-                    } else {
-                        result.fail(sendAttempt.cause());
-                    }
-                }))
-                .compose(ok -> {
-                    //THEN create a consumer once the event message has been successfully sent
-                    final Promise<MessageConsumer> consumerCreated = Promise.promise();
-                    vertx.setTimer(4000, tid -> {
-                        LOGGER.info("opening event consumer for tenant [{}]", tenantId);
-                        createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
-                                .onComplete(consumerCreated);
-                    });
-                    return consumerCreated.future();
-                })
-                .compose(c -> {
-                    final Promise<Void> done = Promise.promise();
-                    vertx.setTimer(1000, tid -> {
-                        //THEN verify if the message is received by the consumer
-                        assertThat(receivedMessageCount.get()).isEqualTo(1);
-                        done.complete();
-                    });
-                    return done.future();
-                }).onComplete(ctx.completing());
+        send(tenantId, deviceId, Buffer.buffer(messagePayload), false, (sendAttempt, result) -> {
+            if (sendAttempt.succeeded()) {
+                LOGGER.debug("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
+                // THEN create a consumer once the event message has been successfully sent
+                LOGGER.debug("opening event consumer for tenant [{}]", tenantId);
+                createConsumer(tenantId, msg -> {
+                    // THEN verify that the event message has been received by the consumer
+                    LOGGER.debug("event message has been received by the consumer");
+                    ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                    ctx.completeNow();
+                });
+            } else {
+                ctx.failNow(sendAttempt.cause());
+            }
+        });
     }
 }
