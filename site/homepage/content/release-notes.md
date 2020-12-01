@@ -11,6 +11,15 @@ title = "Release Notes"
   to limit its resource usage. In particular the AMQP connection's *max-frame-size*,
   the AMQP session's incoming window size and the *max-message-size* of receiver
   links can be configured (and thus limited).
+* A new way of routing Command & Control messages from the AMQP messaging network
+  to the target protocol adapters has been introduced. For that, a new 
+  [Command Router service]({{% doclink "/admin-guide/command-router-config" %}})
+  component is used, receiving command messages and routing them to the appropriate
+  protocol adapters. Protocol adapters supply routing information to the component
+  by means of a new [Command Router API]({{% doclink "/api/command-router/" %}}).
+  Protocol adapters can be configured to either use that new API or they can continue
+  using the now deprecated [Device Connection API]({{% doclink "/api/device-connection/" %}})
+  instead, meaning command routing will be done without using the Command Router.
 
 ### Fixes & Enhancements
 
