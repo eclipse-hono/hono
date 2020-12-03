@@ -60,7 +60,7 @@ public abstract class AdapterConfigurationSupport {
      * @param config The configuration properties.
      * @throws NullPointerException if config is {@code null}.
      */
-    protected final void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
+    protected void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
         if (config.getName() == null && getAdapterName() != null) {
             config.setName(getAdapterName());
         }
