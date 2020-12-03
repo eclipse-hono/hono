@@ -30,9 +30,8 @@ An excellent way to get the latest news and announcements around Hono is to [joi
 
 ## Project Call
 
-There is a bi-weekly community call which is open to everyone interested in
-the development of Hono. You can join by using the following link:
-<https://bluejeans.com/494114785>
+Starting 2020-12-03, there is a bi-weekly community call at 17:00 CET. The call is open to everyone interested in the development of Hono.
 
-You can also import the calendar file [project-call.ics](../project-call.ics "Project Call") 
-which contains more information about joining by computer or telephone.
+You can join by using the following link: <https://eclipse.zoom.us/j/93080939143?pwd=V3lpdkMxSTh2bXBsMEJGdmxvdDFOUT09>
+
+You can also import the calendar file [project-call.ics](../project-call.ics "Project Call") which contains more information about joining by computer or telephone.
