@@ -43,7 +43,7 @@ public class RemoteCacheConfig {
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties("hono.device-connection.remote")
+    @ConfigurationProperties("hono.command-router.cache.remote")
     public InfinispanRemoteConfigurationProperties remoteCacheProperties() {
         return new InfinispanRemoteConfigurationProperties();
     }

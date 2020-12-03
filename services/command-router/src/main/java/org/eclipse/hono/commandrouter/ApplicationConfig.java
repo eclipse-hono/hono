@@ -239,7 +239,7 @@ public class ApplicationConfig {
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.device-connection.common")
+    @ConfigurationProperties(prefix = "hono.command-router.cache.common")
     public CommonCacheConfig deviceConnectionInfoCommonCacheConfig() {
         return new CommonCacheConfig();
     }

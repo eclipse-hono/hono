@@ -43,7 +43,7 @@ public class EmbeddedCacheConfig {
 
     private static final Logger LOG = LoggerFactory.getLogger(RemoteCacheConfig.class);
 
-    @Value("${hono.device-connection.embedded.configuration-file:/etc/hono/cache-config.xml}")
+    @Value("${hono.command-router.cache.embedded.configuration-file:/etc/hono/cache-config.xml}")
     private Path configuration;
 
     /**
