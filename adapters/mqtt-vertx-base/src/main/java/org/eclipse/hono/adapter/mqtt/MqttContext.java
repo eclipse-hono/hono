@@ -171,8 +171,8 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     /**
      * Gets the content type of the message payload.
      * <p>
-     * The type determined from the message topic's property
-     * bag, if if contains a content type.
+     * The type is determined from the message topic's property
+     * bag, if it contains a content type.
      * Otherwise, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
      * content type} is used.
      *
