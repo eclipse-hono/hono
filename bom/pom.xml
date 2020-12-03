@@ -709,11 +709,6 @@
 
       <!-- Other -->
       <dependency>
-        <groupId>org.jboss.slf4j</groupId>
-        <artifactId>slf4j-jboss-logging</artifactId>
-        <version>1.2.1.Final</version>
-      </dependency>
-      <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
         <artifactId>caffeine</artifactId>
         <version>${caffeine.version}</version>
