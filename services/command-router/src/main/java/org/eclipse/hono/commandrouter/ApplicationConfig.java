@@ -44,6 +44,7 @@ import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpE
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -241,7 +242,9 @@ public class ApplicationConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.command-router.cache.common")
     public CommonCacheConfig deviceConnectionInfoCommonCacheConfig() {
-        return new CommonCacheConfig();
+        final CommonCacheConfig commonCacheConfig = new CommonCacheConfig();
+        commonCacheConfig.setCacheName(CommandRouterConstants.DEFAULT_CACHE_NAME);
+        return commonCacheConfig;
     }
 
     /**

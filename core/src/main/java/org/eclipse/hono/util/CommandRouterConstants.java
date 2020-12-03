@@ -20,6 +20,12 @@ package org.eclipse.hono.util;
 public final class CommandRouterConstants extends RequestResponseApiConstants {
 
     /**
+     * The default name of the (remote) cache in the data grid that is used for
+     * storing command router information.
+     */
+    public static final String DEFAULT_CACHE_NAME = "command-router";
+
+    /**
      * The name of the Command Router API endpoint.
      */
     public static final String COMMAND_ROUTER_ENDPOINT = "cmd_router";
