@@ -43,6 +43,9 @@ title = "Release Notes"
 * The MQTT adapter now sets the MQTT client identifier as *client-id* in the payload of a Credentials API *get*
   operation request also when authenticating a device using the username/password mechanism. Previously that was
   only done for the client certificate authentication mechanism.  
+* An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
+  application received a message with an empty content type. Now, the `application/octet-stream`
+  content type is set, as it is also done for telemetry/event HTTP requests with no `Content-Type` header.
 
 ### API Changes
 
