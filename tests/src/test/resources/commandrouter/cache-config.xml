@@ -11,8 +11,8 @@
     SPDX-License-Identifier: EPL-2.0
  -->
 <infinispan>
-  <cache-container default-cache="device-connection">
-    <local-cache name="device-connection" simple-cache="true">
+  <cache-container default-cache="command-router">
+    <local-cache name="command-router" simple-cache="true">
       <memory>
         <object size="100" strategy="REMOVE" />
       </memory>
