@@ -88,10 +88,14 @@ The AMQP 1.0 properties an event sender needs to set for an *empty notification*
 
 The relevant properties are listed again in the following table:
 
-| Name           | Mandatory        | Location                 | Type      | Description |
-| :------------- | :--------------: | :----------------------- | :-------- | :---------- |
-| *content-type* | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
-| *ttd*          | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
+| Name                       | Mandatory        | Location                 | Type      | Description |
+| :------------------------- | :--------------: | :----------------------- | :-------- | :---------- |
+| *content-type*             | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
+| *ttd*                      | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
+| *hono_registration_status* | no               | *application-properties* | *string*  | If set to `NEW` this indicates that a device was auto-provisioned in the course of sending telemetry data via gateway. |
+| *tenant_id*                | no               | *application-properties* | *string*  | The tenant id denoting the tenant for which the device was auto-provisioned. |
+| *device_id*                | no               | *application-properties* | *string*  | The device id denoting of the auto-provisioned device. |
+| *gateway_id*               | no               | *application-properties* | *string*  | The gateway id denoting the gateway for which the device was auto-provisioned. |
 
 **NB** An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
 
