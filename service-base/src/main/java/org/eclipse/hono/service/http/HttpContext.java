@@ -22,7 +22,6 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ExecutionContext;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
 
@@ -144,20 +143,16 @@ public final class HttpContext implements ExecutionContext {
     }
 
     /**
-     * Gets the content type of the request payload.
-     * <p>
-     * The type is determined from the <em>Content-Type</em> HTTP header of the
-     * request, if that header is set.
-     * Otherwise, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
-     * content type} is used.
+     * Gets the value of the <em>Content-Type</em> HTTP header for a request.
      *
-     * @return The type of the request payload.
+     * @return The content type or {@code null} if the request doesn't contain a
+     *         <em>Content-Type</em> header.
      */
     public String getContentType() {
 
         final String contentType = routingContext.parsedHeaders().contentType().value();
         // contentType will be an empty string here if header isn't set
-        return Strings.isNullOrEmpty(contentType) ? MessageHelper.CONTENT_TYPE_OCTET_STREAM : contentType;
+        return Strings.isNullOrEmpty(contentType) ? null : contentType;
     }
 
     /**
