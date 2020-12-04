@@ -9,8 +9,8 @@ title = "Release Notes"
 * The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
   or set to AT_MOST_ONCE. This has been fixed.
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
-  application received a message with an empty content type. Now, the `application/octet-stream`
-  content type is set, as it is also done for telemetry/event HTTP requests with no `Content-Type` header.
+  application received a message with the content type set to an empty string. Now, the content type property
+  isn't set in this case.
 
 ## 1.4.3
 
