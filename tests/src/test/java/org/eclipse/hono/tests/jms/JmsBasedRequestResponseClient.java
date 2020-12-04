@@ -254,8 +254,13 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
             if (message instanceof TextMessage) {
                 final TextMessage textMessage = (TextMessage) message;
                 final String body = textMessage.getText();
-                payload = Buffer.buffer(body);
-                LOGGER.debug("response payload contains text body: {}", body);
+                if (body == null) {
+                    payload = null;
+                    LOGGER.debug("response payload contains empty text body");
+                } else {
+                    payload = Buffer.buffer(body);
+                    LOGGER.debug("response payload contains text body: {}", body);
+                }
             } else if (message instanceof BytesMessage) {
                 final BytesMessage byteMessage = (BytesMessage) message;
                 if (byteMessage.getBodyLength() > 0) {
@@ -263,8 +268,8 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
                     payload = Buffer.buffer(bytes);
                     LOGGER.debug("response payload contains {} bytes", bytes.length);
                 } else {
-                    LOGGER.debug("response payload is empty");
                     payload = null;
+                    LOGGER.debug("response payload is empty");
                 }
             } else {
                 throw new ServerErrorException(
