@@ -120,7 +120,9 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
             }
         });
         headers.add(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, ctx.message().topicName());
-        headers.add(HttpHeaders.CONTENT_TYPE.toString(), ctx.contentType());
+        if (ctx.contentType() != null) {
+            headers.add(HttpHeaders.CONTENT_TYPE.toString(), ctx.contentType());
+        }
 
         final Promise<MappedMessage> result = Promise.promise();
 

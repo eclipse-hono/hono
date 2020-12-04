@@ -591,7 +591,7 @@ public class AbstractProtocolAdapterBaseTest {
         when(eventSender.sendEvent(
                 any(TenantObject.class),
                 any(RegistrationAssertion.class),
-                anyString(),
+                any(),
                 any(),
                 any(),
                 any())).thenReturn(Future.succeededFuture());

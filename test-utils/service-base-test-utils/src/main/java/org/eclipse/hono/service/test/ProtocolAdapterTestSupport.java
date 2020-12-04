@@ -316,7 +316,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(TenantObject.class),
                 any(RegistrationAssertion.class),
                 any(org.eclipse.hono.util.QoS.class),
-                anyString(),
+                any(),
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());
@@ -348,7 +348,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         when(this.eventSender.sendEvent(
                 any(TenantObject.class),
                 any(RegistrationAssertion.class),
-                anyString(),
+                any(),
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());

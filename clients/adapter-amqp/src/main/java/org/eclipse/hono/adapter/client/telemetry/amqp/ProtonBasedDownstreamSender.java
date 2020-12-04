@@ -118,7 +118,6 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(device);
         Objects.requireNonNull(qos);
-        Objects.requireNonNull(contentType);
 
         return getOrCreateTelemetrySender(tenant.getTenantId())
             .compose(sender -> {
@@ -148,7 +147,6 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
 
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(device);
-        Objects.requireNonNull(contentType);
 
         return getOrCreateEventSender(tenant.getTenantId())
                 .compose(sender -> {

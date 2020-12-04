@@ -834,7 +834,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                             argThat(tenant -> tenant.getTenantId().equals("my-tenant")),
                             argThat(assertion -> assertion.getDeviceId().equals("4712")),
                             eq(QoS.AT_LEAST_ONCE),
-                            anyString(),
+                            any(),
                             any(),
                             argThat(props -> props.get(MessageHelper.ANNOTATION_X_OPT_RETAIN).equals(Boolean.TRUE)),
                             any());
