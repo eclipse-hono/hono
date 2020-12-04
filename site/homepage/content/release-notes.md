@@ -51,7 +51,9 @@ title = "Release Notes"
 * The MQTT adapter now supports specifying the content-type of a telemetry/event message via a MQTT property bag.
 * The MQTT adapter now sets the MQTT client identifier as *client-id* in the payload of a Credentials API *get*
   operation request also when authenticating a device using the username/password mechanism. Previously that was
-  only done for the client certificate authentication mechanism.  
+  only done for the client certificate authentication mechanism.
+* Hono's HTTP protocol adapter included a `qos` application-property with a value other than `1` under certain
+  conditions. This has been fixed.
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with an empty content type. Now, the `application/octet-stream`
   content type is set, as it is also done for telemetry/event HTTP requests with no `Content-Type` header.
@@ -61,6 +63,13 @@ title = "Release Notes"
 * The deprecated configuration property `singleTenant` of the protocol adapters and the device registry has been removed.
 * The default pattern for valid device identifiers used for the file based and the MongoDB based registry
   implementations now also contains a colon for compatibility with Eclipse Ditto.
+
+## 1.4.4
+
+### Fixes & Enhancements
+
+* Hono's HTTP protocol adapter included a `qos` application-property with a value other than `1` under certain
+  conditions. This has been fixed.
 
 ## 1.4.3
 
@@ -121,6 +130,13 @@ title = "Release Notes"
   realized by configuring just one tenant in the device registry.
 * The `HONO_REGISTRY_REST_*` configuration properties of the file based device registry have been deprecated
   in favor of corresponding properties with the `HONO_REGISTRY_HTTP_` prefix.
+
+## 1.3.2
+
+### Fixes & Enhancements
+
+* Hono's HTTP protocol adapter included a `qos` application-property with a value other than `1` under certain
+  conditions. This has been fixed.
 
 ## 1.3.1
 
