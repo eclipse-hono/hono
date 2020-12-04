@@ -52,8 +52,8 @@ title = "Release Notes"
 * The MQTT adapter now sets the MQTT client identifier as *client-id* in the payload of a Credentials API *get*
   operation request also when authenticating a device using the username/password mechanism. Previously that was
   only done for the client certificate authentication mechanism.
-* Hono's HTTP protocol adapter included a `qos` application-property with a value other than `1` under certain
-  conditions. This has been fixed.
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+  or set to AT_MOST_ONCE. This has been fixed.
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with an empty content type. Now, the `application/octet-stream`
   content type is set, as it is also done for telemetry/event HTTP requests with no `Content-Type` header.
@@ -68,8 +68,11 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 
-* Hono's HTTP protocol adapter included a `qos` application-property with a value other than `1` under certain
-  conditions. This has been fixed.
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+  or set to AT_MOST_ONCE. This has been fixed.
+* An HTTP device sending a command response request with no `Content-Type` header meant that the north bound
+  application received a message with the content type set to an empty string. Now, the content type property
+  isn't set in this case.
 
 ## 1.4.3
 
@@ -135,8 +138,11 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 
-* Hono's HTTP protocol adapter included a `qos` application-property with a value other than `1` under certain
-  conditions. This has been fixed.
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+  or set to AT_MOST_ONCE. This has been fixed.
+* An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
+  application received a message with the content type set to an empty string. Now, the content type property
+  isn't set in this case.
 
 ## 1.3.1
 
