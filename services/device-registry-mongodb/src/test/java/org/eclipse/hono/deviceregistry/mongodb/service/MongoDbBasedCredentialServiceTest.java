@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
@@ -60,15 +59,13 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
     private Vertx vertx;
 
     /**
-     * Sets up static fixture.
+     * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
-     * @throws IOException if the embedded mongo db could not be started on the available port.
      */
     @BeforeAll
-    public void setup(final VertxTestContext testContext) throws IOException {
+    public void startService(final VertxTestContext testContext) {
 
-        final Checkpoint started = testContext.checkpoint(2);
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
         credentialsService = new MongoDbBasedCredentialsService(
@@ -81,8 +78,11 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
                 mongoClient,
                 registrationServiceConfig);
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
-        credentialsService.start().onSuccess(ok -> started.flag());
-        registrationService.start().onSuccess(ok -> started.flag());
+        // start services sequentially as concurrent startup seems to cause
+        // concurrency issues sometimes
+        credentialsService.start()
+            .compose(ok -> registrationService.start())
+            .onComplete(testContext.completing());
     }
 
     /**

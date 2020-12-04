@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -94,26 +93,31 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
 
     @Override
     public Future<Void> start() {
+
         // initialize indexes
-        return CompositeFuture.all(
-                mongoDbCallExecutor.createCollectionIndex(config.getCollectionName(),
-                        new JsonObject().put(
-                                RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
-                        new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES),
-                // add unique index predicate for tenants with field of trusted-ca inside tenant object
-                // to ensure that no tenants have the same trusted-ca but only if trusted-ca exist
-                // to to deal with creating/updating tenants containing unique ids.
-                mongoDbCallExecutor.createCollectionIndex(config.getCollectionName(),
-                        new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                        new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject().put(
-                                        RegistryManagementConstants.FIELD_TENANT + "." +
-                                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                        new JsonObject().put("$exists", true))),
-                        INDEX_CREATION_MAX_RETRIES))
-                .map(ok -> null);
+        return mongoDbCallExecutor.createCollectionIndex(
+                config.getCollectionName(),
+                new JsonObject().put(
+                        RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
+                new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES)
+
+            // add unique index predicate for tenants with field of trusted-ca inside tenant object
+            // to ensure that no tenants have the same trusted-ca but only if trusted-ca exist
+            // to to deal with creating/updating tenants containing unique ids.
+            .compose(ok -> mongoDbCallExecutor.createCollectionIndex(
+                    config.getCollectionName(),
+                    new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
+                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
+                            RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                    new IndexOptions().unique(true)
+                            .partialFilterExpression(new JsonObject().put(
+                                    RegistryManagementConstants.FIELD_TENANT + "." +
+                                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                                    new JsonObject().put("$exists", true))),
+                    INDEX_CREATION_MAX_RETRIES))
+            .onSuccess(ok -> {
+                LOG.info("MongoDB Tenant service started");
+            });
     }
 
     @Override
