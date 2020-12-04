@@ -38,12 +38,7 @@ node {
                     name: 'DEPLOY_DOCUMENTATION'),
             booleanParam(defaultValue: true,
                     description: "Set the documentation for this release as the new stable version.\nDisable for milestone release.",
-                    name: 'STABLE_DOCUMENTATION'),
-            credentials(credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials',
-                    defaultValue: '',
-                    description: 'The credentials to use during checkout from git',
-                    name: 'CREDENTIALS_ID',
-                    required: true)])])
+                    name: 'STABLE_DOCUMENTATION')])])
     try {
         checkOut()
         setReleaseVersionAndBuild(utils)
@@ -52,7 +47,6 @@ node {
         setNextVersion(utils)
         commitAndPush()
         copyArtifacts()
-        utils.publishJavaDoc('target/site/apidocs', true)
         currentBuild.result = 'SUCCESS'
     } catch (err) {
         currentBuild.result = 'FAILURE'
@@ -76,7 +70,7 @@ def checkOut() {
                   doGenerateSubmoduleConfigurations: false,
                   extensions                       : [[$class: 'WipeWorkspace'],
                                                       [$class: 'LocalBranch']],
-                  userRemoteConfigs                : [[credentialsId: "${params.CREDENTIALS_ID}", url: 'ssh://git@github.com/eclipse/hono.git']]])
+                  userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse/hono.git']]])
     }
 }
 
@@ -129,7 +123,9 @@ def setVersionForDocumentation() {
  */
 def commitAndTag() {
     stage("Commit and tag release version") {
-        sh ''' 
+        sh '''
+            git config user.email "hono-bot@eclipse.org"
+            git config user.name "hono-bot"
             git add pom.xml \\*/pom.xml
             git commit -m "Release ${RELEASE_VERSION}"
             git tag ${RELEASE_VERSION}
@@ -157,11 +153,13 @@ def setNextVersion(def utils) {
  */
 def commitAndPush() {
     stage("Commit and push") {
+      sshagent(credentials: [ 'github-bot-ssh' ]) {
         sh ''' 
             git add pom.xml \\*/pom.xml
             git commit -m "Bump version to ${NEXT_VERSION}"
             git push --all ssh://git@github.com/eclipse/hono.git && git push --tags ssh://git@github.com/eclipse/hono.git
            '''
+        }
     }
 }
 
@@ -171,10 +169,12 @@ def commitAndPush() {
  */
 def copyArtifacts() {
     stage("Copy Artifacts") {
+      sshagent(credentials: [ 'projects-storage.eclipse.org-bot-ssh' ]) {
         sh ''' 
             chmod +r cli/target/hono-cli-${RELEASE_VERSION}-exec.jar
-            cp cli/target/hono-cli-${RELEASE_VERSION}-exec.jar /home/data/httpd/download.eclipse.org/hono/
+            scp cli/target/hono-cli-${RELEASE_VERSION}-exec.jar genie.hono@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/hono/
            '''
+      }
     }
 
 }
