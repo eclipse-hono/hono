@@ -50,7 +50,7 @@ public interface TelemetrySender extends Lifecycle {
      *         The future will be failed with a {@code org.eclipse.hono.client.ServerErrorException} if the data
      *         could not be sent. The error code contained in the exception indicates the
      *         cause of the failure.
-     * @throws NullPointerException if tenant, device, qos or contentType are {@code null}.
+     * @throws NullPointerException if tenant, device or qos are {@code null}.
      */
     Future<Void> sendTelemetry(
             TenantObject tenant,

@@ -116,8 +116,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
                 result.topic = bag.topicWithoutPropertyBag();
                 result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
                 // set the content-type using the corresponding value from the property bag
-                result.contentType = Optional.ofNullable(bag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
-                        .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                result.contentType = bag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE);
                 if (result.endpoint == EndpointType.EVENT) {
                     result.timeToLive = determineTimeToLive(bag);
                 }
@@ -171,12 +170,11 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     /**
      * Gets the content type of the message payload.
      * <p>
-     * The type is determined from the message topic's property
+     * The type has either been set via {@link #setContentType(String)}
+     * or it is the type determined from the message topic's property
      * bag, if it contains a content type.
-     * Otherwise, the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default
-     * content type} is used.
      *
-     * @return The type of the message payload.
+     * @return The type of the message payload or {@code null} if the type is unknown.
      */
     public String contentType() {
         return contentType;

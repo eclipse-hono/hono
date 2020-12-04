@@ -334,32 +334,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
-     * Verifies that a request to upload telemetry message without a content-type set results in the adapter setting
-     * {@link MessageHelper#CONTENT_TYPE_OCTET_STREAM} as the content-type before uploading the message.
-     */
-    @Test
-    public void testUploadTelemetryWithoutContentType() {
-        // GIVEN an AMQP adapter with a configured server
-        givenAnAdapter(properties);
-
-        // IF a device sends telemetry data (with un-settled delivery)
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        when(delivery.remotelySettled()).thenReturn(false);
-        final String to = ResourceIdentifier
-                .from(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, TEST_TENANT_ID, TEST_DEVICE).toString();
-
-        // AND without a content-type set
-        final Message mockMessage = ProtonHelper.message(to, "payload");
-
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, mockMessage, span, null));
-
-        // THEN the sender sends the message with the content-type "application/octet-stream"
-        assertTelemetryMessageHasBeenSentDownstream(QoS.AT_LEAST_ONCE, TEST_TENANT_ID, TEST_DEVICE,
-                "application/octet-stream");
-
-    }
-
-    /**
      * Verifies that a request to upload an "unsettled" telemetry message from a device that belongs to a tenant for which the AMQP
      * adapter is disabled fails and that the device is notified when the message cannot be processed.
      *
