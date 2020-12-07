@@ -22,18 +22,14 @@
 node {
     def utils = evaluate readTrusted("jenkins/Hono-PipelineUtils.groovy")
     properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')), parameters([
-            string(defaultValue: '',
-                    description: "The tag to build and deploy. \nExamples:\n1.0.0-M6\n1.0.0-RC1\n2.1.0",
-                    name: 'RELEASE_VERSION',
-                    trim: true),
-            credentials(credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials',
-                    defaultValue: '',
-                    description: 'The credentials to use during checkout from git',
-                    name: 'CREDENTIALS_ID',
-                    required: true)
+            string(
+                name: 'RELEASE_VERSION',
+                description: "The tag to build and deploy.\nExamples:\nrefs/tags/1.0.0-M6\nrefs/tags/1.0.0-RC1\nrefs/tags/2.1.0",
+                defaultValue: 'refs/tags/',
+                trim: true)
     ])])
     try {
-        utils.checkOutRepoWithCredentials("${params.RELEASE_VERSION}", "${params.CREDENTIALS_ID}", "ssh://git@github.com/eclipse/hono.git")
+        utils.checkOutRepoWithCredentials("${params.RELEASE_VERSION}", "github-bot-ssh", "ssh://git@github.com/eclipse/hono.git")
         buildAndDeploy(utils)
         currentBuild.result = 'SUCCESS'
     } catch (err) {
@@ -53,10 +49,10 @@ node {
  */
 def buildAndDeploy(def utils) {
     stage('Build and deploy to maven central') {
-        withMaven(maven: utils.getMavenVersion(),
-                jdk: utils.getJDKVersion(),
-                mavenLocalRepo: '.repository',
-                options: [artifactsPublisher(disabled: true)]) {
+        withMaven(
+          maven: utils.getMavenVersion(),
+          jdk: utils.getJDKVersion(),
+          options: [artifactsPublisher(disabled: true)]) {
             sh "mvn --projects :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-mongodb,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"
         }
     }
