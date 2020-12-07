@@ -153,6 +153,7 @@ public class MessageHelperTest {
     public void testAddDefaultsAddsDefaultContentType() {
 
         final Message message = ProtonHelper.message();
+        message.setBody(new Data(new Binary("test".getBytes(StandardCharsets.UTF_8))));
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final Map<String, Object> defaults = new JsonObject()
                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/hono")
@@ -183,13 +184,14 @@ public class MessageHelperTest {
 
     /**
      * Verifies that the fall back content type is set on a downstream message
-     * if no default has been configured for the device.
+     * if no default has been configured for the device and the payload is not {@code null}.
      */
     @Test
     public void testAddPropertiesAddsFallbackContentType() {
 
         final Message message = ProtonHelper.message();
         message.setAddress("telemetry/DEFAULT_TENANT/4711");
+        message.setBody(new Data(new Binary("test".getBytes(StandardCharsets.UTF_8))));
         MessageHelper.addProperties(
                 message,
                 null,
@@ -200,6 +202,20 @@ public class MessageHelperTest {
                 false);
 
         assertThat(message.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+
+        // negative test with empty payload
+        final Message message2 = ProtonHelper.message();
+        message2.setAddress("telemetry/DEFAULT_TENANT/4711");
+        MessageHelper.addProperties(
+                message2,
+                null,
+                null,
+                null,
+                null,
+                true,
+                false);
+
+        assertThat(message2.getContentType()).isNull();
     }
 
     /**
@@ -323,6 +339,63 @@ public class MessageHelperTest {
                 false);
 
         assertThat(message.getTtl()).isEqualTo(timeToLive.toMillis());
+    }
+
+    /**
+     * Verifies that the "application/vnd.eclipse-hono-empty-notification" content-type
+     * can be set on a newly created event message with a {@code null} payload.
+     */
+    @Test
+    public void testNewMessageSetsEmptyNotificationContentType() {
+
+        final Map<String, Object> props = Collections.singletonMap(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                "application/vnd+hono.ignore+json");
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
+                Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final JsonObject defaults = new JsonObject().put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                "application/vnd+hono.ignore+json");
+
+        final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+        final Message message = MessageHelper.newMessage(
+                target,
+                contentType,
+                null,
+                tenant,
+                props,
+                defaults.getMap(),
+                true,
+                false);
+
+        assertThat(message.getContentType()).isEqualTo(contentType);
+    }
+
+    /**
+     * Verifies that the content-type of a newly created event message
+     * is set to the content-type given in the defaults.
+     */
+    @Test
+    public void testNewMessageUsesContentTypeFromDefaults() {
+
+        final String contentTypeInDefaults = "application/text";
+        final Map<String, Object> props = Collections.emptyMap();
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
+                Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final JsonObject defaults = new JsonObject().put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                contentTypeInDefaults);
+
+        final Message message = MessageHelper.newMessage(
+                target,
+                null, // use 'null' contentType here
+                Buffer.buffer("test"),
+                tenant,
+                props,
+                defaults.getMap(),
+                true,
+                false);
+
+        assertThat(message.getContentType()).isEqualTo(contentTypeInDefaults);
     }
 
     /**
