@@ -12,12 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 
 import io.vertx.core.Future;
@@ -84,17 +80,12 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                         payload.put("data", data);
                     }
 
-                    final long timeToLive = tenant.getResourceLimits().getMaxTtl();
-
-                    final Map<String, Object> props = new HashMap<>();
-                    props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, timeToLive);
-
                     return context.getMessageSenderClient().sendEvent(
                             tenant,
                             new RegistrationAssertion(deviceId),
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
                             payload.toBuffer(),
-                            props,
+                            null,
                             null);
                 });
     }

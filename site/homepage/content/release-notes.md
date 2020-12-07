@@ -57,6 +57,8 @@ title = "Release Notes"
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with an empty content type. Now, the `application/octet-stream`
   content type is set, as it is also done for telemetry/event HTTP requests with no `Content-Type` header.
+* There were errors sending Connection Events via the Events API if the corresponding tenant didn't
+  have a non-default `max-ttl` resource limit configuration. This has been fixed.
 
 ### API Changes
 
@@ -73,6 +75,8 @@ title = "Release Notes"
 * An HTTP device sending a command response request with no `Content-Type` header meant that the north bound
   application received a message with the content type set to an empty string. Now, the content type property
   isn't set in this case.
+* There were errors sending Connection Events via the Events API if the corresponding tenant didn't
+  have a non-default `max-ttl` resource limit configuration. This has been fixed.
 
 ## 1.4.3
 
@@ -143,6 +147,8 @@ title = "Release Notes"
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with the content type set to an empty string. Now, the content type property
   isn't set in this case.
+* There were errors sending Connection Events via the Events API if the corresponding tenant didn't
+  have a non-default `max-ttl` resource limit configuration. This has been fixed.
 
 ## 1.3.1
 
