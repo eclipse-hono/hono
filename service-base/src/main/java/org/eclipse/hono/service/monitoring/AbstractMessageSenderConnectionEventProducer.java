@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -108,15 +107,14 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                     }
 
                     final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenantId, deviceId);
-                    final Duration timeToLive = Duration.ofSeconds(tenant.getResourceLimits().getMaxTtl());
 
                     return MessageHelper.newMessage(
                             QoS.AT_LEAST_ONCE,
                             target,
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
                             payload.toBuffer(), 
-                            tenant, 
-                            timeToLive,
+                            tenant,
+                            null,
                             protocolAdapter);
                 })
                 .compose(msg -> downstreamSender.result().send(msg));
