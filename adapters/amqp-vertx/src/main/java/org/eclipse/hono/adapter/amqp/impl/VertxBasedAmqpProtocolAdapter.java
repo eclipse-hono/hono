@@ -938,6 +938,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         } else {
 
             final Message msg = ProtonHelper.message();
+            msg.setAddress(String.format("%s/%s/%s",
+                    CommandConstants.COMMAND_ENDPOINT,
+                    command.getTenant(),
+                    command.getOriginalDeviceId()));
             msg.setCorrelationId(command.getCorrelationId());
             msg.setSubject(command.getName());
             MessageHelper.setPayload(msg, command.getContentType(), command.getPayload());
