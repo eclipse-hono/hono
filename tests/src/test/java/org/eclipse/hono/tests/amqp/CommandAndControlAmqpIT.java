@@ -271,6 +271,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     ctx.verify(() -> {
                         assertThat(msg.getReplyTo()).isNull();
                         assertThat(msg.getSubject()).isEqualTo("setValue");
+                        assertThat(msg.getAddress())
+                                .isEqualTo(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
                     });
                     log.debug("received command [name: {}]", msg.getSubject());
                     ProtonHelper.accepted(delivery, true);
