@@ -11,6 +11,8 @@ title = "Release Notes"
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with the content type set to an empty string. Now, the content type property
   isn't set in this case.
+* There were errors sending Connection Events via the Events API if the corresponding tenant didn't
+  have a non-default `max-ttl` resource limit configuration. This has been fixed.
 
 ## 1.4.3
 
