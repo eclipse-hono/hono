@@ -56,7 +56,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
@@ -577,13 +576,12 @@ public class AbstractProtocolAdapterBaseTest {
 
     /**
      * Verifies that the (default) ConnectionEvent API configured for a protocol adapter
-     * sets the connection event message's TTL header value before forwarding the message
-     * to downstream applications.
+     * forwards the message to downstream applications.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testForwardedConnectionEventMessageHasTtlHeaderSet(final VertxTestContext ctx) {
+    public void testConnectionEventGetsSent(final VertxTestContext ctx) {
 
         // GIVEN a protocol adapter configured to send connection events
         final ConnectionEventProducer connectionEventProducer = new HonoEventConnectionEventProducer();
@@ -596,12 +594,9 @@ public class AbstractProtocolAdapterBaseTest {
                 any(),
                 any())).thenReturn(Future.succeededFuture());
 
-        // WHEN a device, belonging to a tenant for which a max TTL is configured, connects to such an adapter
+        // WHEN a device connects to such an adapter
         final Device authenticatedDevice = new Device(Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        final ResourceLimits tenantLimits = new ResourceLimits();
-        tenantLimits.setMaxTtl(5L);
-        tenantObject.setResourceLimits(tenantLimits);
         when(tenantClient.get(eq(Constants.DEFAULT_TENANT), any())).thenReturn(Future.succeededFuture(tenantObject));
 
         // THEN the adapter forwards the connection event message downstream
@@ -613,7 +608,7 @@ public class AbstractProtocolAdapterBaseTest {
                             argThat(assertion -> assertion.getDeviceId().equals("4711")),
                             eq(EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE),
                             any(Buffer.class),
-                            argThat(props -> props.get(MessageHelper.SYS_HEADER_PROPERTY_TTL).equals(5L)),
+                            any(),
                             any());
                 });
                 ctx.completeNow();
