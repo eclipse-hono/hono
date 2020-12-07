@@ -842,8 +842,12 @@ public final class MessageHelper {
      * Sets the payload of an AMQP message using a <em>Data</em> section.
      *
      * @param message The message.
-     * @param contentType The type of the payload. If {@code null} the message's <em>content-type</em>
-     *                    property will not be set.
+     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
+     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
+     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
+     *                    given.
+     *                    If the given type is {@code null} and the payload is not {@code null}, the
+     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} will be used.
      * @param payload The payload or {@code null} if there is no payload to convey in the message body.
      *
      * @throws NullPointerException If message is {@code null}.
@@ -858,8 +862,12 @@ public final class MessageHelper {
      * Sets the payload of an AMQP message using a <em>Data</em> section.
      *
      * @param message The message.
-     * @param contentType The type of the payload. The message's <em>content-type</em> property
-     *                    will only be set if both this and the payload parameter are not {@code null}.
+     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
+     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
+     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
+     *                    given.
+     *                    If the given type is {@code null} and the payload is not {@code null}, the
+     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} will be used.
      * @param payload The payload or {@code null} if there is no payload to convey in the message body.
      *
      * @throws NullPointerException If message is {@code null}.
@@ -867,11 +875,24 @@ public final class MessageHelper {
     public static void setPayload(final Message message, final String contentType, final byte[] payload) {
         Objects.requireNonNull(message);
 
+        setPayload(message, contentType, payload, true);
+    }
+
+    private static void setPayload(
+            final Message message,
+            final String contentType,
+            final byte[] payload,
+            final boolean useDefaultContentTypeAsFallback) {
+        Objects.requireNonNull(message);
+
         if (payload != null) {
             message.setBody(new Data(new Binary(payload)));
-            if (contentType != null) {
-                message.setContentType(contentType);
-            }
+        }
+        if ((payload != null && contentType != null)
+                || EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType)) {
+            message.setContentType(contentType);
+        } else if (payload != null && useDefaultContentTypeAsFallback) {
+            message.setContentType(CONTENT_TYPE_OCTET_STREAM);
         }
     }
 
@@ -1084,8 +1105,11 @@ public final class MessageHelper {
      *
      * @param target The target address of the message. The target address is used to determine if the message
      *               represents an event or not.
-     * @param contentType The content type describing the message's payload or {@code null} if no content type
-     *                    should be set.
+     * @param contentType The content type describing the message's payload. If {@code null}, the message's
+     *                    <em>content-type</em> property will either be derived from the given properties or
+     *                    deviceDefaultProperties (if set there) or it will be set to the
+     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} if the
+     *                    given payload isn't {@code null}.
      * @param payload The message payload or {@code null} if the message has no payload.
      * @param tenant The information registered for the tenant that the device belongs to or {@code null}
      *               if no information about the tenant is available.
@@ -1115,8 +1139,9 @@ public final class MessageHelper {
         Objects.requireNonNull(target);
 
         final Message msg = ProtonHelper.message();
-        msg.setContentType(contentType);
-        setPayload(msg, contentType, payload);
+        final byte[] payloadBytesOrNull = payload != null ? payload.getBytes() : null;
+        // content-type from properties or defaults shall be used as fallback first, therefore last param is false
+        setPayload(msg, contentType, payloadBytesOrNull, false);
 
         return addProperties(
                 msg,
@@ -1251,7 +1276,8 @@ public final class MessageHelper {
      * the device level take precedence over properties with the same name defined at the tenant level.</li>
      * <li>optionally adds JMS vendor properties.</li>
      * <li>sets the message's <em>content-type</em> to the {@linkplain #CONTENT_TYPE_OCTET_STREAM fall back content
-     * type}, if the default properties do not contain a content type and the message has no content type set yet.</li>
+     * type}, if the properties or deviceDefaultProperties do not contain a content type property, the message has no
+     * content type set yet and the payload of the message is not {@code null}.</li>
      * <li>sets the message's <em>ttl</em> header field based on the (device provided) <em>time-to-live</em> duration
      * as specified by the <a href="https://www.eclipse.org/hono/docs/api/tenant/#resource-limits-configuration-format">
      * Tenant API</a>.</li>
@@ -1320,9 +1346,9 @@ public final class MessageHelper {
 
         addDefaults(message, target, props, maxTtl);
 
-        if (Strings.isNullOrEmpty(message.getContentType())) {
-            // set default content type if none has been specified when creating the
-            // message nor a default content type is available
+        // set default content type if none has been set yet (also after applying properties and defaults)
+        // and message payload isn't null
+        if (Strings.isNullOrEmpty(message.getContentType()) && message.getBody() != null) {
             message.setContentType(CONTENT_TYPE_OCTET_STREAM);
         }
         if (addJmsVendorProps) {
@@ -1400,8 +1426,9 @@ public final class MessageHelper {
                 }
                 break;
             case SYS_PROPERTY_CONTENT_TYPE:
-                if (Strings.isNullOrEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
-                    // set to default type registered for device or fall back to default content type
+                // apply default content type if none is set yet
+                if (Strings.isNullOrEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())
+                        && message.getBody() != null) {
                     message.setContentType((String) prop.getValue());
                 }
                 break;

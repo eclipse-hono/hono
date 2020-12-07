@@ -36,7 +36,11 @@ public interface TelemetrySender extends Lifecycle {
      * @param tenant The tenant that the device belongs to.
      * @param device The registration assertion for the device that the data originates from.
      * @param qos The delivery semantics to use for sending the data.
-     * @param contentType The content type of the data.
+     * @param contentType The content type of the data. If {@code null}, the used content type will
+     *                    either be derived from the given properties or the tenant's default
+     *                    properties (if set) or it will be set to the
+     *                    {@linkplain org.eclipse.hono.util.MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type}
+     *                    if the given payload isn't {@code null}.
      * @param payload The data to send.
      * @param properties Additional meta data that should be included in the downstream message.
      * @param context The currently active OpenTracing span (may be {@code null}). An implementation
