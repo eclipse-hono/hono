@@ -31,7 +31,7 @@ Once the source code has been retrieved, the build process can be started using 
 
 ~~~sh
 # in base directory of Hono working tree:
-mvn clean install -Pbuild-docker-image,metrics-prometheus
+mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
 ~~~
 
 After the build process has finished, the custom container images need to be pushed to the registry so that the
@@ -90,7 +90,7 @@ In any case the build process can be started using the following command:
 
 ~~~sh
 # in base directory of Hono working tree:
-mvn clean install -Pbuild-docker-image,metrics-prometheus
+mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
 ~~~
 The newly built images can then be deployed using Helm:
 

@@ -20,6 +20,8 @@ title = "Release Notes"
   Protocol adapters can be configured to either use that new API or they can continue
   using the now deprecated [Device Connection API]({{% doclink "/api/device-connection/" %}})
   instead, meaning command routing will be done without using the Command Router.
+* The pre-built Hono Docker images available from Docker Hub now include the Jaeger
+  OpenTracing client.
 
 ### Fixes & Enhancements
 

@@ -45,7 +45,7 @@ Run the following from the source folder:
 
 ```sh
 # in the "hono" folder containing the source code
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger
 ```
 
 with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. This will build all libraries, Docker images and example code. If you are running on Linux and Docker is installed locally or you have set the `DOCKER_HOST` environment variable, you can omit the `-Ddocker.host` property definition.
@@ -66,7 +66,7 @@ The default value for *docker.image.org-name* is `eclipse`. The following build 
 and the `custom` repository name:
 
 ```sh
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
 ```
 
 #### Building native Images
@@ -88,7 +88,7 @@ Support for *native* images is an experimental feature. The `build-native-image`
 The container images that are created as part of the build process can be automatically pushed to a container registry using the `docker-push-image` Maven profile:
 
 ```sh
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,docker-push-image
+mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger,docker-push-image
 ```
 
 Note that the container registry might require authentication in order to push images. The build uses the Docker Maven Plugin for creating and pushing images.
