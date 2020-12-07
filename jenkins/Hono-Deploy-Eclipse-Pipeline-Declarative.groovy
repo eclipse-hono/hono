@@ -126,7 +126,7 @@ spec:
     stage('Build and deploy to Maven Central') {
       steps {
         container('maven') {
-          sh "mvn -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-mongodb,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DenableEclipseJarSigner=true -DskipStaging=true"
+          sh "mvn -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-mongodb,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DcreateJavadoc=true -DskipTests=true -DenableEclipseJarSigner=true -DskipStaging=true"
         }
       }
     }
