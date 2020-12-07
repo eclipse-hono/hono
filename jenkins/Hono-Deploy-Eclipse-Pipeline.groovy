@@ -23,13 +23,18 @@ node {
     def utils = evaluate readTrusted("jenkins/Hono-PipelineUtils.groovy")
     properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')), parameters([
             string(
+                name: 'BRANCH',
+                description: "The branch to read the pipeline definition from.\nExamples:\n refs/heads/master\nrefs/heads/1.3.x",
+                defaultValue: '',
+                trim: true),
+            string(
                 name: 'RELEASE_VERSION',
-                description: "The tag to build and deploy.\nExamples:\nrefs/tags/1.0.0-M6\nrefs/tags/1.0.0-RC1\nrefs/tags/2.1.0",
-                defaultValue: 'refs/tags/',
+                description: "The tag to build and deploy.\nExamples:\n1.0.0-M6\n1.0.0-RC1\n2.1.0",
+                defaultValue: '',
                 trim: true)
     ])])
     try {
-        utils.checkOutRepoWithCredentials("${params.RELEASE_VERSION}", "github-bot-ssh", "ssh://git@github.com/eclipse/hono.git")
+        utils.checkOutRepoWithCredentials("refs/tags/${params.RELEASE_VERSION}", "github-bot-ssh", "ssh://git@github.com/eclipse/hono.git")
         buildAndDeploy(utils)
         currentBuild.result = 'SUCCESS'
     } catch (err) {

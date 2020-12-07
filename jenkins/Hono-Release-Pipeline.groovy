@@ -22,15 +22,15 @@ node {
     def utils = evaluate readTrusted("jenkins/Hono-PipelineUtils.groovy")
     properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')), parameters([
             string(defaultValue: '',
-                    description: "The branch to build and release from.\nExamples: \n master\n1.0.x\n1.x",
+                    description: "The branch to build and release from.\nExamples:\n refs/heads/master\nrefs/heads/1.4.x",
                     name: 'BRANCH',
                     trim: true),
             string(defaultValue: '',
-                    description: "The version identifier to use for the artifacts built and released by this job. \nExamples:\n1.0.0-M6\n1.0.0-RC1\n2.1.0",
+                    description: "The version identifier (tag name) to use for the artifacts built and released by this job. \nExamples:\n1.0.0-M6\n1.3.0-RC1\n1.4.4",
                     name: 'RELEASE_VERSION',
                     trim: true),
             string(defaultValue: '',
-                    description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.1.0-SNAPSHOT",
+                    description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.6.0-SNAPSHOT",
                     name: 'NEXT_VERSION',
                     trim: true),
             booleanParam(defaultValue: true,
@@ -64,9 +64,9 @@ node {
  */
 def checkOut() {
     stage('Checkout') {
-        echo "Check out branch: origin/${params.BRANCH}"
+        echo "Check out branch: ${params.BRANCH}"
         checkout([$class                           : 'GitSCM',
-                  branches                         : [[name: "origin/${params.BRANCH}"]],
+                  branches                         : [[name: "${params.BRANCH}"]],
                   doGenerateSubmoduleConfigurations: false,
                   extensions                       : [[$class: 'WipeWorkspace'],
                                                       [$class: 'LocalBranch']],
