@@ -24,7 +24,7 @@
  * @return returns the jdk version to be used for the build.
  */
 String getJDKVersion() {
-    return "jdk11-latest"
+    return "openjdk-jdk11-latest"
 }
 
 /**
@@ -66,7 +66,7 @@ void checkOutHonoRepoMaster() {
  */
 void checkOutRepoWithCredentials(String branch, String credentialsId, String url) {
     stage('Checkout') {
-        echo "Check out branch: [$branch] from repository [$url] with provided credentials"
+        echo "Checking out branch [$branch] from repository [$url] with provided credentials"
         checkout([$class                           : 'GitSCM',
                   branches                         : [[name: "$branch"]],
                   doGenerateSubmoduleConfigurations: false,
