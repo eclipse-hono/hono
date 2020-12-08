@@ -16,6 +16,11 @@ With this API clients publish event messages to an Apache Kafka&reg; cluster ins
 The definitions in [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry-kafka#kafka-based-messaging" >}}) 
 also apply to the *Event* API for Kafka.   
 
+{{% note title="Tech preview" %}}
+The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs may change with the next version. 
+{{% /note %}}
+
+
 ## Southbound Operations
 
 The following operation can be used by *Protocol Adapters* to send event messages received from devices to downstream consumers like *Business Applications*.

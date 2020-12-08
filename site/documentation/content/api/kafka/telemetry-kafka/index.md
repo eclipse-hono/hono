@@ -14,6 +14,11 @@ The *Telemetry* API is used by *Protocol Adapters* to send telemetry data downst
 The Telemetry API for Kafka is an alternative to the [Telemetry API for AMQP]({{< relref "/api/telemetry" >}}).
 With this API clients publish telemetry data to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
+{{% note title="Tech preview" %}}
+The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs may change with the next version. 
+{{% /note %}}
+
+
 ## Kafka-based Messaging
 
 Using Kafka instead of AMQP comes with slightly different behavior. Kafka provides a Publish/Subscribe messaging style.
