@@ -53,7 +53,7 @@ node {
  * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
  */
 def buildAndDeploy(def utils) {
-    stage('Build and deploy to maven central') {
+    stage('Build and deploy to Eclipse Repo') {
         withMaven(
           maven: utils.getMavenVersion(),
           jdk: utils.getJDKVersion(),
