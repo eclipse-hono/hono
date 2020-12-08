@@ -22,6 +22,7 @@ import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CommandResponseSenderImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.AddressHelper;
@@ -90,6 +91,7 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
 
         Objects.requireNonNull(response);
         return getSender(response.getTenantId(), response.getReplyToId())
+                .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
                     final Message msg = createDownstreamMessage(response);
                     return sender.sendAndWaitForOutcome(msg, context)
