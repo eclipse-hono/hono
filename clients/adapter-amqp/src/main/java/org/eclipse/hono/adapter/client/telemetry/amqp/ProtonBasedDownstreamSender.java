@@ -26,6 +26,7 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.EventSenderImpl;
 import org.eclipse.hono.client.impl.TelemetrySenderImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -120,6 +121,7 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
         Objects.requireNonNull(qos);
 
         return getOrCreateTelemetrySender(tenant.getTenantId())
+            .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
             .compose(sender -> {
                 final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
                 final Message message = createMessage(tenant, device, qos, target, contentType, payload, properties);
@@ -149,6 +151,7 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
         Objects.requireNonNull(device);
 
         return getOrCreateEventSender(tenant.getTenantId())
+                .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
                     final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
                     final Message message = createMessage(tenant, device, QoS.AT_LEAST_ONCE, target, contentType, payload, properties);

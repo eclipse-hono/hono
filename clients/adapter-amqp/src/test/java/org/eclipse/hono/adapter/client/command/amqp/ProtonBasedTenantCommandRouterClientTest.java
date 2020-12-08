@@ -24,13 +24,12 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -45,15 +44,12 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -79,12 +75,11 @@ public class ProtonBasedTenantCommandRouterClientTest {
         final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         final Vertx vertx = mock(Vertx.class);
-        final ProtonReceiver receiver = mockProtonReceiver();
-        sender = mockProtonSender();
+        final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
+        sender = AmqpClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        final HonoConnection connection = mockHonoConnection(vertx, config, tracer);
-        when(connection.getTracer()).thenReturn(tracer);
+        final HonoConnection connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, config, tracer);
 
         client = new ProtonBasedTenantCommandRouterClient(connection, Constants.DEFAULT_TENANT, sender, receiver, SendMessageSampler.noop());
     }
@@ -477,34 +472,5 @@ public class ProtonBasedTenantCommandRouterClientTest {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         return messageCaptor.getValue();
-    }
-
-    private static ProtonSender mockProtonSender() {
-        final ProtonSender sender = mock(ProtonSender.class);
-        when(sender.isOpen()).thenReturn(Boolean.TRUE);
-        when(sender.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
-        when(sender.getTarget()).thenReturn(mock(Target.class));
-        return sender;
-    }
-
-    private static ProtonReceiver mockProtonReceiver() {
-        final ProtonReceiver receiver = mock(ProtonReceiver.class);
-        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
-        return receiver;
-    }
-
-    private static HonoConnection mockHonoConnection(final Vertx vertx, final ClientConfigProperties props,
-            final Tracer tracer) {
-        final HonoConnection connection = mock(HonoConnection.class);
-        when(connection.getVertx()).thenReturn(vertx);
-        when(connection.getConfig()).thenReturn(props);
-        when(connection.getTracer()).thenReturn(tracer);
-        when(connection.executeOnContext(VertxMockSupport.anyHandler())).then(invocation -> {
-            final Promise<?> result = Promise.promise();
-            final Handler<Future<?>> handler = invocation.getArgument(0);
-            handler.handle(result.future());
-            return result.future();
-        });
-        return connection;
     }
 }

@@ -135,4 +135,29 @@ public abstract class StatusCodeMapper {
             return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, description);
         }
     }
+
+    /**
+     * Maps the given exception to a {@link ServiceInvocationException} with a server error code.
+     * <p>
+     * A client error is mapped to a <em>503: Service unavailable</em> error. If the exception
+     * already represents a server error, the exception itself is returned.
+     * <p>
+     * All other kinds of errors are mapped to a <em>500: Internal server error</em>.
+     *
+     * @param throwable The exception to map.
+     * @return The mapped exception.
+     * @throws NullPointerException if throwable is {@code null}.
+     */
+    public static final ServiceInvocationException toServerError(final Throwable throwable) {
+        Objects.requireNonNull(throwable);
+        if (throwable instanceof ServiceInvocationException) {
+            final int errorCode = ((ServiceInvocationException) throwable).getErrorCode();
+            if (errorCode >= 400 && errorCode < 500) {
+                // a client error gets mapped to "service unavailable"
+                return new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, throwable);
+            }
+            return (ServiceInvocationException) throwable;
+        }
+        return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, throwable);
+    }
 }
