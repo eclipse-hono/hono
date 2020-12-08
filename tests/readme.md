@@ -32,7 +32,7 @@ To run all tests of a certain class, or to run an individual test, set the `it.t
     $ mvn verify -Prun-tests -Dit.test=TelemetryHttpIT
     $ mvn verify -Prun-tests -Dit.test=TelemetryHttpIT#testUploadUsingQoS1
 
-The `logging.profile` property with a value of either `prod`, `dev` or `trace` can be used to set the log level in the Hono Docker containers:
+The `logging.profile` property with a value of either `prod`, `dev` or `trace` can be used to set the log level in the Hono Docker containers and the integration tests:
 
     $ mvn verify -Prun-tests -Dlogging.profile=trace
 

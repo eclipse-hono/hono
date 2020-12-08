@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2020 Contributors to the Eclipse Foundation
+
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+
+    SPDX-License-Identifier: EPL-2.0
+ -->
+
+<!--
+  This is the logging configuration included for the "trace" logging profile.
+ -->
+<included>
+  <logger name="org.eclipse.hono" level="TRACE"/>
+  <logger name="org.eclipse.hono.client" level="TRACE"/>
+  <logger name="org.eclipse.hono.client.impl" level="TRACE"/>
+  <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="TRACE"/>
+  <logger name="org.eclipse.hono.connection" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.CrudHttpClient" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.amqp" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.coap" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.http" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.jms" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.mqtt" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.registry" level="TRACE"/>
+</included>

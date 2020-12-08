@@ -1370,6 +1370,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <adapter.sendMessageToDeviceTimeout>${adapter.sendMessageToDeviceTimeout}</adapter.sendMessageToDeviceTimeout>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
+                <logging.profile>${logging.profile}</logging.profile>
                 <max.bcrypt.costFactor>${max.bcrypt.costFactor}</max.bcrypt.costFactor>
                 <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
