@@ -19,7 +19,6 @@
  */
 
 node {
-    def utils = evaluate readTrusted("jenkins/Hono-PipelineUtils.groovy")
     properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')), parameters([
             string(defaultValue: '',
                     description: "The branch to build and release from.\nExamples:\n refs/heads/master\nrefs/heads/1.4.x",
@@ -41,6 +40,7 @@ node {
                     name: 'STABLE_DOCUMENTATION')])])
     try {
         checkOut()
+        def utils = load 'jenkins/Hono-PipelineUtils.groovy'
         setReleaseVersionAndBuild(utils)
         setVersionForDocumentation()
         commitAndTag()
@@ -51,10 +51,12 @@ node {
     } catch (err) {
         currentBuild.result = 'FAILURE'
         echo "Error: ${err}"
-    }
-    finally {
+    } finally {
         echo "Build status: ${currentBuild.result}"
-        utils.notifyBuildStatus()
+        step([$class                  : 'Mailer',
+              notifyEveryUnstableBuild: true,
+              recipients              : 'hono-dev@eclipse.org',
+              sendToIndividuals       : false])
     }
 }
 
