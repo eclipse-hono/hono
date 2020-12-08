@@ -81,7 +81,6 @@
     <vertx.version>3.9.4</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
     <wildfly-elytron.version>1.10.4.Final</wildfly-elytron.version>
-    <wiremock.version>2.24.1</wiremock.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
@@ -826,23 +825,6 @@
         <groupId>org.apache.qpid</groupId>
         <artifactId>qpid-jms-client</artifactId>
         <version>${qpid-jms.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.github.tomakehurst</groupId>
-        <artifactId>wiremock</artifactId>
-        <version>${wiremock.version}</version>
-        <exclusions>
-          <!-- omit older version that is affected by CVEs -->
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-          </exclusion>
-        </exclusions>
         <scope>test</scope>
       </dependency>
       <dependency>
