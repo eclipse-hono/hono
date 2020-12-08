@@ -46,10 +46,10 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "256Mi"
+        memory: "512Mi"
         cpu: "1"
       requests:
-        memory: "256Mi"
+        memory: "512Mi"
         cpu: "1"
   volumes:
   - configMap:
