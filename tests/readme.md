@@ -36,7 +36,7 @@ mvn verify -Prun-tests -Dit.test=TelemetryHttpIT
 mvn verify -Prun-tests -Dit.test=TelemetryHttpIT#testUploadUsingQoS1
 ```
 
-The `logging.profile` property with a value of either `prod`, `dev` or `trace` can be used to set the log level in the Hono Docker containers:
+The `logging.profile` property with a value of either `prod`, `dev` or `trace` can be used to set the log level in the Hono Docker containers and the integration tests:
 
 ```sh
 mvn verify -Prun-tests -Dlogging.profile=trace
