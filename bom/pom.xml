@@ -51,7 +51,6 @@
     <jboss-logging.version>3.4.1.Final</jboss-logging.version>
     <jgroups.version>4.1.9.Final</jgroups.version>
     <jjwt.version>0.10.8</jjwt.version>
-    <jmeter.version>5.1.1</jmeter.version>
     <junit.jupiter.version>5.7.0</junit.jupiter.version>
     <log4j.version>2.12.1</log4j.version>
     <logback.version>1.2.3</logback.version>
@@ -794,12 +793,6 @@
             <artifactId>animal-sniffer-annotations</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.jmeter</groupId>
-        <artifactId>ApacheJMeter_core</artifactId>
-        <version>${jmeter.version}</version>
-        <scope>provided</scope>
       </dependency>
 
       <!-- Testing -->
