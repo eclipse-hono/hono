@@ -68,6 +68,14 @@ title = "Release Notes"
 * The default pattern for valid device identifiers used for the file based and the MongoDB based registry
   implementations now also contains a colon for compatibility with Eclipse Ditto.
 
+### End of Life
+
+* The *hono-jmeter* Maven module along with the JMeter plugin that is contained in it hasn't been updated for
+  over a year and is also not used in any automated test runs.
+  JMeter has turned out not to be the best choice for conducting load tests of Hono because it is difficult to
+  generate the needed AMQP message load with its (blocking) thread based execution model.
+  The JMeter plugin therefore has been removed.
+
 ## 1.4.4
 
 ### Fixes & Enhancements
