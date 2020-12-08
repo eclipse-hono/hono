@@ -116,7 +116,7 @@ spec:
           junit '**/surefire-reports/*.xml'
 
           echo "publishing JavaDoc ..."
-          sh 'mvn javadoc:aggregate'
+          sh 'mvn package javadoc:aggregate -DskipTests'
           step([$class: 'JavadocArchiver', javadocDir: 'target/site/apidocs'])
 
           echo "archiving Command Line Client ..."
@@ -124,6 +124,21 @@ spec:
         }
       }
 
+    }
+  }
+
+  post {
+    fixed {
+      step([$class                  : 'Mailer',
+            notifyEveryUnstableBuild: true,
+            recipients              : 'hono-dev@eclipse.org',
+            sendToIndividuals       : false])
+    }
+    failure {
+      step([$class                  : 'Mailer',
+            notifyEveryUnstableBuild: true,
+            recipients              : 'hono-dev@eclipse.org',
+            sendToIndividuals       : false])
     }
   }
 }
