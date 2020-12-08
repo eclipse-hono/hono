@@ -109,9 +109,6 @@ spec:
                     branches         : [[name: "refs/heads/master"]],
                     userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
 
-          echo "creating JavaDocs ..."
-          sh 'mvn javadoc:aggregate'
-
           echo "building and deploying nightly artifacts ..."
           sh 'mvn -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
 
@@ -119,6 +116,7 @@ spec:
           junit '**/surefire-reports/*.xml'
 
           echo "publishing JavaDoc ..."
+          sh 'mvn javadoc:aggregate'
           step([$class: 'JavadocArchiver', javadocDir: 'target/site/apidocs'])
 
           echo "archiving Command Line Client ..."
