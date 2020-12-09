@@ -23,11 +23,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.AbstractDeviceManagementSearchDevicesTest;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.SearchDevicesResult;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,7 +123,7 @@ public final class FileBasedDeviceManagementSearchDevicesTest implements Abstrac
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                    final SearchDevicesResult searchResult = s.getPayload();
+                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
                     assertThat(searchResult.getTotal()).isEqualTo(2);
                     assertThat(searchResult.getResult()).hasSize(1);
                 });

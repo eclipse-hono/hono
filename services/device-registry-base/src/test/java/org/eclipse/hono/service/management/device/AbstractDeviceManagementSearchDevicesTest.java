@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +95,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                    final SearchDevicesResult searchResult = s.getPayload();
+                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
                     assertThat(searchResult.getTotal()).isEqualTo(1);
                     assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
                 });
@@ -126,7 +127,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
                                         assertThat(searchResult.getTotal()).isEqualTo(1);
                                         assertThat(searchResult.getResult()).hasSize(1);
                                         assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
@@ -190,7 +191,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
                                         assertThat(searchResult.getTotal()).isEqualTo(2);
                                         assertThat(searchResult.getResult()).hasSize(1);
                                         assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
@@ -224,7 +225,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                    final SearchDevicesResult searchResult = s.getPayload();
+                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
                     assertThat(searchResult.getTotal()).isEqualTo(2);
                     assertThat(searchResult.getResult()).hasSize(1);
                     assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice2");
@@ -259,7 +260,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
                                         assertThat(searchResult.getTotal()).isEqualTo(1);
                                         assertThat(searchResult.getResult()).hasSize(1);
                                         assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
@@ -294,7 +295,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                                     ctx.verify(() -> {
                                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchDevicesResult searchResult = s.getPayload();
+                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
                                         assertThat(searchResult.getTotal()).isEqualTo(2);
                                         assertThat(searchResult.getResult()).hasSize(2);
                                         assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
