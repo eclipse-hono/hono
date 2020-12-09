@@ -34,7 +34,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -43,6 +46,7 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.Status;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,6 +91,22 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
 
         registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationConfig);
+
+        final AutoProvisioner autoProvisioner = new AutoProvisioner();
+        autoProvisioner.setDeviceManagementService(registrationService);
+        autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
+
+        final DownstreamSenderFactory downstreamSenderFactoryMock = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactoryMock.connect()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> handler = invocation.getArgument(0);
+            handler.handle(Future.succeededFuture());
+            return null;
+        }).when(downstreamSenderFactoryMock).disconnect(VertxMockSupport.anyHandler());
+
+        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactoryMock);
+
+        registrationService.setAutoProvisioner(autoProvisioner);
     }
 
     @Override
@@ -407,7 +427,7 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
 
         // WHEN registering an additional device for the tenant
         final OperationResult<Id> result = registrationService.processCreateDevice(TENANT, Optional.of("newDevice"),
-                new Device(), NoopSpan.INSTANCE);
+                false, new Device(), NoopSpan.INSTANCE);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been added to the registry
         assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());

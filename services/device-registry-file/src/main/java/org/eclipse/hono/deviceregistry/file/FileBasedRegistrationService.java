@@ -45,7 +45,6 @@ import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -66,7 +65,7 @@ import io.vertx.core.json.JsonObject;
  * A device backend that keeps all data in memory but is backed by a file.
  */
 public class FileBasedRegistrationService extends AbstractRegistrationService
-        implements DeviceManagementService, RegistrationService, Lifecycle {
+        implements DeviceManagementService, RegistrationService {
 
     //// VERTICLE
 
@@ -271,8 +270,8 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                             .put(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE, deviceEntry.getValue().getCreationTime())
                             .put(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE, deviceEntry.getValue().getUpdatedOn())
                             .put(RegistryManagementConstants.FIELD_STATUS_LAST_USER, deviceEntry.getValue().getLastUser())
-                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, deviceEntry.getValue().getDeviceStatus().isAutoProvisioned())
-                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, deviceEntry.getValue().getDeviceStatus().isAutoProvisioningNotificationSent())
+                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, deviceEntry.getValue().getDeviceStatus().getAutoProvisioningNotificationSentSetInternal())
+                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, deviceEntry.getValue().getDeviceStatus().getAutoProvisioningNotificationSentSetInternal())
                             .put(RegistrationConstants.FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getData())));
                     idCount.incrementAndGet();
                 }
@@ -445,7 +444,8 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         // To workaround it we actually sets the property.
         device.setEnabled(device.isEnabled());
 
-        return Future.succeededFuture(processCreateDevice(tenantId, deviceId, device, span));
+        return Future.succeededFuture(processCreateDevice(tenantId, deviceId,
+                device.getStatus() != null ? device.getStatus().isAutoProvisioned() : false, device, span));
     }
 
     /**
@@ -453,11 +453,12 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to add.
+     * @param autoProvisioned Marks this device as having been created via auto-provisioning.
      * @param device Additional data to register with the device (may be {@code null}).
      * @param span The tracing span to use.
      * @return The outcome of the operation indicating success or failure.
      */
-    public OperationResult<Id> processCreateDevice(final String tenantId, final Optional<String> deviceId,
+    public OperationResult<Id> processCreateDevice(final String tenantId, final Optional<String> deviceId, final boolean autoProvisioned,
             final Device device, final Span span) {
 
         Objects.requireNonNull(tenantId);
@@ -469,8 +470,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
         }
 
-        // setting autoProvisioned to null until #2053 is implemented
-        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(FileBasedDeviceDto::new, tenantId, deviceIdValue, null, device, new Versioned<>(device).getVersion());
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(FileBasedDeviceDto::new, tenantId, deviceIdValue, autoProvisioned, device, new Versioned<>(device).getVersion());
         if (devices.putIfAbsent(deviceIdValue, deviceDto) == null) {
             dirty.set(true);
             return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
@@ -528,9 +528,10 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_PRECON_FAILED, OperationResult::empty);
         }
 
-        // setting autoProvisioningNotificationSent to null until #2053 is implemented
-        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(tenantId, deviceId, null, newDevice.getValue())
-                .merge(currentDevice);
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(tenantId, deviceId,
+                device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
+                newDevice.getValue())
+            .merge(currentDevice);
         devices.put(deviceId, deviceDto);
         dirty.set(true);
 
@@ -753,6 +754,12 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             if (other != null) {
                 setCreationTime(other.getCreationTime());
                 getDeviceStatus().setAutoProvisioned(other.getDeviceStatus().isAutoProvisioned());
+
+                if (getDeviceStatus().getAutoProvisioningNotificationSentSetInternal() == null) {
+                    getDeviceStatus().setAutoProvisioningNotificationSent(
+                            other.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal()
+                    );
+                }
             }
             return this;
         }

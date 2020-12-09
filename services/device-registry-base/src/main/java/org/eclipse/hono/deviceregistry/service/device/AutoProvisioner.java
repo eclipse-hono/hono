@@ -384,11 +384,11 @@ public class AutoProvisioner implements Lifecycle {
     }
 
     private boolean wasDeviceAutoProvisioned(final Device registrationData) {
-        return registrationData.getStatus().isAutoProvisioned();
+        return registrationData.getStatus() != null ? registrationData.getStatus().isAutoProvisioned() : false;
     }
 
     private boolean wasAutoProvisioningNotificationSent(final Device registrationData) {
-        return registrationData.getStatus().isAutoProvisioningNotificationSent();
+        return registrationData.getStatus() != null ? registrationData.getStatus().isAutoProvisioningNotificationSent() : false;
     }
 
     private Future<OperationResult<Id>> setAutoProvisioningNotificationSent(final String tenantId,

@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.service.management.device;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -39,6 +40,7 @@ import org.eclipse.hono.service.management.Sort.Direction;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -196,6 +198,87 @@ public class DelegatingDeviceManagementHttpEndpointTest {
 
         verify(response).setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
         verify(service, never()).createDevice(anyString(), any(Optional.class), any(Device.class), any(Span.class));
+    }
+
+    /**
+     * Makes sure that status properties are ignored when creating a device management via the REST API.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateDeviceIgnoresStatus() {
+
+        final JsonObject json = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_STATUS, new JsonObject().put("created", "foobar"));
+        requestBody = json.toBuffer();
+        final HttpServerResponse response = newResponse();
+
+        final HttpServerRequest request = newRequest(
+                HttpMethod.POST,
+                "/v1/devices/mytenant/newdevice",
+                requestHeaders,
+                requestParams,
+                response);
+        when(request.getHeader("Content-Type")).thenReturn("application/json");
+
+        when(service.createDevice(anyString(), any(Optional.class), any(Device.class), any(Span.class)))
+                .thenAnswer(invocation -> {
+                    final Optional<String> deviceId = invocation.getArgument(1);
+                    return Future.succeededFuture(OperationResult.ok(
+                            HttpURLConnection.HTTP_CREATED,
+                            Id.of(deviceId.get()),
+                            Optional.empty(),
+                            Optional.empty()));
+                });
+
+        router.handle(request);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_CREATED);
+
+        final ArgumentCaptor<Device> deviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
+        verify(service).createDevice(anyString(), any(Optional.class), deviceArgumentCaptor.capture(), any(Span.class));
+
+        assertThat(deviceArgumentCaptor.getValue().getStatus()).isNull();
+    }
+
+    /**
+     * Makes sure that status properties are ignored when updating a device management via the REST API.
+     */
+    @Test
+    public void testUpdateDeviceIgnoresStatus() {
+
+        final JsonObject json = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_STATUS, new JsonObject().put("created", "foobar"));
+        requestBody = json.toBuffer();
+        final HttpServerResponse response = newResponse();
+
+        final HttpServerRequest request = newRequest(
+                HttpMethod.PUT,
+                "/v1/devices/mytenant/newdevice",
+                requestHeaders,
+                requestParams,
+                response);
+        when(request.getHeader("Content-Type")).thenReturn("application/json");
+
+        when(service.updateDevice(anyString(), anyString(), any(Device.class), any(), any(Span.class)))
+                .thenAnswer(invocation -> {
+                    final String deviceId = invocation.getArgument(1);
+                    return Future.succeededFuture(OperationResult.ok(
+                            HttpURLConnection.HTTP_NO_CONTENT,
+                            Id.of(deviceId),
+                            Optional.empty(),
+                            Optional.empty()));
+                });
+
+        router.handle(request);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
+
+        final ArgumentCaptor<Device> deviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
+        verify(service).updateDevice(anyString(), anyString(), deviceArgumentCaptor.capture(), any(), any(Span.class));
+
+        assertThat(deviceArgumentCaptor.getValue().getStatus()).isNull();
     }
 
     /**

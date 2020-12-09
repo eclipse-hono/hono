@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -64,6 +65,17 @@ public final class DeviceStatus extends Status<DeviceStatus> {
     @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
     public boolean isAutoProvisioningNotificationSent() {
         return Optional.ofNullable(autoProvisioningNotificationSent).orElse(false);
+    }
+
+    /**
+     * Gets the underlying property of {@link #isAutoProvisioningNotificationSent()} in order to determine if this
+     * object actually contains an explicitly set or just the initialized value.
+     *
+     * @return The underlying property of {@link #isAutoProvisioningNotificationSent()}.
+     */
+    @JsonIgnore
+    public Boolean getAutoProvisioningNotificationSentSetInternal() {
+        return autoProvisioningNotificationSent;
     }
 
     /**
