@@ -18,7 +18,10 @@ import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
+import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -32,6 +35,8 @@ import org.eclipse.hono.deviceregistry.jdbc.impl.TenantManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantServiceImpl;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -349,7 +354,62 @@ public class ApplicationConfig {
     }
 
     /**
+     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The factory is initialized with the connection provided by {@link #downstreamConnection(Vertx)}.
+     *
+     * @param vertx The vert.x instance to run on.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public DownstreamSenderFactory downstreamSenderFactory(final Vertx vertx) {
+        return DownstreamSenderFactory.create(downstreamConnection(vertx));
+    }
+
+    /**
+     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     *
+     * @param vertx The vert.x instance to run on.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Scope("prototype")
+    public HonoConnection downstreamConnection(final Vertx vertx) {
+        return HonoConnection.newConnection(vertx, downstreamSenderFactoryConfig());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.messaging")
+    @Bean
+    public ClientConfigProperties downstreamSenderFactoryConfig() {
+        return new ClientConfigProperties();
+    }
+
+    /**
+     * Gets properties for configuring gateway based auto-provisioning.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.autoprovisioning")
+    public AutoProvisionerConfigProperties autoProvisionerConfigProperties() {
+        return new AutoProvisionerConfigProperties();
+    }
+
+    /**
      * Provide a registration service.
+     *
+     * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
      *
      * @return The bean instance.
      * @throws IOException if reading the SQL configuration fails.
@@ -357,8 +417,19 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public RegistrationService registrationService() throws IOException {
-        return new RegistrationServiceImpl(devicesAdapterStore());
+    public RegistrationService registrationService(final Vertx vertx, final Tracer tracer) throws IOException {
+        final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore());
+        final AutoProvisioner autoProvisioner = new AutoProvisioner();
+
+        autoProvisioner.setDeviceManagementService(registrationManagementService());
+        autoProvisioner.setVertx(vertx);
+        autoProvisioner.setTracer(tracer);
+        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactory(vertx));
+        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+
+        registrationService.setAutoProvisioner(autoProvisioner);
+
+        return registrationService;
     }
 
     /**
@@ -429,14 +500,17 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
+     * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
+     *
      * @return The handler.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(RegistrationService.class)
-    public AmqpEndpoint registrationAmqpEndpoint() throws IOException {
-        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService());
+    public AmqpEndpoint registrationAmqpEndpoint(final Vertx vertx, final Tracer tracer) throws IOException {
+        return new DelegatingRegistrationAmqpEndpoint<>(vertx, registrationService(vertx, tracer));
     }
 
     /**
