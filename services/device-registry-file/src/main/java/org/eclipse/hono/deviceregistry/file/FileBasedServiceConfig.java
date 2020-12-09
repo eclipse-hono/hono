@@ -16,9 +16,16 @@ package org.eclipse.hono.deviceregistry.file;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
+import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -36,9 +43,11 @@ import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
+import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
 
 /**
@@ -126,18 +135,93 @@ public class FileBasedServiceConfig {
         return new SpringBasedHonoPasswordEncoder(credentialsProperties().getMaxBcryptCostFactor());
     }
 
+
+    /**
+     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The factory is initialized with the connection provided by {@link #downstreamConnection(Vertx)}.
+     *
+     * @param vertx The vert.x instance to run on.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public DownstreamSenderFactory downstreamSenderFactory(final Vertx vertx) {
+        return DownstreamSenderFactory.create(downstreamConnection(vertx));
+    }
+
+    /**
+     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     *
+     * @param vertx The vert.x instance to run on.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Scope("prototype")
+    public HonoConnection downstreamConnection(final Vertx vertx) {
+        return HonoConnection.newConnection(vertx, downstreamSenderFactoryConfig());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.messaging")
+    @Bean
+    public ClientConfigProperties downstreamSenderFactoryConfig() {
+        return new ClientConfigProperties();
+    }
+
+    /**
+     * Exposes a {@link TenantInformationService} as a Spring Bean.
+     *
+     * @return The bean instance.
+     */
+    @Bean
+    public TenantInformationService tenantInformationService() {
+        return new AutowiredTenantInformationService();
+    }
+
+    /**
+     * Gets properties for configuring gateway based auto-provisioning.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.registry.autoprovisioning")
+    public AutoProvisionerConfigProperties autoProvisionerConfigProperties() {
+        return new AutoProvisionerConfigProperties();
+    }
+
     /**
      * Creates an instance of the file based service for managing device registration information
      * and credentials.
      *
      * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
+     *
      * @return The service.
      */
     @Bean
-    public FileBasedDeviceBackend deviceBackend(final Vertx vertx) {
+    public FileBasedDeviceBackend deviceBackend(final Vertx vertx, final Tracer tracer) {
 
         final FileBasedRegistrationService registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationProperties());
+
+        final AutoProvisioner autoProvisioner = new AutoProvisioner();
+        autoProvisioner.setDeviceManagementService(registrationService);
+        autoProvisioner.setVertx(vertx);
+        autoProvisioner.setTracer(tracer);
+        autoProvisioner.setTenantInformationService(tenantInformationService());
+        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactory(vertx));
+        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+
+        registrationService.setAutoProvisioner(autoProvisioner);
 
         final FileBasedCredentialsService credentialsService = new FileBasedCredentialsService(
                 vertx,
