@@ -22,6 +22,7 @@ import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 
 import io.opentracing.Span;
@@ -96,7 +97,7 @@ public interface DeviceManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
      *      Management API - Search Devices</a>
      */
-    default Future<OperationResult<SearchDevicesResult>> searchDevices(
+    default Future<OperationResult<SearchResult<DeviceWithId>>> searchDevices(
             final String tenantId,
             final int pageSize,
             final int pageOffset,

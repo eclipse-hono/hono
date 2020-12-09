@@ -28,11 +28,12 @@ import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.AutoProvisioningEnabledDeviceBackend;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.SearchDevicesResult;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -176,8 +177,9 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     }
 
     @Override
-    public Future<OperationResult<SearchDevicesResult>> searchDevices(final String tenantId, final int pageSize, final int pageOffset, final List<Filter> filters, final List<Sort> sortOptions, final Span span) {
-    return registrationService.searchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span);
+    public Future<OperationResult<SearchResult<DeviceWithId>>> searchDevices(final String tenantId, final int pageSize,
+            final int pageOffset, final List<Filter> filters, final List<Sort> sortOptions, final Span span) {
+        return registrationService.searchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span);
     }
 
     // CREDENTIALS

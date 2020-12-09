@@ -36,13 +36,13 @@ import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.device.DeviceWithId;
-import org.eclipse.hono.service.management.device.SearchDevicesResult;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
@@ -549,7 +549,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
      * so the paging may be inconsistent.
      */
     @Override
-    public Future<OperationResult<SearchDevicesResult>> searchDevices(
+    public Future<OperationResult<SearchResult<DeviceWithId>>> searchDevices(
             final String tenantId,
             final int pageSize,
             final int pageOffset,
@@ -597,7 +597,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Future.succeededFuture(
                     OperationResult.ok(
                             HttpURLConnection.HTTP_OK,
-                            new SearchDevicesResult(matchingDevices.size(), returnDevicesList),
+                            new SearchResult<>(matchingDevices.size(), returnDevicesList),
                             Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                             Optional.empty()));
         }

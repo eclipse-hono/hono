@@ -25,8 +25,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.SearchDevicesResult;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -37,11 +38,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.jackson.JacksonCodec;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -453,8 +457,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                                     List.of(), List.of(), HttpURLConnection.HTTP_OK))
                             .onComplete(ctx.succeeding(httpResponse -> {
                                 ctx.verify(() -> {
-                                    final SearchDevicesResult searchDevicesResult = httpResponse
-                                            .bodyAsJson(SearchDevicesResult.class);
+                                    final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                            .decodeValue(httpResponse.body(), new TypeReference<>() { });
                                     assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
                                     assertThat(searchDevicesResult.getResult()).hasSize(1);
                                 });
@@ -499,8 +503,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                             List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final SearchDevicesResult searchDevicesResult = httpResponse
-                                    .bodyAsJson(SearchDevicesResult.class);
+                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
@@ -547,8 +551,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                             List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final SearchDevicesResult searchDevicesResult = httpResponse
-                                    .bodyAsJson(SearchDevicesResult.class);
+                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
@@ -579,8 +583,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                             List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final SearchDevicesResult searchDevicesResult = httpResponse
-                                    .bodyAsJson(SearchDevicesResult.class);
+                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
@@ -629,8 +633,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                             List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final SearchDevicesResult searchDevicesResult = httpResponse
-                                    .bodyAsJson(SearchDevicesResult.class);
+                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
                             assertThat(searchDevicesResult.getResult()).hasSize(1);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
@@ -691,8 +695,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                             List.of(sortJson), HttpURLConnection.HTTP_OK))
                     .onComplete(ctx.succeeding(httpResponse -> {
                         ctx.verify(() -> {
-                            final SearchDevicesResult searchDevicesResult = httpResponse
-                                    .bodyAsJson(SearchDevicesResult.class);
+                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
                             assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
                             assertThat(searchDevicesResult.getResult()).hasSize(2);
                             assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
