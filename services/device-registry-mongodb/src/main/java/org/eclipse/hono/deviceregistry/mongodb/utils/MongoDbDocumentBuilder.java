@@ -79,8 +79,10 @@ public final class MongoDbDocumentBuilder {
 
         final JsonObject updateDocument = document.getJsonObject(SET_OPERATOR);
 
-        updateDocument.put(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONED, deviceDto.getDeviceStatus().isAutoProvisioned());
-        updateDocument.put(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
+        if (deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal() != null) {
+            updateDocument.put(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
+                    deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal());
+        }
 
         return this;
     }

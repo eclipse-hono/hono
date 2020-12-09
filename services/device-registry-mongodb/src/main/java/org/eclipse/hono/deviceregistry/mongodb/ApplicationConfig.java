@@ -17,7 +17,10 @@ import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
+import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -31,6 +34,8 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationS
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -287,18 +292,86 @@ public class ApplicationConfig {
     }
 
     /**
+     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The factory is initialized with the connection provided by {@link #downstreamConnection(Vertx)}.
+     *
+     * @param vertx The vert.x instance to run on.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public DownstreamSenderFactory downstreamSenderFactory(final Vertx vertx) {
+        return DownstreamSenderFactory.create(downstreamConnection(vertx));
+    }
+
+    /**
+     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     *
+     * @param vertx The vert.x instance to run on.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Scope("prototype")
+    public HonoConnection downstreamConnection(final Vertx vertx) {
+        return HonoConnection.newConnection(vertx, downstreamSenderFactoryConfig());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.messaging")
+    @Bean
+    public ClientConfigProperties downstreamSenderFactoryConfig() {
+        return new ClientConfigProperties();
+    }
+
+    /**
+     * Gets properties for configuring gateway based auto-provisioning.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.autoprovisioning")
+    public AutoProvisionerConfigProperties autoProvisionerConfigProperties() {
+        return new AutoProvisionerConfigProperties();
+    }
+
+    /**
      * Exposes the MongoDB registration service as a Spring bean.
+     *
+     * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
      *
      * @return The MongoDB registration service.
      */
     @Bean
     @Scope("prototype")
-    public MongoDbBasedRegistrationService registrationService() {
-        return new MongoDbBasedRegistrationService(
-                vertx(),
+    public MongoDbBasedRegistrationService registrationService(final Vertx vertx, final Tracer tracer) {
+        final AutowiredTenantInformationService tenantInformationService = tenantInformationService();
+        final MongoDbBasedRegistrationService mongoDbBasedRegistrationService = new MongoDbBasedRegistrationService(
+                vertx,
                 mongoClient(),
                 registrationServiceProperties(),
-                tenantInformationService());
+                tenantInformationService);
+
+        final AutoProvisioner autoProvisioner = new AutoProvisioner();
+        autoProvisioner.setVertx(vertx);
+        autoProvisioner.setTracer(tracer);
+        autoProvisioner.setDeviceManagementService(mongoDbBasedRegistrationService);
+        autoProvisioner.setTenantInformationService(tenantInformationService);
+        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactory(vertx));
+        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+
+        mongoDbBasedRegistrationService.setAutoProvisioner(autoProvisioner);
+
+        return mongoDbBasedRegistrationService;
     }
 
     /**
@@ -346,25 +419,31 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint registrationAmqpEndpoint() {
-        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), registrationService());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
+     * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
      *
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    public AmqpEndpoint credentialsAmqpEndpoint() {
+    public AmqpEndpoint registrationAmqpEndpoint(final Vertx vertx, final Tracer tracer) {
+        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), registrationService(vertx, tracer));
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
+     *
+     * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public AmqpEndpoint credentialsAmqpEndpoint(final Vertx vertx, final Tracer tracer) {
         // need to use backend service because the Credentials service's "get" operation
         // supports auto-provisioning and thus needs to be able to create a device on the fly
-        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
+        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(vertx, tracer),
                 credentialsService());
         return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
     }
@@ -452,14 +531,17 @@ public class ApplicationConfig {
      * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
      * of Hono's Device Registry Management API's.
      *
+     * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
+     *
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    public HttpEndpoint deviceHttpEndpoint() {
+    public HttpEndpoint deviceHttpEndpoint(final Vertx vertx, final Tracer tracer) {
         // need to use backend service because creating a device implicitly
         // creates (empty) credentials as well for the device
-        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
+        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(vertx, tracer),
                 credentialsService());
         return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), service);
     }

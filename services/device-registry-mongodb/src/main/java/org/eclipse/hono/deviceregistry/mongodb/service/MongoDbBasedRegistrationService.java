@@ -143,9 +143,9 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .compose(ok -> tenantExists(tenantId, span))
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> {
-                    // setting autoProvisioned to null until #2053 is implemented
                     final DeviceDto deviceDto = DeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId,
-                            deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()), null,
+                            deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()),
+                            device.getStatus() != null ? device.getStatus().isAutoProvisioned() : false,
                             device, new Versioned<>(device).getVersion());
                     return processCreateDevice(
                             deviceDto,
@@ -213,7 +213,9 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(ok -> tenantExists(tenantId, span))
-                .compose(deviceDto -> processUpdateDevice(tenantId, deviceId, device, resourceVersion, span))
+                .compose(deviceDto -> processUpdateDevice(tenantId, deviceId,
+                        device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
+                        device, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -396,6 +398,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     private Future<OperationResult<Id>> processUpdateDevice(
             final String tenantId,
             final String deviceId,
+            final Boolean autoProvisioningNotificationSent,
             final Device device,
             final Optional<String> resourceVersion,
             final Span span) {
@@ -409,8 +412,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
-        // setting autoProvisioningNotificationSent to null until #2053 is implemented
-        final DeviceDto deviceDto = DeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, null, device, new Versioned<>(device).getVersion());
+        final DeviceDto deviceDto = DeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, autoProvisioningNotificationSent, device, new Versioned<>(device).getVersion());
 
         mongoClient.findOneAndUpdateWithOptions(config.getCollectionName(), updateDeviceQuery,
                 MongoDbDocumentBuilder.builder().forUpdateOf(deviceDto).document(),
