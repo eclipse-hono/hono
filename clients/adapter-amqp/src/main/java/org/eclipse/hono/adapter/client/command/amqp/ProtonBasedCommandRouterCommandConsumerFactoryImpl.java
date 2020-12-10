@@ -32,12 +32,10 @@ import org.eclipse.hono.client.impl.AdapterInstanceCommandHandler;
 import org.eclipse.hono.client.impl.CommandHandlerWrapper;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
@@ -92,8 +90,6 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
     public Future<Void> start() {
         return super.start()
                 .onComplete(v -> {
-                    connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
-                            this::handleTenantTimeout);
                     connection.addReconnectListener(c -> recreateConsumer());
                     // trigger creation of adapter specific consumer link (with retry if failed)
                     recreateConsumer();
@@ -310,16 +306,6 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
 
     private void invokeRecreateConsumerWithDelay() {
         connection.getVertx().setTimer(RECREATE_CONSUMER_DELAY, tid -> recreateConsumer());
-    }
-
-    private void handleTenantTimeout(final Message<String> msg) {
-        final String tenantId = msg.body();
-        adapterInstanceCommandHandler.getDeviceSpecificCommandHandlers().stream()
-                .filter(handler -> handler.getTenantId().equals(tenantId))
-                .forEach(handler -> {
-                    log.info("timeout of tenant {}: removing command handler for device {}", tenantId, handler.getDeviceId());
-                    adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(handler.getTenantId(), handler.getDeviceId());
-                });
     }
 
 }
