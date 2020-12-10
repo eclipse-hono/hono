@@ -222,4 +222,19 @@ EOS
     }
 
   }
+
+  post {
+    fixed {
+      step([$class                  : 'Mailer',
+            notifyEveryUnstableBuild: true,
+            recipients              : 'hono-dev@eclipse.org',
+            sendToIndividuals       : false])
+    }
+    failure {
+      step([$class                  : 'Mailer',
+            notifyEveryUnstableBuild: true,
+            recipients              : 'hono-dev@eclipse.org',
+            sendToIndividuals       : false])
+    }
+  }
 }
