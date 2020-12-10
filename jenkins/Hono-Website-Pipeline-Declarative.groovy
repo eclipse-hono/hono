@@ -211,7 +211,7 @@ EOS
                 echo "Changes have been detected, publishing to repo 'www.eclipse.org/hono'"
                 git config user.email "hono-bot@eclipse.org"
                 git config user.name "Hono Bot"
-                git commit -m "Website build ${JOB_NAME}-${BUILD_NUMBER}"
+                git commit -s -m "Website build ${JOB_NAME}-${BUILD_NUMBER}"
                 git log --graph --abbrev-commit --date=relative -n 5
                 git push origin HEAD:refs/heads/master
                 echo "Done" 
