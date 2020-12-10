@@ -17,7 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -224,7 +223,8 @@ public abstract class CoapTestBase {
     protected CoapClient getCoapsClient(final AdvancedPskStore pskStoreToUse) {
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
-        dtlsConfig.setAddress(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
+        // listen on wildcard to support non-localhost docker daemons
+        dtlsConfig.setAddress(new InetSocketAddress(0));
         dtlsConfig.setAdvancedPskStore(pskStoreToUse);
         dtlsConfig.setMaxRetransmissions(1);
         final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
