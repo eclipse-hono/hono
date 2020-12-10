@@ -134,34 +134,6 @@ public class HonoConnectionImplTest {
     }
 
     /**
-     * Verifies that the client fails a connection attempt if no AMQP session can be established
-     * with the peer.
-     *
-     * @param ctx The vert.x test client.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testConnectFailsIfSessionCannotBeEstablished(final VertxTestContext ctx) {
-
-        // GIVEN a client attempting to connect to a peer that does not allow opening
-        // a session
-        final Future<HonoConnection> result = honoConnection.connect();
-        ctx.verify(() -> {
-            verify(session).open();
-            // WHEN the peer closes the session
-            final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = ArgumentCaptor.forClass(Handler.class);
-            verify(session).closeHandler(sessionCloseHandler.capture());
-            sessionCloseHandler.getValue().handle(Future.failedFuture("malfunction"));
-
-            // THEN the connection attempt fails
-            assertThat(result.failed());
-            // and the connection has been closed again
-            verify(con).close();
-        });
-        ctx.completeNow();
-    }
-
-    /**
      * Verifies that the client tries to connect a limited
      * number of times only.
      *
