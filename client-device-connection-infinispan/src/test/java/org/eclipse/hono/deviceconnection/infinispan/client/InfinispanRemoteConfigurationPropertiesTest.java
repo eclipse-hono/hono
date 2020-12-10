@@ -43,7 +43,6 @@ class InfinispanRemoteConfigurationPropertiesTest {
     void testConnectionPoolProperties() {
         props.setConnectionPool(Map.of("min_idle", "2"));
         final Configuration config = props.getConfigurationBuilder().build();
-        System.out.println(config);
         assertThat(config.connectionPool().minIdle()).isEqualTo(2);
         assertThat(config.connectionPool().minEvictableIdleTime()).isGreaterThan(0L);
     }

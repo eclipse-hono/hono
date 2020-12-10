@@ -341,7 +341,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         assertThat(location).isNotNull();
         final Pattern pattern = Pattern.compile("/(.*)/(.*)/(.*)");
         final Matcher matcher = pattern.matcher(location);
-        assertThat(matcher.matches());
+        assertThat(matcher.matches()).isTrue();
         final String generatedId = matcher.group(3);
         assertThat(generatedId).isNotNull();
         return generatedId;

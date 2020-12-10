@@ -107,7 +107,7 @@ public interface RegistrationServiceTests {
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId))
             .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
-                    assertThat(registrationResult.isOk());
+                    assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
                 });
                 ctx.completeNow();
@@ -138,7 +138,7 @@ public interface RegistrationServiceTests {
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId))
             .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
-                    assertThat(registrationResult.isOk());
+                    assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
                 });
                 ctx.completeNow();
@@ -178,7 +178,7 @@ public interface RegistrationServiceTests {
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, gatewayIdB))
             .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
-                    assertThat(registrationResult.isOk());
+                    assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
                         .contains(gatewayIdA, gatewayIdB, gatewayIdC);
                 });
@@ -418,7 +418,7 @@ public interface RegistrationServiceTests {
             .compose(ok -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
-                    assertThat(s.isOk());
+                    assertThat(s.isOk()).isTrue();
                     assertThat(s.getPayload()).isNotNull();
                     assertThat(s.getPayload().getVia()).contains("a", "b", "c");
                     assertThat(s.getPayload().getViaGroups()).contains("group1", "group2");
@@ -447,17 +447,17 @@ public interface RegistrationServiceTests {
                     return result;
                 })
                 .compose(r -> {
-                    ctx.verify(() -> assertThat(r.isOk()));
+                    ctx.verify(() -> assertThat(r.isOk()).isTrue());
                     r.getPayload().setExtensions(Map.of("new-prop", true));
                     return getDeviceManagementService()
                             .readDevice(TENANT, deviceId, NoopSpan.INSTANCE);
                 })
                 .onComplete(ctx.succeeding(secondGetResult -> {
                     ctx.verify(() -> {
-                        assertThat(secondGetResult.isOk());
+                        assertThat(secondGetResult.isOk()).isTrue();
                         assertThat(secondGetResult.getPayload().getExtensions()).isEmpty();
                         assertThat(secondGetResult.getPayload()).isNotEqualTo(getResult.future().result().getPayload());
-                        assertThat(getResult.future().result().getPayload().getExtensions().get("new-prop"));
+                        assertThat(getResult.future().result().getPayload().getExtensions().get("new-prop")).isEqualTo(true);
                     });
                     ctx.completeNow();
                 }));
@@ -577,11 +577,9 @@ public interface RegistrationServiceTests {
                     ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
                     register.flag();
                     return response;
-                }).compose(rr -> {
-                    final String resourceVersion = rr.getResourceVersion().orElse(null);
-                    return getDeviceManagementService()
-                            .deleteDevice(TENANT, deviceId, Optional.of(resourceVersion), NoopSpan.INSTANCE);
-                }).onComplete(ctx.succeeding(response -> {
+                }).compose(rr -> getDeviceManagementService()
+                        .deleteDevice(TENANT, deviceId, rr.getResourceVersion(), NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                     });
@@ -888,7 +886,7 @@ public interface RegistrationServiceTests {
             final var device = entry.getValue();
             current = current.compose(ok -> assertDevice(TENANT, entry.getKey(), Optional.empty(),
                     r -> {
-                        assertThat(r.isOk());
+                        assertThat(r.isOk()).isTrue();
                         assertThat(r.getPayload()).isNotNull();
                         assertThat(r.getResourceVersion()).isNotNull(); // may be empty, but not null
                         assertThat(r.getCacheDirective()).isNotNull(); // may be empty, but not null
@@ -897,7 +895,7 @@ public interface RegistrationServiceTests {
                     },
                     r -> {
                         if (device.isEnabled()) {
-                            assertThat(r.isOk());
+                            assertThat(r.isOk()).isTrue();
                             assertThat(r.getPayload()).isNotNull();
                             final JsonArray actualVias = r.getPayload().getJsonArray(RegistryManagementConstants.FIELD_VIA, new JsonArray());
                             assertThat(actualVias).hasSameElementsAs(device.getVia());

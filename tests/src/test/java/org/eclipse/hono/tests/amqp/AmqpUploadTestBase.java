@@ -139,7 +139,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that a message containing a payload which has the <em>emtpy notification</em>
+     * Verifies that a message containing a payload which has the <em>empty notification</em>
      * content type is rejected by the adapter.
      *
      * @param context The Vert.x context for running asynchronous tests.

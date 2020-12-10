@@ -161,7 +161,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                             }
                             creds.getSecrets()
                                 .forEach(secret -> {
-                                    assertThat(secret.isEnabled());
+                                    assertThat(secret.isEnabled()).isTrue();
                                     assertThat(secret.getId()).isNotNull();
                                 });
                         });

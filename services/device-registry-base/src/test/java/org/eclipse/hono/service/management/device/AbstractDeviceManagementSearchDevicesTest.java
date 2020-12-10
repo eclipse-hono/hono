@@ -63,7 +63,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                         .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
-                        assertThat(s.isError());
+                        assertThat(s.isError()).isTrue();
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     });
                     ctx.completeNow();

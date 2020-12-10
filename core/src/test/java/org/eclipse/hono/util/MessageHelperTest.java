@@ -73,7 +73,7 @@ public class MessageHelperTest {
         final Message msg = ProtonHelper.message();
         msg.setContentType("");
         MessageHelper.addJmsVendorProperties(msg);
-        assertThat(msg.getApplicationProperties()).isNull();;
+        assertThat(msg.getApplicationProperties()).isNull();
     }
 
     /**

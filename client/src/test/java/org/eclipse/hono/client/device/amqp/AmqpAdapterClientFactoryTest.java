@@ -72,7 +72,7 @@ public class AmqpAdapterClientFactoryTest {
     @Test
     public void testGetOrCreateTelemetrySenderReturnsInstance() {
         final Future<TelemetrySender> sender = factory.getOrCreateTelemetrySender();
-        assertThat(sender.succeeded());
+        assertThat(sender.succeeded()).isTrue();
         assertThat(sender.result()).isNotNull();
     }
 
@@ -82,7 +82,7 @@ public class AmqpAdapterClientFactoryTest {
     @Test
     public void testGetOrCreateEventSenderReturnsInstance() {
         final Future<EventSender> sender = factory.getOrCreateEventSender();
-        assertThat(sender.succeeded());
+        assertThat(sender.succeeded()).isTrue();
         assertThat(sender.result()).isNotNull();
     }
 
@@ -93,7 +93,7 @@ public class AmqpAdapterClientFactoryTest {
     public void testCreateDeviceSpecificCommandConsumerReturnsInstance() {
         final Future<MessageConsumer> commandConsumer = factory.createDeviceSpecificCommandConsumer("my-device", x -> {
         });
-        assertThat(commandConsumer.succeeded());
+        assertThat(commandConsumer.succeeded()).isTrue();
         assertThat(commandConsumer.result()).isNotNull();
     }
 
@@ -104,7 +104,7 @@ public class AmqpAdapterClientFactoryTest {
     public void testCreateCommandConsumerReturnsInstance() {
         final Future<MessageConsumer> commandConsumer = factory.createCommandConsumer(x -> {
         });
-        assertThat(commandConsumer.succeeded());
+        assertThat(commandConsumer.succeeded()).isTrue();
         assertThat(commandConsumer.result()).isNotNull();
     }
 
@@ -114,7 +114,7 @@ public class AmqpAdapterClientFactoryTest {
     @Test
     public void testGetOrCreateCommandResponseSender() {
         final Future<CommandResponder> responseSender = factory.getOrCreateCommandResponseSender();
-        assertThat(responseSender.succeeded());
+        assertThat(responseSender.succeeded()).isTrue();
         assertThat(responseSender.result()).isNotNull();
     }
 }

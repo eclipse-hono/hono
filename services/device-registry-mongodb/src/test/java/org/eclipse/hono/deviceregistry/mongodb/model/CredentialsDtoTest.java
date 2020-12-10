@@ -81,7 +81,7 @@ class CredentialsDtoTest {
         final PskCredential updatedCred = new PskCredential("psk-id", List.of(existingSecret, updatedSecret));
 
         final CredentialsDto updatedDto = CredentialsDto.forUpdate(CredentialsDto::new, List.of(updatedCred), "1");
-        assertThat(updatedDto.requiresMerging());
+        assertThat(updatedDto.requiresMerging()).isTrue();
         assertThatThrownBy(() -> updatedDto.merge(existingDto)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -104,7 +104,7 @@ class CredentialsDtoTest {
         final PskCredential updatedCred = new PskCredential("psk-id", List.of(unchangedSecret, newSecret));
 
         final CredentialsDto updatedDto = CredentialsDto.forUpdate(CredentialsDto::new, List.of(updatedCred), "1");
-        assertThat(updatedDto.requiresMerging());
+        assertThat(updatedDto.requiresMerging()).isTrue();
         updatedDto.merge(existingDto);
         final PskSecret secret = updatedDto.getCredentials().get(0).getSecrets()
                 .stream()

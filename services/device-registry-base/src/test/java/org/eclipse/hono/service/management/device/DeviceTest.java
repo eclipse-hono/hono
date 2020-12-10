@@ -39,7 +39,7 @@ public class DeviceTest {
     public void testDecodeDefault() {
         final var device = Json.decodeValue("{}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.isEnabled());
+        assertThat(device.isEnabled()).isTrue();
     }
 
     /**
@@ -68,7 +68,7 @@ public class DeviceTest {
     public void testDecodeEnabled() {
         final var device = Json.decodeValue("{\"enabled\": true}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.isEnabled());
+        assertThat(device.isEnabled()).isTrue();
     }
 
     /**
@@ -78,7 +78,7 @@ public class DeviceTest {
     public void testDecodeExt() {
         final var device = Json.decodeValue("{\"ext\": {\"foo\": \"bar\"}}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.isEnabled());
+        assertThat(device.isEnabled()).isTrue();
 
         final var ext = device.getExtensions();
         assertThat(ext).isNotNull();

@@ -55,7 +55,7 @@ public class ServiceInvocationExceptionTest {
     @Test
     public void testExtractStatusCodeFromNonServiceInvocationException() {
 
-        assertThat(ServiceInvocationException.extractStatusCode(new NullPointerException()))
+        assertThat(ServiceInvocationException.extractStatusCode(new Exception()))
                 .isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
     }
 

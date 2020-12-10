@@ -726,7 +726,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         assertThat(location).isNotNull();
         final Pattern pattern = Pattern.compile("/(.*)/(.*)/(.*)/(.*)");
         final Matcher matcher = pattern.matcher(location);
-        assertThat(matcher.matches());
+        assertThat(matcher.matches()).isTrue();
         assertThat(matcher.group(2)).isEqualTo(RegistryManagementConstants.DEVICES_HTTP_ENDPOINT);
         assertThat(matcher.group(3)).isEqualTo(tenantId);
         final String generatedId = matcher.group(4);

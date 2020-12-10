@@ -128,7 +128,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
         .compose(connAck -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
             if (sendAttempt.succeeded()) {
-                LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
+                LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}]", tenantId, deviceId);
                 result.complete();
             } else {
                 result.fail(sendAttempt.cause());

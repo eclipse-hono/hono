@@ -38,7 +38,7 @@ public class FireflyProviderTest extends LoraProviderTestBase<FireflyProvider> {
     protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
 
         final LoraMetaData metaData = loraMessage.getMetaData();
-        assertThat(metaData.getAdaptiveDataRateEnabled());
+        assertThat(metaData.getAdaptiveDataRateEnabled()).isTrue();
         assertThat(metaData.getBandwidth()).isEqualTo(125);
         assertThat(metaData.getCodingRate()).isEqualTo("4/5");
         assertThat(metaData.getFrameCount()).isEqualTo(2602);

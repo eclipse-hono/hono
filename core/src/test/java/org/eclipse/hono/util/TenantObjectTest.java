@@ -116,18 +116,16 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray());
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
-        assertThat(tenant.isEnabled());
+        assertThat(tenant.isEnabled()).isTrue();
         assertThat(tenant.getTrustAnchors()).isNotNull();
         assertThat(tenant.getTrustAnchors()).isEmpty();
     }
 
     /**
      * Verifies that a trust anchor can be deserialized from a Base64 encoded public key.
-     *
-     * @throws GeneralSecurityException if the trust anchor cannot be deserialized.
      */
     @Test
-    public void testDeserializationOfPublicKeyTrustAnchors() throws GeneralSecurityException {
+    public void testDeserializationOfPublicKeyTrustAnchors() {
 
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
@@ -239,11 +237,9 @@ public class TenantObjectTest {
 
     /**
      * Verifies that the trust anchor uses the configured trusted CA's public key and subject DN.
-     *
-     * @throws GeneralSecurityException if the certificate cannot be DER encoded.
      */
     @Test
-    public void testGetTrustAnchorsUsesPublicKey() throws GeneralSecurityException {
+    public void testGetTrustAnchorsUsesPublicKey() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());

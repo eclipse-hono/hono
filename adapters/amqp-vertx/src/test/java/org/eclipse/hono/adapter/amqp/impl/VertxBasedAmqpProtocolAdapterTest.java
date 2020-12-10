@@ -1112,7 +1112,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * Verifies that the adapter closes the link for sending commands to a device when no
      * delivery update is received after a certain amount of time.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testLinkForSendingCommandsCloseAfterTimeout() {
         // GIVEN an AMQP adapter

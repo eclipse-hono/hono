@@ -176,8 +176,8 @@ public interface AbstractCredentialsServiceTest {
      * @param secret The secret to check.
      */
     default void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
-        assertThat(secret.getPasswordHash()).as("password secret has no password hash").isNull();;
-        assertThat(secret.getHashFunction()).as("password secret has no hash function").isNull();;
+        assertThat(secret.getPasswordHash()).as("password secret has no password hash").isNull();
+        assertThat(secret.getHashFunction()).as("password secret has no hash function").isNull();
         assertThat(secret.getSalt()).as("password secret has no salt").isNull();
     }
 
@@ -481,7 +481,7 @@ public interface AbstractCredentialsServiceTest {
                                 final JsonArray secrets = response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS);
                                 secrets.stream()
                                     .map(JsonObject.class::cast)
-                                    .forEach(secret -> assertThat(secret.containsKey(CredentialsConstants.FIELD_SECRETS_KEY)));
+                                    .forEach(secret -> assertThat(secret.containsKey(CredentialsConstants.FIELD_SECRETS_KEY)).isTrue());
                             });
                             ctx.completeNow();
                         })));
@@ -1112,7 +1112,7 @@ public interface AbstractCredentialsServiceTest {
                                 .stream()
                                 .map(PasswordSecret::getId)
                                 .anyMatch(pwdSecretId.get()::equals);
-                        assertThat(containsPasswordSecretWithOriginalId);
+                        assertThat(containsPasswordSecretWithOriginalId).isTrue();
                     },
                     getCredentialsResult -> {
                         assertThat(getCredentialsResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);

@@ -79,7 +79,7 @@ public class AmqpAdapterClientCommandConsumerTest {
         verify(connection).createReceiver(eq("command"), eq(ProtonQoS.AT_LEAST_ONCE), any(),
                 VertxMockSupport.anyHandler());
 
-        assertThat(consumerFuture.succeeded());
+        assertThat(consumerFuture.succeeded()).isTrue();
         assertThat(consumerFuture.result()).isNotNull();
     }
 
@@ -98,7 +98,7 @@ public class AmqpAdapterClientCommandConsumerTest {
         verify(connection).createReceiver(eq("command/" + tenantId + "/" + deviceId), eq(ProtonQoS.AT_LEAST_ONCE),
                 any(), VertxMockSupport.anyHandler());
 
-        assertThat(consumerFuture.succeeded());
+        assertThat(consumerFuture.succeeded()).isTrue();
         assertThat(consumerFuture.result()).isNotNull();
     }
 
