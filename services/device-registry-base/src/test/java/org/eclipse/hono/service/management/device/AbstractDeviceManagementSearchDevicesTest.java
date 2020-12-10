@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.Sort;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;

@@ -22,12 +22,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.AbstractDeviceManagementSearchDevicesTest;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
-import org.eclipse.hono.service.management.device.Sort;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -18,15 +18,15 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.AutoProvisioningEnabledDeviceBackend;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.Filter;
 import org.eclipse.hono.service.management.device.SearchDevicesResult;
-import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;

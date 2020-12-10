@@ -19,9 +19,9 @@ import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
+import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.DeviceDto;
-import org.eclipse.hono.service.management.device.Filter;
-import org.eclipse.hono.service.management.device.Sort;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;

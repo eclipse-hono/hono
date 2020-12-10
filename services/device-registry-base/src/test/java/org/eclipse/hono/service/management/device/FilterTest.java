@@ -17,7 +17,8 @@ package org.eclipse.hono.service.management.device;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.eclipse.hono.service.management.device.Filter.Operator;
+import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.Filter.Operator;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.DecodeException;

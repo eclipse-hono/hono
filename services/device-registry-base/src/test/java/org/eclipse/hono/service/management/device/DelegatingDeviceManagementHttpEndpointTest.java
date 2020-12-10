@@ -30,10 +30,12 @@ import java.util.Optional;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
+import org.eclipse.hono.service.management.Filter;
+import org.eclipse.hono.service.management.Filter.Operator;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.device.Filter.Operator;
-import org.eclipse.hono.service.management.device.Sort.Direction;
+import org.eclipse.hono.service.management.Sort;
+import org.eclipse.hono.service.management.Sort.Direction;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
