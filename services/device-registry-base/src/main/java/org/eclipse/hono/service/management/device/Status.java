@@ -43,7 +43,7 @@ public class Status<T extends Status<T>> {
     private String lastUser;
 
     /**
-     * Create a new Status initialised at the creation time.
+     * Creates an empty status.
      */
     public Status() {
     }
