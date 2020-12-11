@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -105,8 +105,9 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
     public Jws<Claims> expand(final String token) {
 
         Objects.requireNonNull(token);
-        return Jwts.parser()
+        return Jwts.parserBuilder()
                 .setSigningKey(key)
+                .build()
                 .parseClaimsJws(token);
     }
 }

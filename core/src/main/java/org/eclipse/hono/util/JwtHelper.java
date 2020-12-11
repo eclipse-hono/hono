@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,7 @@ import java.security.Key;
 import java.security.interfaces.ECKey;
 import java.security.interfaces.RSAKey;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -30,12 +27,7 @@ import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwsHeader;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.SigningKeyResolverAdapter;
 import io.vertx.core.Vertx;
 
 /**
@@ -45,9 +37,6 @@ import io.vertx.core.Vertx;
 public abstract class JwtHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(JwtHelper.class);
-
-    private static final Key DUMMY_KEY = new SecretKeySpec(new byte[] { 0x00, 0x01 },
-            SignatureAlgorithm.HS256.getJcaName());
 
     /**
      * The signature algorithm used for signing.
@@ -151,76 +140,6 @@ public abstract class JwtHelper {
      */
     public final Duration getTokenLifetime() {
         return tokenLifetime;
-    }
-
-    /**
-     * Checks if a token is expired.
-     *
-     * @param token The token to check.
-     * @param allowedClockSkewSeconds The allowed clock skew in seconds.
-     * @return {@code true} if the token is expired according to the current system time (including allowed skew).
-     */
-    public static final boolean isExpired(final String token, final int allowedClockSkewSeconds) {
-        final Instant now = Instant.now().minus(Duration.ofSeconds(allowedClockSkewSeconds));
-        return isExpired(token, now);
-    }
-
-    /**
-     * Checks if a token is expired.
-     *
-     * @param token The token to check.
-     * @param now The instant of time the token's expiration time should be checked against.
-     * @return {@code true} if the token is expired according to the given instant of time.
-     * @throws NullPointerException if the token is {@code null}.
-     * @throws IllegalArgumentException if the given token contains no <em>exp</em> claim.
-     */
-    public static final boolean isExpired(final String token, final Instant now) {
-
-        if (token == null) {
-            throw new NullPointerException("token must not be null");
-        } else {
-            final Date exp = getExpiration(token);
-            return exp.before(Date.from(now));
-        }
-    }
-
-    /**
-     * Gets the value of the <em>exp</em> claim of a JWT.
-     *
-     * @param token The token.
-     * @return The expiration.
-     * @throws NullPointerException if the token is {@code null}.
-     * @throws IllegalArgumentException if the given token contains no <em>exp</em> claim.
-     */
-    public static final Date getExpiration(final String token) {
-
-        if (token == null) {
-            throw new NullPointerException("token must not be null");
-        }
-
-        final AtomicReference<Date> result = new AtomicReference<>();
-
-        try {
-            Jwts.parser().setSigningKeyResolver(new SigningKeyResolverAdapter() {
-
-                @Override
-                public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
-                    final Date exp = claims.getExpiration();
-                    if (exp != null) {
-                        result.set(exp);
-                    }
-                    return DUMMY_KEY;
-                }
-            }).parse(token);
-        } catch (final JwtException e) {
-            // expected since we do not know the signing key
-        }
-
-        if (result.get() == null) {
-            throw new IllegalArgumentException("token contains no exp claim");
-        } else {
-            return result.get();
-        }
     }
 
     /**

@@ -13,7 +13,9 @@
 
 package org.eclipse.hono.service.auth;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
 
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
@@ -51,9 +53,12 @@ public class AuthTokenHelperImplTest {
         final Authorities authorities = new AuthoritiesImpl()
                 .addResource("telemetry", "*", Activity.READ, Activity.WRITE)
                 .addOperation("registration", "*", "assert");
+        final Instant expirationMin = Instant.now().plusSeconds(59);
+        final Instant expirationMax = expirationMin.plusSeconds(1);
         final String token = helper.createToken("userA", authorities);
 
         final Jws<Claims> parsedToken = helper.expand(token);
-        assertNotNull(parsedToken.getBody());
+        assertThat(parsedToken.getBody()).isNotNull();
+        assertThat(parsedToken.getBody().getExpiration().toInstant()).isBetween(expirationMin, expirationMax);
     }
 }
