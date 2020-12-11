@@ -350,12 +350,12 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The name of the field that contains a boolean indicating if an entity was auto-provisioned.
      */
-    public static final String FIELD_AUTO_PROVISIONED   = "autoProvisioned";
+    public static final String FIELD_AUTO_PROVISIONED   = "auto-provisioned";
 
     /**
      * The name of the field that contains a boolean indicating if a notification for an auto-provisioned device was sent.
      */
-    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "autoProvisioningNotificationSent";
+    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "auto-provisioning-notification-sent";
 
     private RegistryManagementConstants() {
         // prevent instantiation

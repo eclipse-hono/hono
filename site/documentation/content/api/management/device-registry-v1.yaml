@@ -1032,13 +1032,15 @@ components:
             "last-user":
                type: string
                description: The user who made the last edit on this device.
-            "autoProvisioned":
-               type: string
+            "auto-provisioned":
+               type: boolean
+               default: false
                description: Indicates if the device was created via auto-provisioning.
-            "autoProvisioningNotificationSent":
-               type: string
-               description: Indicates if the northbound application was notified of the auto-provisioned device via an
-                  empty event.
+            "auto-provisioning-notification-sent":
+               type: boolean
+               default: false
+               description: Indicates if downstream consumers have been notified about the newly auto-provisioned
+                  device by means of a corresponding event.
 
       SearchDevicesResult:
          type: object
