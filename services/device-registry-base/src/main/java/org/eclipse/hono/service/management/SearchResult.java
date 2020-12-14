@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -44,8 +45,10 @@ public final class SearchResult<T> {
     public SearchResult(
             @JsonProperty(value = RegistryManagementConstants.FIELD_RESULT_SET_SIZE) final int total,
             @JsonProperty(value = RegistryManagementConstants.FIELD_RESULT_SET_PAGE) final List<T> result) {
+        Objects.requireNonNull(result);
+
         this.total = total;
-        this.result = Objects.requireNonNull(result);
+        this.result = new ArrayList<>(result);
     }
 
     /**

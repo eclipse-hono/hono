@@ -727,6 +727,17 @@ components:
                items:
                   $ref: '#/components/schemas/TrustedCA'
 
+      TenantWithId:
+         type: object
+         additionalProperties: false
+         allOf:
+            - type: object
+              properties:
+                 "id":
+                    description: The identifier of the tenant.
+                    type: string
+            - $ref: '#/components/schemas/Tenant'
+
       TrustedCA:
          type: object
          additionalProperties: false
@@ -1025,17 +1036,6 @@ components:
             "status":
                $ref: '#/components/schemas/Status'
 
-      TenantWithId:
-         type: object
-         additionalProperties: false
-         allOf:
-            - type: object
-              properties:
-                 "id":
-                    description: The identifier of the tenant.
-                    type: string
-            - $ref: '#/components/schemas/Tenant'
-
       DeviceWithId:
          type: object
          additionalProperties: false
@@ -1087,6 +1087,7 @@ components:
          properties:
             "total":
                type: integer
+               minimum: 0
                description: The total number of objects in the result set, regardless of the *pageSize* set in query.
             "result":
                type: array

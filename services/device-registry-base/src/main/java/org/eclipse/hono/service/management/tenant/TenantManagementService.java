@@ -76,7 +76,7 @@ public interface TenantManagementService {
      * <p>
      * This search operation is considered as optional since it is not required for the normal functioning of Hono and
      * is more of a convenient operation. Hence here it is declared as a default method which returns
-     * {@link HttpURLConnection#HTTP_NOT_IMPLEMENTED}. It is upto the implementors of this interface to offer an
+     * {@link HttpURLConnection#HTTP_NOT_IMPLEMENTED}. It is up to the implementors of this interface to offer an
      * implementation of this service or not.
      *
      * @param pageSize The maximum number of results to include in a response.
