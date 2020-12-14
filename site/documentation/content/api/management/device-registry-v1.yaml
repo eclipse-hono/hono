@@ -943,7 +943,7 @@ components:
             "mode":
                type: string
                description: |
-                 The accounting period mode of recurrence. The following modes are defined:
+                 The accounting period's' mode of recurrence. The following modes are defined:
                  * `monthly`: Accounting periods start at midnight (start of day) UTC on the 1st day of each month.
                  * `days`: Accounting periods start at the time of the initial accounting period every *N* days where
                            *N* is the value of the *no-of-days* property.
@@ -1010,37 +1010,40 @@ components:
                  "id":
                     description: The identifier of the device.
                     type: string
+                    readOnly: true
             - $ref: '#/components/schemas/Device'
 
       Status:
          type: object
          additionalProperties: false
-         description: Optional and written only by the device registry implementation.
-            It can not be updated by the user.
-            Any data inserted in the status section by the user in a PUT request will be ignored.
+         description: |
+            Additional meta data describing the entity.
          properties:
             "created":
                type: string
                format: date-time
-               description: The date and time when the device was created.
-                  The format must comply with RFC 3339, section 5.6. The representation must be UTC (no timezone offset).
+               readOnly: true
+               description: The point in time when the entity was originally created.
             "updated":
                type: string
                format: date-time
-               description: The date and time when the device was last updated.
-                  The format must comply with RFC 3339, section 5.6. The representation must be UTC (no timezone offset).
+               readOnly: true
+               description: The point in time when the entity was last updated.
             "last-user":
                type: string
-               description: The user who made the last edit on this device.
+               readOnly: true
+               description: The user who made the last edit on this entity.
             "auto-provisioned":
                type: boolean
                default: false
-               description: Indicates if the device was created via auto-provisioning.
+               readOnly: true
+               description: Indicates if the entity was created via auto-provisioning.
             "auto-provisioning-notification-sent":
                type: boolean
                default: false
+               readOnly: true
                description: Indicates if downstream consumers have been notified about the newly auto-provisioned
-                  device by means of a corresponding event.
+                  entity by means of a corresponding event.
 
       SearchDevicesResult:
          type: object
@@ -1049,6 +1052,7 @@ components:
          properties:
             "total":
                type: integer
+               minimum: 0
                description: The total number of objects in the result set, regardless of the *pageSize* set in query.
             "result":
                type: array
@@ -1220,10 +1224,11 @@ components:
                                  In this case the id field must be set instead.
                  "pwd-plain":
                     type: string
+                    writeOnly: true
                     description: The clear text value of the password to be hashed by the device registry.
                                  If this property is specified, the device registry will ignore user-provided hash properties (`hash-function`, `pwd-hash` and `salt`).
-                                 This property must never be stored by the device registry.
-                                 This property must be empty when returning passwords from the device registry.
+                                 This property must never be included in a response from the device registry.
+                                 A device registry implementation must never write plain text passwords to a persistent store.
 
       PSKSecret:
          additionalProperties: false
