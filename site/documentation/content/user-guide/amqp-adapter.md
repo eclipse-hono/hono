@@ -161,11 +161,12 @@ All other combinations are not supported by the adapter and will result in the m
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
     defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
 * Message Body:
-  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section.
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will be ignored.
 * Outcomes:
   * `accepted`: The message has been successfully forwarded downstream.
-  * `released`: The message could not be processed by the adapter due to a (temporary) problem at the infrastructure level.
-    A common reason for this is that there is no active downstream consumer for messages from the device.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client. Potential reasons include that there is no active downstream consumer for messages from the device.
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
@@ -204,11 +205,12 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.p
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
     defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
 * Message Body:
-  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section.
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will be ignored.
 * Outcomes:
   * `accepted`: The message has been successfully forwarded downstream.
-  * `released`: The message could not be processed by the adapter due to a (temporary) problem at the infrastructure level.
-    A common reason for this is that there is no active downstream consumer for messages from the device.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client. Potential reasons include that there is no active downstream consumer for messages from the device.
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
@@ -261,11 +263,12 @@ All other combinations are not supported by the adapter and result in the messag
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
     defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
 * Message Body:
-  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section.
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will be ignored.
 * Outcomes:
   * `accepted`: The message has been successfully forwarded downstream.
-  * `released`: The message could not be processed by the adapter due to a (temporary) problem at the infrastructure level.
-    A common reason for this is that there is no active downstream consumer for messages from the device.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client.
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
@@ -297,11 +300,12 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.u
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
     defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
 * Message Body:
-  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section.
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will be ignored.
 * Outcomes:
   * `accepted`: The message has been successfully forwarded downstream.
-  * `released`: The message could not be processed by the adapter due to a (temporary) problem at the infrastructure level.
-    A common reason for this is that there is no active downstream consumer for messages from the device.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client.
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
@@ -406,11 +410,12 @@ for uploading command responses. All other combinations are not supported by the
   * (required) `status`: MUST contain an integer status code indicating the outcome of processing the command at the
     device (see [Command & Control API]({{< relref "/api/command-and-control" >}}) for details).
 * Message Body:
-  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section.
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will be ignored.
 * Outcomes:
   * `accepted`: The message has been successfully forwarded downstream.
-  * `released`: The message could not be processed by the adapter due to a (temporary) problem at the infrastructure level.
-    A common reason for this is that there is no active downstream consumer for messages from the device.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client. Potential reasons include that there is no active downstream consumer for messages from the device.
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
