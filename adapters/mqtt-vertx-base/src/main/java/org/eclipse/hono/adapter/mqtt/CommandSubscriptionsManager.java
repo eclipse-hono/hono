@@ -66,18 +66,19 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
     /**
      * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
      *
-     * @param msgId The msgId of the command published with QoS 1.
+     * @param msgId The message/packet id of the command published with QoS 1.
      * @throws NullPointerException if msgId is {@code null}.
      */
     public void handlePubAck(final Integer msgId) {
         Objects.requireNonNull(msgId);
-        LOG.trace("Acknowledgement received for command [Msg-id: {}] that has been sent to device", msgId);
-        Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
-            if (value.timerId != null) {
-                cancelTimer(value.timerId);
-            }
-            value.onAckHandler.handle(msgId);
-        });
+        LOG.trace("acknowledgement received for command sent to device [packet-id: {}]", msgId);
+        Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
+                .ifPresentOrElse(pendingCommandRequest -> {
+                    if (pendingCommandRequest.timerId != null) {
+                        cancelTimer(pendingCommandRequest.timerId);
+                    }
+                    pendingCommandRequest.onAckHandler.handle(msgId);
+                }, () -> LOG.debug("no active command request found for received acknowledgement [packet-id: {}]", msgId));
     }
 
     /**
@@ -189,7 +190,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
 
     private void cancelTimer(final Long timerId) {
         vertx.cancelTimer(timerId);
-        LOG.trace("Canceled Timer [timer-id: {}}", timerId);
+        LOG.trace("canceled Timer [timer-id: {}}", timerId);
     }
 
     /**

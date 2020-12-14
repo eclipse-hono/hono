@@ -1444,17 +1444,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         endpoint.publish(publishTopic, payload, subscription.getQos(), false, false, sentHandler -> {
             if (sentHandler.succeeded()) {
 
+                final Integer msgId = sentHandler.result();
                 if (command.isTargetedAtGateway()) {
                     log.debug("published command [packet-id: {}] to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                            sentHandler.result(), subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
+                            msgId, subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
                             subscription.getClientId(), subscription.getQos(), publishTopic);
                 } else {
                     log.debug("published command [packet-id: {}] to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                            sentHandler.result(), subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
+                            msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
                             subscription.getQos(), publishTopic);
                 }
-                commandContext.getTracingSpan().log("published command");
-                afterCommandPublished(sentHandler.result(), commandContext, tenantObject, subscription, cmdSubscriptionsManager);
+                commandContext.getTracingSpan().log(subscription.getQos().value() > 0 ? "published command, packet-id: " + msgId
+                                : "published command");
+                afterCommandPublished(msgId, commandContext, tenantObject, subscription, cmdSubscriptionsManager);
 
             } else {
 
