@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,6 +87,40 @@ public class MessageHelperTest {
         msg.setContentEncoding("");
         MessageHelper.addJmsVendorProperties(msg);
         assertThat(msg.getApplicationProperties()).isNull();
+    }
+
+    /**
+     * Verifies that the helper returns {@code null} when retrieving an AmqpValue
+     * containing a binary instance.
+     */
+    @Test
+    public void testGetPayloadReturnsNullForBinaryValue() {
+        final Binary payload = new Binary(new byte[] { 0x00, 0x01 });
+        final AmqpValue value = new AmqpValue(payload);
+        final Message message = ProtonHelper.message();
+        message.setBody(value);
+        final byte[] encodedMsg = new byte[2048];
+        final int bytesWritten = message.encode(encodedMsg, 0, 2048);
+        final Message decodedMessage = ProtonHelper.message();
+        decodedMessage.decode(encodedMsg, 0, bytesWritten);
+        assertThat(MessageHelper.getPayload(decodedMessage)).isNull();
+    }
+
+    /**
+     * Verifies that the helper returns a byte array when retrieving an AmqpValue
+     * containing an array of bytes.
+     */
+    @Test
+    public void testGetPayloadReturnsByteArray() {
+        final byte[] payload = new byte[] { 0x00, 0x01 };
+        final AmqpValue value = new AmqpValue(payload);
+        final Message message = ProtonHelper.message();
+        message.setBody(value);
+        final byte[] encodedMsg = new byte[2048];
+        final int bytesWritten = message.encode(encodedMsg, 0, 2048);
+        final Message decodedMessage = ProtonHelper.message();
+        decodedMessage.decode(encodedMsg, 0, bytesWritten);
+        assertThat(MessageHelper.getPayload(decodedMessage).getBytes()).isEqualTo(payload);
     }
 
     /**
