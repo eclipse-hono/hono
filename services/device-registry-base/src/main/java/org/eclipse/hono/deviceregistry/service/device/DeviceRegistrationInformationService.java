@@ -35,12 +35,13 @@ public interface DeviceRegistrationInformationService {
      *            The <em>payload</em> will contain a JSON object with the following properties:
      *              <ul>
      *              <li><em>device-id</em> - the device identifier</li>
-     *              <li><em>data</em> - the information registered for the device</li>
+     *              <li><em>data</em> - the information registered for the device, i.e. the registered
+     *                  {@link org.eclipse.hono.service.management.device.Device}</li>
      *              </ul>
      *            </li>
      *            <li><em>404 Not Found</em>, if no device with the given identifier is registered for the tenant.</li>
      *            </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    Future<RegistrationResult> processAssertRegistration(DeviceKey deviceKey, Span span);
+    Future<RegistrationResult> getRegistrationInformation(DeviceKey deviceKey, Span span);
 }

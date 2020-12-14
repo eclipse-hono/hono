@@ -47,7 +47,7 @@ import io.vertx.core.json.JsonObject;
  * An abstract base class implementation for {@link RegistrationService}.
  * <p>
  * The default implementation of <em>assertRegistration</em> relies on
- * {@link AbstractRegistrationService#processAssertRegistration(DeviceKey, Span)} to retrieve a device's registration
+ * {@link AbstractRegistrationService#getRegistrationInformation(DeviceKey, Span)} to retrieve a device's registration
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
  */
@@ -90,7 +90,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
     /**
      * Enables subclasses to add custom shutdown logic, see {@link Lifecycle#stop()}.
      *
-     * @return A future indicating the outcome of the startup process.
+     * @return A future indicating the outcome of the shutdown process.
      */
     protected Future<Void> stopInternal() {
         return Future.succeededFuture();
@@ -183,7 +183,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
      * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #processAssertRegistration(DeviceKey, Span) processAssertRegistration} method to work.
+     * {@link #getRegistrationInformation(DeviceKey, Span) processAssertRegistration} method to work.
      */
     @Override
     public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final Span span) {
@@ -198,7 +198,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     if (tenantKeyResult.isError()) {
                         return Future.succeededFuture(RegistrationResult.from(tenantKeyResult.getStatus()));
                     } else {
-                        return processAssertRegistration(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
+                        return getRegistrationInformation(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
                                 .compose(result -> {
                                     if (result.isNotFound()) {
                                         LOG.debug("no such device");
@@ -228,7 +228,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
      * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #processAssertRegistration(DeviceKey, Span) processAssertRegistration} method to work.
+     * {@link #getRegistrationInformation(DeviceKey, Span) processAssertRegistration} method to work.
      */
     @Override
     public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final String gatewayId, final Span span) {
@@ -248,8 +248,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
                     final TenantKey tenantKey = result.getPayload();
 
-                    final Future<RegistrationResult> deviceInfoTracker = processAssertRegistration(DeviceKey.from(tenantKey, deviceId), span);
-                    final Future<RegistrationResult> gatewayInfoTracker = processAssertRegistration(DeviceKey.from(tenantKey, gatewayId), span);
+                    final Future<RegistrationResult> deviceInfoTracker = getRegistrationInformation(DeviceKey.from(tenantKey, deviceId), span);
+                    final Future<RegistrationResult> gatewayInfoTracker = getRegistrationInformation(DeviceKey.from(tenantKey, gatewayId), span);
 
                     return CompositeFuture
                             .all(deviceInfoTracker, gatewayInfoTracker)

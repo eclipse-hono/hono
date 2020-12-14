@@ -222,7 +222,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      * {@inheritDoc}
      */
     @Override
-    public Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
+    public Future<RegistrationResult> getRegistrationInformation(final DeviceKey deviceKey, final Span span) {
 
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);

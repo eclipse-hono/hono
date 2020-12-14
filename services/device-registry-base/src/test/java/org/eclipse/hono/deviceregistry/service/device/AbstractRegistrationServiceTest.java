@@ -118,7 +118,9 @@ public class AbstractRegistrationServiceTest {
         service = spy(AbstractRegistrationServiceTestClass.class);
         service.setTenantInformationService(tenantInformationService);
 
-        final AutoProvisioner autoProvisioner = new AutoProvisioner(service, service);
+        final AutoProvisioner autoProvisioner = new AutoProvisioner();
+        autoProvisioner.setDeviceManagementService(service);
+        autoProvisioner.setDeviceRegistrationInformationService(service);
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
         service.setAutoProvisioner(autoProvisioner);
@@ -149,7 +151,7 @@ public class AbstractRegistrationServiceTest {
                 .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw1").add("gw2"))
                 .put("ext", new JsonObject().put("key", "value"));
 
-        when(service.processAssertRegistration(any(DeviceKey.class), any(Span.class)))
+        when(service.getRegistrationInformation(any(DeviceKey.class), any(Span.class)))
             .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK,
                     new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, "device")
                         .put(RegistrationConstants.FIELD_DATA, registreredDevice))));
@@ -192,7 +194,7 @@ public class AbstractRegistrationServiceTest {
                 .put(RegistryManagementConstants.FIELD_MEMBER_OF, new JsonArray(memberOf))
                 .put(RegistryManagementConstants.FIELD_AUTHORITIES, new JsonArray(authorities));
 
-        when(service.processAssertRegistration(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), deviceId)), any(Span.class)))
+        when(service.getRegistrationInformation(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), deviceId)), any(Span.class)))
                 .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK,
                         new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                                 .put(RegistrationConstants.FIELD_DATA, registeredGateway))));
@@ -200,7 +202,7 @@ public class AbstractRegistrationServiceTest {
     }
 
     private void mockAssertRegistration(final String deviceId, final boolean autoProvisioningNotificationSent) {
-        when(service.processAssertRegistration(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), deviceId)), any(Span.class)))
+        when(service.getRegistrationInformation(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), deviceId)), any(Span.class)))
                 .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)))
                 .thenReturn(Future.succeededFuture(newRegistrationResult(deviceId, autoProvisioningNotificationSent)));
 
@@ -313,7 +315,7 @@ public class AbstractRegistrationServiceTest {
     public void testAssertRegistrationResendsDeviceNotification(final VertxTestContext ctx) {
         mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.singletonList(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
 
-        when(service.processAssertRegistration(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), DEVICE_ID)), any(Span.class)))
+        when(service.getRegistrationInformation(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), DEVICE_ID)), any(Span.class)))
                 .thenReturn(Future.succeededFuture(newRegistrationResult(DEVICE_ID, false)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, span)
@@ -402,12 +404,12 @@ public class AbstractRegistrationServiceTest {
         mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.emptyList());
         mockAddEdgeDevice(HttpURLConnection.HTTP_OK);
 
-        when(service.processAssertRegistration(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), AbstractRegistrationServiceTest.GATEWAY_ID)), any(Span.class)))
+        when(service.getRegistrationInformation(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), AbstractRegistrationServiceTest.GATEWAY_ID)), any(Span.class)))
                 .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK,
                         new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, AbstractRegistrationServiceTest.GATEWAY_ID)
                                 .put(RegistrationConstants.FIELD_DATA, new JsonObject()))));
 
-        when(service.processAssertRegistration(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), AbstractRegistrationServiceTest.DEVICE_ID)), any(Span.class)))
+        when(service.getRegistrationInformation(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), AbstractRegistrationServiceTest.DEVICE_ID)), any(Span.class)))
                 .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, AbstractRegistrationServiceTest.DEVICE_ID, AbstractRegistrationServiceTest.GATEWAY_ID, span)
@@ -449,7 +451,7 @@ public class AbstractRegistrationServiceTest {
     @Test
     public void testAssertRegistrationFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        when(service.processAssertRegistration(any(DeviceKey.class), any(Span.class)))
+        when(service.getRegistrationInformation(any(DeviceKey.class), any(Span.class)))
             .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
@@ -470,7 +472,7 @@ public class AbstractRegistrationServiceTest {
     @Test
     public void testAssertRegistrationFailsForDisabledDevice(final VertxTestContext ctx) {
 
-        when(service.processAssertRegistration(any(DeviceKey.class), any(Span.class)))
+        when(service.getRegistrationInformation(any(DeviceKey.class), any(Span.class)))
             .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, PAYLOAD_DISABLED)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
@@ -491,7 +493,7 @@ public class AbstractRegistrationServiceTest {
     @Test
     public void testAssertRegistrationFailsForNonExistingGateway(final VertxTestContext ctx) {
 
-        when(service.processAssertRegistration(any(DeviceKey.class), any(Span.class)))
+        when(service.getRegistrationInformation(any(DeviceKey.class), any(Span.class)))
             .thenAnswer(invocation -> {
                 final DeviceKey key = invocation.getArgument(0);
                 if (key.getDeviceId().equals("gw")) {
@@ -519,7 +521,7 @@ public class AbstractRegistrationServiceTest {
     @Test
     public void testAssertRegistrationFailsForDisabledGateway(final VertxTestContext ctx) {
 
-        when(service.processAssertRegistration(any(DeviceKey.class), any(Span.class)))
+        when(service.getRegistrationInformation(any(DeviceKey.class), any(Span.class)))
             .thenAnswer(invocation -> {
                 final DeviceKey key = invocation.getArgument(0);
                 if (key.getDeviceId().equals("gw")) {

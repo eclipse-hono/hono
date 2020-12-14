@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.management.device;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -320,7 +321,7 @@ public class Device {
      * @return A reference to this for fluent use.
      */
     public final Device setAuthorities(final Set<String> authorities) {
-        this.authorities = authorities;
+        this.authorities = new HashSet<>(authorities);
         return this;
     }
 
@@ -330,6 +331,6 @@ public class Device {
      * @return The device's authorities.
      */
     public final Set<String> getAuthorities() {
-        return authorities;
+        return Collections.unmodifiableSet(authorities);
     }
 }

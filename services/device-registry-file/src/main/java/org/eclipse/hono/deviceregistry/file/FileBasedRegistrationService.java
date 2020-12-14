@@ -301,7 +301,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     ///// DEVICES
 
     @Override
-    public Future<RegistrationResult> processAssertRegistration(final DeviceKey key, final Span span) {
+    public Future<RegistrationResult> getRegistrationInformation(final DeviceKey key, final Span span) {
 
         Objects.requireNonNull(key);
         Objects.requireNonNull(span);

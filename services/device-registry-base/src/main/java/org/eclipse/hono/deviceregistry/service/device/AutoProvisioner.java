@@ -68,9 +68,9 @@ public class AutoProvisioner implements Lifecycle {
 
     private Tracer tracer = NoopTracerFactory.create();
 
-    private final DeviceManagementService deviceManagementService;
+    private DeviceManagementService deviceManagementService;
 
-    private final DeviceRegistrationInformationService deviceRegistrationInformationService;
+    private DeviceRegistrationInformationService deviceRegistrationInformationService;
 
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
@@ -81,21 +81,6 @@ public class AutoProvisioner implements Lifecycle {
     private Vertx vertx;
 
     private AutoProvisionerConfigProperties config;
-
-    /**
-     * Constructs a new instance.
-     *
-     * @param deviceManagementService The device management service to be used.
-     * @param deviceRegistrationInformationService The device registration information service to be used.
-     *
-     * @throws NullPointerException if any argument is {@code null}.
-     */
-    public AutoProvisioner(
-            final DeviceManagementService deviceManagementService,
-            final DeviceRegistrationInformationService deviceRegistrationInformationService) {
-        this.deviceManagementService = Objects.requireNonNull(deviceManagementService);
-        this.deviceRegistrationInformationService = Objects.requireNonNull(deviceRegistrationInformationService);
-    }
 
     @Override
     public final Future<Void> start() {
@@ -146,6 +131,30 @@ public class AutoProvisioner implements Lifecycle {
     @Autowired
     public final void setDownstreamSenderFactory(final DownstreamSenderFactory factory) {
         this.downstreamSenderFactory = Objects.requireNonNull(factory);
+    }
+
+    /**
+     * Sets the {@link DeviceManagementService} to use.
+     *
+     * @param deviceManagementService The service to set.
+     *
+     * @throws NullPointerException if the service is {@code null}.
+     */
+    @Autowired
+    public void setDeviceManagementService(final DeviceManagementService deviceManagementService) {
+        this.deviceManagementService = Objects.requireNonNull(deviceManagementService);
+    }
+
+    /**
+     * Sets the {@link DeviceRegistrationInformationService} to use.
+     *
+     * @param deviceRegistrationInformationService The service to set.
+     *
+     * @throws NullPointerException if the service is {@code null}.
+     */
+    @Autowired
+    public void setDeviceRegistrationInformationService(final DeviceRegistrationInformationService deviceRegistrationInformationService) {
+        this.deviceRegistrationInformationService = Objects.requireNonNull(deviceRegistrationInformationService);
     }
 
     /**
@@ -283,7 +292,7 @@ public class AutoProvisioner implements Lifecycle {
                         LOG.debug("device [{}] for gateway [{}] already created by concurrent auto-provisioning [tenant-id: {}]",
                                 deviceId, gatewayId, tenantId);
                         return deviceRegistrationInformationService
-                                .processAssertRegistration(DeviceKey.from(TenantKey.from(tenantId), deviceId), span)
+                                .getRegistrationInformation(DeviceKey.from(TenantKey.from(tenantId), deviceId), span)
                                 .compose(assertRegistrationResult -> {
                                     final JsonObject deviceData = assertRegistrationResult.getPayload()
                                             .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
@@ -297,7 +306,7 @@ public class AutoProvisioner implements Lifecycle {
                             deviceId, gatewayId, tenantId);
                     return sendAutoProvisioningEvent(tenantId, deviceId, gatewayId, span)
                             .compose(sendEmptyEventOk -> deviceRegistrationInformationService
-                                    .processAssertRegistration(DeviceKey.from((TenantKey.from(tenantId)), deviceId), span)
+                                    .getRegistrationInformation(DeviceKey.from((TenantKey.from(tenantId)), deviceId), span)
                                     .compose(deviceRegistrationData -> {
                                         if (!deviceRegistrationData.isOk()) {
                                             span.log("update of notification flag failed");
@@ -356,7 +365,7 @@ public class AutoProvisioner implements Lifecycle {
         final DeviceKey deviceKey = DeviceKey.from(TenantKey.from(tenantId), deviceId);
         final Promise<Void> resultPromise = Promise.promise();
         vertx.setTimer(config.getRetryEventSendingDelay(), tid -> {
-            deviceRegistrationInformationService.processAssertRegistration(deviceKey, span)
+            deviceRegistrationInformationService.getRegistrationInformation(deviceKey, span)
                     .compose(assertRegistrationResult -> {
                         if (!assertRegistrationResult.isOk()) {
                             span.log("sending of delayed notification failed");
