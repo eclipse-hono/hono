@@ -127,9 +127,9 @@ public abstract class AbstractRegistrationService implements RegistrationService
     }
 
     /**
-     * Gets device registration data by device ID.
+     * Gets the information registered for a device.
      *
-     * @param deviceKey The ID of the device to get registration data for.
+     * @param deviceKey The identifier of the device to get registration information for.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
@@ -250,8 +250,9 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * {@inheritDoc}
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
-     * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #getRegistrationInformation(DeviceKey, Span) processAssertRegistration} method to work.
+     * registration status, e.g. using cached information etc. This method relies on
+     * {@link #getRegistrationInformation(DeviceKey, Span)} to retrieve the information registered for
+     * the given device.
      */
     @Override
     public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final String gatewayId, final Span span) {
@@ -261,8 +262,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(span);
 
-        return this.tenantInformationService
-                .tenantExists(tenantId, span)
+        return this.tenantInformationService.tenantExists(tenantId, span)
                 .compose(result -> {
 
                     if (result.isError()) {

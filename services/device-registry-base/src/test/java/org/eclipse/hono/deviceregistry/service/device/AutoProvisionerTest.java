@@ -39,6 +39,8 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceStatus;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -52,9 +54,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -85,15 +85,9 @@ class AutoProvisionerTest {
                 .thenAnswer(invocation -> Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK,
                         TenantObject.from(invocation.getArgument(0), true))));
 
-        span = mock(Span.class);
-        when(span.context()).thenReturn(mock(SpanContext.class));
+        span = TracingMockSupport.mockSpan();
         vertx = mock(Vertx.class);
-        // run timers immediately
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<Void> task = invocation.getArgument(1);
-            task.handle(null);
-            return 1L;
-        });
+        VertxMockSupport.runTimersImmediately(vertx);
 
         deviceManagementService = mock(DeviceManagementService.class);
 

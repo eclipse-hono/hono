@@ -36,6 +36,7 @@ import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -46,7 +47,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -88,8 +88,7 @@ public class AbstractRegistrationServiceTest {
                 Optional.empty(),
                 Optional.empty())));
 
-        span = mock(Span.class);
-        when(span.context()).thenReturn(mock(SpanContext.class));
+        span = TracingMockSupport.mockSpan();
 
         service = spy(AbstractRegistrationService.class);
         service.setTenantInformationService(tenantInformationService);
