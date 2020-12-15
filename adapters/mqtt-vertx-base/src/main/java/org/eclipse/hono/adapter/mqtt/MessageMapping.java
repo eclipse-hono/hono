@@ -31,15 +31,23 @@ public interface MessageMapping<T extends ExecutionContext> {
 
     /**
      * Maps a message uploaded by a device.
+     * <p>
+     * If a mapping service is not configured for a gateway or a protocol adapter, this method returns
+     * a successful future containing the original device payload and target address. If a mapping service is configured for a gateway
+     * or a protocol adapter and the mapping service returns a 200 OK HTTP status code, then this method returns a successful
+     * future containing the mapped payload.
+     * <p>
+     * For all other 2XX HTTP status codes, this method returns a mapped message containing the original device payload and 
+     * target address. In all other cases, this method returns a failed future with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      *
-     * @param ctx The context in which the message has been uploaded.
-     * @param targetAddress The downstream address that the message will be forwarded to.
+     * @param ctx              The context in which the message has been uploaded.
+     * @param targetAddress    The downstream address that the message will be forwarded to.
      * @param registrationInfo The information included in the registration assertion for
      *                         the authenticated device that has uploaded the message.
-     * @return A future indicating the outcome of the operation.
-     *         The future will be completed with the mapped message or failed with
-     *         a {@link org.eclipse.hono.client.ServiceInvocationException} if the
-     *         message could not be mapped.
+     * @return                 A successful future containing either the mapped message or {@code null} if no mapper is configured.
+     *                         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if the
+     *                         message could not be mapped.
+     *
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     Future<MappedMessage> mapMessage(

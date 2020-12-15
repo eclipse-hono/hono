@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -31,6 +32,7 @@ import java.util.Map;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
@@ -198,6 +200,42 @@ public class HttpBasedMessageMappingTest {
         final MultiMap addedHeaders = headersCaptor.getValue();
         assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals(topic));
         assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text/plain"));
+    }
+
+    /**
+     * Verifies that the mapper returns a failed future with a ServiceInvocatoonException if the mapper has been configured
+     * for an adapter but the remote service returns a 403 status code indicating that the device payload cannot be mapped.
+     *
+     * @param ctx   The Vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testMappingFailsForWhenPayloadCannotMapped(final VertxTestContext ctx) {
+        config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
+
+        final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
+
+        final HttpResponse<Buffer> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+
+        when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, "mqtt-topic");
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
+        messageMapping.mapMessage(context, targetAddress, assertion)
+        .onComplete(ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ServiceInvocationException.class);
+                assertThat((((ServiceInvocationException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
+            });
+            ctx.completeNow();
+        }));
+
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(httpRequest).sendBuffer(any(Buffer.class), handlerCaptor.capture());
+        handlerCaptor.getValue().handle(Future.succeededFuture(httpResponse));
     }
 
     private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
