@@ -23,7 +23,7 @@ import org.eclipse.hono.adapter.mqtt.MappedMessage;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -46,10 +46,9 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
 /**
- * A message mapper that calls out to a service implementation using HTTP.
+ * A message mapper that invokes a service implementation via HTTP(S).
  * <p>
- * This component requests mapping from another server over HTTP(S) if this
- * is configured properly. The headers are overwritten with the result of the mapper (which includes the resourceId).
+ * The headers are overwritten with the result of the mapper (which includes the resourceId).
  * E.g.: when the deviceId is in the payload of the message, the deviceId can be deducted in the custom mapper and
  * the payload can be changed accordingly to the payload originally received by the gateway.
  */
@@ -61,20 +60,42 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
     private final MqttProtocolAdapterProperties mqttProtocolAdapterProperties;
 
     /**
-     * Constructs the messageMapping client used to call external/custom messageMapping.
+     * Creates a new service for a web client and configuration properties.
      *
-     * @param webClient Vert.x webclient to use in the messageMapping.
-     * @param mqttProtocolAdapterProperties The configuration properties of the mqtt protocol adapter used to look up
-     *                                     mapper configurations.
+     * @param webClient The web client to use for invoking the mapper endpoint.
+     * @param protocolAdapterConfig The configuration properties of the MQTT protocol
+     *                              adapter used to look up mapper configurations.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public HttpBasedMessageMapping(
             final WebClient webClient,
-            final MqttProtocolAdapterProperties mqttProtocolAdapterProperties) {
+            final MqttProtocolAdapterProperties protocolAdapterConfig) {
 
         this.webClient = Objects.requireNonNull(webClient);
-        this.mqttProtocolAdapterProperties = Objects.requireNonNull(mqttProtocolAdapterProperties);
+        this.mqttProtocolAdapterProperties = Objects.requireNonNull(protocolAdapterConfig);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation tries to look up the URL of the service endpoint to invoke in the
+     * adapter's <em>mapperEndpoints</em> using the value of the registration assertion's
+     * <em>mapper</em> property as the key.
+     * If a mapping endpoint configuration is found, an HTTP GET request is sent to the endpoint
+     * containing the original message's
+     * <ul>
+     * <li>payload in the request body,</li>
+     * <li>content type in the HTTP content-type header,</li>
+     * <li>topic name in the {@value MessageHelper#APP_PROPERTY_ORIG_ADDRESS} header and</li>
+     * <li>all properties from the registration assertion as headers.</li>
+     * </ul>
+     *
+     * @return A future indicating the mapping result.
+     *         The future will be succeeded with the original unaltered message if no mapping
+     *         URL could be found. The future will be succeeded with the message contained in the
+     *         response body if the returned status code is 200.
+     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     */
     @Override
     public Future<MappedMessage> mapMessage(
             final MqttContext ctx,
@@ -132,8 +153,11 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
             .ssl(mapperEndpoint.isTlsEnabled())
             .sendBuffer(ctx.message().payload(), httpResponseAsyncResult -> {
                 if (httpResponseAsyncResult.failed()) {
-                    LOG.debug("mapping of message published by {} failed", ctx.authenticatedDevice(), httpResponseAsyncResult.cause());
-                    result.fail(new ServiceInvocationException(HttpURLConnection.HTTP_INTERNAL_ERROR, httpResponseAsyncResult.cause()));
+                    LOG.debug("failed to map message [origin: {}] using mapping service [host: {}, port: {}, URI: {}]",
+                            ctx.authenticatedDevice(),
+                            mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri(),
+                            httpResponseAsyncResult.cause());
+                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, httpResponseAsyncResult.cause()));
                 } else {
                     final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
                     if (httpResponse.statusCode() == HttpURLConnection.HTTP_OK) {
@@ -152,13 +176,11 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                                 httpResponse.bodyAsBuffer(),
                                 additionalProperties));
                     } else {
-                        if (httpResponse.statusCode() > 200 && httpResponse.statusCode() < 300) {
-                            result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
-                        } else {
-                            result.fail(new ServiceInvocationException(httpResponse.statusCode(),
-                                    String.format("Payload mapping failed [DeviceId=%s, StatusCode=%s]",
-                                                targetAddress.getResourceId(), httpResponse.statusCode())));
-                        }
+                        LOG.debug("mapping service [host: {}, port: {}, URI: {}] returned unexpected status code: {}",
+                                mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri(),
+                                httpResponse.statusCode());
+                        result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "could not invoke configured mapping service"));
                     }
                 }
                 resultHandler.handle(result.future());

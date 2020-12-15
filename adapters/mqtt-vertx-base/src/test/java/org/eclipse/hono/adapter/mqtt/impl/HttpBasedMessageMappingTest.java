@@ -32,7 +32,7 @@ import java.util.Map;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
@@ -203,7 +203,7 @@ public class HttpBasedMessageMappingTest {
     }
 
     /**
-     * Verifies that the mapper returns a failed future with a ServiceInvocatoonException if the mapper has been configured
+     * Verifies that the mapper returns a failed future with a ServerErrorException if the mapper has been configured
      * for an adapter but the remote service returns a 403 status code indicating that the device payload cannot be mapped.
      *
      * @param ctx   The Vert.x test context.
@@ -211,6 +211,7 @@ public class HttpBasedMessageMappingTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testMappingFailsForWhenPayloadCannotMapped(final VertxTestContext ctx) {
+
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
 
@@ -225,13 +226,13 @@ public class HttpBasedMessageMappingTest {
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
         messageMapping.mapMessage(context, targetAddress, assertion)
-        .onComplete(ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ServiceInvocationException.class);
-                assertThat((((ServiceInvocationException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-            });
-            ctx.completeNow();
-        }));
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                });
+                ctx.completeNow();
+            }));
 
         final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(httpRequest).sendBuffer(any(Buffer.class), handlerCaptor.capture());

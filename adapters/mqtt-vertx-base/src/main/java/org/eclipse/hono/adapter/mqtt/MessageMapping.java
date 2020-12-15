@@ -20,10 +20,8 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import io.vertx.core.Future;
 
 /**
- * This component requests mapping from another server if configured properly. The
- * headers are overwritten with the result of the mapper (which includes the resourceId).
- * E.g.: when the deviceId is in the payload of the message, the deviceId can be deducted in the custom mapper and
- * the payload can be changed accordingly to the payload originally received by the gateway.
+ * A service for processing messages uploaded by devices before they are being
+ * forwarded downstream.
  *
  * @param <T> The type of execution context supported by this mapping service.
  */
@@ -44,10 +42,9 @@ public interface MessageMapping<T extends ExecutionContext> {
      * @param targetAddress    The downstream address that the message will be forwarded to.
      * @param registrationInfo The information included in the registration assertion for
      *                         the authenticated device that has uploaded the message.
-     * @return                 A successful future containing either the mapped message or {@code null} if no mapper is configured.
-     *                         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if the
-     *                         message could not be mapped.
-     *
+     * @return                 A successful future containing the mapped message.
+     *                         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *                         if the message could not be mapped.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     Future<MappedMessage> mapMessage(
