@@ -38,8 +38,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -56,7 +54,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -69,8 +66,6 @@ public class AutoProvisioner implements Lifecycle {
     private Tracer tracer = NoopTracerFactory.create();
 
     private DeviceManagementService deviceManagementService;
-
-    private DeviceRegistrationInformationService deviceRegistrationInformationService;
 
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
@@ -143,18 +138,6 @@ public class AutoProvisioner implements Lifecycle {
     @Autowired
     public void setDeviceManagementService(final DeviceManagementService deviceManagementService) {
         this.deviceManagementService = Objects.requireNonNull(deviceManagementService);
-    }
-
-    /**
-     * Sets the {@link DeviceRegistrationInformationService} to use.
-     *
-     * @param deviceRegistrationInformationService The service to set.
-     *
-     * @throws NullPointerException if the service is {@code null}.
-     */
-    @Autowired
-    public void setDeviceRegistrationInformationService(final DeviceRegistrationInformationService deviceRegistrationInformationService) {
-        this.deviceRegistrationInformationService = Objects.requireNonNull(deviceRegistrationInformationService);
     }
 
     /**
@@ -258,7 +241,7 @@ public class AutoProvisioner implements Lifecycle {
      *
      * @throws NullPointerException if any argument except deviceId is {@code null}.
      */
-    public Future<JsonObject> performAutoProvisioning(final String tenantId, final String deviceId,
+    public Future<Device> performAutoProvisioning(final String tenantId, final String deviceId,
             final String gatewayId, final Device device, final SpanContext spanContext) {
 
         Objects.requireNonNull(tenantId);
@@ -291,13 +274,20 @@ public class AutoProvisioner implements Lifecycle {
                         span.log("device already exists");
                         LOG.debug("device [{}] for gateway [{}] already created by concurrent auto-provisioning [tenant-id: {}]",
                                 deviceId, gatewayId, tenantId);
-                        return deviceRegistrationInformationService
-                                .getRegistrationInformation(DeviceKey.from(TenantKey.from(tenantId), deviceId), span)
-                                .compose(assertRegistrationResult -> {
-                                    final JsonObject deviceData = assertRegistrationResult.getPayload()
-                                            .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
+                        return deviceManagementService.readDevice(tenantId, deviceId, span)
+                                .compose(readDeviceResult -> {
+                                    if (!readDeviceResult.isOk()) {
+                                        span.log("reading device after conflict failed");
+                                        LOG.warn("reading device after conflict failed for device [{}] of gateway [{}] of tenant [tenant-id: {}]: status: {}",
+                                                deviceId, gatewayId, tenantId, readDeviceResult.getStatus());
+                                        return Future.failedFuture(StatusCodeMapper.from(readDeviceResult.getStatus(),
+                                                String.format("reading device after conflict failed (status %d)",
+                                                        readDeviceResult.getStatus())));
+                                    }
+
+                                    final Device readDevice = readDeviceResult.getPayload();
                                     // ensure that a notification event gets sent (even if we might send duplicate events)
-                                    return sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, deviceData, span).map(deviceData);
+                                    return sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, readDevice, span).map(readDevice);
                                 });
                     }
 
@@ -305,22 +295,20 @@ public class AutoProvisioner implements Lifecycle {
                     LOG.trace("device [{}] for gateway [{}] successfully created by auto-provisioning [tenant-id: {}]",
                             deviceId, gatewayId, tenantId);
                     return sendAutoProvisioningEvent(tenantId, deviceId, gatewayId, span)
-                            .compose(sendEmptyEventOk -> deviceRegistrationInformationService
-                                    .getRegistrationInformation(DeviceKey.from((TenantKey.from(tenantId)), deviceId), span)
-                                    .compose(deviceRegistrationData -> {
-                                        if (!deviceRegistrationData.isOk()) {
+                            .compose(sendEmptyEventOk -> deviceManagementService.readDevice(tenantId, deviceId, span)
+                                    .compose(readDeviceResult -> {
+                                        if (!readDeviceResult.isOk()) {
                                             span.log("update of notification flag failed");
                                             LOG.warn("notification flag of device [{}] for gateway [{}] of tenant [tenant-id: {}] could not be updated",
                                                     deviceId, gatewayId, tenantId);
                                             return Future.failedFuture(
-                                                    StatusCodeMapper.from(deviceRegistrationData.getStatus(),
+                                                    StatusCodeMapper.from(readDeviceResult.getStatus(),
                                                             String.format(
                                                                     "update of notification flag failed (status %d)",
-                                                                    deviceRegistrationData.getStatus())));
+                                                                    readDeviceResult.getStatus())));
                                         }
 
-                                        final JsonObject deviceData = deviceRegistrationData.getPayload()
-                                                .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
+                                        final Device deviceData = readDeviceResult.getPayload();
                                         return setAutoProvisioningNotificationSent(tenantId, deviceId, deviceData, span)
                                                 .map(deviceData);
                                     }));
@@ -335,7 +323,7 @@ public class AutoProvisioner implements Lifecycle {
      * @param tenantId The id of the tenant for which the edge device should be provisioned.
      * @param deviceId The id of the edge device which should be provisioned.
      * @param gatewayId The id of the edge device's gateway.
-     * @param deviceData The data of the edge device.
+     * @param device The data of the edge device.
      * @param span The span to be used for tracing this operation.
      *
      * @return A future indicating the outcome of the operation.
@@ -345,14 +333,14 @@ public class AutoProvisioner implements Lifecycle {
      * @see AutoProvisionerConfigProperties#DEFAULT_RETRY_EVENT_SENDING_DELAY
      */
     public Future<Void> sendDelayedAutoProvisioningNotificationIfNeeded(final String tenantId,
-            final String deviceId, final String gatewayId, final JsonObject deviceData, final Span span) {
+            final String deviceId, final String gatewayId, final Device device, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
-        Objects.requireNonNull(deviceData);
+        Objects.requireNonNull(device);
         Objects.requireNonNull(span);
 
-        if (!wasDeviceAutoProvisioned(deviceData) || wasAutoProvisioningNotificationSent(deviceData)) {
+        if (!wasDeviceAutoProvisioned(device) || wasAutoProvisioningNotificationSent(device)) {
             // nothing to do
             return Future.succeededFuture();
         }
@@ -365,25 +353,24 @@ public class AutoProvisioner implements Lifecycle {
         final DeviceKey deviceKey = DeviceKey.from(TenantKey.from(tenantId), deviceId);
         final Promise<Void> resultPromise = Promise.promise();
         vertx.setTimer(config.getRetryEventSendingDelay(), tid -> {
-            deviceRegistrationInformationService.getRegistrationInformation(deviceKey, span)
-                    .compose(assertRegistrationResult -> {
-                        if (!assertRegistrationResult.isOk()) {
+            deviceManagementService.readDevice(tenantId, deviceId, span)
+                    .compose(readDeviceResult -> {
+                        if (!readDeviceResult.isOk()) {
                             span.log("sending of delayed notification failed");
                             LOG.warn("sending of delayed for device [{}] of gateway [{}] of tenant [tenant-id: {}] failed: status: {}",
-                                    deviceId, gatewayId, tenantId, assertRegistrationResult.getStatus());
-                            return Future.failedFuture(StatusCodeMapper.from(assertRegistrationResult.getStatus(),
+                                    deviceId, gatewayId, tenantId, readDeviceResult.getStatus());
+                            return Future.failedFuture(StatusCodeMapper.from(readDeviceResult.getStatus(),
                                     String.format("sending of delayed notification failed (status %d)",
-                                            assertRegistrationResult.getStatus())));
+                                            readDeviceResult.getStatus())));
                         }
 
-                        final JsonObject newDeviceData = assertRegistrationResult.getPayload()
-                                .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
-                        if (!wasAutoProvisioningNotificationSent(newDeviceData)) {
+                        final Device readDevice = readDeviceResult.getPayload();
+                        if (!wasAutoProvisioningNotificationSent(readDevice)) {
                             LOG.debug("sending auto-provisioning event - notificationSent flag wasn't updated in between [tenant-id: {}, device-id: {}]",
                                     tenantId, deviceId);
                             span.log("sending event - notificationSent flag wasn't updated in between");
                             return sendAutoProvisioningEvent(tenantId, deviceId, gatewayId, span)
-                                    .compose(ok -> setAutoProvisioningNotificationSent(tenantId, deviceId, newDeviceData, span))
+                                    .compose(ok -> setAutoProvisioningNotificationSent(tenantId, deviceId, readDevice, span))
                                     .mapEmpty();
                         } else {
                             LOG.debug("no need to send auto-provisioning event, notificationSent flag was set in between [tenant-id: {}, device-id: {}]",
@@ -396,21 +383,17 @@ public class AutoProvisioner implements Lifecycle {
         return resultPromise.future();
     }
 
-    private boolean wasDeviceAutoProvisioned(final JsonObject registrationData) {
-        return registrationData.getJsonObject(RegistryManagementConstants.FIELD_STATUS, new JsonObject())
-                .getBoolean(RegistrationConstants.FIELD_AUTO_PROVISIONED, Boolean.FALSE);
+    private boolean wasDeviceAutoProvisioned(final Device registrationData) {
+        return registrationData.getStatus().isAutoProvisioned();
     }
 
-    private boolean wasAutoProvisioningNotificationSent(final JsonObject registrationData) {
-        return registrationData.getJsonObject(RegistryManagementConstants.FIELD_STATUS, new JsonObject())
-                .getBoolean(RegistrationConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, Boolean.FALSE);
+    private boolean wasAutoProvisioningNotificationSent(final Device registrationData) {
+        return registrationData.getStatus().isAutoProvisioningNotificationSent();
     }
 
     private Future<OperationResult<Id>> setAutoProvisioningNotificationSent(final String tenantId,
-            final String deviceId, final JsonObject deviceJson, final Span span) {
-        final Device device = deviceJson.mapTo(Device.class)
-                .setStatus(new DeviceStatus()
-                        .setAutoProvisioningNotificationSent(true));
+            final String deviceId, final Device device, final Span span) {
+        device.setStatus(new DeviceStatus().setAutoProvisioningNotificationSent(true));
         return deviceManagementService.updateDevice(tenantId, deviceId, device, Optional.empty(), span)
                 .map(opResult -> {
                     if (opResult.isError()) {

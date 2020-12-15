@@ -43,7 +43,7 @@ public class RegistrationServiceImpl extends AbstractRegistrationService {
     }
 
     @Override
-    public Future<RegistrationResult> getRegistrationInformation(final DeviceKey deviceKey, final Span span) {
+    protected Future<RegistrationResult> getRegistrationInformation(final DeviceKey deviceKey, final Span span) {
 
         return this.store
                 .readDevice(deviceKey, span.context())

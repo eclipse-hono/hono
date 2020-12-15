@@ -51,7 +51,7 @@ import io.vertx.core.json.JsonObject;
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
  */
-public abstract class AbstractRegistrationService implements RegistrationService, DeviceRegistrationInformationService, Lifecycle {
+public abstract class AbstractRegistrationService implements RegistrationService, Lifecycle {
 
     /**
      * The default number of seconds that information returned by this service's operations may be cached for.
@@ -125,6 +125,29 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(autoProvisioner);
         this.autoProvisioner = autoProvisioner;
     }
+
+    /**
+     * Gets device registration data by device ID.
+     *
+     * @param deviceKey The ID of the device to get registration data for.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation. The <em>status</em> will be
+     *            <ul>
+     *            <li><em>200 OK</em>, if a device with the given ID is registered for the tenant.<br>
+     *            The <em>payload</em> will contain a JSON object with the following properties:
+     *              <ul>
+     *              <li><em>device-id</em> - the device identifier</li>
+     *              <li><em>data</em> - the information registered for the device, i.e. the registered
+     *                  {@link org.eclipse.hono.service.management.device.Device}</li>
+     *              </ul>
+     *            </li>
+     *            <li><em>404 Not Found</em>, if no device with the given identifier is registered for the tenant.</li>
+     *            </ul>
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected abstract Future<RegistrationResult> getRegistrationInformation(DeviceKey deviceKey, Span span);
 
     /**
      * Takes the 'viaGroups' list of a device and resolves all group ids with the ids of the devices that are
@@ -277,7 +300,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
                                     LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
                                     return autoProvisioner.performAutoProvisioning(tenantId, deviceId, gatewayId, device, span.context())
-                                            .compose(deviceData -> createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span));
+                                            .compose(newDevice -> {
+                                                final JsonObject deviceData = JsonObject.mapFrom(newDevice);
+                                                return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                                            });
 
                                 } else if (!isDeviceEnabled(deviceResult)) {
                                     if (deviceResult.isNotFound()) {
@@ -311,7 +337,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
                                     if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
                                         if (supportsAutoProvisioning()) {
-                                            return autoProvisioner.sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, deviceData, span)
+                                            final Device device = deviceData.mapTo(Device.class);
+                                            return autoProvisioner.sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, device, span)
                                                     .compose(v -> createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span));
                                         } else {
                                             return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
