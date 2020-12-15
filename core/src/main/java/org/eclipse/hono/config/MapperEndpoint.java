@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.config;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Objects;
 
 /**
@@ -77,9 +79,14 @@ public final class MapperEndpoint {
      *
      * @param uri The uri.
      * @throws NullPointerException if uri is {@code null}.
+     * @throws IllegalArgumentException if the URI cannot be parsed to a URI referenced as specified in RFC&nbsp;2396.
      */
     public void setUri(final String uri) {
-        this.uri = Objects.requireNonNull(uri);
+        Objects.requireNonNull(uri);
+        if (!isUriValid(uri)) {
+            throw new IllegalArgumentException("Invalid mapper URI");
+        }
+        this.uri = uri;
     }
 
     /**
@@ -118,10 +125,20 @@ public final class MapperEndpoint {
      */
     public static MapperEndpoint from(final String host, final int port, final String uri, final boolean tlsEnabled) {
         final MapperEndpoint ep = new MapperEndpoint();
-        ep.host = host;
-        ep.port = port;
-        ep.uri = uri;
-        ep.tlsEnabled = tlsEnabled;
+        ep.setHost(host);
+        ep.setPort(port);
+        ep.setUri(uri);
+        ep.setTlsEnabled(tlsEnabled);
         return ep;
     }
+
+    private boolean isUriValid(final String uri) {
+        try {
+            new URI(uri);
+            return true;
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
+
 }

@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +23,7 @@ import org.eclipse.hono.adapter.mqtt.MappedMessage;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -42,7 +44,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 
 /**
  * A message mapper that calls out to a service implementation using HTTP.
@@ -129,28 +130,36 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
             .putHeaders(headers)
             .ssl(mapperEndpoint.isTlsEnabled())
-            .expect(ResponsePredicate.SC_OK)
             .sendBuffer(ctx.message().payload(), httpResponseAsyncResult -> {
-                if (httpResponseAsyncResult.succeeded()) {
-                    final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
-
-                    final Map<String, String> additionalProperties = new HashMap<>();
-                    httpResponse.headers().forEach(entry -> additionalProperties.put(entry.getKey(), entry.getValue()));
-
-                    final String mappedDeviceId = Optional.ofNullable(additionalProperties.remove(MessageHelper.APP_PROPERTY_DEVICE_ID))
-                            .map(id -> {
-                                LOG.debug("original {} has been mapped to [device-id: {}]", ctx.authenticatedDevice(), id);
-                                return id;
-                            })
-                            .orElseGet(() -> targetAddress.getResourceId());
-
-                    result.complete(new MappedMessage(
-                            ResourceIdentifier.from(targetAddress.getEndpoint(), targetAddress.getTenantId(), mappedDeviceId),
-                            httpResponse.bodyAsBuffer(),
-                            additionalProperties));
-                } else {
+                if (httpResponseAsyncResult.failed()) {
                     LOG.debug("mapping of message published by {} failed", ctx.authenticatedDevice(), httpResponseAsyncResult.cause());
-                    result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
+                    result.fail(new ServiceInvocationException(HttpURLConnection.HTTP_INTERNAL_ERROR, httpResponseAsyncResult.cause()));
+                } else {
+                    final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
+                    if (httpResponse.statusCode() == HttpURLConnection.HTTP_OK) {
+                        final Map<String, String> additionalProperties = new HashMap<>();
+                        httpResponse.headers().forEach(entry -> additionalProperties.put(entry.getKey(), entry.getValue()));
+
+                        final String mappedDeviceId = Optional.ofNullable(additionalProperties.remove(MessageHelper.APP_PROPERTY_DEVICE_ID))
+                                .map(id -> {
+                                    LOG.debug("original {} has been mapped to [device-id: {}]", ctx.authenticatedDevice(), id);
+                                    return id;
+                                })
+                                .orElseGet(() -> targetAddress.getResourceId());
+
+                        result.complete(new MappedMessage(
+                                ResourceIdentifier.from(targetAddress.getEndpoint(), targetAddress.getTenantId(), mappedDeviceId),
+                                httpResponse.bodyAsBuffer(),
+                                additionalProperties));
+                    } else {
+                        if (httpResponse.statusCode() > 200 && httpResponse.statusCode() < 300) {
+                            result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
+                        } else {
+                            result.fail(new ServiceInvocationException(httpResponse.statusCode(),
+                                    String.format("Payload mapping failed [DeviceId=%s, StatusCode=%s]",
+                                                targetAddress.getResourceId(), httpResponse.statusCode())));
+                        }
+                    }
                 }
                 resultHandler.handle(result.future());
             });
