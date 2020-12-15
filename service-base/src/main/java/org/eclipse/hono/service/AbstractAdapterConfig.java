@@ -727,7 +727,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public ClientConfigProperties commandConsumerFactoryConfig() {
         final ClientConfigProperties config = Optional.ofNullable(getCommandConsumerFactoryConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Command & Control");
+        setConfigServerRoleIfUnknown(config, "Command_Control");
         setDefaultConfigNameIfNotSet(config);
         return config;
     }

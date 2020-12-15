@@ -82,7 +82,9 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
 
         // the container id contains a UUID therefore it can be used as a unique adapter instance id
-        adapterInstanceId = connection.getContainerId();
+        //NOTE: the spaces in adapter instance id are replaced with underscore as the kafka topics doesn't allow it.
+        //TODO: to find a generic solution for the above.
+        adapterInstanceId = connection.getContainerId().replaceAll(" ", "_");
         adapterInstanceCommandHandler = new AdapterInstanceCommandHandler(connection.getTracer(), adapterInstanceId);
     }
 
