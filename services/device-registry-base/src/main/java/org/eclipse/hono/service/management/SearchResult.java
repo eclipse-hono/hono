@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -48,7 +48,7 @@ public final class SearchResult<T> {
         Objects.requireNonNull(result);
 
         this.total = total;
-        this.result = new ArrayList<>(result);
+        this.result = Collections.unmodifiableList(result);
     }
 
     /**
