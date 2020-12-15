@@ -13,6 +13,8 @@
 package org.eclipse.hono.deviceregistry.service.tenant;
 
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -41,5 +43,25 @@ public interface TenantInformationService {
      *            </ul>
      */
      Future<Result<TenantKey>> tenantExists(String tenantId, Span span);
+
+    /**
+     * Gets the tenant identified by the given id.
+     *
+     * @param tenantId The id identifying the tenant to obtain, must not be {@code null}.
+     * @param span The active OpenTracing span for this operation, must not be {@code null}.
+     *            It is not to be closed in this method! An implementation should log (error) events on this span and
+     *            it may set tags and use this span as the parent for any spans created in this method.
+     *
+     * @return A future indicating the outcome of the operation.
+     *             The <em>status</em> will be
+     *             <ul>
+     *             <li><em>200 OK</em> if a tenant with the given ID is registered.
+     *             The <em>payload</em> will contain the tenant's configuration information.</li>
+     *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
+     *             </ul>
+     *
+     * @throws NullPointerException if any argument is {@code null}.
+     */
+     Future<TenantResult<TenantObject>> getTenant(String tenantId, Span span);
 
 }

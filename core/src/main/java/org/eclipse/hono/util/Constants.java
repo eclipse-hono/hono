@@ -77,6 +77,10 @@ public final class Constants {
      * The type of the sigfox protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_SIGFOX = "hono-sigfox";
+    /**
+     * The type of the protocol adapter which actually denotes the device registry.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY = "hono-device-registry";
 
     /**
      * The (short) name of the Auth Server component.

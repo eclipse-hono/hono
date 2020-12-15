@@ -988,6 +988,14 @@ components:
                description: |
                   The IDs of the gateway groups that this device is a member of.
                   Note that neither "via" nor "viaGroups" must be set if "memberOf" is set.
+            "authorities":
+               type: array
+               items:
+                  type: string
+               description: |
+                  The authorities granted to a device. Applies to gateways only currently: the authority
+                  `auto-provisioning-enabled` entitles a gateway device to perform auto-provisioning for its
+                  edge devices.
             "mapper":
                type: string
                description: |

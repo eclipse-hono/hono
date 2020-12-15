@@ -26,10 +26,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public final class DeviceStatus extends Status<DeviceStatus> {
 
-    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
     private Boolean autoProvisioned;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
     private Boolean autoProvisioningNotificationSent;
 
     /**
@@ -39,6 +37,7 @@ public final class DeviceStatus extends Status<DeviceStatus> {
      *
      * @return {@code true} if this device was auto-provisioned.
      */
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
     public boolean isAutoProvisioned() {
         return Optional.ofNullable(autoProvisioned).orElse(false);
     }
@@ -62,6 +61,7 @@ public final class DeviceStatus extends Status<DeviceStatus> {
      *
      * @return {@code true} if the notification has been sent.
      */
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
     public boolean isAutoProvisioningNotificationSent() {
         return Optional.ofNullable(autoProvisioningNotificationSent).orElse(false);
     }

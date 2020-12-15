@@ -48,7 +48,7 @@ public final class NoopRegistrationService extends AbstractRegistrationService {
      * {@inheritDoc}
      */
     @Override
-    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
+    protected Future<RegistrationResult> getRegistrationInformation(final DeviceKey deviceKey, final Span span) {
         return Future.failedFuture("Not implemented");
     }
 

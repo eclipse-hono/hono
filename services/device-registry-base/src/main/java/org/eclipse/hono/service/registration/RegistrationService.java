@@ -83,6 +83,12 @@ public interface RegistrationService {
      * Implementing classes should verify, that the gateway is authorized to get an assertion for the device.
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
+     * <p>
+     * Also they may perform an automatic provisioning of edge devices, if the gateway which sends telemetry on
+     * behalf of the edge device has the corresponding authority, i.e. the registration data of the device has
+     * a field with name {@link org.eclipse.hono.util.RegistryManagementConstants#FIELD_AUTHORITIES} which is an array
+     * containing at least the value
+     * {@link org.eclipse.hono.util.RegistryManagementConstants#AUTHORITY_AUTO_PROVISIONING_ENABLED}.
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
@@ -113,6 +119,12 @@ public interface RegistrationService {
      * Implementing classes should verify, that the gateway is authorized to get an assertion for the device.
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
+     * <p>
+     * Also they may perform an automatic provisioning of edge devices, if the gateway which sends telemetry on
+     * behalf of the edge device has the corresponding authority, i.e. the registration data of the device has
+     * a field with name {@link org.eclipse.hono.util.RegistryManagementConstants#FIELD_AUTHORITIES} which is an array
+     * containing at least the value
+     * {@link org.eclipse.hono.util.RegistryManagementConstants#AUTHORITY_AUTO_PROVISIONING_ENABLED}.
      * <p>
      * This default implementation simply returns the result of {@link #assertRegistration(String, String, String)}.
      *

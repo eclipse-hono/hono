@@ -14,12 +14,15 @@
 package org.eclipse.hono.service.management.device;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -70,6 +73,10 @@ public class Device {
     @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTHORITIES)
+    @JsonInclude(value = Include.NON_EMPTY)
+    private Set<String> authorities = new HashSet<>();
+
     /**
      * Creates a new Device instance.
      */
@@ -99,6 +106,9 @@ public class Device {
         }
         if (other.memberOf != null) {
             this.memberOf = new ArrayList<>(other.memberOf);
+        }
+        if (other.authorities != null) {
+            this.authorities = new HashSet<>(other.authorities);
         }
         this.mapper = other.mapper;
         this.status = other.status;
@@ -301,5 +311,26 @@ public class Device {
      */
     public final DeviceStatus getStatus() {
         return status;
+    }
+
+    /**
+     * Sets the authorities granted to this device.
+     *
+     * @param authorities The device's authorities.
+     *
+     * @return A reference to this for fluent use.
+     */
+    public final Device setAuthorities(final Set<String> authorities) {
+        this.authorities = new HashSet<>(authorities);
+        return this;
+    }
+
+    /**
+     * Gets the authorities granted to this device.
+     *
+     * @return The device's authorities.
+     */
+    public final Set<String> getAuthorities() {
+        return Collections.unmodifiableSet(authorities);
     }
 }
