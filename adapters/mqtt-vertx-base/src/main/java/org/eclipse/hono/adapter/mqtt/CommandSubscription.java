@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -81,8 +82,16 @@ public final class CommandSubscription {
         this.req = resource.elementAt(3);
 
         this.isAuthenticated = authenticatedDevice != null;
-        this.authenticatedDeviceId = authenticatedDevice != null ? authenticatedDevice.getDeviceId() : null;
-        if (authenticatedDevice == null) {
+
+        if (isAuthenticated) {
+            if (resourceTenant != null && !authenticatedDevice.getTenantId().equals(resourceTenant)) {
+                throw new IllegalArgumentException(
+                        "tenant in topic filter does not match authenticated device");
+            }
+            this.tenant = authenticatedDevice.getTenantId();
+            this.authenticatedDeviceId = authenticatedDevice.getDeviceId();
+            this.deviceId = Strings.isNullOrEmpty(resourceDeviceId) ? authenticatedDevice.getDeviceId() : resourceDeviceId;
+        } else {
             if (Strings.isNullOrEmpty(resourceTenant)) {
                 throw new IllegalArgumentException(
                         "for unauthenticated devices the tenant needs to be given in the subscription");
@@ -92,14 +101,8 @@ public final class CommandSubscription {
                         "for unauthenticated devices the device-id needs to be given in the subscription");
             }
             this.tenant = resourceTenant;
+            this.authenticatedDeviceId = null;
             this.deviceId = resourceDeviceId;
-        } else {
-            if (resourceTenant != null && !authenticatedDevice.getTenantId().equals(resourceTenant)) {
-                throw new IllegalArgumentException(
-                        "tenant in topic filter does not match authenticated device");
-            }
-            this.tenant = authenticatedDevice.getTenantId();
-            this.deviceId = Strings.isNullOrEmpty(resourceDeviceId) ? authenticatedDevice.getDeviceId() : resourceDeviceId;
         }
     }
 
@@ -107,6 +110,46 @@ public final class CommandSubscription {
         this(topic, authenticatedDevice);
         this.qos = qos;
         this.clientId = clientId;
+    }
+
+    /**
+     * Creates a command subscription object for the given topic. When the authenticated device is given
+     * it is used to either check given tenant and device-id from topic or fill this
+     * fields if not given.
+     *
+     * @param topic The topic to subscribe for commands.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if topic is {@code null}.
+     */
+    public static CommandSubscription fromTopic(final String topic, final Device authenticatedDevice) {
+        try {
+            return new CommandSubscription(topic, authenticatedDevice);
+        } catch (final IllegalArgumentException e) {
+            LOG.debug(e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Creates a command subscription object for the given topic. When the authenticated device is given
+     * it is used to either check given tenant and device-id from topic or fill this
+     * fields if not given.
+     *
+     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param clientId The client identifier as provided by the remote MQTT client.
+     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if topic is {@code null}.
+     */
+    public static CommandSubscription fromTopic(final MqttTopicSubscription mqttTopicSub, final Device authenticatedDevice, final String clientId) {
+        try {
+            return new CommandSubscription(mqttTopicSub.topicName(), authenticatedDevice,
+                    mqttTopicSub.qualityOfService(), clientId);
+        } catch (final IllegalArgumentException e) {
+            LOG.debug(e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -202,42 +245,31 @@ public final class CommandSubscription {
     }
 
     /**
-     * Creates a command subscription object for the given topic. When the authenticated device is given
-     * it is used to either check given tenant and device-id from topic or fill this
-     * fields if not given.
+     * Gets the name of the topic that a command should be published to.
      *
-     * @param topic The topic to subscribe for commands.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if topic is {@code null}.
+     * @param command The command to publish.
+     * @return The topic name.
      */
-    public static CommandSubscription fromTopic(final String topic, final Device authenticatedDevice) {
-        try {
-            return new CommandSubscription(topic, authenticatedDevice);
-        } catch (final IllegalArgumentException e) {
-            LOG.debug(e.getMessage());
-            return null;
-        }
-    }
+    public String getCommandPublishTopic(final Command command) {
 
-    /**
-     * Creates a command subscription object for the given topic. When the authenticated device is given
-     * it is used to either check given tenant and device-id from topic or fill this
-     * fields if not given.
-     *
-     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param clientId The client identifier as provided by the remote MQTT client.
-     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if topic is {@code null}.
-     */
-    public static CommandSubscription fromTopic(final MqttTopicSubscription mqttTopicSub, final Device authenticatedDevice, final String clientId) {
-        try {
-            return new CommandSubscription(mqttTopicSub.topicName(), authenticatedDevice,
-                    mqttTopicSub.qualityOfService(), clientId);
-        } catch (final IllegalArgumentException e) {
-            LOG.debug(e.getMessage());
-            return null;
-        }
+        // build topic string; examples:
+        // command///req/xyz/light (authenticated device)
+        // command///req//light (authenticated device, one-way)
+        // command/DEFAULT_TENANT/4711/req/xyz/light (unauthenticated device)
+        // command//4712/req/xyz/light (authenticated gateway)
+
+        final String topicTenantId = isAuthenticated() ? "" : getTenant();
+        final String topicDeviceId = command.isTargetedAtGateway() ? command.getOriginalDeviceId()
+                : isAuthenticated() ? "" : getDeviceId();
+        final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
+
+        return String.format(
+                "%s/%s/%s/%s/%s/%s",
+                getEndpoint(),
+                topicTenantId,
+                topicDeviceId,
+                getRequestPart(),
+                topicCommandRequestId,
+                command.getName());
     }
 }

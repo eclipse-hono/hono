@@ -1417,26 +1417,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(cmdSubscriptionsManager);
 
         final Command command = commandContext.getCommand();
-
-        // build topic string; examples:
-        // command///req/xyz/light (authenticated device)
-        // command///req//light (authenticated device, one-way)
-        // command/DEFAULT_TENANT/4711/req/xyz/light (unauthenticated device)
-        // command//4712/req/xyz/light (authenticated gateway)
-
-        final String topicTenantId = subscription.isAuthenticated() ? "" : subscription.getTenant();
-        final String topicDeviceId = command.isTargetedAtGateway() ? command.getOriginalDeviceId()
-                : subscription.isAuthenticated() ? "" : subscription.getDeviceId();
-        final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
-
-        final String publishTopic = String.format(
-                "%s/%s/%s/%s/%s/%s",
-                subscription.getEndpoint(),
-                topicTenantId,
-                topicDeviceId,
-                subscription.getRequestPart(),
-                topicCommandRequestId,
-                command.getName());
+        final String publishTopic = subscription.getCommandPublishTopic(command);
         Tags.MESSAGE_BUS_DESTINATION.set(commandContext.getTracingSpan(), publishTopic);
         TracingHelper.TAG_QOS.set(commandContext.getTracingSpan(), subscription.getQos().name());
 
