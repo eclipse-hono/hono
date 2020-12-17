@@ -274,25 +274,39 @@ The following variables are used:
 
 ### Receiving Commands (authenticated Device)
 
-An authenticated device MUST use the topic filter `command///req/#` to subscribe to commands.
+An authenticated device MUST use the following topic filter for subscribing to commands:
+
+`command/[${tenant-id}]/[${device-id}]/req/#`
+
+Both the tenant and the device ID are optional. If specified, they MUST match the authenticated device's tenant and/or device ID.
+Note that the *authentication identifier* used in the device's credentials is *not* necessarily the same as the device ID.
+
+The protocol adapter will publish commands for the device to the following topic names
+
+* **one-way** `command/${tenant-id}/${device-id}/req//${command}`
+* **request-response** `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
+
+The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
+in the topic filter used for subscribing to commands.
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required authenticated devices to use `command/+/+/req/#` for subscribing to commands.
 This old topic filter is deprecated. Devices MAY still use it until support for it will be removed in a future Hono version.
 {{% /note %}}
 
-**Example**
+**Examples**
+
+The following command can be used to subscribe to commands resulting in command messages being published to a
+topic that does not include tenant nor device ID:
 
 ```sh
 mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command///req/#
 ```
 
-The adapter will then publish *Request/Response* commands for the device to topic `command///req/${req-id}/${command}` and *one-way* commands to topic `command///req//${command}`.
-
-For example, a request/response command with name `setBrightness` from an application might look like this:
+A request/response command with name `setBrightness` from an application might look like this:
 
 ```plaintext
-command///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+command///req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
@@ -301,13 +315,44 @@ command///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 A corresponding *one-way* command might look like this:
 
 ```plaintext
-command///q//setBrightness
+command///req//setBrightness
 {
   "brightness": 79
 }
 ```
 
 Note that the topic in the latter case doesn't contain a request identifier.
+
+The following command can be used to subscribe to commands resulting in command messages being published to a
+topic that includes the tenant ID:
+
+```sh
+mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c/DEFAULT_TENANT//q/#
+```
+
+Note the usage of the abbreviated names (`c` and `q` instead of `command` and `req`) and the inclusion of the tenant ID
+in the topic filter.
+
+A corresponding request/response command with name `setBrightness` from an application might look like this:
+
+```plaintext
+c/DEFAULT_TENANT//q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+{
+  "brightness": 79
+}
+```
+
+A corresponding *one-way* command might look like this:
+
+```plaintext
+c/DEFAULT_TENANT//q//setBrightness
+{
+  "brightness": 79
+}
+```
+
+Note that the topic also includes the abbreviated names and the tenant identifier because the
+topic filter used for subscribing did contain the tenant ID as well.
 
 ### Receiving Commands (unauthenticated Device)
 
@@ -319,12 +364,13 @@ An unauthenticated device MUST use the topic filter `command/${tenant-id}/${devi
 mosquitto_sub -v -t command/DEFAULT_TENANT/4711/req/#
 ```
 
-The adapter will then publish *Request/Response* commands for the device to topic `command/${tenant-id}/${device-id}/req/${req-id}/${command}` and *one-way* commands to topic `command/${tenant-id}/${device-id}/req//${command}`.
+The adapter will then publish *Request/Response* commands for the device to topic `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
+and *one-way* commands to topic `command/${tenant-id}/${device-id}/req//${command}`.
 
 For example, a request/response command with name `setBrightness` from an application might look like this:
 
 ```plaintext
-command/DEFAULT_TENANT/4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+command/DEFAULT_TENANT/4711/req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
@@ -333,7 +379,7 @@ command/DEFAULT_TENANT/4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBright
 A corresponding *one-way* command might look like this:
 
 ```plaintext
-command/DEFAULT_TENANT/4711/q//setBrightness
+command/DEFAULT_TENANT/4711/req//setBrightness
 {
   "brightness": 79
 }
@@ -346,9 +392,21 @@ Note that the topic in the latter case doesn't contain a request identifier.
 
 *Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details.
 
-An authenticated gateway MUST use the topic filter `command//+/req/#` to subscribe to commands for all devices in whose behalf it acts.
+An authenticated gateway MUST use one of the following topic filters for subscribing to commands:
 
-To subscribe only to commands for a specific device, an authenticated gateway MUST use the topic filter `command//${device-id}/req/#`.
+| Topic Filter                          | Description                                                                                     |
+| :------------------------------------ | :---------------------------------------------------------------------------------------------- |
+| `command//+/req/#`                      | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
+| `command/${tenant-id}/+/req/#`           | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
+| `command//${device-id}/req/#`            | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
+| `command/${tenant-id}/${device-id}/req/#` | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
+
+The protocol adapter will publish commands for devices to the following topic names
+
+* **one-way** `command//${device-id}/req//${command}` or `command/${tenant-id}/${device-id}/req//${command}`
+* **request-response** `command//${device-id}/req/${req-id}/${command}` or `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
+
+The `${tenant-id}` will be included in the topic name if the tenant ID had been included in the topic filter used for subscribing to commands.
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
@@ -362,38 +420,47 @@ If no device-specific command subscription exists for a command target device, b
 If *multiple* gateways have initiated such generic subscriptions, the protocol adapter may have to decide to which gateway a particular command message will be sent to.
 In case the command target device has already sent a telemetry, event or command response message via a gateway and if that gateway has created such a command subscription, that gateway will be chosen. Otherwise one gateway that may act on behalf of the command target device and that has an open subscription will be chosen randomly to receive the command message.
 
-**Example**
+**Subscribe to all Devices**
 
 A subscription to commands for all devices that a gateway acts on behalf of looks like this:
+
 ```sh
-mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//+/req/#
-```
-A subscription to commands for a specific device can be done like this:
-```sh
-mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//4711/req/#
+mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command/DEFAULT_TENANT/+/req/#
 ```
 
-The adapter will then publish *Request/Response* commands for devices, that the gateway has acted on behalf of, to topic `command//${device-id}/req/${req-id}/${command}` and *one-way* commands to topic `command//${device-id}/req//${command}`.
-
-For example, a request/response command for device `4711` with name `setBrightness` from an application might look like this:
+A request/response command for device `4711` with name `setBrightness` from an application might then look like this:
 
 ```plaintext
-command//4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+command/DEFAULT_TENANT/4711/req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
 ```
+
+Note that the tenant identifier is included in the topic name that the command has been published to because it had been
+included in the topic filter used for subscribing to the commands.
+
+**Subscribe to a specific Device**
+
+A subscription to commands for a specific device can be done like this:
+
+```sh
+mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/q/#
+```
+
+Note the usage of the abbreviated names (`c` and `q` instead of `command` and `req`) in the topic filter.
 
 A corresponding *one-way* command might look like this:
 
 ```plaintext
-command//4711/q//setBrightness
+c//4711/q//setBrightness
 {
   "brightness": 79
 }
 ```
 
-Note that the topic in the latter case doesn't contain a request identifier.
+Note that the topic also includes the abbreviated names and does not include the tenant identifier because the
+topic filter used for subscribing did not contain the tenant ID either.
 
 
 ### Sending a Response to a Command (authenticated Device)
@@ -508,9 +575,9 @@ Also the default *ttl* and *max-ttl* values can be configured for a tenant/devic
 ## Tenant specific Configuration
 
 The adapter uses the [Tenant API]({{< ref "/api/tenant#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-mqtt`.
-The following properties are (currently) supported:
+The following properties are (currently) supported in the *Adapter* object:
 
-| Name               | Type       | Default Value | Description                                                     |
-| :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
-| *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
+| Name                           | Type       | Default Value | Description                                                     |
+| :----------------------------- | :--------- | :------------ | :-------------------------------------------------------------- |
+| *enabled*                      | *boolean*  | `true`        | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
 

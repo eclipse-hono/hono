@@ -2,7 +2,6 @@
 title = "Release Notes"
 +++
 
-
 ## 1.6.0 (not yet released)
 
 ### New Features
@@ -11,6 +10,8 @@ title = "Release Notes"
   This can be enabled by configuring protocol adapters to use Hono's new Kafka-based
   client. Please refer to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration/" %}})
   for details.
+* The MQTT adapter now allows clients to indicate whether they want the target device's tenant and/or device IDs
+  to be included in the topic used when publishing commands.
 
 ## 1.5.0
 
