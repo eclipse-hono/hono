@@ -33,9 +33,9 @@ import io.vertx.mqtt.MqttTopicSubscription;
  * <p>
  * Examples:
  * <ol>
- * <li>{@code command/+/+/req/#} - authenticated device and verbose format</li>
- * <li>{@code c/+/+/q/#} - authenticated device with short format</li>
- * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format</li>
+ * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device</li>
+ * <li>{@code command///req/#} - authenticated device</li>
+ * <li>{@code c///q/#} - authenticated device using short names</li>
  * </ol>
  */
 public final class CommandSubscription {
@@ -48,7 +48,9 @@ public final class CommandSubscription {
     private final String deviceId;
     private final String authenticatedDeviceId;
     private final String topic;
-    private final boolean isAuthenticated;
+    private final boolean authenticated;
+    private final boolean containsTenantId;
+    private final boolean containsDeviceId;
 
     private MqttQoS qos;
     private String clientId;
@@ -78,12 +80,14 @@ public final class CommandSubscription {
         }
         this.endpoint = resource.getEndpoint();
         final String resourceTenant = "+".equals(resource.getTenantId()) ? null : resource.getTenantId();
+        this.containsTenantId = !Strings.isNullOrEmpty(resourceTenant);
         final String resourceDeviceId = "+".equals(resource.getResourceId()) ? null : resource.getResourceId();
+        this.containsDeviceId = !Strings.isNullOrEmpty(resourceDeviceId);
         this.req = resource.elementAt(3);
 
-        this.isAuthenticated = authenticatedDevice != null;
+        this.authenticated = authenticatedDevice != null;
 
-        if (isAuthenticated) {
+        if (isAuthenticated()) {
             if (resourceTenant != null && !authenticatedDevice.getTenantId().equals(resourceTenant)) {
                 throw new IllegalArgumentException(
                         "tenant in topic filter does not match authenticated device");
@@ -142,10 +146,17 @@ public final class CommandSubscription {
      * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
      * @throws NullPointerException if topic is {@code null}.
      */
-    public static CommandSubscription fromTopic(final MqttTopicSubscription mqttTopicSub, final Device authenticatedDevice, final String clientId) {
+    public static CommandSubscription fromTopic(
+            final MqttTopicSubscription mqttTopicSub,
+            final Device authenticatedDevice,
+            final String clientId) {
+
         try {
-            return new CommandSubscription(mqttTopicSub.topicName(), authenticatedDevice,
-                    mqttTopicSub.qualityOfService(), clientId);
+            return new CommandSubscription(
+                    mqttTopicSub.topicName(),
+                    authenticatedDevice,
+                    mqttTopicSub.qualityOfService(),
+                    clientId);
         } catch (final IllegalArgumentException e) {
             LOG.debug(e.getMessage());
             return null;
@@ -231,7 +242,7 @@ public final class CommandSubscription {
      * @return {@code true} if created with an authenticated device.
      */
     public boolean isAuthenticated() {
-        return isAuthenticated;
+        return authenticated;
     }
 
     /**
@@ -249,18 +260,15 @@ public final class CommandSubscription {
      *
      * @param command The command to publish.
      * @return The topic name.
+     * @throws NullPointerException if command is {@code null}.
      */
     public String getCommandPublishTopic(final Command command) {
 
-        // build topic string; examples:
-        // command///req/xyz/light (authenticated device)
-        // command///req//light (authenticated device, one-way)
-        // command/DEFAULT_TENANT/4711/req/xyz/light (unauthenticated device)
-        // command//4712/req/xyz/light (authenticated gateway)
+        Objects.requireNonNull(command);
 
-        final String topicTenantId = isAuthenticated() ? "" : getTenant();
+        final String topicTenantId = containsTenantId ? getTenant() : "";
         final String topicDeviceId = command.isTargetedAtGateway() ? command.getOriginalDeviceId()
-                : isAuthenticated() ? "" : getDeviceId();
+                : containsDeviceId ? getDeviceId() : "";
         final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
 
         return String.format(
