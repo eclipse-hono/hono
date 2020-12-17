@@ -24,7 +24,9 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 

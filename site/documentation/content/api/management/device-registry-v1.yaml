@@ -116,6 +116,30 @@ paths:
                         error: "Root Certificate Authority is already used by other tenant"
                         subject-dn: "CN=devices,OU=iot,O=ACME"
 
+      get:
+         tags:
+            - tenants
+         summary: Search tenants with optional filters, paging and sorting options.
+         operationId: searchTenants
+         parameters:
+            - $ref: '#/components/parameters/pageSize'
+            - $ref: '#/components/parameters/pageOffset'
+            - $ref: '#/components/parameters/filterJson'
+            - $ref: '#/components/parameters/sortJson'
+         responses:
+            200:
+               description: operation successful
+               content:
+                  application/json:
+                     schema:
+                        $ref: '#/components/schemas/SearchTenantsResult'
+            400:
+               $ref: '#/components/responses/MalformedRequest'
+            401:
+               $ref: '#/components/responses/Unauthorized'
+            404:
+               $ref: '#/components/responses/NotFound'                        
+
    /tenants/{tenantId}:
 
       parameters:
@@ -703,6 +727,17 @@ components:
                items:
                   $ref: '#/components/schemas/TrustedCA'
 
+      TenantWithId:
+         type: object
+         additionalProperties: false
+         allOf:
+            - type: object
+              properties:
+                 "id":
+                    description: The identifier of the tenant.
+                    type: string
+            - $ref: '#/components/schemas/Tenant'
+
       TrustedCA:
          type: object
          additionalProperties: false
@@ -1052,6 +1087,20 @@ components:
                readOnly: true
                description: Indicates if downstream consumers have been notified about the newly auto-provisioned
                   entity by means of a corresponding event.
+
+      SearchTenantsResult:
+         type: object
+         description: The result of a search request for tenants.
+         additionalProperties: false
+         properties:
+            "total":
+               type: integer
+               minimum: 0
+               description: The total number of objects in the result set, regardless of the *pageSize* set in query.
+            "result":
+               type: array
+               items:
+                  $ref: '#/components/schemas/TenantWithId'
 
       SearchDevicesResult:
          type: object

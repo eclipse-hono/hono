@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -73,6 +74,39 @@ public class Tenant {
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private List<TrustedCertificateAuthority> trustedCertificateAuthorities;
+
+    /**
+     * Creates a new Tenant instance.
+     */
+    public Tenant() {
+    }
+
+    /**
+     * Creates a new Tenant instance from an existing one.
+     *
+     * @param other The tenant to copy from.
+     * @throws NullPointerException if other tenant is {@code null}.
+     */
+    public Tenant(final Tenant other) {
+        Objects.requireNonNull(other);
+
+        this.enabled = other.enabled;
+        if (other.extensions != null) {
+            this.extensions = new HashMap<>(other.extensions);
+        }
+        if (other.defaults != null) {
+            this.defaults = new HashMap<>(other.defaults);
+        }
+        if (other.adapters != null) {
+            this.adapters = new ArrayList<>(other.adapters);
+        }
+        this.minimumMessageSize = other.minimumMessageSize;
+        this.resourceLimits = other.resourceLimits;
+        this.tracing = other.tracing;
+        if (Objects.nonNull(other.trustedCertificateAuthorities)) {
+            this.trustedCertificateAuthorities = new ArrayList<>(other.trustedCertificateAuthorities);
+        }
+    }
 
     /**
      * Checks if this object contains all required data.
@@ -343,7 +377,7 @@ public class Tenant {
     public Set<X500Principal> getTrustedCertificateAuthoritySubjectDNs() {
 
         return Optional.ofNullable(trustedCertificateAuthorities)
-                .map(list -> list.stream().map(ca -> ca.getSubjectDn()).collect(Collectors.toSet()))
+                .map(list -> list.stream().map(TrustedCertificateAuthority::getSubjectDn).collect(Collectors.toSet()))
                 .orElseGet(Set::of);
     }
 
