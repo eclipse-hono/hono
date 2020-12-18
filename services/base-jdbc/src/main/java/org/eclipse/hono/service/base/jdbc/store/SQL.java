@@ -44,6 +44,7 @@ import io.vertx.ext.sql.SQLConnection;
  * SQL helper methods.
  */
 public final class SQL {
+    public static String DIALECT_POSTGRESQL = "postgresql";
 
     private static final Logger log = LoggerFactory.getLogger(SQL.class);
 

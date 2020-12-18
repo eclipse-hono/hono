@@ -24,7 +24,7 @@ readByTrustAnchor: |
    SELECT
       T.tenant_id as TENANT_ID,
       T.version as VERSION,
-      T.data as DATA,
+      T.data as DATA
    FROM
       %1$s as T
    INNER JOIN

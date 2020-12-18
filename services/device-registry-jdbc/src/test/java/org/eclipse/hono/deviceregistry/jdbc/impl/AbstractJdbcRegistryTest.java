@@ -14,12 +14,19 @@
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
@@ -37,6 +44,8 @@ import org.h2.Driver;
 import org.h2.tools.RunScript;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.testcontainers.containers.JdbcDatabaseContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -47,11 +56,21 @@ import io.vertx.junit5.VertxExtension;
 
 @ExtendWith(VertxExtension.class)
 abstract class AbstractJdbcRegistryTest {
-
+    enum DatabaseType {
+        H2,
+        POSTGRESQL
+    }
     protected static final Span SPAN = NoopSpan.INSTANCE;
 
+    private static final DatabaseType DEFAULT_DATABASE_TYPE = DatabaseType.H2;
+    private static final DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName() + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
+    private static final Map<DatabaseType, JdbcDatabaseContainer<?>> DATABASE_CONTAINER_CACHE = new ConcurrentHashMap<>();
+    private static final String POSTGRESQL_DOCKER_IMAGE = "postgres:12-alpine";
+
+    private static final AtomicLong UNIQUE_ID_GENERATOR = new AtomicLong(System.currentTimeMillis());
+
     private static final Tracer TRACER = NoopTracerFactory.create();
-    private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "sql", "h2");
+    private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "sql", DATABASE_TYPE.name().toLowerCase());
 
     private static final Path BASE_DIR = Path.of("target/data").toAbsolutePath();
 
@@ -65,20 +84,15 @@ abstract class AbstractJdbcRegistryTest {
 
     @BeforeEach
     void startDevices(final Vertx vertx) throws IOException, SQLException {
-        final var database = UUID.randomUUID().toString();
-        final var url = "jdbc:h2:" + BASE_DIR.resolve(database).toAbsolutePath().toString();
+        final var jdbc = resolveJdbcProperties();
 
         try (
-                var connection = new Driver().connect(url, new Properties());
+                var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
                 var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("create.devices.sql"))
         ) {
             // pre-create database
             RunScript.execute(connection, script);
         }
-
-        final var jdbc = new JdbcProperties();
-        jdbc.setDriverClass(Driver.class.getName());
-        jdbc.setUrl(url);
 
         final var properties = new DeviceServiceProperties();
 
@@ -102,22 +116,83 @@ abstract class AbstractJdbcRegistryTest {
 
     }
 
+    private JdbcProperties resolveJdbcProperties() {
+        final var jdbc = new JdbcProperties();
+        if (DATABASE_TYPE != DatabaseType.H2) {
+            final JdbcDatabaseContainer<?> databaseContainer = getDatabaseContainer();
+            jdbc.setDriverClass(databaseContainer.getDriverClassName());
+            jdbc.setUrl(databaseContainer.getJdbcUrl());
+            jdbc.setUsername(databaseContainer.getUsername());
+            jdbc.setPassword(databaseContainer.getPassword());
+        }
+        switch (DATABASE_TYPE) {
+            case H2:
+                jdbc.setDriverClass(Driver.class.getName());
+                jdbc.setUrl("jdbc:h2:" + BASE_DIR.resolve(UUID.randomUUID().toString()).toAbsolutePath());
+                break;
+            case POSTGRESQL:
+                createNewPerTestSchemaForPostgres(jdbc);
+                break;
+            default:
+                throw new UnsupportedOperationException(DATABASE_TYPE.name() + " is not supported.");
+        }
+        try {
+            Class.forName(jdbc.getDriverClass());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Cannot load JDBC driver class", e);
+        }
+        return jdbc;
+    }
+
+    private JdbcDatabaseContainer<?> getDatabaseContainer() {
+        return DATABASE_CONTAINER_CACHE.computeIfAbsent(DATABASE_TYPE,
+                __ -> {
+                    final JdbcDatabaseContainer<?> container;
+                    switch (DATABASE_TYPE) {
+                        case POSTGRESQL:
+                            container = new PostgreSQLContainer<>(POSTGRESQL_DOCKER_IMAGE);
+                            final List<String> commandLine = new ArrayList<>(Arrays.asList(container.getCommandParts()));
+                            // resolve issue "FATAL: sorry, too many clients already"
+                            commandLine.add("-N");
+                            commandLine.add("500");
+                            container.setCommandParts(commandLine.toArray(new String[0]));
+                            break;
+                        default:
+                            throw new UnsupportedOperationException(DATABASE_TYPE.name() + " is not supported.");
+                    }
+                    container.start();
+                    return container;
+                });
+    }
+
+    private void executeSQLScript(final JdbcProperties jdbc, final String sql) {
+        try (
+                var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
+                var script = new StringReader(sql)
+        ) {
+            RunScript.execute(connection, script);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void createNewPerTestSchemaForPostgres(final JdbcProperties jdbc) {
+        final var schemaName = "testschema" + UNIQUE_ID_GENERATOR.incrementAndGet();
+        executeSQLScript(jdbc, "create schema "  + schemaName);
+        jdbc.setUrl(jdbc.getUrl() + "&currentSchema=" + schemaName);
+    }
+
     @BeforeEach
     void startTenants(final Vertx vertx) throws IOException, SQLException {
-        final var database = UUID.randomUUID().toString();
-        final var url = "jdbc:h2:" + BASE_DIR.resolve(database).toAbsolutePath().toString();
+        final var jdbc = resolveJdbcProperties();
 
         try (
-                var connection = new Driver().connect(url, new Properties());
+                var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
                 var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("create.tenants.sql"))
         ) {
             // pre-create database
             RunScript.execute(connection, script);
         }
-
-        final var jdbc = new JdbcProperties();
-        jdbc.setDriverClass(Driver.class.getName());
-        jdbc.setUrl(url);
 
         this.tenantAdapter = new TenantServiceImpl(
                 Stores.adapterStore(vertx, TRACER, jdbc),
