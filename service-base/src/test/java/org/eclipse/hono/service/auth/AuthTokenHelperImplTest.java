@@ -54,7 +54,7 @@ public class AuthTokenHelperImplTest {
                 .addResource("telemetry", "*", Activity.READ, Activity.WRITE)
                 .addOperation("registration", "*", "assert");
         final Instant expirationMin = Instant.now().plusSeconds(59);
-        final Instant expirationMax = expirationMin.plusSeconds(1);
+        final Instant expirationMax = expirationMin.plusSeconds(2);
         final String token = helper.createToken("userA", authorities);
 
         final Jws<Claims> parsedToken = helper.expand(token);
