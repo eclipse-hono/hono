@@ -43,3 +43,13 @@ insertCredentialEntry: |
       :auth_id,
       :data::jsonb
    )
+
+resolveGroups: |
+   SELECT
+      device_id
+   FROM
+      %3$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      group_id in (select unnest((string_to_array(:group_ids,','))::varchar[]))

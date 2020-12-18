@@ -19,6 +19,7 @@ import java.util.function.Function;
 
 import org.eclipse.hono.service.base.jdbc.config.JdbcDeviceStoreProperties;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
+import org.eclipse.hono.service.base.jdbc.store.SQL;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
@@ -97,7 +98,8 @@ public final class DeviceStores {
             return new TableAdapterStore(
                     JdbcProperties.dataSource(vertx, properties),
                     tracer,
-                    Configurations.tableConfiguration(properties.getUrl(), credentials, registrations, groups));
+                    Configurations.tableConfiguration(properties.getUrl(), credentials, registrations, groups),
+                    SQL.getDatabaseDialect(properties.getUrl()));
 
         }
     }

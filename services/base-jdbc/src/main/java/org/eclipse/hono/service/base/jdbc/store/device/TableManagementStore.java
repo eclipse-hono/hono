@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.base.jdbc.store.device;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -229,7 +230,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                         params.put("device_id", deviceDto.getDeviceId());
                         params.put("version", deviceDto.getVersion());
                         params.put("data", deviceDto.getDeviceJson());
-                        params.put("created", deviceDto.getCreationTime());
+                        params.put("created", Timestamp.from(deviceDto.getCreationTime()));
                         params.put("auto_provisioned", deviceDto.getDeviceStatus().isAutoProvisioned());
                     });
 
@@ -395,7 +396,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             map.put("data", deviceDto.getDeviceJson());
                                             map.put("expected_version", version);
                                             map.put("next_version", deviceDto.getVersion());
-                                            map.put("updated_on", deviceDto.getUpdatedOn());
+                                            map.put("updated_on", Timestamp.from(deviceDto.getUpdatedOn()));
                                             map.put("auto_provisioning_notification_sent", deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
                                         })
                                         .trace(this.tracer, span.context()).update(connection)

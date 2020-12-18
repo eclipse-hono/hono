@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.base.jdbc.store.device;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
+import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -48,6 +50,7 @@ public class TableAdapterStore extends AbstractDeviceStore {
 
     private final Statement findCredentialsStatement;
     private final Statement resolveGroupsStatement;
+    private final String dialect;
 
     /**
      * Create a new instance.
@@ -55,9 +58,11 @@ public class TableAdapterStore extends AbstractDeviceStore {
      * @param client The SQL client ot use.
      * @param tracer The tracer to use.
      * @param cfg The SQL statement configuration.
+     * @param dialect Database type, from the JDBC URL scheme
      */
-    public TableAdapterStore(final SQLClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public TableAdapterStore(final SQLClient client, final Tracer tracer, final StatementConfiguration cfg, final String dialect) {
         super(client, tracer, cfg);
+        this.dialect = dialect;
         cfg.dump(log);
 
         this.findCredentialsStatement = cfg
@@ -215,7 +220,7 @@ public class TableAdapterStore extends AbstractDeviceStore {
 
         final var expanded = this.resolveGroupsStatement.expand(params -> {
             params.put("tenant_id", tenantId);
-            params.put("group_ids", viaGroups.toArray(String[]::new));
+            params.put("group_ids", convertToArrayValue(viaGroups));
         });
 
         log.debug("resolveGroupMembers - statement: {}", expanded);
@@ -242,5 +247,17 @@ public class TableAdapterStore extends AbstractDeviceStore {
 
                 .onComplete(x -> span.finish());
 
+    }
+
+    private Object convertToArrayValue(final Collection<String> values) {
+        // SQLServer and Postgres driver fails to recognize String array value
+        // pass as CSV string instead and use database specific functions
+        // to convert the CSV string to an array
+        // vertx jdbc doesn't support arrays, see https://stackoverflow.com/a/42295098
+        // TODO: introduce a better way to configure the way array values get passed
+        if (dialect.equals(SQL.DIALECT_POSTGRESQL)) {
+            return String.join(",", values);
+        }
+        return values.toArray(String[]::new);
     }
 }
