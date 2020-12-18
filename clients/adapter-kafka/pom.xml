@@ -31,6 +31,12 @@
         <dependency>
             <groupId>org.eclipse.hono</groupId>
             <artifactId>hono-client</artifactId>
+            <exclusions>
+              <exclusion>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-proton</artifactId>
+              </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.eclipse.hono</groupId>
