@@ -42,6 +42,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -509,12 +510,11 @@ public final class IntegrationTestSupport {
      */
     public static ClientConfigProperties getMessagingNetworkProperties() {
 
-        final ClientConfigProperties props = getClientConfigProperties(
+        return getClientConfigProperties(
                 IntegrationTestSupport.DOWNSTREAM_HOST,
                 IntegrationTestSupport.DOWNSTREAM_PORT,
                 IntegrationTestSupport.DOWNSTREAM_USER,
                 IntegrationTestSupport.DOWNSTREAM_PWD);
-        return props;
     }
 
     /**
@@ -526,12 +526,11 @@ public final class IntegrationTestSupport {
      */
     public static ClientConfigProperties getAmqpAdapterProperties(final String username, final String password) {
 
-        final ClientConfigProperties props = getClientConfigProperties(
+        return getClientConfigProperties(
                 IntegrationTestSupport.AMQP_HOST,
                 IntegrationTestSupport.AMQP_PORT,
                 username,
                 password);
-        return props;
     }
 
     /**
