@@ -90,9 +90,19 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                             .put(CredentialsConstants.FIELD_AUTH_ID, key.getAuthId())
                             .put(CredentialsConstants.FIELD_SECRETS, new JsonArray(secrets));
 
-                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, ttl);
+                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, getCacheDirective(key.getType()));
 
                 });
+    }
+
+    private CacheDirective getCacheDirective(final String type) {
+        switch (type) {
+            case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+            case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+                return ttl;
+            default:
+                return CacheDirective.noCacheDirective();
+        }
     }
 
     private static boolean filterSecrets(final JsonObject secret) {
