@@ -27,6 +27,7 @@ import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CredentialsConstants;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -95,12 +96,27 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
                 .map(r -> r.map(result -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         result.getCredentials(),
-                        this.ttl,
+                        Optional.of(resolveCacheDirective(result.getCredentials())),
                         result.getResourceVersion()))
                         .orElseGet(() -> OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND)))
 
                 .otherwise(err -> OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR));
 
+    }
+
+    @Override
+    protected CacheDirective getCacheDirective(final String type) {
+        if (ttl.isPresent()) {
+            switch (type) {
+                case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+                case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+                    return ttl.get();
+                default:
+                    return CacheDirective.noCacheDirective();
+            }
+        } else {
+            return CacheDirective.noCacheDirective();
+        }
     }
 
 }

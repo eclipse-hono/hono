@@ -29,6 +29,8 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -209,4 +211,24 @@ public abstract class AbstractCredentialsManagementService implements Credential
         return credentials;
     }
 
+    /**
+     * Resolves the cache directive for a list of credentials.
+     * @param credentials the list of credentials
+     * @return cache directive to use in response
+     */
+    protected CacheDirective resolveCacheDirective(final List<CommonCredential> credentials) {
+        // resolve cache directive for results, use the maximum value of cache directive when there are multiple entries
+        return credentials.stream().map(CommonCredential::getType)
+                .map(this::getCacheDirective)
+                .max(CacheDirective::compareTo)
+                // use cache options for hashed password when results is empty so that empty result get cached
+                .orElseGet(() -> getCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD));
+    }
+
+    /**
+     * Resolves the cache directive for a credentials type.
+     * @param type the type of credentials
+     * @return cache directive to use in response
+     */
+    protected abstract CacheDirective getCacheDirective(String type);
 }

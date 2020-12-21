@@ -79,9 +79,11 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                             .filter(CredentialsServiceImpl::filterSecrets)
                             .collect(Collectors.toList());
 
+                    final CacheDirective cacheDirective = resolveCacheDirective(result.getCredentials());
+
                     if (secrets.isEmpty()) {
                         // nothing was left after filtering ... not found
-                        return CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+                        return CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND, null, cacheDirective);
                     }
 
                     final var payload = new JsonObject()
@@ -90,12 +92,12 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                             .put(CredentialsConstants.FIELD_AUTH_ID, key.getAuthId())
                             .put(CredentialsConstants.FIELD_SECRETS, new JsonArray(secrets));
 
-                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, getCacheDirective(key.getType()));
-
+                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, cacheDirective);
                 });
     }
 
-    private CacheDirective getCacheDirective(final String type) {
+    @Override
+    protected CacheDirective getCacheDirective(final String type) {
         switch (type) {
             case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
             case CredentialsConstants.SECRETS_TYPE_X509_CERT:

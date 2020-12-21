@@ -325,7 +325,12 @@ public interface AbstractCredentialsServiceTest {
                         assertNotNull(s3.getCacheDirective());
                         if (s3.isOk()) {
                             assertResourceVersion(s3);
-                            assertEquals(Optional.of(getExpectedCacheDirective(type)), s3.getCacheDirective());
+                            final Optional<CacheDirective> expectedCacheDirective = s3.getPayload().stream()
+                                    .map(CommonCredential::getType)
+                                    .map(this::getExpectedCacheDirective)
+                                    .max(CacheDirective::compareTo)
+                                    .or(() -> Optional.of(getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)));
+                            assertEquals(expectedCacheDirective, s3.getCacheDirective());
                         }
 
                         mangementValidation.accept(s3);

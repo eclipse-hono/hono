@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * A helper for parsing and creating <em>cache directives</em> compliant with
  * <a href="https://tools.ietf.org/html/rfc2616#section-14.9">RFC 2616, Section 14.9</a>.
  */
-public final class CacheDirective {
+public final class CacheDirective implements Comparable<CacheDirective> {
 
     private static final Pattern PATTERN_MAX_AGE = Pattern.compile("^\\s*max-age\\s*=\\s*(\\d*)\\s*$");
     private static final Pattern PATTERN_NO_CACHE = Pattern.compile("^\\s*no-cache\\s*$");
@@ -168,5 +168,14 @@ public final class CacheDirective {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public int compareTo(final CacheDirective o) {
+        if (isCachingAllowed() == o.isCachingAllowed() == true) {
+            return Long.compare(getMaxAge(), o.getMaxAge());
+        } else {
+            return Boolean.compare(o.isCachingAllowed(), isCachingAllowed());
+        }
     }
 }

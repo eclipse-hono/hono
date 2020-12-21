@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.service.credentials;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.Objects;
 
 import javax.annotation.PostConstruct;
@@ -23,10 +24,12 @@ import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.AutoProvisioning;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.slf4j.Logger;
@@ -110,6 +113,27 @@ public abstract class AbstractCredentialsService implements CredentialsService {
      * @return A future indicating the outcome of the operation.
      */
     protected abstract Future<CredentialsResult<JsonObject>> processGet(TenantKey tenant, CredentialKey key, JsonObject clientContext, Span span);
+
+    /**
+     * Resolves the cache directive for a list of credentials.
+     * @param credentials the list of credentials
+     * @return cache directive to use in response
+     */
+    protected CacheDirective resolveCacheDirective(final List<CommonCredential> credentials) {
+        // resolve cache directive for results, use the maximum value of cache directive when there are multiple entries
+        return credentials.stream().map(CommonCredential::getType)
+                .map(this::getCacheDirective)
+                .max(CacheDirective::compareTo)
+                // use cache options for hashed password when results is empty so that empty result get cached
+                .orElseGet(() -> getCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD));
+    }
+
+    /**
+     * Resolves the cache directive for a credentials type.
+     * @param type the type of credentials
+     * @return cache directive to use in response
+     */
+    protected abstract CacheDirective getCacheDirective(String type);
 
     @Override
     public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final Span span) {

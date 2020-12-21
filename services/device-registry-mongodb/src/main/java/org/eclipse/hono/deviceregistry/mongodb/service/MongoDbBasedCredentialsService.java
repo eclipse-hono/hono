@@ -16,8 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -214,21 +212,10 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .map(credentialsDto -> {
                     final List<CommonCredential> credentials = credentialsDto.getCredentials();
 
-                    // resolve cache directive for results.
-                    // Limit caching to the case when cache directives are the same for all results
-                    final Set<CacheDirective> cacheDirectives = credentials.stream().map(CommonCredential::getType)
-                            .distinct()
-                            .map(this::getCacheDirective)
-                            .collect(Collectors.collectingAndThen(Collectors.toUnmodifiableSet(),
-                                    // use cache options for hashed password when results is empty so that empty result gets cached
-                                    set -> set.isEmpty() ? Set.of(getCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) : set));
-                    final Optional<CacheDirective> cacheDirective = cacheDirectives.size() == 1 ?
-                            cacheDirectives.stream().findFirst() : Optional.empty();
-
                     return OperationResult.ok(
                             HttpURLConnection.HTTP_OK,
                             credentials,
-                            cacheDirective,
+                            Optional.of(resolveCacheDirective(credentials)),
                             Optional.of(credentialsDto.getVersion()));
                 })
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
@@ -388,8 +375,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         .orElseGet(() -> CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
-    private CacheDirective getCacheDirective(final String type) {
-
+    @Override
+    protected CacheDirective getCacheDirective(final String type) {
         if (config.getCacheMaxAge() > 0) {
             switch (type) {
             case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
