@@ -27,7 +27,10 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">
  * Device Connection API specification</a> for a description of the result codes returned.
+ *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.DeviceConnectionClient} instead.
  */
+@Deprecated
 public interface DeviceConnectionClient extends RequestResponseClient {
 
     /**

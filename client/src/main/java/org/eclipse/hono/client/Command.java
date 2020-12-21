@@ -31,7 +31,9 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A wrapper around an AMQP 1.0 message representing a command.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.Command} instead.
  */
+@Deprecated
 public final class Command {
 
     /**

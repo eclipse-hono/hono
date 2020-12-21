@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,9 @@ import io.vertx.core.Handler;
 /**
  * A client for consuming messages from a Hono server.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandConsumer} instead.
  */
+@Deprecated
 public interface MessageConsumer {
 
     /**

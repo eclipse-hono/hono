@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,10 @@ import io.vertx.proton.ProtonDelivery;
 
 /**
  * A sender to send back the response message of a command.
+ *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandResponseSender} instead.
  */
+@Deprecated
 public interface CommandResponseSender extends MessageSender {
 
     /**

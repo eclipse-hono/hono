@@ -50,6 +50,7 @@ import io.vertx.core.json.JsonObject;
  * won't be returned here for that device. That kind of gateway mapping will occur when processing the command at the
  * target protocol adapter instance.
  */
+@Deprecated
 public interface CommandTargetMapper {
 
     /**

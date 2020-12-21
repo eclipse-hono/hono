@@ -20,7 +20,10 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's south bound Telemetry and Event APIs.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.telemetry.TelemetrySender} and/or
+ * {@code org.eclipse.hono.adapter.client.telemetry.EventSender} instead.
  */
+@Deprecated
 public interface DownstreamSenderFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**

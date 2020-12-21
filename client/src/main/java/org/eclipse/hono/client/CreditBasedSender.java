@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import io.vertx.core.Handler;
  *  A client with methods to retrieve flow credits and also to set queueDrainHandler.
  *
  */
+@Deprecated
 public interface CreditBasedSender {
     /**
      * Gets the number of messages this sender can send based on its current number of credits.

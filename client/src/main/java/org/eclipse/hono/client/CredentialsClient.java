@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,10 @@ import io.vertx.core.json.JsonObject;
  * See Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">
  * Credentials API specification</a> for a description of the result codes returned.
  * </p>
+ *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.CredentialsClient} instead.
  */
+@Deprecated
 public interface CredentialsClient extends RequestResponseClient {
 
     /**

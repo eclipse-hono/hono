@@ -35,7 +35,9 @@ import io.vertx.proton.ProtonHelper;
 /**
  * A context for passing around parameters relevant for processing a {@code Command}.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandContext} instead.
  */
+@Deprecated
 public class CommandContext extends MapBasedExecutionContext {
 
     /**

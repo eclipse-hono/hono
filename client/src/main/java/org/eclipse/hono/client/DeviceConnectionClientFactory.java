@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,9 @@ import org.eclipse.hono.client.impl.DeviceConnectionClientFactoryImpl;
 /**
  * A factory for creating clients for Hono's Device Connection API.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.DeviceConnectionClient} instead.
  */
+@Deprecated
 public interface DeviceConnectionClientFactory extends BasicDeviceConnectionClientFactory, ConnectionLifecycle<HonoConnection> {
 
     /**

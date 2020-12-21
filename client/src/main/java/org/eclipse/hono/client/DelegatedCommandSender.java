@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import io.vertx.proton.ProtonDelivery;
  * This usually involves command messages first retrieved via a tenant-scoped consumer and then delegated back to the
  * downstream peer so that they can be consumed by the device-specific consumer.
  */
+@Deprecated
 public interface DelegatedCommandSender extends MessageSender {
 
     /**

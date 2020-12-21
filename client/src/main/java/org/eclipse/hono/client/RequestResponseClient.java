@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import io.vertx.core.Handler;
 /**
  * Interface for common methods that all clients that follow the request response pattern need to implement.
  */
+@Deprecated
 public interface RequestResponseClient extends CreditBasedSender {
     /**
      * Closes the AMQP link(s) with the Hono server this client is configured to use.

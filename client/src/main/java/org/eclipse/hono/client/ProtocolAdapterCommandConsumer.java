@@ -19,7 +19,9 @@ import io.vertx.core.Future;
 /**
  * Represents the device specific command consumer used in protocol adapters.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandConsumer} instead.
  */
+@Deprecated
 public interface ProtocolAdapterCommandConsumer {
 
     /**

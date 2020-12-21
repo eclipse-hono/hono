@@ -19,6 +19,9 @@ title = "Release Notes"
   classes have been deprecated to further reduce the dependency on Spring Boot. Clients should use
   `org.eclipse.hono.service.cache.CaffeineCacheProvider` and `org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache`
   instead.
+* The public interfaces of the legacy `client` module have been deprecated. Client code should be
+  adapted to use the corresponding interfaces and implementations from the `clients/adapter` and
+  `clients/adapter-amqp` modules instead.
 
 ## 1.5.0
 

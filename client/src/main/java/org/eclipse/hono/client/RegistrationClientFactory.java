@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,9 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's Device Registration API.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient} instead.
  */
+@Deprecated
 public interface RegistrationClientFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
