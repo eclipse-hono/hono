@@ -647,30 +647,31 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     // we do not support subscribing to commands using QoS 2
                     result = Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
                 } else {
-                    result = createCommandConsumer(endpoint, cmdSub, cmdSubscriptionsManager, span).map(consumer -> {
-                        final Map<String, Object> items = new HashMap<>(4);
-                        items.put(Fields.EVENT, "accepting subscription");
-                        items.put(KEY_TOPIC_FILTER, subscription.topicName());
-                        items.put("requested QoS", subscription.qualityOfService());
-                        items.put("granted QoS", subscription.qualityOfService());
-                        span.log(items);
-                        log.debug("created subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}, granted QoS: {}]",
-                                cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
-                                subscription.qualityOfService(), subscription.qualityOfService());
-                        cmdSubscriptionsManager.addSubscription(cmdSub, consumer);
-                        return cmdSub;
-                    }).recover(t -> {
-                        final Map<String, Object> items = new HashMap<>(4);
-                        items.put(Fields.EVENT, Tags.ERROR.getKey());
-                        items.put(KEY_TOPIC_FILTER, subscription.topicName());
-                        items.put("requested QoS", subscription.qualityOfService());
-                        items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
-                        TracingHelper.logError(span, items);
-                        log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
-                                cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
-                                subscription.qualityOfService(), t);
-                        return Future.failedFuture(t);
-                    });
+                    result = createCommandConsumer(endpoint, cmdSub, authenticatedDevice, cmdSubscriptionsManager, span)
+                            .map(consumer -> {
+                                final Map<String, Object> items = new HashMap<>(4);
+                                items.put(Fields.EVENT, "accepting subscription");
+                                items.put(KEY_TOPIC_FILTER, subscription.topicName());
+                                items.put("requested QoS", subscription.qualityOfService());
+                                items.put("granted QoS", subscription.qualityOfService());
+                                span.log(items);
+                                log.debug("created subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}, granted QoS: {}]",
+                                        cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
+                                        subscription.qualityOfService(), subscription.qualityOfService());
+                                cmdSubscriptionsManager.addSubscription(cmdSub, consumer);
+                                return cmdSub;
+                            }).recover(t -> {
+                                final Map<String, Object> items = new HashMap<>(4);
+                                items.put(Fields.EVENT, Tags.ERROR.getKey());
+                                items.put(KEY_TOPIC_FILTER, subscription.topicName());
+                                items.put("requested QoS", subscription.qualityOfService());
+                                items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
+                                TracingHelper.logError(span, items);
+                                log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
+                                        cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
+                                        subscription.qualityOfService(), t);
+                                return Future.failedFuture(t);
+                            });
                 }
                 topicFilters.put(subscription.topicName(), result);
                 subscriptionOutcome.put(subscription, result);
@@ -790,6 +791,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final MqttEndpoint mqttEndpoint,
             final CommandSubscription subscription,
+            final Device authenticatedDevice,
             final CommandSubscriptionsManager<T> cmdHandler,
             final Span span) {
 
@@ -826,22 +828,31 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         timer);
             });
         };
+
+        final Future<JsonObject> tokenTracker = Optional.ofNullable(authenticatedDevice)
+                .map(v -> getRegistrationAssertion(
+                        authenticatedDevice.getTenantId(),
+                        subscription.getDeviceId(),
+                        authenticatedDevice,
+                        span.context()))
+                .orElseGet(Future::succeededFuture);
+
         if (subscription.isGatewaySubscriptionForSpecificDevice()) {
             // gateway scenario
-            return getCommandConsumerFactory().createCommandConsumer(
+            return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
                     subscription.getTenant(),
                     subscription.getDeviceId(),
                     subscription.getAuthenticatedDeviceId(),
                     commandHandler,
                     null,
-                    span.context());
+                    span.context()));
         } else {
-            return getCommandConsumerFactory().createCommandConsumer(
+            return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
                     subscription.getTenant(),
                     subscription.getDeviceId(),
                     commandHandler,
                     null,
-                    span.context());
+                    span.context()));
         }
     }
 

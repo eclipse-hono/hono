@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.AsyncCommandClient;
@@ -43,6 +44,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
@@ -832,6 +834,53 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         } else {
             ctx.failNow(new IllegalStateException("did not complete all commands sent"));
         }
+    }
+
+    /**
+     * Verifies that the adapter immediately closes the command receiver link of a gateway wanting
+     * to receive commands of a device that doesn't have the gateway in its via-gateways.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testCommandReceiverCreationFailsForDeviceNotInViaGateways(
+            final VertxTestContext ctx) {
+
+        final AmqpCommandEndpointConfiguration endpointConfig = new AmqpCommandEndpointConfiguration(
+                SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE);
+
+        final String otherDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.registry
+                .addDeviceToTenant(tenantId, deviceId, password)
+                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, otherDeviceId, password))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .compose(conAck -> {
+                    final Promise<Void> result = Promise.promise();
+                    context.runOnContext(go -> {
+                        final ProtonReceiver recv = connection
+                                .createReceiver(endpointConfig.getSubscriptionAddress(tenantId, otherDeviceId));
+                        recv.setQoS(ProtonQoS.AT_LEAST_ONCE);
+                        recv.openHandler(openResult -> {
+                            ctx.verify(() -> {
+                                assertThat(openResult.failed() || !HonoProtonHelper.isLinkEstablished(openResult.result()))
+                                        .isTrue();
+                            });
+                        });
+                        recv.closeHandler(closeResult -> {
+                            ctx.verify(() -> {
+                                assertThat(recv.getRemoteCondition()).isNotNull();
+                                assertThat(recv.getRemoteCondition().getCondition().toString())
+                                        .isEqualTo(AmqpError.PRECONDITION_FAILED.toString());
+                            });
+                            result.tryComplete();
+                        });
+                        recv.detachHandler(closeResult -> result.tryFail("unexpected detach with closed=false"));
+                        recv.open();
+                    });
+                    return result.future();
+                })
+                .onComplete(ctx.completing());
     }
 
     /**

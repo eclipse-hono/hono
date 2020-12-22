@@ -92,6 +92,15 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 );
     }
 
+    static Stream<MqttCommandEndpointConfiguration> gatewayForSingleDevice() {
+        return Stream.of(
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false),
+
+                // the following variants can be removed once we no longer support the legacy topic filters
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true)
+        );
+    }
+
     /**
      * Sets up the fixture.
      */
@@ -541,6 +550,43 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         } else {
             ctx.failNow(new java.lang.IllegalStateException("did not complete all commands sent"));
         }
+    }
+
+    /**
+     * Verifies that the adapter doesn't send a positive acknowledgement when a gateway subscribes
+     * for commands of a device that doesn't have the gateway in its via-gateways.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("gatewayForSingleDevice")
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testSubscribeFailsForDeviceNotInViaGateways(
+            final MqttCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) {
+
+        final String otherDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.registry
+                .addDeviceToTenant(tenantId, deviceId, password)
+                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, otherDeviceId, password))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .compose(conAck -> {
+                    final Promise<Void> result = Promise.promise();
+                    context.runOnContext(go -> {
+                        mqttClient.subscribeCompletionHandler(subAckMsg -> {
+                            ctx.verify(() -> {
+                                assertThat(subAckMsg.grantedQoSLevels().size()).isEqualTo(1);
+                                assertThat(subAckMsg.grantedQoSLevels().get(0)).isEqualTo(MqttQoS.FAILURE.value());
+                            });
+                            result.complete();
+                        });
+                        mqttClient.subscribe(endpointConfig.getCommandTopicFilter(otherDeviceId), MqttQoS.AT_LEAST_ONCE.value());
+                    });
+                    return result.future();
+                })
+                .onComplete(ctx.completing());
+
     }
 
     private Future<Void> injectMqttClientPubAckBlocker(final AtomicBoolean outboundPubAckBlocked) {

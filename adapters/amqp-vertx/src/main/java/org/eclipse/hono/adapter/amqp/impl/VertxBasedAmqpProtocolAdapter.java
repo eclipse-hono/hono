@@ -730,7 +730,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         getResourceIdentifier(sender.getRemoteSource())
         .compose(address -> validateAddress(address, authenticatedDevice))
-        .map(validAddress -> {
+        .compose(validAddress -> {
             // validAddress ALWAYS contains the tenant and device ID
             if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
                 return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority)
@@ -748,14 +748,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             return consumer;
                         });
             } else {
-                throw new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node");
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
             }
         })
         .map(consumer -> {
             span.log("link established");
             return consumer;
         })
-        .otherwise(t -> {
+        .recover(t -> {
             if (t instanceof ServiceInvocationException) {
                 closeLinkWithError(sender, t, span);
             } else {
@@ -763,7 +763,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"),
                         span);
             }
-            return null;
+            return Future.failedFuture(t);
         })
         .onComplete(s -> {
             span.finish();
@@ -874,13 +874,31 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return null;
             });
         };
+
+        final Future<JsonObject> tokenTracker = Optional.ofNullable(authenticatedDevice)
+                .map(v -> getRegistrationAssertion(
+                        authenticatedDevice.getTenantId(),
+                        sourceAddress.getResourceId(),
+                        authenticatedDevice,
+                        span.context()))
+                .orElseGet(Future::succeededFuture);
+
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
-            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, null, span.context());
+            return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
+                    sourceAddress.getTenantId(),
+                    sourceAddress.getResourceId(),
+                    authenticatedDevice.getDeviceId(),
+                    commandHandler,
+                    null,
+                    span.context()));
         } else {
-            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), commandHandler, null, span.context());
+            return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
+                    sourceAddress.getTenantId(),
+                    sourceAddress.getResourceId(),
+                    commandHandler,
+                    null,
+                    span.context()));
         }
     }
 
