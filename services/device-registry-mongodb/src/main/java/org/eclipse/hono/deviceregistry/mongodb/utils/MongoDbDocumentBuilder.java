@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.mongodb.utils;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
@@ -201,19 +202,11 @@ public final class MongoDbDocumentBuilder {
      *
      * @param filters The device filters list.
      * @return a reference to this for fluent use.
+     * @throws NullPointerException if the filters is {@code null}.
      */
     public MongoDbDocumentBuilder withDeviceFilters(final List<Filter> filters) {
-
-        filters.forEach(filter -> {
-            if (filter.getValue() instanceof String) {
-                final String value = (String) filter.getValue();
-                document.put(mapDeviceField(filter.getField()),
-                        new JsonObject().put("$regex",
-                                DeviceRegistryUtils.getRegexExpressionForSearchOperation(value)));
-            } else {
-                document.put(mapDeviceField(filter.getField()), filter.getValue());
-            }
-        });
+        Objects.requireNonNull(filters);
+        applySearchFilters(filters, MongoDbDocumentBuilder::mapDeviceField);
         return this;
     }
 
@@ -222,13 +215,29 @@ public final class MongoDbDocumentBuilder {
      *
      * @param sortOptions The list of soring options.
      * @return a reference to this for fluent use.
+     * @throws NullPointerException if the sortOptions is {@code null}.
      */
     public MongoDbDocumentBuilder withDeviceSortOptions(final List<Sort> sortOptions) {
-
-        sortOptions.forEach(sortOption -> document.put(mapDeviceField(sortOption.getField()),
-                mapSortingDirection(sortOption.getDirection())));
-
+        Objects.requireNonNull(sortOptions);
+        applySortingOptions(sortOptions, MongoDbDocumentBuilder::mapDeviceField);
         return this;
+    }
+
+    private void applySearchFilters(final List<Filter> filters, final Function<JsonPointer, String> fieldMapper) {
+        filters.forEach(filter -> {
+            if (filter.getValue() instanceof String) {
+                final String value = (String) filter.getValue();
+                document.put(fieldMapper.apply(filter.getField()), new JsonObject().put("$regex",
+                        DeviceRegistryUtils.getRegexExpressionForSearchOperation(value)));
+            } else {
+                document.put(fieldMapper.apply(filter.getField()), filter.getValue());
+            }
+        });
+    }
+
+    private void applySortingOptions(final List<Sort> sortOptions, final Function<JsonPointer, String> fieldMapper) {
+        sortOptions.forEach(sortOption -> document.put(fieldMapper.apply(sortOption.getField()),
+                mapSortingDirection(sortOption.getDirection())));
     }
 
     private static String mapDeviceField(final JsonPointer field) {
