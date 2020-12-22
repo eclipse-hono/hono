@@ -170,7 +170,6 @@ public class MappingAndDelegatingCommandHandler {
         // note that the command might be invalid here - a matching local handler to reject it (and report metrics) shall be found in that case
         final Command originalCommand = originalCommandContext.getCommand();
 
-        // determine last used gateway device id
         LOG.trace("determine command target gateway/adapter for [{}]", originalCommand);
         final Future<JsonObject> commandTargetFuture = commandTargetMapper.getTargetGatewayAndAdapterInstance(tenantId,
                 originalDeviceId, originalCommandContext.getTracingContext());
