@@ -26,7 +26,7 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.eclipse.hono.adapter" level="WARN"/>
+  <logger name="org.eclipse.hono.adapter.client" level="WARN"/>
   <logger name="org.eclipse.hono.auth" level="WARN"/>
   <logger name="org.eclipse.hono.config" level="WARN"/>
   <logger name="org.eclipse.hono.connection" level="WARN"/>

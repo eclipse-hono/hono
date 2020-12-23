@@ -101,6 +101,27 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
         return newSpan(parent, References.CHILD_OF, operationName);
     }
 
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service invocation.
+     * <p>
+     * The returned span will already contain the following tags:
+     * <ul>
+     * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getPort()}</li>
+     * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
+     * </ul>
+     *
+     * @param parent The existing span. If not {@code null} then the new span will have a
+     *                     {@link References#FOLLOWS_FROM} reference to the existing span.
+     * @param operationName The operation name that the span should be created for.
+     * @return The new span.
+     */
+    protected final Span newFollowingSpan(final SpanContext parent, final String operationName) {
+
+        return newSpan(parent, References.FOLLOWS_FROM, operationName);
+    }
+
     private Span newSpan(final SpanContext parent, final String referenceType, final String operationName) {
 
         return TracingHelper.buildSpan(connection.getTracer(), parent, operationName, referenceType)

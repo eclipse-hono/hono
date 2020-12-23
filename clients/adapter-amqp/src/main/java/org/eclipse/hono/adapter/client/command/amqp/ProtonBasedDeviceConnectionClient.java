@@ -14,26 +14,39 @@
 
 package org.eclipse.hono.adapter.client.command.amqp;
 
+import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseClient;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseServiceClient;
+import org.eclipse.hono.adapter.client.amqp.RequestResponseClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler.Factory;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.client.impl.CredentialsClientImpl;
-import org.eclipse.hono.client.impl.DeviceConnectionClientImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.eventbus.Message;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 
@@ -41,10 +54,10 @@ import io.vertx.core.json.JsonObject;
  * A vertx-proton based client for accessing Hono's <em>Device Connection</em> API.
  *
  */
-public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseClient<DeviceConnectionResult>
+public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseServiceClient<JsonObject, DeviceConnectionResult>
         implements DeviceConnectionClient {
 
-    private final CachingClientFactory<org.eclipse.hono.client.DeviceConnectionClient> clientFactory;
+    private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedDeviceConnectionClient.class);
 
     /**
      * Creates a new client for a connection.
@@ -59,47 +72,58 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
             final Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
-        super(connection, samplerFactory, adapterConfig, null);
-        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), org.eclipse.hono.client.DeviceConnectionClient::isOpen);
+        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
+                connection.getVertx(), RequestResponseClient::isOpen), null);
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
 
-    private void handleTenantTimeout(final Message<String> msg) {
-        final String address = CredentialsClientImpl.getTargetAddress(msg.body());
-        Optional.ofNullable(clientFactory.getClient(address))
-            .ifPresent(client -> client.close(v -> clientFactory.removeClient(address)));
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getKey(final String tenantId) {
+        return String.format("%s-%s", DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT, tenantId);
     }
 
-    private Future<org.eclipse.hono.client.DeviceConnectionClient> getOrCreateDeviceConnectionClient(final String tenantId) {
+    private Future<RequestResponseClient<DeviceConnectionResult>> getOrCreateClient(final String tenantId) {
 
-        Objects.requireNonNull(tenantId);
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     clientFactory.getOrCreateClient(
-                            DeviceConnectionClientImpl.getTargetAddress(tenantId),
-                            () -> DeviceConnectionClientImpl.create(
-                                    connection,
-                                    tenantId,
-                                    samplerFactory.create(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT),
-                                    this::removeDeviceConnectionClient,
-                                    this::removeDeviceConnectionClient),
+                            getKey(tenantId),
+                            () -> {
+                                return RequestResponseClient.forEndpoint(
+                                        connection,
+                                        DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
+                                        tenantId,
+                                        samplerFactory.create(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT),
+                                        this::removeClient,
+                                        this::removeClient);
+                            },
                             result);
                 }));
     }
 
-    private void removeDeviceConnectionClient(final String tenantId) {
-        clientFactory.removeClient(DeviceConnectionClientImpl.getTargetAddress(tenantId));
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Clears the state of the client factory.
-     */
     @Override
-    protected void onDisconnect() {
-        clientFactory.clearState();
+    protected final DeviceConnectionResult getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+
+        if (payload == null) {
+            return DeviceConnectionResult.from(status, null, null, applicationProperties);
+        } else {
+            try {
+                // ignoring given cacheDirective param here - device connection results shall not be cached
+                return DeviceConnectionResult.from(status, new JsonObject(payload), CacheDirective.noCacheDirective(), applicationProperties);
+            } catch (final DecodeException e) {
+                LOG.warn("received malformed payload from Device Connection service", e);
+                return DeviceConnectionResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
+            }
+        }
     }
 
     /**
@@ -114,8 +138,28 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
 
-        return getOrCreateDeviceConnectionClient(tenant)
-                .compose(client -> client.getLastKnownGatewayForDevice(deviceId, context));
+        final Span currentSpan = newChildSpan(context, "get last known gateway for device");
+        TracingHelper.setDeviceTags(currentSpan, tenant, deviceId);
+
+        final Future<DeviceConnectionResult> resultTracker = getOrCreateClient(tenant)
+                .compose(client -> client.createAndSendRequest(
+                    DeviceConnectionConstants.DeviceConnectionAction.GET_LAST_GATEWAY.getSubject(),
+                    createDeviceIdProperties(deviceId),
+                    null,
+                    null,
+                    this::getRequestResponseResult,
+                    currentSpan));
+        return mapResultAndFinishSpan(
+                resultTracker,
+                result -> {
+                    switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        return result.getPayload();
+                    default:
+                        throw StatusCodeMapper.from(result);
+                    }
+                },
+                currentSpan);
     }
 
     /**
@@ -132,8 +176,33 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
 
-        return getOrCreateDeviceConnectionClient(tenant)
-                .compose(client -> client.setLastKnownGatewayForDevice(deviceId, gatewayId, context));
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+
+        // using FollowsFrom instead of ChildOf reference here as invoking methods usually don't depend and wait on the result of this method
+        final Span currentSpan = newFollowingSpan(context, "set last known gateway for device");
+        TracingHelper.setDeviceTags(currentSpan, tenant, deviceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+
+        final Future<DeviceConnectionResult> resultTracker = getOrCreateClient(tenant)
+                .compose(client -> client.createAndSendRequest(
+                        DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject(),
+                        properties,
+                        null,
+                        null,
+                        this::getRequestResponseResult,
+                        currentSpan));
+        return mapResultAndFinishSpan(
+                resultTracker,
+                result -> {
+                    switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_NO_CONTENT:
+                        return null;
+                    default:
+                        throw StatusCodeMapper.from(result);
+                    }
+                },
+                currentSpan).mapEmpty();
     }
 
     /**
@@ -151,8 +220,32 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return getOrCreateDeviceConnectionClient(tenantId)
-                .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, lifespan, context));
+        final int lifespanSeconds = lifespan != null && lifespan.getSeconds() <= Integer.MAX_VALUE ? (int) lifespan.getSeconds() : -1;
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        properties.put(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+
+        final Span currentSpan = newChildSpan(context, "set command handling adapter instance");
+        TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+
+        final Future<DeviceConnectionResult> resultTracker = getOrCreateClient(tenantId)
+                .compose(client -> client.createAndSendRequest(
+                        DeviceConnectionConstants.DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
+                        properties,
+                        null,
+                        null,
+                        this::getRequestResponseResult,
+                        currentSpan));
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    return null;
+                default:
+                    throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan).mapEmpty();
     }
 
     /**
@@ -169,8 +262,43 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return getOrCreateDeviceConnectionClient(tenantId)
-                .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context));
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+
+        final Span currentSpan = newChildSpan(context, "remove command handling adapter instance");
+        TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+
+        return getOrCreateClient(tenantId)
+                .compose(client -> client.createAndSendRequest(
+                        DeviceConnectionConstants.DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
+                        properties,
+                        null,
+                        null,
+                        this::getRequestResponseResult,
+                        currentSpan))
+                // not using mapResultAndFinishSpan() in order to skip logging PRECON_FAILED result as error
+                // (may have been trying to remove an expired entry)
+                .recover(t -> {
+                    Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
+                    TracingHelper.logError(currentSpan, t);
+                    return Future.failedFuture(t);
+                })
+                .map(resultValue -> {
+                    Tags.HTTP_STATUS.set(currentSpan, resultValue.getStatus());
+                    if (resultValue.isError() && resultValue.getStatus() != HttpURLConnection.HTTP_PRECON_FAILED) {
+                        Tags.ERROR.set(currentSpan, Boolean.TRUE);
+                    }
+
+                    switch (resultValue.getStatus()) {
+                    case HttpURLConnection.HTTP_NO_CONTENT:
+                        return null;
+                    default:
+                        throw StatusCodeMapper.from(resultValue);
+                    }
+                })
+                .onComplete(v -> currentSpan.finish())
+                .mapEmpty();
     }
 
     /**
@@ -187,7 +315,28 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseCl
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(viaGateways);
 
-        return getOrCreateDeviceConnectionClient(tenant)
-                .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, viaGateways, context));
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        final JsonObject payload = new JsonObject();
+        payload.put(DeviceConnectionConstants.FIELD_GATEWAY_IDS, new JsonArray(viaGateways));
+
+        final Span currentSpan = newChildSpan(context, "get command handling adapter instances");
+        TracingHelper.setDeviceTags(currentSpan, tenant, deviceId);
+
+        final Future<DeviceConnectionResult> resultTracker = getOrCreateClient(tenant)
+                .compose(client -> client.createAndSendRequest(
+                        DeviceConnectionConstants.DeviceConnectionAction.GET_CMD_HANDLING_ADAPTER_INSTANCES.getSubject(),
+                        properties,
+                        payload.toBuffer(),
+                        RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                        this::getRequestResponseResult,
+                        currentSpan));
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_OK:
+                    return result.getPayload();
+                default:
+                    throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan);
     }
 }

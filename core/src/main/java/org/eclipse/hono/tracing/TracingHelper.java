@@ -106,6 +106,10 @@ public final class TracingHelper {
      */
     public static final StringTag TAG_REMOTE_STATE = new StringTag("message_bus.remote_state");
     /**
+     * An OpenTracing tag that contains an X.500 Subject DN.
+     */
+    public static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");
+    /**
      * An OpenTracing tag that contains the tenant identifier.
      */
     public static final StringTag TAG_TENANT_ID = new StringTag(MessageHelper.APP_PROPERTY_TENANT_ID);
