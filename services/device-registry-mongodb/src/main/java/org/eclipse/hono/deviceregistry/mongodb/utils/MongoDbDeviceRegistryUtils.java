@@ -209,7 +209,8 @@ public final class MongoDbDeviceRegistryUtils {
      * @param <T> The type of the result namely {@link org.eclipse.hono.service.management.device.DeviceWithId} or 
      *           {@link org.eclipse.hono.service.management.tenant.TenantWithId}
      * @return A future indicating the outcome of the operation. The future will succeed if the search operation 
-     *         is successful and some resources are found. Otherwise the future will fail with the error reason.
+     *         is successful and some resources are found. If no resources are found then the future will fail
+     *         with a {@link ClientErrorException} with status {@link HttpURLConnection#HTTP_NOT_FOUND}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://docs.mongodb.com/manual/core/aggregation-pipeline">MongoDB Aggregation Pipeline</a>
      */
