@@ -23,10 +23,15 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.References;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -73,6 +78,38 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
         this.connection.addDisconnectListener(con -> onDisconnect());
         this.samplerFactory = Objects.requireNonNull(samplerFactory);
         this.adapterConfig = Objects.requireNonNull(adapterConfig);
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service invocation.
+     * <p>
+     * The returned span will already contain the following tags:
+     * <ul>
+     * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getPort()}</li>
+     * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
+     * </ul>
+     *
+     * @param parent The existing span. If not {@code null} then the new span will have a
+     *                     {@link References#CHILD_OF} reference to the existing span.
+     * @param operationName The operation name that the span should be created for.
+     * @return The new span.
+     */
+    protected final Span newChildSpan(final SpanContext parent, final String operationName) {
+
+        return newSpan(parent, References.CHILD_OF, operationName);
+    }
+
+    private Span newSpan(final SpanContext parent, final String referenceType, final String operationName) {
+
+        return TracingHelper.buildSpan(connection.getTracer(), parent, operationName, referenceType)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), "hono-client")
+                .withTag(Tags.PEER_HOSTNAME.getKey(), connection.getConfig().getHost())
+                .withTag(Tags.PEER_PORT.getKey(), connection.getConfig().getPort())
+                .withTag(TracingHelper.TAG_PEER_CONTAINER.getKey(), connection.getRemoteContainerId())
+                .start();
     }
 
     /**

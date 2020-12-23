@@ -39,7 +39,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -103,7 +102,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
                     ctx.completeNow();
                 }));
 
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
         client.doHandleResponse(mock(ProtonDelivery.class), response);
     }
@@ -127,7 +126,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
                     ctx.completeNow();
                 }));
 
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
         client.doHandleResponse(mock(ProtonDelivery.class), response);
     }
@@ -151,7 +150,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
                     ctx.completeNow();
                 }));
 
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
         client.doHandleResponse(mock(ProtonDelivery.class), response);
     }
@@ -251,7 +250,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
                     ctx.completeNow();
                 }));
 
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_PRECON_FAILED);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
@@ -372,7 +371,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
         client.setLastKnownGatewayForDevice(deviceId, gatewayId, span.context());
 
         // THEN the message being sent contains the device ID in its properties
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
@@ -395,7 +394,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
         client.registerCommandConsumer(deviceId, "adapterInstanceId", null, span.context());
 
         // THEN the message being sent contains the device ID in its properties
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
@@ -423,7 +422,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
                 Duration.ofSeconds(lifespanSeconds), span.context());
 
         // THEN the message being sent contains the device ID in its properties
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
@@ -450,7 +449,7 @@ public class ProtonBasedTenantCommandRouterClientTest {
         client.unregisterCommandConsumer(deviceId, adapterInstanceId, span.context());
 
         // THEN the message being sent contains the device ID in its properties
-        final Message sentMessage = verifySenderSend();
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
@@ -466,11 +465,5 @@ public class ProtonBasedTenantCommandRouterClientTest {
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(correlationId);
         return response;
-    }
-
-    private Message verifySenderSend() {
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
-        return messageCaptor.getValue();
     }
 }

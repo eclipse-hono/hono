@@ -13,13 +13,20 @@
 
 package org.eclipse.hono.adapter.client.amqp;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Objects;
+
 import org.apache.qpid.proton.amqp.transport.Target;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
@@ -27,6 +34,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -40,6 +48,35 @@ public final class AmqpClientUnitTestHelper {
 
     private AmqpClientUnitTestHelper() {
         // prevent instantiation
+    }
+
+    /**
+     * Asserts that a message has been sent via a given sender link.
+     *
+     * @param sender The sender link.
+     * @return The message that has been sent.
+     * @throws NullPointerException if sender is {@code null}.
+     * @throws AssertionError if no message has been sent.
+     */
+    public static Message assertMessageHasBeenSent(final ProtonSender sender) {
+        Objects.requireNonNull(sender);
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+        return messageCaptor.getValue();
+    }
+
+    /**
+     * Asserts that a receiver link has been created for a connection.
+     *
+     * @param connection The connection.
+     * @return The message handler that has been set on the receiver link.
+     * @throws NullPointerException if connection is {@code null}.
+     * @throws AssertionError if no link has been created.
+     */
+    public static ProtonMessageHandler assertReceiverLinkCreated(final HonoConnection connection) {
+        final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
+        verify(connection).createReceiver(anyString(), any(ProtonQoS.class), messageHandler.capture(), VertxMockSupport.anyHandler());
+        return messageHandler.getValue();
     }
 
     /**
