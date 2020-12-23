@@ -248,7 +248,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    default void testSearchDevicesWithWildCardToMatchMultipleCharacters(final VertxTestContext ctx) {
+    default void testSearchTenantsWithWildCardToMatchMultipleCharacters(final VertxTestContext ctx) {
         final String tenantId1 = DeviceRegistryUtils.getUniqueIdentifier();
         final String tenantId2 = DeviceRegistryUtils.getUniqueIdentifier();
         final String tenantId3 = DeviceRegistryUtils.getUniqueIdentifier();
