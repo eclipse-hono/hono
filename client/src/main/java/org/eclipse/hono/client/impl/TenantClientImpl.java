@@ -56,7 +56,9 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for Hono's Tenant API.
  *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient} instead.
  */
+@Deprecated
 public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult<TenantObject>>
         implements TenantClient {
 
