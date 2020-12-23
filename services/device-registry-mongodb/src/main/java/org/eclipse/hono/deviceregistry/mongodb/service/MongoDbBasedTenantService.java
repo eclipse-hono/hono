@@ -14,8 +14,11 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -27,11 +30,15 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.SearchResult;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
+import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
@@ -221,6 +228,36 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     }
 
     @Override
+    public Future<OperationResult<SearchResult<TenantWithId>>> searchTenants(
+            final int pageSize,
+            final int pageOffset,
+            final List<Filter> filters,
+            final List<Sort> sortOptions,
+            final Span span) {
+
+        Objects.requireNonNull(filters);
+        Objects.requireNonNull(sortOptions);
+        Objects.requireNonNull(span);
+
+        final JsonObject filterDocument = MongoDbDocumentBuilder.builder()
+                .withTenantFilters(filters)
+                .document();
+        final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
+                .withTenantSortOptions(sortOptions)
+                .document();
+
+        return MongoDbDeviceRegistryUtils.processSearchResource(
+                mongoClient,
+                config.getCollectionName(),
+                pageSize,
+                pageOffset,
+                filterDocument,
+                sortDocument,
+                MongoDbBasedTenantService::getTenantsWithId)
+                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+    }
+
+    @Override
     public Future<TenantResult<JsonObject>> get(final String tenantId) {
         return get(tenantId, NoopSpan.INSTANCE);
     }
@@ -405,5 +442,17 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                         return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR));
                     }
                 });
+    }
+
+
+    private static List<TenantWithId> getTenantsWithId(final JsonObject searchResult) {
+        return Optional.ofNullable(searchResult.getJsonArray(RegistryManagementConstants.FIELD_RESULT_SET_PAGE))
+                .map(tenants -> tenants.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .map(json -> json.mapTo(TenantDto.class))
+                        .map(tenantDto -> TenantWithId.from(tenantDto.getTenantId(), tenantDto.getData()))
+                        .collect(Collectors.toList()))
+                .orElseGet(ArrayList::new);
     }
 }

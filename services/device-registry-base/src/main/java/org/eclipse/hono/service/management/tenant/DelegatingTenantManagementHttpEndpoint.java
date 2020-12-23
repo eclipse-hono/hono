@@ -14,6 +14,7 @@ package org.eclipse.hono.service.management.tenant;
 
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -21,7 +22,9 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -50,10 +53,17 @@ import io.vertx.ext.web.handler.BodyHandler;
  */
 public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
 
+    static final int DEFAULT_PAGE_OFFSET = 0;
+    static final int DEFAULT_PAGE_SIZE = 30;
+    static final int MAX_PAGE_SIZE = 200;
+    static final int MIN_PAGE_OFFSET = 0;
+    static final int MIN_PAGE_SIZE = 0;
+
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
     private static final String SPAN_NAME_UPDATE_TENANT = "update Tenant from management API";
     private static final String SPAN_NAME_REMOVE_TENANT = "remove Tenant from management API";
+    private static final String SPAN_NAME_SEARCH_TENANT = "search Tenants from management API";
 
     private static final String TENANT_MANAGEMENT_ENDPOINT_NAME = String.format("%s/%s",
             RegistryManagementConstants.API_VERSION,
@@ -115,6 +125,10 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         router.delete(pathWithTenant)
                 .handler(this::extractIfMatchVersionParam)
                 .handler(this::deleteTenant);
+
+        // SEARCH tenants
+        router.get(path)
+                .handler(this::searchTenants);
     }
 
     private void getTenant(final RoutingContext ctx) {
@@ -208,6 +222,42 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
             .onSuccess(result -> writeResponse(ctx, result, span))
             .onFailure(t -> failRequest(ctx, t, span))
             .onComplete(s -> span.finish());
+    }
+
+    private void searchTenants(final RoutingContext ctx) {
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_SEARCH_TENANT,
+                getClass().getSimpleName()).start();
+
+        final Future<Integer> pageSize = getRequestParameter(
+                ctx,
+                RegistryManagementConstants.PARAM_PAGE_SIZE,
+                DEFAULT_PAGE_SIZE,
+                CONVERTER_INT,
+                value -> value >= MIN_PAGE_SIZE && value <= MAX_PAGE_SIZE);
+        final Future<Integer> pageOffset = getRequestParameter(
+                ctx,
+                RegistryManagementConstants.PARAM_PAGE_OFFSET,
+                DEFAULT_PAGE_OFFSET,
+                CONVERTER_INT,
+                value -> value >= MIN_PAGE_OFFSET);
+        final Future<List<Filter>> filters = decodeJsonFromRequestParameter(ctx,
+                RegistryManagementConstants.PARAM_FILTER_JSON, Filter.class);
+        final Future<List<Sort>> sortOptions = decodeJsonFromRequestParameter(ctx,
+                RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
+
+        CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
+                .compose(ok -> getService().searchTenants(
+                        pageSize.result(),
+                        pageOffset.result(),
+                        filters.result(),
+                        sortOptions.result(),
+                        span))
+                .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+                .onFailure(t -> failRequest(ctx, t, span))
+                .onComplete(s -> span.finish());
     }
 
     /**
