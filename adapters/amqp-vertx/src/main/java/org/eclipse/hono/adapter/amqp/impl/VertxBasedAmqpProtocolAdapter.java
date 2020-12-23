@@ -856,6 +856,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 }
                 return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
             }).compose(success -> {
+                // in case of a gateway having subscribed for a specific device,
+                // check the via-gateways, ensuring that the gateway may act on behalf of the device at this point in time
+                if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
+                    return getRegistrationAssertion(
+                            authenticatedDevice.getTenantId(),
+                            sourceAddress.getResourceId(),
+                            authenticatedDevice,
+                            commandContext.getTracingContext());
+                }
+                return Future.succeededFuture();
+            }).compose(success -> {
                 onCommandReceived(tenantTracker.result(), sender, commandContext);
                 return Future.succeededFuture();
             }).otherwise(failure -> {

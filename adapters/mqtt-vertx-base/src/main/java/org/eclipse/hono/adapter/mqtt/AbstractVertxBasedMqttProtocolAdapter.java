@@ -810,6 +810,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
                 }
             }).compose(success -> {
+                // in case of a gateway having subscribed for a specific device,
+                // check the via-gateways, ensuring that the gateway may act on behalf of the device at this point in time
+                if (subscription.isGatewaySubscriptionForSpecificDevice()) {
+                    return getRegistrationAssertion(
+                            authenticatedDevice.getTenantId(),
+                            subscription.getDeviceId(),
+                            authenticatedDevice,
+                            commandContext.getTracingContext());
+                }
+                return Future.succeededFuture();
+            }).compose(success -> {
                 addMicrometerSample(commandContext, timer);
                 onCommandReceived(tenantTracker.result(), mqttEndpoint, subscription, commandContext, cmdHandler);
                 return Future.succeededFuture();
