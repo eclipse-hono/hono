@@ -211,6 +211,19 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
+     * Sets the json object with the given filters for tenants search operation..
+     *
+     * @param filters The device filters list.
+     * @return a reference to this for fluent use.
+     * @throws NullPointerException if the filters is {@code null}.
+     */
+    public MongoDbDocumentBuilder withTenantFilters(final List<Filter> filters) {
+        Objects.requireNonNull(filters);
+        applySearchFilters(filters, MongoDbDocumentBuilder::mapTenantField);
+        return this;
+    }
+
+    /**
      * Sets the json object with the given sorting options.
      *
      * @param sortOptions The list of soring options.
@@ -220,6 +233,19 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withDeviceSortOptions(final List<Sort> sortOptions) {
         Objects.requireNonNull(sortOptions);
         applySortingOptions(sortOptions, MongoDbDocumentBuilder::mapDeviceField);
+        return this;
+    }
+
+    /**
+     * Sets the json object with the given sorting options for tenants search operation.
+     *
+     * @param sortOptions The list of soring options.
+     * @return a reference to this for fluent use.
+     * @throws NullPointerException if the sortOptions is {@code null}.
+     */
+    public MongoDbDocumentBuilder withTenantSortOptions(final List<Sort> sortOptions) {
+        Objects.requireNonNull(sortOptions);
+        applySortingOptions(sortOptions, MongoDbDocumentBuilder::mapTenantField);
         return this;
     }
 
@@ -245,6 +271,14 @@ public final class MongoDbDocumentBuilder {
             return RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID;
         } else {
             return MongoDbDeviceRegistryUtils.FIELD_DEVICE + field.toString().replace("/", ".");
+        }
+    }
+
+    private static String mapTenantField(final JsonPointer field) {
+        if (FIELD_ID.equals(field)) {
+            return RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID;
+        } else {
+            return RegistryManagementConstants.FIELD_TENANT + field.toString().replace("/", ".");
         }
     }
 

@@ -18,7 +18,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -38,7 +37,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -299,27 +297,4 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         return result.future();
     }
 
-    private static <T> Future<List<T>> decodeJsonFromRequestParameter(
-            final RoutingContext ctx,
-            final String paramKey,
-            final Class<T> clazz) {
-
-        Objects.requireNonNull(ctx);
-        Objects.requireNonNull(paramKey);
-        Objects.requireNonNull(clazz);
-
-        final Promise<List<T>> result = Promise.promise();
-        try {
-            final List<T> values = ctx.request().params().getAll(paramKey)
-                    .stream()
-                    .map(json -> Json.decodeValue(json, clazz))
-                    .collect(Collectors.toList());
-            result.complete(values);
-        } catch (final DecodeException e) {
-            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("error parsing json value of parameter [%s]", paramKey), e));
-        }
-
-        return result.future();
-    }
 }
