@@ -13,6 +13,13 @@ title = "Release Notes"
 * The MQTT adapter now allows clients to indicate whether they want the target device's tenant and/or device IDs
   to be included in the topic used when publishing commands.
 
+### Deprecations
+
+* The `org.eclipse.hono.service.cache.SpringCacheProvider` and `org.eclipse.hono.service.cache.SpringBasedExpiringValueCache`
+  classes have been deprecated to further reduce the dependency on Spring Boot. Clients should use
+  `org.eclipse.hono.service.cache.CaffeineCacheProvider` and `org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache`
+  instead.
+
 ## 1.5.0
 
 ### New Features

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,16 +19,15 @@ package org.eclipse.hono.cache;
 public interface CacheProvider {
 
     /**
-     * Gets a new instance of a cache by name.
+     * Gets a cache instance by name.
      * <p>
-     * It is up to the provider how the cache instance is created, or it creates a new or returns an existing one.
+     * It is up to the implementation how the cache instance is created
+     * and/or if a new instance is being created or an existing one is returned.
      *
-     * @param cacheName the name of the cache to get. Must not be {@code null}.
+     * @param cacheName The name of the cache to get.
      * @param <K> The type of keys that the cache supports.
      * @param <V> The type of values that the cache supports.
-     *
      * @return The new cache instance, may be {@code null} if no cache with that name can be provided.
-     *
      * @throws NullPointerException if the cache name is {@code null}.
      */
     <K, V> ExpiringValueCache<K, V> getCache(String cacheName);

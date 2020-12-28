@@ -49,7 +49,7 @@ import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.client.KafkaProducerFactory;
-import org.eclipse.hono.service.cache.SpringCacheProvider;
+import org.eclipse.hono.service.cache.CaffeineCacheProvider;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
@@ -75,7 +75,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
@@ -850,11 +849,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 .initialCapacity(minCacheSize)
                 .maximumSize(Math.max(minCacheSize, maxCacheSize));
 
-        final CaffeineCacheManager manager = new CaffeineCacheManager();
-        manager.setAllowNullValues(false);
-        manager.setCaffeine(caffeine);
-
-        return new SpringCacheProvider(manager);
+        return new CaffeineCacheProvider(caffeine);
     }
 
     /**

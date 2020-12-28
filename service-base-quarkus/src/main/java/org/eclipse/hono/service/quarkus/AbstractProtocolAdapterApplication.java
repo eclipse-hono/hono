@@ -12,8 +12,6 @@
  */
 package org.eclipse.hono.service.quarkus;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -39,7 +37,6 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrati
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -53,7 +50,7 @@ import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.DeviceConnect
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConfigurationSupport;
 import org.eclipse.hono.service.HealthCheckServer;
-import org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache;
+import org.eclipse.hono.service.cache.CaffeineCacheProvider;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
@@ -440,14 +437,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 .initialCapacity(config.getResponseCacheMinSize())
                 .maximumSize(Math.max(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize()));
 
-        return new CacheProvider() {
-            private final Map<String, ExpiringValueCache<Object, Object>> caches = new HashMap<>();
-
-            @Override
-            public ExpiringValueCache<Object, Object> getCache(final String cacheName) {
-
-                return caches.computeIfAbsent(cacheName, name -> new CaffeineBasedExpiringValueCache<>(caffeine.build()));
-            }
-        };
+        return new CaffeineCacheProvider(caffeine);
     }
 }

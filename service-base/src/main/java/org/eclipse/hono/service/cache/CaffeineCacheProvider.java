@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,28 +19,25 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
- * A cache manager based on Spring Cache.
- *
- * @deprecated Use {@code CaffeineCacheProvider} instead.
+ * A cache manager based on Caffeine.
  */
-@Deprecated
-public class SpringCacheProvider implements CacheProvider {
+public class CaffeineCacheProvider implements CacheProvider {
 
-    private final CacheManager manager;
-    private final Map<String, ExpiringValueCache<?, ?>> caches = new ConcurrentHashMap<>();
+    private final Caffeine<Object, Object> cacheSpec;
+    private final Map<String, ExpiringValueCache<Object, Object>> caches = new ConcurrentHashMap<>();
 
     /**
-     * Creates a new instance based on the provided {@link CacheManager} instance.
+     * Creates a new instance based on the provided {@link com.github.benmanes.caffeine.cache.CaffeineSpec}.
      *
-     * @param manager the cache manager to use, must not be {@code null}
+     * @param cacheSpec The cache configuration to use for creating cache instances.
+     * @throws NullPointerException if cache spec is {@code null}.
      */
-    public SpringCacheProvider(final CacheManager manager) {
-        Objects.requireNonNull(manager);
-        this.manager = manager;
+    public CaffeineCacheProvider(final Caffeine<Object, Object> cacheSpec) {
+        this.cacheSpec = Objects.requireNonNull(cacheSpec);
     }
 
     /**
@@ -54,11 +51,7 @@ public class SpringCacheProvider implements CacheProvider {
     public <K, V> ExpiringValueCache<K, V> getCache(final String cacheName) {
         Objects.requireNonNull(cacheName);
         return (ExpiringValueCache<K, V>) caches.computeIfAbsent(cacheName, name -> {
-            final Cache cache = this.manager.getCache(cacheName);
-            if (cache == null) {
-                return null;
-            }
-            return new SpringBasedExpiringValueCache<K, V>(cache);
+            return new CaffeineBasedExpiringValueCache<>(cacheSpec.build());
         });
     }
 }

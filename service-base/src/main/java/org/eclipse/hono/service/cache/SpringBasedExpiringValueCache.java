@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,9 @@ import org.springframework.cache.Cache;
  *
  * @param <K> The type of keys that the cache supports.
  * @param <V> The type of values that the cache supports.
+ * @deprecated Use {@code CaffeineBasedExpiringValueCache} instead.
  */
+@Deprecated
 public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K, V> {
 
     private static final Logger LOG = LoggerFactory.getLogger(SpringBasedExpiringValueCache.class);
