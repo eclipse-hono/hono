@@ -15,37 +15,50 @@
 package org.eclipse.hono.adapter.client.registry.amqp;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseClient;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseServiceClient;
+import org.eclipse.hono.adapter.client.amqp.RequestResponseClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.client.impl.RegistrationClientImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.TriTuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.eventbus.Message;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 
 
 /**
  * A vertx-proton based client of Hono's Device Registration service.
  *
  */
-public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponseClient<RegistrationResult>
+public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponseServiceClient<JsonObject, RegistrationResult>
         implements DeviceRegistrationClient {
 
-    private final CachingClientFactory<org.eclipse.hono.client.RegistrationClient> clientFactory;
+    private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedDeviceRegistrationClient.class);
 
     /**
      * Creates a new client for a connection.
@@ -62,51 +75,56 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig,
             final CacheProvider cacheProvider) {
-        super(connection, samplerFactory, adapterConfig, cacheProvider);
-        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), RegistrationClient::isOpen);
-        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+
+        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
+                connection.getVertx(), RequestResponseClient::isOpen), cacheProvider);
+        connection.getVertx().eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
 
-    private Future<RegistrationClient> getOrCreateRegistrationClient(final String tenantId) {
+    @Override
+    protected String getKey(final String tenantId) {
+        return String.format("%s-%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId);
+    }
 
-        Objects.requireNonNull(tenantId);
+    private Future<RequestResponseClient<RegistrationResult>> getOrCreateClient(final String tenantId) {
 
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     clientFactory.getOrCreateClient(
-                            RegistrationClientImpl.getTargetAddress(tenantId),
-                            () -> RegistrationClientImpl.create(
-                                    responseCacheProvider,
-                                    connection,
-                                    tenantId,
-                                    samplerFactory.create(RegistrationConstants.REGISTRATION_ENDPOINT),
-                                    this::removeRegistrationClient,
-                                    this::removeRegistrationClient),
+                            getKey(tenantId),
+                            () -> {
+                                return RequestResponseClient.forEndpoint(
+                                        connection,
+                                        RegistrationConstants.REGISTRATION_ENDPOINT,
+                                        tenantId,
+                                        samplerFactory.create(RegistrationConstants.REGISTRATION_ENDPOINT),
+                                        this::removeClient,
+                                        this::removeClient);
+                            },
                             result);
                 }));
     }
 
-    private void removeRegistrationClient(final String tenantId) {
-        clientFactory.removeClient(RegistrationClientImpl.getTargetAddress(tenantId));
-    }
-
-    private void handleTenantTimeout(final Message<String> msg) {
-        final String address = RegistrationClientImpl.getTargetAddress(msg.body());
-        final RegistrationClient client = clientFactory.getClient(address);
-        if (client != null) {
-            client.close(v -> clientFactory.removeClient(address));
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Clears the state of the client factory.
-     */
     @Override
-    protected void onDisconnect() {
-        clientFactory.clearState();
+    protected final RegistrationResult getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+
+        if (isSuccessResponse(status, contentType, payload)) {
+            try {
+                return RegistrationResult.from(status, new JsonObject(payload), cacheDirective, applicationProperties);
+            } catch (final DecodeException e) {
+                LOG.warn("received malformed payload from Device Registration service", e);
+                return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
+            }
+        } else {
+            return RegistrationResult.from(status, null, null, applicationProperties);
+        }
     }
 
     /**
@@ -122,20 +140,70 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        return getOrCreateRegistrationClient(tenantId)
-                .compose(client -> client.assertRegistration(deviceId, gatewayId, context))
-                .map(json -> {
-                    try {
-                        return json.mapTo(RegistrationAssertion.class);
-                    } catch (final DecodeException e) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("registration service returned invalid response:{}{}",
-                                    System.lineSeparator(), json.encodePrettily());
-                        }
-                        throw new ServerErrorException(
-                                HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                "registration service returned invalid response");
+        Objects.requireNonNull(deviceId);
+
+        final TriTuple<String, String, String> responseCacheKey = TriTuple.of(
+                RegistrationConstants.ACTION_ASSERT,
+                String.format("%s@%s", deviceId, tenantId),
+                gatewayId);
+        final Span span = newChildSpan(context, "assert Device Registration");
+        TracingHelper.setDeviceTags(span, tenantId, deviceId);
+        TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
+
+        return getResponseFromCache(responseCacheKey, span)
+                .recover(t -> getOrCreateClient(tenantId)
+                        .compose(client -> {
+                            final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+                            if (gatewayId != null) {
+                                properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+                            }
+                            return client.createAndSendRequest(
+                                    RegistrationConstants.ACTION_ASSERT,
+                                    properties,
+                                    null,
+                                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                                    this::getRequestResponseResult,
+                                    span);
+                        })
+                        .map(registrationResult -> {
+                            addToCache(responseCacheKey, registrationResult);
+                            return registrationResult;
+                        }))
+                .recover(t -> {
+                    Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
+                    TracingHelper.logError(span, t);
+                    return Future.failedFuture(t);
+                })
+                .map(registrationResult -> {
+                    Tags.HTTP_STATUS.set(span, registrationResult.getStatus());
+                    if (registrationResult.isError()) {
+                        Tags.ERROR.set(span, Boolean.TRUE);
                     }
-                });
+                    switch (registrationResult.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        final JsonObject payload = registrationResult.getPayload();
+                        try {
+                            return payload.mapTo(RegistrationAssertion.class);
+                        } catch (final DecodeException e) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("registration service returned invalid response:{}{}",
+                                        System.lineSeparator(), payload.encodePrettily());
+                            }
+                            TracingHelper.logError(span, "registration service returned invalid response", e);
+                            throw new ServerErrorException(
+                                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                    "registration service returned invalid response");
+                        }
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        throw new ClientErrorException(registrationResult.getStatus(), "device unknown or disabled");
+                    case HttpURLConnection.HTTP_FORBIDDEN:
+                        throw new ClientErrorException(
+                                registrationResult.getStatus(),
+                                "gateway unknown, disabled or not authorized to act on behalf of device");
+                    default:
+                        throw StatusCodeMapper.from(registrationResult);
+                    }
+                })
+                .onComplete(o -> span.finish());
     }
 }
