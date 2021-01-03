@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,7 @@ import io.quarkus.arc.properties.IfBuildProperty;
  * A factory class that creates a proper tracer based on the profile.
  */
 @ApplicationScoped
-public class TracerFactory {
+public class TracerProducer {
 
     @Produces
     @DefaultBean
