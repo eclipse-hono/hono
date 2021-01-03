@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
-import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -37,7 +36,7 @@ import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.cache.SpringCacheProvider;
+import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpEndpoint;
@@ -51,13 +50,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
-
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
@@ -331,7 +327,7 @@ public class ApplicationConfig {
                 registrationServiceConnection(),
                 SendMessageSampler.Factory.noop(),
                 config,
-                registrationCacheProvider());
+                Caches.newCaffeineCache(registrationClientConfig()));
     }
 
     /**
@@ -344,52 +340,6 @@ public class ApplicationConfig {
     @Scope("prototype")
     public HonoConnection registrationServiceConnection() {
         return HonoConnection.newConnection(vertx(), registrationClientConfig());
-    }
-
-    /**
-     * Exposes the provider for caches as a Spring bean.
-     *
-     * @return The provider instance.
-     */
-    @Bean
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Scope("prototype")
-    public CacheProvider registrationCacheProvider() {
-        return newCaffeineCache(registrationClientConfig());
-    }
-
-    /**
-     * Create a new cache provider based on Caffeine and Spring Cache.
-     *
-     * @param config The configuration to use as base for this cache.
-     * @return A new cache provider or {@code null} if no cache should be used.
-     */
-    private static CacheProvider newCaffeineCache(final RequestResponseClientConfigProperties config) {
-        return newCaffeineCache(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize());
-    }
-
-    /**
-     * Create a new cache provider based on Caffeine and Spring Cache.
-     *
-     * @param minCacheSize The minimum size of the cache.
-     * @param maxCacheSize the maximum size of the cache.
-     * @return A new cache provider or {@code null} if no cache should be used.
-     */
-    private static CacheProvider newCaffeineCache(final int minCacheSize, final long maxCacheSize) {
-
-        if (maxCacheSize <= 0) {
-            return null;
-        }
-
-        final Caffeine<Object, Object> caffeine = Caffeine.newBuilder()
-                .initialCapacity(minCacheSize)
-                .maximumSize(Math.max(minCacheSize, maxCacheSize));
-
-        final CaffeineCacheManager manager = new CaffeineCacheManager();
-        manager.setAllowNullValues(false);
-        manager.setCaffeine(caffeine);
-
-        return new SpringCacheProvider(manager);
     }
 
     private static void setConfigServerRoleIfUnknown(final AuthenticatingClientConfigProperties config,

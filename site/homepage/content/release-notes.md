@@ -12,6 +12,20 @@ title = "Release Notes"
   for details.
 * The MQTT adapter now allows clients to indicate whether they want the target device's tenant and/or device IDs
   to be included in the topic used when publishing commands.
+* The caching behavior of the protocol adapters' AMQP based registry clients has been changed. All adapter
+  Verticle instances now share a single cache instance *per service*. In particular, there is a single cache for
+  all responses returned by the Tenant, Device Registration and Credentials service respectively.
+  In addition, each cache is now being used for all responses to requests regardless of the tenant. Consequently, the
+  service client configurations' *responseCacheMinSize* and *responseCacheMaxSize* properties now determine
+  the overall number of responses that can be cached *per service*. In previous versions the properties determined
+  the number of entries *per client instance and tenant*. The new approach allows for better control over the maximum
+  amount of memory being used by the cache and should also increase cache hits when deploying multiple adapter
+  Verticle instances.
+  The `org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient` now makes sure that only a single
+  request to the Tenant service is issued when multiple (parallel) *get* method invocations run into a cache miss.
+  This should reduce the load on the Tenant service significantly in scenarios where devices of the same
+  tenant connect to an adapter at a high rate, e.g. in when re-connecting after one or more adapter pods have
+  crashed.
 
 ### Deprecations
 

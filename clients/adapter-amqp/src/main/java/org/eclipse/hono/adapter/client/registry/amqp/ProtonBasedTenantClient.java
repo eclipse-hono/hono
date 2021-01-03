@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,10 @@
 package org.eclipse.hono.adapter.client.registry.amqp;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import javax.security.auth.x500.X500Principal;
@@ -24,7 +27,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.adapter.client.amqp.RequestResponseClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
-import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -42,10 +44,13 @@ import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
+
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.StringTag;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
@@ -60,6 +65,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedTenantClient.class);
     private static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");
+    private final Map<Object, Future<TenantResult<TenantObject>>> pendingRequests = new HashMap<>();
 
     /**
      * Creates a new client for a connection.
@@ -67,16 +73,16 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
      * @param connection The connection to the service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @param cacheProvider The cache provider to use for creating the cache for service responses.
-     * @throws NullPointerException if any of the parameters other than cacheProvider are {@code null}.
+     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
+     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedTenantClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig,
-            final CacheProvider cacheProvider) {
+            final Cache<Object, TenantResult<TenantObject>> responseCache) {
         super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), cacheProvider);
+                connection.getVertx(), RequestResponseClient::isOpen), responseCache);
     }
 
     /**
@@ -166,24 +172,21 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                 span);
     }
 
-    private <T> Future<TenantObject> get(
-            final Pair<TenantAction, T> responseCacheKey,
+    private Future<TenantObject> get(
+            final Pair<TenantAction, ?> responseCacheKey,
             final Supplier<JsonObject> payloadSupplier,
             final Span currentSpan) {
 
         final Future<TenantResult<TenantObject>> resultTracker = getResponseFromCache(responseCacheKey, currentSpan)
-                .recover(cacheMiss -> getOrCreateClient()
-                        .compose(client -> client.createAndSendRequest(
+                .recover(cacheMiss -> addResultHandler(
+                        responseCacheKey,
+                        () -> getOrCreateClient().compose(client -> client.createAndSendRequest(
                                     TenantAction.get.toString(),
                                     null,
                                     payloadSupplier.get().toBuffer(),
                                     RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
                                     this::getRequestResponseResult,
-                                    currentSpan))
-                        .map(tenantResult -> {
-                            addToCache(responseCacheKey, tenantResult);
-                            return tenantResult;
-                        }));
+                                    currentSpan))));
         return mapResultAndFinishSpan(resultTracker, tenantResult -> {
             switch (tenantResult.getStatus()) {
             case HttpURLConnection.HTTP_OK:
@@ -194,5 +197,30 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                 throw StatusCodeMapper.from(tenantResult);
             }
         }, currentSpan);
+    }
+
+    private Future<TenantResult<TenantObject>> addResultHandler(
+            final Object responseCacheKey,
+            final Supplier<Future<TenantResult<TenantObject>>> serviceRequest) {
+
+        final Future<TenantResult<TenantObject>> response = Optional.ofNullable(pendingRequests.get(responseCacheKey))
+                .map(request -> {
+                    // create a new result handler
+                    final Promise<TenantResult<TenantObject>> resultHandler = Promise.promise();
+                    // which will be notified once the the pending request completes
+                    request.onComplete(resultHandler);
+                    return resultHandler.future();
+                })
+                // execute the request
+                .orElseGet(() -> serviceRequest.get()
+                        // make sure to put the response to the cache (if applicable)
+                        .onSuccess(tenantResult -> addToCache(responseCacheKey, tenantResult))
+                        // and remove the most recent result handler so that
+                        // a new request will be executed again
+                        .onComplete(r -> pendingRequests.remove(responseCacheKey)));
+
+        // keep track of the most recent result handler
+        pendingRequests.put(responseCacheKey, response);
+        return response;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,14 +25,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -51,6 +48,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+
+import com.github.benmanes.caffeine.cache.Cache;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -83,8 +82,7 @@ class ProtonBasedCredentialsClientTest {
     private ProtonSender sender;
     private ProtonReceiver receiver;
     private ProtonBasedCredentialsClient client;
-    private ExpiringValueCache<Object, Object> cache;
-    private CacheProvider cacheProvider;
+    private Cache<Object, CredentialsResult<CredentialsObject>> cache;
     private Span span;
     private Vertx vertx;
 
@@ -112,9 +110,7 @@ class ProtonBasedCredentialsClientTest {
         when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
             .thenReturn(Future.succeededFuture(sender));
 
-        cache = mock(ExpiringValueCache.class);
-        cacheProvider = mock(CacheProvider.class);
-        when(cacheProvider.getCache(anyString())).thenReturn(cache);
+        cache = mock(Cache.class);
     }
 
 
@@ -127,12 +123,12 @@ class ProtonBasedCredentialsClientTest {
                 null, null, null));
     }
 
-    private void givenAClient(final CacheProvider cacheProvider) {
+    private void givenAClient(final Cache<Object, CredentialsResult<CredentialsObject>> cache) {
         client = new ProtonBasedCredentialsClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
                 new ProtocolAdapterProperties(),
-                cacheProvider);
+                cache);
     }
 
     /**
@@ -141,6 +137,7 @@ class ProtonBasedCredentialsClientTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetCredentialsInvokesServiceIfNoCacheConfigured(final VertxTestContext ctx) {
 
@@ -155,10 +152,10 @@ class ProtonBasedCredentialsClientTest {
         client.get("tenant", credentialsType, authId, span.context()).onComplete(ctx.succeeding(credentials -> {
             ctx.verify(() -> {
                 // THEN the credentials have been retrieved from the service
-                verify(cache, never()).get(any());
+                verify(cache, never()).getIfPresent(any());
                 assertThat(credentials.getDeviceId()).isEqualTo("device");
                 // and put to the cache
-                verify(cache, never()).put(any(), any(CredentialsResult.class), any(Duration.class));
+                verify(cache, never()).put(any(), any(CredentialsResult.class));
                 // and the span is finished
                 verify(span).finish();
 
@@ -187,11 +184,12 @@ class ProtonBasedCredentialsClientTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetCredentialsAddsResponseToCacheOnCacheMiss(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
-        givenAClient(cacheProvider);
+        givenAClient(cache);
 
         final String authId = "test-auth";
         final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
@@ -203,13 +201,12 @@ class ProtonBasedCredentialsClientTest {
                 .onComplete(ctx.succeeding(credentials -> {
                     ctx.verify(() -> {
                         final var responseCacheKey = ArgumentCaptor.forClass(TriTuple.class);
-                        verify(cache).get(responseCacheKey.capture());
+                        verify(cache).getIfPresent(responseCacheKey.capture());
                         assertThat(credentials.getDeviceId()).isEqualTo("device");
                         // THEN the credentials result has been added to the cache.
                         verify(cache).put(
                                 eq(responseCacheKey.getValue()),
-                                any(CredentialsResult.class),
-                                any(Duration.class));
+                                any(CredentialsResult.class));
                         // and the span is finished
                         verify(span).finish();
                     });
@@ -235,7 +232,7 @@ class ProtonBasedCredentialsClientTest {
     public void testGetCredentialsReturnsValueFromCache(final VertxTestContext ctx) {
 
         // GIVEN a client with a cache containing a credentials
-        givenAClient(cacheProvider);
+        givenAClient(cache);
         final String authId = "test-auth";
         final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
 
@@ -243,14 +240,14 @@ class ProtonBasedCredentialsClientTest {
         final CredentialsResult<CredentialsObject> credentialsResult = client
                 .getResult(HttpURLConnection.HTTP_OK, RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
                         credentialsObject.toBuffer(), null, null);
-        when(cache.get(any())).thenReturn(credentialsResult);
+        when(cache.getIfPresent(any())).thenReturn(credentialsResult);
 
         // WHEN getting credentials
         client.get("tenant", credentialsType, authId, span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the credentials are read from the cache
-                        verify(cache).get(any());
+                        verify(cache).getIfPresent(any());
                         assertThat(result).isEqualTo(credentialsResult.getPayload());
                         verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
                         // and the span is finished
@@ -269,7 +266,7 @@ class ProtonBasedCredentialsClientTest {
     public void testGetCredentialsFailsWithSendError(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left
-        givenAClient(cacheProvider);
+        givenAClient(cache);
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting credentials
@@ -294,7 +291,7 @@ class ProtonBasedCredentialsClientTest {
     public void testGetCredentialsFailsWithRejectedRequest(final VertxTestContext ctx) {
 
         // GIVEN a client
-        givenAClient(cacheProvider);
+        givenAClient(cache);
 
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());

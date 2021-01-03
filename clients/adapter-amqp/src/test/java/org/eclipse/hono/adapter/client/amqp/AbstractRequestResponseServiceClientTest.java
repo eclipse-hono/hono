@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,13 +20,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.impl.CachingClientFactory;
@@ -34,6 +31,8 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.github.benmanes.caffeine.cache.Cache;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -48,8 +47,7 @@ class AbstractRequestResponseServiceClientTest {
     private static final int DEFAULT_CACHE_TIMEOUT_SECONDS = 100;
     private AbstractRequestResponseServiceClient<Buffer, SimpleRequestResponseResult> client;
     private Vertx vertx;
-    private CacheProvider cacheProvider;
-    private ExpiringValueCache<Object, Object> cache;
+    private Cache<Object, SimpleRequestResponseResult> cache;
 
     /**
      * Sets up the fixture.
@@ -59,9 +57,7 @@ class AbstractRequestResponseServiceClientTest {
     void setUp() {
 
         vertx = mock(Vertx.class);
-        cache = mock(ExpiringValueCache.class);
-        cacheProvider = mock(CacheProvider.class);
-        when(cacheProvider.getCache(anyString())).thenReturn(cache);
+        cache = mock(Cache.class);
         final var props = new RequestResponseClientConfigProperties();
         props.setResponseCacheDefaultTimeout(DEFAULT_CACHE_TIMEOUT_SECONDS);
 
@@ -70,7 +66,7 @@ class AbstractRequestResponseServiceClientTest {
                 SendMessageSampler.Factory.noop(),
                 new ProtocolAdapterProperties(),
                 new CachingClientFactory<>(vertx, v -> true),
-                cacheProvider) {
+                cache) {
 
             @Override
             protected SimpleRequestResponseResult getResult(
@@ -92,10 +88,11 @@ class AbstractRequestResponseServiceClientTest {
     /**
      * Verifies that the client puts a response from a service to the cache
      * using the default cache timeout if the response does not contain a
-     * <em>no-cache</em> cache directive.
+     * cache directive but has a status code that allows the response to be
+     * cached using the default timeout.
      */
     @Test
-    public void testCreateAndSendRequestAddsResponseToCache() {
+    public void testCreateAndSendRequestAddsResponseWithNoCacheDirectiveToCache() {
 
         // GIVEN a response without a cache directive and status code 200
         final var response = SimpleRequestResponseResult.from(
@@ -107,16 +104,13 @@ class AbstractRequestResponseServiceClientTest {
         // WHEN adding the response to the cache
         client.addToCache("key", response);
 
-        // THEN the response has been put to the cache with the default timeout
-        verify(cache).put(
-                eq("key"),
-                eq(response),
-                eq(Duration.ofSeconds(DEFAULT_CACHE_TIMEOUT_SECONDS)));
+        // THEN the response has been put to the cache
+        verify(cache).put(eq("key"), eq(response));
     }
 
     /**
      * Verifies that the client puts a response from a service to the cache
-     * using the max age indicated by the response's <em>max-age</em> cache directive.
+     * if the response contains a <em>max-age</em> cache directive.
      */
     @Test
     public void testAddToCacheConsidersMaxAge() {
@@ -132,7 +126,7 @@ class AbstractRequestResponseServiceClientTest {
         client.addToCache("key", response);
 
         // THEN the response has been put to the cache
-        verify(cache).put(eq("key"), eq(response), eq(Duration.ofMinutes(5)));
+        verify(cache).put(eq("key"), eq(response));
     }
 
     /**
@@ -153,7 +147,7 @@ class AbstractRequestResponseServiceClientTest {
         client.addToCache("key", response);
 
         // THEN the response is not put to the cache
-        verify(cache, never()).put(anyString(), any(SimpleRequestResponseResult.class), any(Duration.class));
+        verify(cache, never()).put(anyString(), any(SimpleRequestResponseResult.class));
     }
 
     /**
@@ -174,6 +168,6 @@ class AbstractRequestResponseServiceClientTest {
         client.addToCache("key", response);
 
         // THEN the response is not put to the cache
-        verify(cache, never()).put(anyString(), any(SimpleRequestResponseResult.class), any(Duration.class));
+        verify(cache, never()).put(anyString(), any(SimpleRequestResponseResult.class));
     }
 }

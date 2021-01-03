@@ -83,6 +83,10 @@ where the `${PREFIX}` is set to `HONO_REGISTRATION`.
 The adapter caches the responses from the service according to the *cache directive* included in the response.
 If the response doesn't contain a *cache directive* no data will be cached.
 
+Note that the adapter uses a single cache for all responses from the service regardless of the tenant identifier.
+Consequently, the Device Registration Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
+determine the overall number of responses that can be cached.
+
 ### Credentials Service Connection Configuration
 
 Protocol adapters require a connection to an implementation of Hono's [Credentials API]({{< relref "/api/credentials" >}}) in order to retrieve credentials stored for devices that needs to be authenticated. During connection establishment, the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the credentials provided by a device.
@@ -92,6 +96,10 @@ where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
 If the response doesn't contain a *cache directive* no data will be cached.
+
+Note that the adapter uses a single cache for all responses from the service regardless of the tenant identifier.
+Consequently, the Credentials Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
+determine the overall number of responses that can be cached.
 
 <a name="device-connection-service-connection-configuration"></a>
 ### Device Connection Service Connection Configuration

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,6 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender;
-import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -49,7 +48,7 @@ import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.client.KafkaProducerFactory;
-import org.eclipse.hono.service.cache.CaffeineCacheProvider;
+import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
@@ -61,11 +60,16 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -79,6 +83,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
@@ -418,7 +423,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 registrationServiceConnection(),
                 samplerFactory,
                 adapterConfig,
-                registrationCacheProvider());
+                registrationCache());
     }
 
     /**
@@ -440,9 +445,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Scope("prototype")
-    public CacheProvider registrationCacheProvider() {
-        return newCaffeineCache(registrationClientConfig());
+    public Cache<Object, RegistrationResult> registrationCache() {
+        return Caches.newCaffeineCache(registrationClientConfig());
     }
 
     /**
@@ -492,7 +496,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 credentialsServiceConnection(),
                 samplerFactory,
                 adapterConfig,
-                credentialsCacheProvider());
+                credentialsCache());
     }
 
     /**
@@ -508,15 +512,14 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
-     * Exposes the provider for caches as a Spring bean.
+     * Exposes a cache for Credentials service response messages.
      *
-     * @return The provider instance.
+     * @return The cache instance.
      */
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
-    @Scope("prototype")
-    public CacheProvider credentialsCacheProvider() {
-        return newCaffeineCache(credentialsClientConfig());
+    public Cache<Object, CredentialsResult<CredentialsObject>> credentialsCache() {
+        return Caches.newCaffeineCache(credentialsClientConfig());
     }
 
     /**
@@ -566,7 +569,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 tenantServiceConnection(),
                 samplerFactory,
                 adapterConfig,
-                tenantCacheProvider());
+                tenantCache());
     }
 
     /**
@@ -588,9 +591,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
-    @Scope("prototype")
-    public CacheProvider tenantCacheProvider() {
-        return newCaffeineCache(tenantServiceClientConfig());
+    public Cache<Object, TenantResult<TenantObject>> tenantCache() {
+        return Caches.newCaffeineCache(tenantServiceClientConfig());
     }
 
     /**
@@ -820,36 +822,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     @Bean
     public VertxProperties vertxProperties() {
         return new VertxProperties();
-    }
-
-    /**
-     * Create a new cache provider based on Caffeine and Spring Cache.
-     *
-     * @param config The configuration to use as base for this cache.
-     * @return A new cache provider or {@code null} if no cache should be used.
-     */
-    private static CacheProvider newCaffeineCache(final RequestResponseClientConfigProperties config) {
-        return newCaffeineCache(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize());
-    }
-
-    /**
-     * Create a new cache provider based on Caffeine and Spring Cache.
-     *
-     * @param minCacheSize The minimum size of the cache.
-     * @param maxCacheSize the maximum size of the cache.
-     * @return A new cache provider or {@code null} if no cache should be used.
-     */
-    private static CacheProvider newCaffeineCache(final int minCacheSize, final long maxCacheSize) {
-
-        if (maxCacheSize <= 0) {
-            return null;
-        }
-
-        final Caffeine<Object, Object> caffeine = Caffeine.newBuilder()
-                .initialCapacity(minCacheSize)
-                .maximumSize(Math.max(minCacheSize, maxCacheSize));
-
-        return new CaffeineCacheProvider(caffeine);
     }
 
     /**
