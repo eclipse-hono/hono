@@ -62,9 +62,9 @@ public final class Caches {
                     private long getMaxAge(final CacheDirective directive) {
                         return Optional.ofNullable(directive)
                             .map(d -> {
-                                return Duration.ofSeconds(d.getMaxAge()).toNanos();
+                                return Duration.ofSeconds(Math.min(d.getMaxAge(), config.getResponseCacheDefaultTimeout())).toNanos();
                             })
-                            .orElse(config.getResponseCacheDefaultTimeout());
+                            .orElse(Duration.ofSeconds(config.getResponseCacheDefaultTimeout()).toNanos());
                     }
 
                     @Override

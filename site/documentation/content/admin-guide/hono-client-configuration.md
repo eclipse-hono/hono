@@ -65,8 +65,11 @@ The clients created by a Hono client factory support the caching of responses re
 In order to enable caching, the `org.eclipse.hono.client.impl.HonoClientImpl` factory class needs to be configured with a cache manager using the *setCacheManager* method. Any specific client created by the factory will then cache responses to service invocations based on the following rules:
 
 1. If the response contains a `no-cache` directive, the response is not cached at all.
-2. Otherwise, if the response contains a `max-age` directive, the response is cached for the number of seconds specified by the directive.
-3. Otherwise, if the response message does not contain any of the above directives and the response's status code is one of the codes defined in [RFC 2616, Section 13.4 Response Cacheability](https://tools.ietf.org/html/rfc2616#section-13.4), the response is put to the cache using the default timeout defined by the `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT` variable as the maximum age.
+2. Otherwise, if the response contains a `max-age` directive, the response is cached for the number of seconds determined
+   as the minimum of the value contained in the directive and the value of the `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT` variable.
+3. Otherwise, if the response message does not contain any of the above directives and the response's status code is one
+   of the codes defined in [RFC 2616, Section 13.4 Response Cacheability](https://tools.ietf.org/html/rfc2616#section-13.4),
+   the response is put to the cache using the default timeout defined by the `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT` variable as the maximum age.
 
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the Hono client's caching behavior.
 
@@ -74,7 +77,7 @@ The following table provides an overview of the configuration variables and corr
 | :------------------------------------------ | :-------: | :------------ | :------------|
 | `${PREFIX}_RESPONSECACHEMINSIZE`<br>`--${prefix}.responseCacheMinSize` | no | `20` | The minimum number of responses that can be cached. |
 | `${PREFIX}_RESPONSECACHEMAXSIZE`<br>`--${prefix}.responseCacheMaxSize` | no | `1000` | The maximum number of responses that can be cached. It is up to the particular cache implementation, how to deal with new cache entries once this limit has been reached. |
-| `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT`<br>`--${prefix}.responseCacheDefaultTimeout` | no | `600` | The default number of seconds after which cached responses should be considered invalid. |
+| `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT`<br>`--${prefix}.responseCacheDefaultTimeout` | no | `600` | The default number of seconds after which cached responses should be considered invalid. The value of this property serves as an upper boundary to the value conveyed in a `max-age` cache directive and is capped at `86400`, which corresponds to 24 hours. |
 
 ## Using TLS
 

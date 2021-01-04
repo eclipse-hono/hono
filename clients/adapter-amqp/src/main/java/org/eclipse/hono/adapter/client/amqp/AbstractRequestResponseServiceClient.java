@@ -272,17 +272,16 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
      * <p>
      * If no cache is configured then this method does nothing.
      * <p>
-     * Otherwise
+     * Otherwise, the response is put to the cache if it either
      * <ol>
+     * <li>contains a cache directive other than the <em>no-cache</em> directive or</li>
      * <li>if the response does not contain any cache directive and the response's status code is
      * one of the codes defined by <a href="https://tools.ietf.org/html/rfc2616#section-13.4">
-     * RFC 2616, Section 13.4 Response Cacheability</a>, the response is put to the cache using
-     * the default timeout returned by {@link #getResponseCacheDefaultTimeout()},</li>
-     * <li>else if the response contains a <em>max-age</em> directive, the response
-     * is put to the cache using the max age from the directive,</li>
-     * <li>else if the response contains a <em>no-cache</em> directive, the response
-     * is not put to the cache.</li>
+     * RFC 2616, Section 13.4 Response Cacheability</a>.</li>
      * </ol>
+     * It is the cache implementation's responsibility to evict entries after a reasonable amount
+     * of time. The maxAge property of the cache directive contained in a response should be
+     * considered when determining the concrete amount of time.
      *
      * @param key The key to use for the response.
      * @param response The response to put to the cache.
