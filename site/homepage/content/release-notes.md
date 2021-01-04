@@ -2,6 +2,13 @@
 title = "Release Notes"
 +++
 
+## 1.4.5 (not yet released)
+
+### Fixes & Enhancements
+
+* The tenant timeout mechanism doesn't close command consumer resources anymore if there are still active
+  command subscriptions from AMQP or MQTT devices of the corresponding tenant.
+
 ## 1.4.4
 
 ### Fixes & Enhancements

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -321,18 +321,19 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     private void handleTenantTimeout(final Message<String> msg) {
         final String tenantId = msg.body();
-        final MessageConsumer consumer = mappingAndDelegatingCommandConsumerFactory.getClient(tenantId);
-        if (consumer != null) {
-            log.info("timeout of tenant {}: closing and removing command consumer", tenantId);
-            consumer.close(v -> mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId));
-        }
-        final List<CommandHandlerWrapper> handlersToRemove = adapterInstanceCommandHandler
+        final List<CommandHandlerWrapper> tenantRelatedHandlers = adapterInstanceCommandHandler
                 .getDeviceSpecificCommandHandlers().stream().filter(handler -> handler.getTenantId().equals(tenantId))
                 .collect(Collectors.toList());
-        handlersToRemove.forEach(handler -> {
-            log.info("timeout of tenant {}: removing command handler for device {}", tenantId, handler.getDeviceId());
-            adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(handler.getTenantId(), handler.getDeviceId());
-        });
+        if (tenantRelatedHandlers.isEmpty()) {
+            final MessageConsumer consumer = mappingAndDelegatingCommandConsumerFactory.getClient(tenantId);
+            if (consumer != null) {
+                log.info("tenant timeout: closing and removing command consumer [tenant {}]", tenantId);
+                consumer.close(v -> mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId));
+            }
+        } else {
+            log.debug("ignoring tenant timeout; there are still {} command handlers for tenant devices [tenant {}]",
+                    tenantRelatedHandlers.size(), tenantId);
+        }
     }
 
     /**
