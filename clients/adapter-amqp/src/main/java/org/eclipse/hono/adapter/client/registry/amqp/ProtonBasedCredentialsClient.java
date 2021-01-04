@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.adapter.client.amqp.RequestResponseClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
-import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -38,6 +37,8 @@ import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.benmanes.caffeine.cache.Cache;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -64,18 +65,17 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
      * @param connection The connection to the Credentials service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @param cacheProvider The cache provider to use for creating a cache for service responses or
-     *                      {@code null} if responses should not be cached.
-     * @throws NullPointerException if any of the parameters other than the cache provider are {@code null}.
+     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
+     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedCredentialsClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig,
-            final CacheProvider cacheProvider) {
+            final Cache<Object, CredentialsResult<CredentialsObject>> responseCache) {
 
         super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), cacheProvider);
+                connection.getVertx(), RequestResponseClient::isOpen), responseCache);
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,13 +26,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -48,6 +45,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+
+import com.github.benmanes.caffeine.cache.Cache;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -78,8 +77,7 @@ class ProtonBasedDeviceRegistrationClientTest {
     private ProtonSender sender;
     private ProtonReceiver receiver;
     private ProtonBasedDeviceRegistrationClient client;
-    private ExpiringValueCache<Object, Object> cache;
-    private CacheProvider cacheProvider;
+    private Cache<Object, RegistrationResult> cache;
     private Span span;
     private Vertx vertx;
 
@@ -107,9 +105,7 @@ class ProtonBasedDeviceRegistrationClientTest {
         when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
             .thenReturn(Future.succeededFuture(sender));
 
-        cache = mock(ExpiringValueCache.class);
-        cacheProvider = mock(CacheProvider.class);
-        when(cacheProvider.getCache(anyString())).thenReturn(cache);
+        cache = mock(Cache.class);
     }
 
     private static JsonObject newRegistrationAssertionResult(final String deviceId) {
@@ -127,12 +123,12 @@ class ProtonBasedDeviceRegistrationClientTest {
         return result;
     }
 
-    private void givenAClient(final CacheProvider cacheProvider) {
+    private void givenAClient(final Cache<Object, RegistrationResult> cache) {
         client = new ProtonBasedDeviceRegistrationClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
                 new ProtocolAdapterProperties(),
-                cacheProvider);
+                cache);
     }
 
     /**
@@ -147,21 +143,20 @@ class ProtonBasedDeviceRegistrationClientTest {
         final var registrationAssertion = newRegistrationAssertionResult("myDevice");
 
         // GIVEN a client with an empty cache
-        givenAClient(cacheProvider);
-        when(cache.get(any())).thenReturn(null);
+        givenAClient(cache);
+        when(cache.getIfPresent(any())).thenReturn(null);
 
         // WHEN getting registration information
         client.assertRegistration("tenant", "myDevice", null, span.context()).onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the registration information has been added to the cache
                 final var responseCacheKey = ArgumentCaptor.forClass(TriTuple.class);
-                verify(cache).get(responseCacheKey.capture());
+                verify(cache).getIfPresent(responseCacheKey.capture());
                 assertThat(result.getDeviceId()).isEqualTo("myDevice");
                 assertThat(result.getAuthorizedGateways()).isEmpty();
                 verify(cache).put(
                         eq(responseCacheKey.getValue()),
-                        argThat((RegistrationResult response) -> registrationAssertion.equals(response.getPayload())),
-                        any(Duration.class));
+                        argThat((RegistrationResult response) -> registrationAssertion.equals(response.getPayload())));
                 // and the span is finished
                 verify(span).finish();
             });
@@ -195,10 +190,10 @@ class ProtonBasedDeviceRegistrationClientTest {
         client.assertRegistration("tenant", "device", null, span.context()).onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the registration information has been retrieved from the service
-                verify(cache, never()).get(any());
+                verify(cache, never()).getIfPresent(any());
                 assertThat(result.getDeviceId()).isEqualTo("device");
                 // and not been put to the cache
-                verify(cache, never()).put(any(), any(RegistrationResult.class), any(Duration.class));
+                verify(cache, never()).put(any(), any(RegistrationResult.class));
                 // and the span is finished
                 verify(span).finish();
             });
@@ -225,17 +220,17 @@ class ProtonBasedDeviceRegistrationClientTest {
 
         // GIVEN an adapter with a cache containing a registration assertion
         // response for "device"
-        givenAClient(cacheProvider);
+        givenAClient(cache);
         final JsonObject registrationAssertion = newRegistrationAssertionResult("device");
         final RegistrationResult regResult = RegistrationResult.from(HttpURLConnection.HTTP_OK, registrationAssertion);
-        when(cache.get(any())).thenReturn(regResult);
+        when(cache.getIfPresent(any())).thenReturn(regResult);
 
         // WHEN getting registration information
         client.assertRegistration("tenant", "device", "gateway", span.context())
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     // THEN the registration information is read from the cache
-                    verify(cache).get(any());
+                    verify(cache).getIfPresent(any());
                     assertThat(result.getDeviceId()).isEqualTo("device");
                     // and no request message is sent to the service
                     verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());

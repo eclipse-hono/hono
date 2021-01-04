@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 package org.eclipse.hono.adapter.client.amqp;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,8 +22,6 @@ import java.util.function.Function;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -39,6 +36,8 @@ import org.eclipse.hono.util.RequestResponseResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
+
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
@@ -47,7 +46,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A vertx-proton based parent class for the implementation of API clients that follow the request response pattern.
  * <p>
- * Provides support for caching response messages from a service in an {@link ExpiringValueCache}.
+ * Provides support for caching response messages from a service in a Caffeine Cache.
  *
  * @param <R> The type of response this client expects the peer to return.
  * @param <T> The type of object contained in the peer's response.
@@ -72,7 +71,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     /**
      * A cache to use for responses received from the service.
      */
-    private final ExpiringValueCache<Object, R> responseCache;
+    private final Cache<Object, R> responseCache;
 
     /**
      * Creates a request-response client.
@@ -81,23 +80,19 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @param adapterConfig The protocol adapter's configuration properties.
      * @param clientFactory The factory to use for creating links to the service.
-     * @param cacheProvider The provider to use for creating cache instances for service responses.
-     * @throws NullPointerException if any of the parameters other than cacheProvider are {@code null}.
+     * @param responseCache The cache to use for service responses.
+     * @throws NullPointerException if any of the parameters other than responseCache are {@code null}.
      */
     protected AbstractRequestResponseServiceClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig,
             final CachingClientFactory<RequestResponseClient<R>> clientFactory,
-            final CacheProvider cacheProvider) {
+            final Cache<Object, R> responseCache) {
 
         super(connection, samplerFactory, adapterConfig);
         this.clientFactory = Objects.requireNonNull(clientFactory);
-        if (cacheProvider == null) {
-            this.responseCache = null;
-        } else {
-            this.responseCache = cacheProvider.getCache("responses");
-        }
+        this.responseCache = Optional.ofNullable(responseCache).orElse(null);
     }
 
     /**
@@ -261,16 +256,13 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
         Objects.requireNonNull(key);
 
         if (isCachingEnabled()) {
-            final R result = responseCache.get(key);
-            if (currentSpan != null) {
-                TracingHelper.TAG_CACHE_HIT.set(currentSpan, result != null);
-            }
-            if (result == null) {
-                return Future.failedFuture("cache miss");
-            } else {
-                return Future.succeededFuture(result);
-            }
+            final R result = responseCache.getIfPresent(key);
+            TracingHelper.TAG_CACHE_HIT.set(currentSpan, result != null);
+            return Optional.ofNullable(result)
+                    .map(Future::succeededFuture)
+                    .orElse(Future.failedFuture("cache miss"));
         } else {
+            TracingHelper.TAG_CACHE_HIT.set(currentSpan, Boolean.FALSE);
             return Future.failedFuture(new IllegalStateException("no cache configured"));
         }
     }
@@ -280,17 +272,16 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
      * <p>
      * If no cache is configured then this method does nothing.
      * <p>
-     * Otherwise
+     * Otherwise, the response is put to the cache if it either
      * <ol>
+     * <li>contains a cache directive other than the <em>no-cache</em> directive or</li>
      * <li>if the response does not contain any cache directive and the response's status code is
      * one of the codes defined by <a href="https://tools.ietf.org/html/rfc2616#section-13.4">
-     * RFC 2616, Section 13.4 Response Cacheability</a>, the response is put to the cache using
-     * the default timeout returned by {@link #getResponseCacheDefaultTimeout()},</li>
-     * <li>else if the response contains a <em>max-age</em> directive, the response
-     * is put to the cache using the max age from the directive,</li>
-     * <li>else if the response contains a <em>no-cache</em> directive, the response
-     * is not put to the cache.</li>
+     * RFC 2616, Section 13.4 Response Cacheability</a>.</li>
      * </ol>
+     * It is the cache implementation's responsibility to evict entries after a reasonable amount
+     * of time. The maxAge property of the cache directive contained in a response should be
+     * considered when determining the concrete amount of time.
      *
      * @param key The key to use for the response.
      * @param response The response to put to the cache.
@@ -303,19 +294,12 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
             Objects.requireNonNull(key);
             Objects.requireNonNull(response);
 
-            final CacheDirective cacheDirective = Optional.ofNullable(response.getCacheDirective())
-                    .orElseGet(() -> {
-                        if (isCacheableStatusCode(response.getStatus())) {
-                            return CacheDirective.maxAgeDirective(getResponseCacheDefaultTimeout());
-                        } else {
-                            return CacheDirective.noCacheDirective();
-                        }
-                    });
+            final boolean resultCanBeCached = Optional.ofNullable(response.getCacheDirective())
+                    .map(directive -> directive.isCachingAllowed())
+                    .orElse(isCacheableStatusCode(response.getStatus()));
 
-            if (cacheDirective.isCachingAllowed()) {
-                if (cacheDirective.getMaxAge() > 0) {
-                    responseCache.put(key, response, Duration.ofSeconds(cacheDirective.getMaxAge()));
-                }
+            if (resultCanBeCached) {
+                responseCache.put(key, response);
             }
         }
     }

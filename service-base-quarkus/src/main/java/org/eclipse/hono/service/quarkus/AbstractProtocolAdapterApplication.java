@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,6 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClien
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
-import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -50,16 +49,21 @@ import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.DeviceConnect
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConfigurationSupport;
 import org.eclipse.hono.service.HealthCheckServer;
-import org.eclipse.hono.service.cache.CaffeineCacheProvider;
+import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Cache;
 
 import io.opentracing.Tracer;
 import io.quarkus.runtime.ShutdownEvent;
@@ -103,6 +107,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     @Inject
     protected C protocolAdapterProperties;
+
+    private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
+    private Cache<Object, RegistrationResult> registrationResponseCache;
+    private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache;
 
     /**
      * Creates an instance of the protocol adapter.
@@ -219,6 +227,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return config.tenant;
     }
 
+    private Cache<Object, TenantResult<TenantObject>> tenantResponseCache() {
+        if (tenantResponseCache == null) {
+            tenantResponseCache = Caches.newCaffeineCache(config.tenant);
+        }
+        return tenantResponseCache;
+    }
+
     /**
      * Creates a new client for Hono's Tenant service.
      *
@@ -229,13 +244,20 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 HonoConnection.newConnection(vertx, tenantServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
-                newCaffeineCache(config.tenant));
+                tenantResponseCache());
     }
 
     private RequestResponseClientConfigProperties registrationServiceClientConfig() {
         setConfigServerRoleIfUnknown(config.registration, "Device Registration");
         setDefaultConfigNameIfNotSet(config.registration);
         return config.registration;
+    }
+
+    private Cache<Object, RegistrationResult> registrationResponseCache() {
+        if (registrationResponseCache == null) {
+            registrationResponseCache = Caches.newCaffeineCache(config.registration);
+        }
+        return registrationResponseCache;
     }
 
     /**
@@ -248,13 +270,20 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 HonoConnection.newConnection(vertx, registrationServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
-                newCaffeineCache(config.registration));
+                registrationResponseCache());
     }
 
     private RequestResponseClientConfigProperties credentialsServiceClientConfig() {
         setConfigServerRoleIfUnknown(config.credentials, "Credentials");
         setDefaultConfigNameIfNotSet(config.credentials);
         return config.credentials;
+    }
+
+    private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache() {
+        if (credentialsResponseCache == null) {
+            credentialsResponseCache = Caches.newCaffeineCache(config.credentials);
+        }
+        return credentialsResponseCache;
     }
 
     /**
@@ -267,7 +296,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 HonoConnection.newConnection(vertx, credentialsServiceClientConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties,
-                newCaffeineCache(config.credentials));
+                credentialsResponseCache());
     }
 
     private RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
@@ -416,27 +445,5 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
-    }
-
-    /**
-     * Create a new cache provider based on Caffeine.
-     *
-     * @param config The client configuration to determine the cache size from.
-     * @return A new cache provider or {@code null} if no cache should be used.
-     * @throws NullPointerException if config is {@code null}.
-     */
-    protected static CacheProvider newCaffeineCache(final RequestResponseClientConfigProperties config) {
-
-        Objects.requireNonNull(config);
-
-        if (config.getResponseCacheMaxSize() <= 0) {
-            return null;
-        }
-
-        final Caffeine<Object, Object> caffeine = Caffeine.newBuilder()
-                .initialCapacity(config.getResponseCacheMinSize())
-                .maximumSize(Math.max(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize()));
-
-        return new CaffeineCacheProvider(caffeine);
     }
 }

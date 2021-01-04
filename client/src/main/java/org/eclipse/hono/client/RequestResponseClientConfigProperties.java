@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,6 +33,10 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * The default timeout for cached responses in seconds until they are considered invalid.
      */
     public static final long DEFAULT_RESPONSE_CACHE_TIMEOUT = 600L;
+    /**
+     * The maximum period of time in seconds after which cached responses are considered invalid.
+     */
+    public static final long MAX_RESPONSE_CACHE_TIMEOUT = 24 * 60 * 60L; // 24h
 
     private int responseCacheMinSize = DEFAULT_RESPONSE_CACHE_MIN_SIZE;
     private long responseCacheMaxSize = DEFAULT_RESPONSE_CACHE_MAX_SIZE;
@@ -107,9 +111,9 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
     /**
      * Gets the default period of time after which cached responses are considered invalid.
      * <p>
-     * The default value of this property is {@link #DEFAULT_RESPONSE_CACHE_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_RESPONSE_CACHE_TIMEOUT}.
      *
-     * @return The default timeout for cached responses.
+     * @return The timeout in seconds.
      */
     public final long getResponseCacheDefaultTimeout() {
         return responseCacheDefaultTimeout;
@@ -118,7 +122,8 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
     /**
      * Sets the default period of time after which cached responses should be considered invalid.
      * <p>
-     * The default value of this property is {@link #DEFAULT_RESPONSE_CACHE_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_RESPONSE_CACHE_TIMEOUT}.
+     * The value of this property is capped at {@value #MAX_RESPONSE_CACHE_TIMEOUT}.
      *
      * @param timeout The timeout in seconds.
      * @throws IllegalArgumentException if timeout is &lt;= 0.
@@ -127,9 +132,8 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
         if (timeout <= 0) {
             throw new IllegalArgumentException("default cache timeout must be greater than zero");
         }
-        this.responseCacheDefaultTimeout = timeout;
+        this.responseCacheDefaultTimeout = Math.min(timeout, MAX_RESPONSE_CACHE_TIMEOUT);
     }
-
 
     /**
      * {@inheritDoc}

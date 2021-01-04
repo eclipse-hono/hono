@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,22 +18,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
-import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -51,12 +50,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import com.github.benmanes.caffeine.cache.Cache;
+
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -80,8 +82,7 @@ class ProtonBasedTenantClientTest {
     private ProtonSender sender;
     private ProtonReceiver receiver;
     private ProtonBasedTenantClient client;
-    private ExpiringValueCache<Object, Object> cache;
-    private CacheProvider cacheProvider;
+    private Cache<Object, TenantResult<TenantObject>> cache;
     private Span span;
 
     /**
@@ -106,9 +107,7 @@ class ProtonBasedTenantClientTest {
         when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
             .thenReturn(Future.succeededFuture(sender));
 
-        cache = mock(ExpiringValueCache.class);
-        cacheProvider = mock(CacheProvider.class);
-        when(cacheProvider.getCache(anyString())).thenReturn(cache);
+        cache = mock(Cache.class);
     }
 
     private static JsonObject newTenantResult(final String tenantId) {
@@ -119,12 +118,12 @@ class ProtonBasedTenantClientTest {
         return returnObject;
     }
 
-    private void givenAClient(final CacheProvider cacheProvider) {
+    private void givenAClient(final Cache<Object, TenantResult<TenantObject>> cache) {
         client = new ProtonBasedTenantClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
                 new ProtocolAdapterProperties(),
-                cacheProvider);
+                cache);
     }
 
     /**
@@ -144,11 +143,11 @@ class ProtonBasedTenantClientTest {
         client.get("tenant", span.context()).onComplete(ctx.succeeding(tenant -> {
             ctx.verify(() -> {
                 // THEN the registration information has been retrieved from the service
-                verify(cache, never()).get(any());
+                verify(cache, never()).getIfPresent(any());
                 assertThat(tenant).isNotNull();
                 assertThat(tenant.getTenantId()).isEqualTo("tenant");
                 // and not been put to the cache
-                verify(cache, never()).put(any(), any(TenantResult.class), any(Duration.class));
+                verify(cache, never()).put(any(), any());
                 // and the span is finished
                 verify(span).finish();
             });
@@ -175,33 +174,66 @@ class ProtonBasedTenantClientTest {
     public void testGetTenantAddsInfoToCacheOnCacheMiss(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
-        givenAClient(cacheProvider);
-        when(cache.get(any())).thenReturn(null);
-        final JsonObject tenantResult = newTenantResult("tenant");
+        givenAClient(cache);
+        final JsonObject payload = newTenantResult("tenant");
+        when(cache.getIfPresent(any())).thenReturn(null);
+        final Checkpoint responseReceived = ctx.checkpoint(2);
 
         // WHEN getting tenant information
-        client.get("tenant", span.context()).onComplete(ctx.succeeding(tenant -> {
+
+        final Future<TenantObject> requestOne = client.get("tenant", span.context());
+
+        // THEN the client tries to retrieve the tenant from the cache
+        final var responseCacheKey = ArgumentCaptor.forClass(Object.class);
+        verify(cache).getIfPresent(responseCacheKey.capture());
+
+        // AND sends the request message to the service
+        final Message requestOneMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+
+        // WHEN getting information for the same tenant in a another request
+        // before the first request has completed
+
+        assertThat(requestOne.isComplete()).isFalse();
+        final Future<TenantObject> requestTwo = client.get("tenant", span.context());
+
+        // THEN the client tries to retrieve the tenant from the cache again
+        verify(cache, times(2)).getIfPresent(responseCacheKey.capture());
+        // but does not find it in the cache
+        assertThat(requestTwo.isComplete()).isFalse();
+
+        // WHEN the response to the first request is received from the Tenant service
+        final Message responseOneMessage = ProtonHelper.message();
+        MessageHelper.addProperty(responseOneMessage, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(responseOneMessage, CacheDirective.maxAgeDirective(60));
+        responseOneMessage.setCorrelationId(requestOneMessage.getMessageId());
+        MessageHelper.setPayload(responseOneMessage, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, payload.toBuffer());
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, responseOneMessage);
+
+        // THEN the response is put to the cache
+        verify(cache, times(1)).put(
+                eq(responseCacheKey.getValue()),
+                argThat(result -> {
+                    return result.getPayload().getTenantId().equals("tenant")
+                            && result.getCacheDirective().getMaxAge() == 60L;
+                }));
+
+        // and both requests succeed
+        requestOne.onComplete(ctx.succeeding(tenant -> {
             ctx.verify(() -> {
-                // THEN the tenant result has been added to the cache
-                final var responseCacheKey = ArgumentCaptor.forClass(Object.class);
-                verify(cache).get(responseCacheKey.capture());
                 assertThat(tenant).isNotNull();
                 assertThat(tenant.getTenantId()).isEqualTo("tenant");
-                verify(cache).put(eq(responseCacheKey.getValue()), any(TenantResult.class), any(Duration.class));
-                // and the span is finished
-                verify(span).finish();
             });
-            ctx.completeNow();
+            responseReceived.flag();
         }));
 
-        final Message request = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
-        response.setCorrelationId(request.getMessageId());
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, tenantResult.toBuffer());
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, response);
+        requestTwo.onComplete(ctx.succeeding(tenant -> {
+            ctx.verify(() -> {
+                assertThat(tenant).isNotNull();
+                assertThat(tenant.getTenantId()).isEqualTo("tenant");
+            });
+            responseReceived.flag();
+        }));
     }
 
     /**
@@ -214,7 +246,7 @@ class ProtonBasedTenantClientTest {
     public void testGetTenantReturnsValueFromCache(final VertxTestContext ctx) {
 
         // GIVEN a client with a cache containing a tenant
-        givenAClient(cacheProvider);
+        givenAClient(cache);
         // but no connection to the service
         when(sender.isOpen()).thenReturn(false);
         when(connection.isConnected(anyLong()))
@@ -224,13 +256,13 @@ class ProtonBasedTenantClientTest {
         final TenantResult<TenantObject> tenantResult = client.getResult(
                 HttpURLConnection.HTTP_OK, "application/json", tenantJsonObject.toBuffer(), null, null);
 
-        when(cache.get(any())).thenReturn(tenantResult);
+        when(cache.getIfPresent(any())).thenReturn(tenantResult);
 
         // WHEN getting tenant information
         client.get("tenant", span.context()).onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the tenant information is read from the cache
-                verify(cache).get(any());
+                verify(cache).getIfPresent(any());
                 assertThat(result).isEqualTo(tenantResult.getPayload());
                 // and no request message is sent to the service
                 verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
@@ -251,7 +283,7 @@ class ProtonBasedTenantClientTest {
     public void testGetTenantFailsIfSenderHasNoCredit(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left 
-        givenAClient(cacheProvider);
+        givenAClient(cache);
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting tenant information
@@ -276,7 +308,7 @@ class ProtonBasedTenantClientTest {
     public void testGetTenantByCaUsesRFC2253SubjectDn() {
 
         // GIVEN a client
-        givenAClient(cacheProvider);
+        givenAClient(cache);
 
         // WHEN getting tenant information for a subject DN
         final X500Principal dn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
