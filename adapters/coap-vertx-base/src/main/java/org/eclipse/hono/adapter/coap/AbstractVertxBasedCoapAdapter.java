@@ -230,7 +230,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 })
                 .compose(serverToStart -> Futures.executeBlocking(vertx, () -> {
                     serverToStart.start();
-                    return Future.succeededFuture(serverToStart);
+                    return serverToStart;
                 }))
                 .compose(serverToStart -> {
                     try {
@@ -545,7 +545,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             if (server != null) {
                 server.stop();
             }
-            return Future.succeededFuture();
+            return (Void) null;
         })
         .compose(ok -> postShutdown())
         .onComplete(stopPromise);
