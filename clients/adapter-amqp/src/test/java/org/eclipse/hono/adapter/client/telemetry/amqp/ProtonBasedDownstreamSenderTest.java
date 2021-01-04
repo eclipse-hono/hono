@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,11 +17,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
@@ -30,6 +33,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -42,6 +46,7 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -138,4 +143,16 @@ public class ProtonBasedDownstreamSenderTest {
                 }));
     }
 
+    /**
+     * Verifies that the proton message being transferred when sending an event is marked as durable.
+     */
+    @Test
+    public void testSendEventMarksMessageAsDurable() {
+
+        // WHEN sending an event
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final RegistrationAssertion device = new RegistrationAssertion("4711");
+        sender.sendEvent(tenant, device, "text/plain", Buffer.buffer("hello"), null, span.context());
+        verify(protonSender).send(argThat(Message::isDurable), VertxMockSupport.anyHandler());
+    }
 }

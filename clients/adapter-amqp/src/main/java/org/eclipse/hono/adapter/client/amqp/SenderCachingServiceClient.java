@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,10 +15,9 @@
 package org.eclipse.hono.adapter.client.amqp;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.impl.CachingClientFactory;
@@ -28,9 +27,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 
 
@@ -44,7 +41,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     /**
      * The factory for creating downstream sender links.
      */
-    private final CachingClientFactory<DownstreamSender> clientFactory;
+    private final CachingClientFactory<DownstreamSenderLink> clientFactory;
 
     /**
      * Creates a new client.
@@ -60,7 +57,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
             final ProtocolAdapterProperties adapterConfig) {
 
         super(connection, samplerFactory, adapterConfig);
-        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
+        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), DownstreamSenderLink::isOpen);
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
@@ -68,31 +65,51 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     private void handleTenantTimeout(final Message<String> msg) {
         List.of(AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, msg.body(), null, connection.getConfig()),
                 AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, msg.body(), null, connection.getConfig()))
-            .forEach(key -> Optional.ofNullable(clientFactory.getClient(key)).ifPresent(client -> client.close(v -> clientFactory.removeClient(key))));
+            .forEach(key -> Optional.ofNullable(clientFactory.getClient(key))
+                    .ifPresent(client -> client.close().onComplete(r -> clientFactory.removeClient(key))));
     }
 
     /**
-     * Gets an existing or creates a new sender for telemetry and/or event messages.
+     * Gets an existing or creates a new sender link.
      * <p>
      * This method first tries to look up an already existing
-     * sender using the given key. If no sender exists yet, a new
-     * instance is created using the given factory and put to the cache.
+     * link using the given key. If no link exists yet, a new
+     * instance is created using the endpoint and tenant ID for
+     * the link's target address and put to the cache.
      *
-     * @param key The key to cache the sender under.
-     * @param clientInstanceSupplier The factory to use for creating a
-     *        new sender (if necessary).
-     * @param result The handler to invoke with the outcome of the creation attempt.
-     *         The handler will be invoked with a succeeded future containing
-     *         the sender or with a failed future containing a
-     *         {@link org.eclipse.hono.client.ServiceInvocationException} if no sender
-     *         could be created.
+     * @param endpoint The endpoint to get or create the link for.
+     * @param tenantId The identifier of the tenant to get or create the link for.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be completed with the sender link
+     *         or will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     *         if no sender link could be created.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected void getOrCreateSender(
-            final String key,
-            final Supplier<Future<DownstreamSender>> clientInstanceSupplier,
-            final Handler<AsyncResult<DownstreamSender>> result) {
+    protected final Future<DownstreamSenderLink> getOrCreateSenderLink(
+            final String endpoint,
+            final String tenantId) {
 
-        clientFactory.getOrCreateClient(key, clientInstanceSupplier, result);
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(tenantId);
+
+        return connection
+                .isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOnContext(result -> {
+                    final String key = AddressHelper.getTargetAddress(
+                            endpoint,
+                            tenantId,
+                            null,
+                            connection.getConfig());
+                    clientFactory.getOrCreateClient(
+                            key,
+                            () -> DownstreamSenderLink.create(
+                                    connection,
+                                    endpoint,
+                                    tenantId,
+                                    samplerFactory.create(endpoint),
+                                    onSenderClosed -> removeClient(key)),
+                            result);
+                }));
     }
 
     /**
@@ -100,8 +117,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
      *
      * @param key The key of the sender to remove.
      */
-    protected void removeClient(final String key) {
+    protected final void removeClient(final String key) {
         clientFactory.removeClient(key);
     }
-
 }

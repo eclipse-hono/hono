@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,14 +23,10 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.client.impl.EventSenderImpl;
-import org.eclipse.hono.client.impl.TelemetrySenderImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -63,46 +59,6 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
         super(connection, samplerFactory, adapterConfig);
     }
 
-    private Future<DownstreamSender> getOrCreateTelemetrySender(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return connection
-                .isConnected(getDefaultConnectionCheckTimeout())
-                .compose(v -> connection.executeOnContext(result -> {
-                    final String key = AddressHelper.getTargetAddress(
-                            TelemetryConstants.TELEMETRY_ENDPOINT,
-                            tenantId,
-                            null,
-                            connection.getConfig());
-                    getOrCreateSender(
-                            key,
-                            () -> TelemetrySenderImpl.create(
-                                    connection,
-                                    tenantId,
-                                    samplerFactory.create(TelemetryConstants.TELEMETRY_ENDPOINT),
-                                    onSenderClosed -> removeClient(key)),
-                            result);
-                }));
-    }
-
-    private Future<DownstreamSender> getOrCreateEventSender(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return connection
-                .isConnected(getDefaultConnectionCheckTimeout())
-                .compose(v -> connection.executeOnContext(result -> {
-                    final String key = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, connection.getConfig());
-                    getOrCreateSender(
-                            key,
-                            () -> EventSenderImpl.create(
-                                    connection,
-                                    tenantId,
-                                    samplerFactory.create(EventConstants.EVENT_ENDPOINT),
-                                    onSenderClosed -> removeClient(key)),
-                            result);
-                }));
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -120,16 +76,16 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
         Objects.requireNonNull(device);
         Objects.requireNonNull(qos);
 
-        return getOrCreateTelemetrySender(tenant.getTenantId())
+        return getOrCreateSenderLink(TelemetryConstants.TELEMETRY_ENDPOINT, tenant.getTenantId())
             .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
             .compose(sender -> {
                 final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
                 final Message message = createMessage(tenant, device, qos, target, contentType, payload, properties);
                 switch (qos) {
                 case AT_MOST_ONCE:
-                    return sender.send(message, context);
+                    return sender.send(message, newFollowingSpan(context, "forward Telemetry data"));
                 default:
-                    return sender.sendAndWaitForOutcome(message, context);
+                    return sender.sendAndWaitForOutcome(message, newChildSpan(context, "forward Telemetry data"));
                 }
             })
             .mapEmpty();
@@ -150,12 +106,13 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(device);
 
-        return getOrCreateEventSender(tenant.getTenantId())
+        return getOrCreateSenderLink(EventConstants.EVENT_ENDPOINT, tenant.getTenantId())
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
                     final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
                     final Message message = createMessage(tenant, device, QoS.AT_LEAST_ONCE, target, contentType, payload, properties);
-                    return sender.sendAndWaitForOutcome(message, context);
+                    message.setDurable(true);
+                    return sender.sendAndWaitForOutcome(message, newChildSpan(context, "forward Event"));
                 })
                 .mapEmpty();
     }
