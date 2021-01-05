@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.service.auth;
 
+import java.util.function.Function;
+
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
 import io.vertx.core.Vertx;
@@ -48,5 +51,13 @@ public class ValidityBasedTrustOptions implements TrustOptions {
     public TrustManagerFactory getTrustManagerFactory(final Vertx vertx) {
 
         return factory;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Function<String, TrustManager[]> trustManagerMapper(final Vertx vertx) throws Exception {
+        return sniName -> null;
     }
 }
