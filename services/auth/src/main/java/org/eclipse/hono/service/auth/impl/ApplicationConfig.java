@@ -133,8 +133,8 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.auth.svc")
-    public AuthenticationServerConfigProperties serviceProperties() {
-        return new AuthenticationServerConfigProperties();
+    public FileBasedAuthenticationServiceConfigProperties serviceProperties() {
+        return new FileBasedAuthenticationServiceConfigProperties();
     }
 
     /**
@@ -146,7 +146,7 @@ public class ApplicationConfig {
     @Qualifier("signing")
     public AuthTokenHelper authTokenFactory() {
         final ServiceConfigProperties amqpProps = amqpProperties();
-        final AuthenticationServerConfigProperties serviceProps = serviceProperties();
+        final FileBasedAuthenticationServiceConfigProperties serviceProps = serviceProperties();
         if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
@@ -165,7 +165,7 @@ public class ApplicationConfig {
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public AuthTokenHelper tokenValidator() {
         final ServiceConfigProperties amqpProps = amqpProperties();
-        final AuthenticationServerConfigProperties serviceProps = serviceProperties();
+        final FileBasedAuthenticationServiceConfigProperties serviceProps = serviceProperties();
         if (!serviceProps.getValidation().isAppropriateForValidating() && amqpProps.getCertPath() != null) {
             // fall back to TLS configuration
             serviceProps.getValidation().setCertPath(amqpProps.getCertPath());
