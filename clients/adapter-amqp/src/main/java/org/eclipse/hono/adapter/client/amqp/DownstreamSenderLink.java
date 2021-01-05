@@ -171,6 +171,11 @@ public class DownstreamSenderLink extends AbstractHonoClient {
         return closeLinks();
     }
 
+    /**
+     * Checks if the wrapped sender link is open.
+     *
+     * @return {@code true} if the link is open and can be used to send messages.
+     */
     public final boolean isOpen() {
         return sender.isOpen();
     }
@@ -234,7 +239,7 @@ public class DownstreamSenderLink extends AbstractHonoClient {
 
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
-        Objects.requireNonNull(sender);
+        Objects.requireNonNull(sendOperation);
 
         Tags.MESSAGE_BUS_DESTINATION.set(currentSpan, getMessageAddress(message));
         TracingHelper.TAG_QOS.set(currentSpan, sender.getQoS().toString());
@@ -408,7 +413,7 @@ public class DownstreamSenderLink extends AbstractHonoClient {
                         final Rejected rejected = (Rejected) remoteState;
                         e = Optional.ofNullable(rejected.getError())
                                 .map(error -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error.getDescription()))
-                                .orElse(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+                                .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
                     } else if (Released.class.isInstance(remoteState)) {
                         e = new MessageNotProcessedException();
                     } else if (Modified.class.isInstance(remoteState)) {
