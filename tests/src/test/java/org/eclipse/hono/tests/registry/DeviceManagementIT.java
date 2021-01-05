@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -75,9 +75,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         tenantId = getHelper().getRandomTenantId();
         deviceId = getHelper().getRandomDeviceId(tenantId);
 
-        registry
-                .addTenant(tenantId)
-                .onComplete(ctx.completing());
+        registry.addTenant(tenantId).onComplete(ctx.completing());
 
     }
 
@@ -420,9 +418,9 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson = getFilterJson("/enabled", true, "eq");
 
             registry.registerDevice(tenantId, deviceId, device)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                        List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                .onComplete(ctx.completing());
         }
 
         /**
@@ -435,9 +433,9 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final int invalidPageSize = -100;
 
             registry.registerDevice(tenantId, deviceId)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.of(invalidPageSize), Optional.empty(),
-                            List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                .compose(ok -> registry.searchDevices(tenantId, Optional.of(invalidPageSize), Optional.empty(),
+                        List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                .onComplete(ctx.completing());
         }
 
         /**
@@ -448,22 +446,28 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
          */
         @Test
         public void testSearchDevicesWithValidPageSizeSucceeds(final VertxTestContext ctx) {
+
             final int pageSize = 1;
 
             CompositeFuture.all(
                     registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device()),
-                    registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device())
-                            .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.empty(),
-                                    List.of(), List.of(), HttpURLConnection.HTTP_OK))
-                            .onComplete(ctx.succeeding(httpResponse -> {
-                                ctx.verify(() -> {
-                                    final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
-                                            .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                                    assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
-                                    assertThat(searchDevicesResult.getResult()).hasSize(1);
-                                });
-                                ctx.completeNow();
-                            })));
+                    registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device()))
+                .compose(response -> registry.searchDevices(
+                        tenantId,
+                        Optional.of(pageSize),
+                        Optional.empty(),
+                        List.of(),
+                        List.of(),
+                        HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                        assertThat(searchDevicesResult.getResult()).hasSize(1);
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         /**
@@ -497,20 +501,21 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final int pageOffset = 1;
             final String sortJson = getSortJson("/ext/id", "desc");
 
-            CompositeFuture.all(registry.registerDevice(tenantId, deviceId1, device1),
+            CompositeFuture.all(
+                    registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.of(pageOffset),
-                            List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
-                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                            assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
-                            assertThat(searchDevicesResult.getResult()).hasSize(1);
-                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
-                        });
-                        ctx.completeNow();
-                    }));
+                .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.of(pageOffset),
+                        List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                        assertThat(searchDevicesResult.getResult()).hasSize(1);
+                        assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         /**
@@ -542,23 +547,23 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson2 = getFilterJson("/enabled", true, "eq");
             final String filterJson3 = getFilterJson("/enabled", false, "eq");
 
-            CompositeFuture
-                    .all(registry.registerDevice(tenantId, deviceId1, device1),
-                            registry.registerDevice(tenantId, deviceId2, device2))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
-                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                            assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
-                            assertThat(searchDevicesResult.getResult()).hasSize(1);
-                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
-                        });
-                        ctx.completeNow();
-                    }));
+            CompositeFuture.all(
+                    registry.registerDevice(tenantId, deviceId1, device1),
+                    registry.registerDevice(tenantId, deviceId2, device2))
+                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                        List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                        List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
+                        assertThat(searchDevicesResult.getResult()).hasSize(1);
+                        assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         /**
@@ -576,21 +581,21 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id*", "eq");
 
-            CompositeFuture
-                    .all(registry.registerDevice(tenantId, deviceId1, device1),
-                            registry.registerDevice(tenantId, deviceId2, device2))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
-                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                            assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
-                            assertThat(searchDevicesResult.getResult()).hasSize(1);
-                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
-                        });
-                        ctx.completeNow();
-                    }));
+            CompositeFuture.all(
+                    registry.registerDevice(tenantId, deviceId1, device1),
+                    registry.registerDevice(tenantId, deviceId2, device2))
+                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                        List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
+                        assertThat(searchDevicesResult.getResult()).hasSize(1);
+                        assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         /**
@@ -626,21 +631,21 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id?2", "eq");
 
-            CompositeFuture
-                    .all(registry.registerDevice(tenantId, deviceId1, device1),
-                            registry.registerDevice(tenantId, deviceId2, device2))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
-                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                            assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
-                            assertThat(searchDevicesResult.getResult()).hasSize(1);
-                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
-                        });
-                        ctx.completeNow();
-                    }));
+            CompositeFuture.all(
+                    registry.registerDevice(tenantId, deviceId1, device1),
+                    registry.registerDevice(tenantId, deviceId2, device2))
+                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
+                        List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
+                        assertThat(searchDevicesResult.getResult()).hasSize(1);
+                        assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         /**
@@ -689,21 +694,22 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final Device device2 = new Device().setExtensions(Map.of("id", "bbb"));
             final String sortJson = getSortJson("/ext/id", "desc");
 
-            CompositeFuture.all(registry.registerDevice(tenantId, deviceId1, device1),
+            CompositeFuture.all(
+                    registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
-                            List.of(sortJson), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
-                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                            assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
-                            assertThat(searchDevicesResult.getResult()).hasSize(2);
-                            assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
-                            assertThat(searchDevicesResult.getResult().get(1).getId()).isEqualTo(deviceId1);
-                        });
-                        ctx.completeNow();
-                    }));
+                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
+                        List.of(sortJson), HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                        assertThat(searchDevicesResult.getResult()).hasSize(2);
+                        assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                        assertThat(searchDevicesResult.getResult().get(1).getId()).isEqualTo(deviceId1);
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         private <T> String getFilterJson(final String field, final T value, final String operator) {
