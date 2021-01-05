@@ -14,11 +14,11 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 # Copyright Holders
 
 * Copyright 2016-2019 Bosch Software Innovations GmbH
-* Copyright 2020 Bosch.IO GmbH
+* Copyright 2020-2021 Bosch.IO GmbH
 * Copyright 2016-2020 Red Hat, Inc.
 * Copyright 2017 Francois Travais
-* Copyright 2018 Alfusainey Jallow
-* Copyright 2019 Aloxy NV
+* Copyright 2018-2020 Alfusainey Jallow
+* Copyright 2019-2020 Aloxy NV
 * Copyright 2019 Thiyagarajan B
 * Copyright 2019 Microsoft Corporation
 * Copyright 2020 pragmatic industries GmbH
@@ -188,6 +188,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/jsonwebtoken/jjwt/${jjwt.version}/jjwt-${jjwt.version}-sources.jar).
 
+### Kafka Clients
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Kafka Clients* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/kafka/clients).
+
 ### LOG4J-over-SLF4J ${slf4j.version}
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
@@ -206,6 +216,17 @@ Your use of *Logback* is subject to the terms and conditions of the Eclipse Publ
 A copy of the license is contained in the file [LICENSE](LICENSE) and is also available at https://eclipse.org/legal/epl-v10.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22ch.qos.logback%22%20AND%20v%3A%22${logback.version}%22).
+
+### lz4-java
+
+This product includes software developed by the [lz4-java project](https://github.com/lz4/lz4-java).
+
+Your use of *lz4-java* is subject to the terms and conditions of the Apache Software License 2.0.
+
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/lz4/lz4-java).
 
 ### MChange Commons ${mchange-commons.version}
 
@@ -229,7 +250,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.micrometer%22%20AND%20v%3A%22${micrometer.version}%22).
 
-### Mongo Java Driver ${mongo-java-driver.version}
+### Mongo Java Driver
 
 This product includes software developed by the [MongoDB Java Drivers project](https://mongodb.github.io/mongo-java-driver/).
 
@@ -238,7 +259,7 @@ Your use of *Mongo Java Driver* is subject to the terms and conditions of the Ap
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/mongodb/mongo-java-driver/tree/r${mongo-java-driver.version})
+The source code is available from [GitHub](https://github.com/mongodb/mongo-java-driver)
 
 ### Netty ${netty.version}
 
@@ -362,6 +383,17 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/yaml/snakeyaml/${snakeyaml.version}/snakeyaml-${snakeyaml.version}-sources.jar).
 
+### snappy-java
+
+This product includes software developed by the [snappy-java project](https://github.com/xerial/snappy-java).
+
+Your use of *snappy-java* is subject to the terms and conditions of the Apache Software License 2.0.
+
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/xerial/snappy-java).
+
 ### Spring Framework ${spring.version}
 
 This product includes software developed by the [Spring project](http://spring.io) and others.
@@ -452,6 +484,16 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-jdbc-client/${vertx.version}/vertx-jdbc-client-${vertx.version}-sources.jar).
 
+### vert.x Kafka Client ${vertx.version}
+
+This product includes software developed by the [vert.x project](http://vertx.io).
+
+Your use of *vert.x Kafka Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-kafka-client/tree/${vertx.version}).
+
 ### vert.x Mongo Client ${vertx.version}
 
 This product includes software developed by the [vert.x project](http://vertx.io).
@@ -533,6 +575,15 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/wildfly-security/wildfly-elytron/tree/${wildfly-elytron.version}).
+
+### Zstd-jni
+
+This product includes software developed by the [Zstd-jni](https://github.com/luben/zstd-jni).
+
+Your use of *Zstd-jni* is subject to the terms and conditions defined in the files
+[LICENSE.zstd-jni.txt](LICENSE.zstd-jni.txt) and [LICENSE.zstandard.txt](LICENSE.zstandard.txt).
+
+The source code is available from [GitHub](https://github.com/luben/zstd-jni).
 
 # Trademarks
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -58,7 +58,6 @@
     <micrometer.version>1.6.2</micrometer.version>
     <mockito.version>3.6.28</mockito.version>
     <mongodb.version>4.0.20</mongodb.version>
-    <mongo-java-driver.version>3.10.1</mongo-java-driver.version>
     <netty.version>4.1.49.Final</netty.version>
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
@@ -403,12 +402,6 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-mongo-client</artifactId>
         <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>mongodb</groupId>
-        <artifactId>mongo-driver-async</artifactId>
-        <version>${mongo-java-driver.version}</version>
-        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
