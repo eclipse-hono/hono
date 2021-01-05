@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.time.Duration;
 
 import org.eclipse.hono.auth.Authorities;
@@ -31,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.core.io.ClassPathResource;
 
+import io.vertx.core.Promise;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -48,10 +48,10 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Loads permissions from file.
      *
-     * @throws IOException if the permissions cannot be loaded.
+     * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void loadPermissions() throws IOException {
+    public static void loadPermissions(final VertxTestContext ctx) {
 
         final AuthTokenHelper tokenFactory = mock(AuthTokenHelper.class);
         when(tokenFactory.createToken(anyString(), any(Authorities.class))).thenReturn(TOKEN);
@@ -63,7 +63,9 @@ public class FileBasedAuthenticationServiceTest {
         authService = new FileBasedAuthenticationService();
         authService.setConfig(props);
         authService.setTokenFactory(tokenFactory);
-        authService.loadPermissions();
+        final Promise<Void> startup = Promise.promise();
+        authService.doStart(startup);
+        startup.future().onComplete(ctx.completing());
     }
 
     /**

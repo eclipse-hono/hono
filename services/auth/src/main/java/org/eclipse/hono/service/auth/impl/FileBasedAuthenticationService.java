@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,11 @@
 package org.eclipse.hono.service.auth.impl;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,8 +62,9 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     private static final String FIELD_MECHANISM = "mechanism";
     private static final String UNAUTHORIZED = "unauthorized";
 
-    private static final Map<String, Authorities> roles = new HashMap<>();
-    private static final Map<String, JsonObject> users = new HashMap<>();
+    private final Map<String, Authorities> roles = new HashMap<>();
+    private final Map<String, JsonObject> users = new HashMap<>();
+
     private AuthTokenHelper tokenFactory;
 
     @Autowired
@@ -105,18 +104,16 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         if (tokenFactory == null) {
             startPromise.fail("token factory must be set");
         } else {
-            try {
-                loadPermissions();
-                if (log.isInfoEnabled()) {
-                    final String saslMechanisms = getConfig().getSupportedSaslMechanisms().stream()
-                            .collect(Collectors.joining(", "));
-                    log.info("starting {} with support for SASL mechanisms: {}", getClass().getSimpleName(), saslMechanisms);
-                }
-                startPromise.complete();
-            } catch (final IOException e) {
-                log.error("cannot load permissions from resource {}", getConfig().getPermissionsPath(), e);
-                startPromise.fail(e);
-            }
+
+            loadPermissions()
+                .onSuccess(ok -> {
+                    if (log.isInfoEnabled()) {
+                        final String saslMechanisms = getConfig().getSupportedSaslMechanisms().stream()
+                                .collect(Collectors.joining(", "));
+                        log.info("starting {} with support for SASL mechanisms: {}", getClass().getSimpleName(), saslMechanisms);
+                    }
+                })
+                .onComplete(startPromise);
         }
     }
 
@@ -126,40 +123,52 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
      * @throws IOException if the permissions cannot be read.
      * @throws IllegalStateException if no permissions resource path is set.
      */
-    void loadPermissions() throws IOException {
-        if (getConfig().getPermissionsPath() == null) {
-            throw new IllegalStateException("permissions resource is not set");
-        }
-        if (getConfig().getPermissionsPath().isReadable()) {
-            log.info("loading permissions from resource {}", getConfig().getPermissionsPath().getURI().toString());
-            final StringBuilder json = new StringBuilder();
-            load(getConfig().getPermissionsPath(), json);
-            parsePermissions(new JsonObject(json.toString()));
+    Future<Void> loadPermissions() {
+        final Promise<Void> result = Promise.promise();
+        final Resource permissionsPath = getConfig().getPermissionsPath();
+        if (permissionsPath == null) {
+            result.fail(new IllegalStateException("permissions resource is not set"));
+        } else if (permissionsPath.isReadable()) {
+            load(permissionsPath)
+                .compose(this::parsePermissions)
+                .onComplete(result);
         } else {
-            throw new FileNotFoundException("permissions resource does not exist");
+            result.fail(new FileNotFoundException("permissions resource does not exist"));
         }
+        return result.future()
+                .onFailure(e -> log.error("cannot load permissions from resource {}", permissionsPath, e));
     }
 
-    private void load(final Resource source, final StringBuilder target) throws IOException {
+    private Future<JsonObject> load(final Resource source) {
 
+        final Promise<JsonObject> result = Promise.promise();
+        final StringBuilder json = new StringBuilder();
         final char[] buffer = new char[4096];
         int bytesRead = 0;
         try (Reader reader = new InputStreamReader(source.getInputStream(), StandardCharsets.UTF_8)) {
+            log.info("loading permissions from resource {}", source.getURI().toString());
             while ((bytesRead = reader.read(buffer)) > 0) {
-                target.append(buffer, 0, bytesRead);
+                json.append(buffer, 0, bytesRead);
             }
+            result.complete(new JsonObject(json.toString()));
+        } catch (final Throwable e) {
+            result.fail(e);
         }
+        return result.future();
     }
 
-    private void parsePermissions(final JsonObject permissionsObject) {
+    private Future<Void> parsePermissions(final JsonObject permissionsObject) {
 
-        Objects.requireNonNull(permissionsObject);
-        parseRoles(permissionsObject.getJsonObject(FIELD_ROLES, new JsonObject()));
-        parseUsers(permissionsObject.getJsonObject(FIELD_USERS, new JsonObject()));
+        Optional.ofNullable(permissionsObject.getJsonObject(FIELD_ROLES))
+            .ifPresent(this::parseRoles);
+        Optional.ofNullable(permissionsObject.getJsonObject(FIELD_USERS))
+            .ifPresent(this::parseUsers);
+        return Future.succeededFuture();
     }
 
     private void parseRoles(final JsonObject rolesObject) {
-        rolesObject.stream().filter(entry -> entry.getValue() instanceof JsonArray)
+        rolesObject.stream()
+            .filter(entry -> entry.getValue() instanceof JsonArray)
             .forEach(entry -> {
                 final String roleName = entry.getKey();
                 final JsonArray authSpecs = (JsonArray) entry.getValue();
@@ -168,8 +177,40 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
             });
     }
 
+    private Authorities toAuthorities(final JsonArray authorities) {
+
+        final AuthoritiesImpl result = new AuthoritiesImpl();
+        authorities.stream()
+            .filter(JsonObject.class::isInstance)
+            .map(JsonObject.class::cast)
+            .forEach(authSpec -> {
+                final JsonArray activities = authSpec.getJsonArray(FIELD_ACTIVITIES, new JsonArray());
+                final String resource = authSpec.getString(FIELD_RESOURCE);
+                final String operation = authSpec.getString(FIELD_OPERATION);
+                if (resource != null) {
+                    final List<Activity> activityList = activities.stream()
+                            .filter(String.class::isInstance)
+                            .map(String.class::cast)
+                            .map(Activity::valueOf)
+                            .collect(Collectors.toList());
+                  result.addResource(resource, activityList.toArray(Activity[]::new));
+                } else if (operation != null) {
+                    final String[] parts = operation.split(":", 2);
+                    if (parts.length == 2) {
+                        result.addOperation(parts[0], parts[1]);
+                    } else {
+                       log.debug("ignoring malformed operation spec [{}], operation name missing", operation);
+                    }
+                } else {
+                    throw new IllegalArgumentException("malformed authorities");
+                }
+            });
+        return result;
+    }
+
     private void parseUsers(final JsonObject usersObject) {
-        usersObject.stream().filter(entry -> entry.getValue() instanceof JsonObject)
+        usersObject.stream()
+            .filter(entry -> entry.getValue() instanceof JsonObject)
             .forEach(entry -> {
                 final String authenticationId = entry.getKey();
                 final JsonObject userSpec = (JsonObject) entry.getValue();
@@ -196,39 +237,6 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
                 result.addAll(roleAuthorities);
             }
         });
-        return result;
-    }
-
-    private Authorities toAuthorities(final JsonArray authorities) {
-
-        final AuthoritiesImpl result = new AuthoritiesImpl();
-        Objects.requireNonNull(authorities).stream()
-          .filter(obj -> obj instanceof JsonObject)
-          .forEach(obj -> {
-              final JsonObject authSpec = (JsonObject) obj;
-              final JsonArray activities = authSpec.getJsonArray(FIELD_ACTIVITIES, new JsonArray());
-              final String resource = authSpec.getString(FIELD_RESOURCE);
-              final String operation = authSpec.getString(FIELD_OPERATION);
-              if (resource != null) {
-                  final List<Activity> activityList = new ArrayList<>();
-                  activities.forEach(s -> {
-                      final Activity act = Activity.valueOf((String) s);
-                      if (act != null) {
-                          activityList.add(act);
-                      }
-                  });
-                        result.addResource(resource, activityList.toArray(Activity[]::new));
-              } else if (operation != null) {
-                  final String[] parts = operation.split(":", 2);
-                  if (parts.length == 2) {
-                      result.addOperation(parts[0], parts[1]);
-                  } else {
-                      log.debug("ignoring malformed operation spec [{}], operation name missing", operation);
-                  }
-              } else {
-                  throw new IllegalArgumentException("malformed authorities");
-                  }
-              });
         return result;
     }
 
