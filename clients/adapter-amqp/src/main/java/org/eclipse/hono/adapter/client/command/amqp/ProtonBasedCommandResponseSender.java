@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,12 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
+import org.eclipse.hono.adapter.client.amqp.DownstreamSenderLink;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.client.impl.CommandResponseSenderImpl;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -55,10 +55,11 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         super(connection, samplerFactory, adapterConfig);
     }
 
-    private Future<org.eclipse.hono.client.CommandResponseSender> getSender(final String tenantId, final String replyId) {
+    private Future<DownstreamSenderLink> createSender(final String tenantId, final String replyId) {
         return connection.executeOnContext(result -> {
-            CommandResponseSenderImpl.create(
+            DownstreamSenderLink.create(
                     connection,
+                    CommandConstants.COMMAND_RESPONSE_ENDPOINT,
                     tenantId,
                     replyId,
                     samplerFactory.create(CommandConstants.COMMAND_RESPONSE_ENDPOINT),
@@ -90,12 +91,13 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
     public Future<Void> sendCommandResponse(final CommandResponse response, final SpanContext context) {
 
         Objects.requireNonNull(response);
-        return getSender(response.getTenantId(), response.getReplyToId())
+
+        return createSender(response.getTenantId(), response.getReplyToId())
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
                     final Message msg = createDownstreamMessage(response);
-                    return sender.sendAndWaitForOutcome(msg, context)
-                            .onComplete(delivery -> sender.close(r -> {}));
+                    return sender.sendAndWaitForOutcome(msg, newChildSpan(context, "forward Command response"))
+                            .onComplete(delivery -> sender.close());
                 })
                 .mapEmpty();
     }
