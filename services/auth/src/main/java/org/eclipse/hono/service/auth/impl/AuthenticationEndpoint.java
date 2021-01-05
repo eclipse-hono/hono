@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,7 +39,7 @@ import io.vertx.proton.ProtonSender;
  */
 @Component
 @Scope("prototype")
-public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationServerConfigProperties> {
+public class AuthenticationEndpoint extends AbstractAmqpEndpoint<Object> {
 
     /**
      * Creates a new endpoint for a Vertx instance.
@@ -94,10 +94,5 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
     @Override
     public void onConnectionClosed(final ProtonConnection connection) {
         // we have nothing to clean up
-    }
-
-    @Override
-    protected boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message) {
-        return false;
     }
 }

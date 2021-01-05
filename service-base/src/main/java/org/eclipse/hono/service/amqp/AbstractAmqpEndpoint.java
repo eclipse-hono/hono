@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -102,14 +101,4 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
         sender.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be read from"));
         sender.close();
     }
-
-    /**
-     * Verifies that a message passes <em>formal</em> checks regarding e.g.
-     * required headers, content type and payload format.
-     *
-     * @param targetAddress The address the message has been received on.
-     * @param message The message to check.
-     * @return {@code true} if the message passes all checks and can be forwarded downstream.
-     */
-    protected abstract boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message);
 }

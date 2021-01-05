@@ -81,6 +81,16 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
     }
 
     /**
+     * Verifies that a message passes <em>formal</em> checks regarding e.g.
+     * required headers, content type and payload format.
+     *
+     * @param targetAddress The address the message has been received on.
+     * @param message The message to check.
+     * @return {@code true} if the message passes all checks and can be forwarded downstream.
+     */
+    protected abstract boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message);
+
+    /**
      * Creates the message to send to the service implementation
      * via the vert.x event bus in order to invoke an operation.
      *
