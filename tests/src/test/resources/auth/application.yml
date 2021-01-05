@@ -11,7 +11,7 @@ hono:
       keyPath: /etc/hono/certs/auth-server-key.pem
       certPath: /etc/hono/certs/auth-server-cert.pem
     svc:
-      permissionsPath: file:///etc/hono/permissions.json
+      permissionsPath: /etc/hono/permissions.json
       signing:
         # extend token expiration to 1h in order to prevent
         # connection loss during test execution

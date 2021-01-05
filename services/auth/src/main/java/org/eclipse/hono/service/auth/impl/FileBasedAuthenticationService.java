@@ -13,10 +13,7 @@
 package org.eclipse.hono.service.auth.impl;
 
 import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -36,13 +33,13 @@ import org.eclipse.hono.util.AuthenticationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -51,7 +48,7 @@ import io.vertx.core.json.JsonObject;
  */
 @Service
 @Profile("authentication-impl")
-public final class FileBasedAuthenticationService extends AbstractHonoAuthenticationService<AuthenticationServerConfigProperties> {
+public final class FileBasedAuthenticationService extends AbstractHonoAuthenticationService<FileBasedAuthenticationServiceConfigProperties> {
 
     private static final String FIELD_USERS = "users";
     private static final String FIELD_ROLES = "roles";
@@ -61,6 +58,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     private static final String FIELD_AUTHORITIES = "authorities";
     private static final String FIELD_MECHANISM = "mechanism";
     private static final String UNAUTHORIZED = "unauthorized";
+    private static final String PREFIX_FILE_RESOURCE = "file://";
 
     private final Map<String, Authorities> roles = new HashMap<>();
     private final Map<String, JsonObject> users = new HashMap<>();
@@ -69,7 +67,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     @Autowired
     @Override
-    public void setConfig(final AuthenticationServerConfigProperties configuration) {
+    public void setConfig(final FileBasedAuthenticationServiceConfigProperties configuration) {
         setSpecificConfig(configuration);
     }
 
@@ -117,44 +115,40 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         }
     }
 
-    /**
-     * Loads permissions from <em>permissionsPath</em>.
-     *
-     * @throws IOException if the permissions cannot be read.
-     * @throws IllegalStateException if no permissions resource path is set.
-     */
-    Future<Void> loadPermissions() {
-        final Promise<Void> result = Promise.promise();
-        final Resource permissionsPath = getConfig().getPermissionsPath();
+    private Future<Void> loadPermissions() {
+        final String permissionsPath = getConfig().getPermissionsPath();
         if (permissionsPath == null) {
-            result.fail(new IllegalStateException("permissions resource is not set"));
-        } else if (permissionsPath.isReadable()) {
-            load(permissionsPath)
-                .compose(this::parsePermissions)
-                .onComplete(result);
+            return Future.failedFuture(new IllegalStateException("permissions path is not set"));
         } else {
-            result.fail(new FileNotFoundException("permissions resource does not exist"));
+            return load(permissionsPath)
+                .compose(this::parsePermissions)
+                .onFailure(e -> log.error("cannot load permissions from path [{}]", permissionsPath, e));
         }
-        return result.future()
-                .onFailure(e -> log.error("cannot load permissions from resource {}", permissionsPath, e));
     }
 
-    private Future<JsonObject> load(final Resource source) {
+    private Future<JsonObject> load(final String permissionsPath) {
 
-        final Promise<JsonObject> result = Promise.promise();
-        final StringBuilder json = new StringBuilder();
-        final char[] buffer = new char[4096];
-        int bytesRead = 0;
-        try (Reader reader = new InputStreamReader(source.getInputStream(), StandardCharsets.UTF_8)) {
-            log.info("loading permissions from resource {}", source.getURI().toString());
-            while ((bytesRead = reader.read(buffer)) > 0) {
-                json.append(buffer, 0, bytesRead);
-            }
-            result.complete(new JsonObject(json.toString()));
-        } catch (final Throwable e) {
-            result.fail(e);
+        final String path;
+        if (permissionsPath.toLowerCase().startsWith(PREFIX_FILE_RESOURCE)) {
+            // tolerate URI file resource syntax
+            path = permissionsPath.substring(PREFIX_FILE_RESOURCE.length());
+        } else {
+            path = permissionsPath;
         }
-        return result.future();
+        final Promise<Boolean> fileExistsHandler = Promise.promise();
+        getVertx().fileSystem().exists(path, fileExistsHandler);
+        return fileExistsHandler.future()
+                .compose(fileExists -> {
+                    if (fileExists) {
+                        log.info("loading permissions from resource [{}]", path);
+                        final Promise<Buffer> contentHandler = Promise.promise();
+                        getVertx().fileSystem().readFile(path, contentHandler);
+                        return contentHandler.future();
+                    } else {
+                        return Future.failedFuture(new FileNotFoundException("no such file: " + path));
+                    }
+                })
+                .map(JsonObject::new);
     }
 
     private Future<Void> parsePermissions(final JsonObject permissionsObject) {

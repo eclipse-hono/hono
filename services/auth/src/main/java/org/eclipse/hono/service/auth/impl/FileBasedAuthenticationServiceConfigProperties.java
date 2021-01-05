@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,19 +18,16 @@ import java.util.Objects;
 
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 
 
 /**
  * Configuration properties for the {@code FileBasedAuthenticationService}.
  *
  */
-public class AuthenticationServerConfigProperties {
+public class FileBasedAuthenticationServiceConfigProperties {
 
-    private static final Resource DEFAULT_PERMISSIONS_RESOURCE = new ClassPathResource("permissions.json");
     private final SignatureSupportingConfigProperties signing = new SignatureSupportingConfigProperties();
-    private Resource permissionsResource = DEFAULT_PERMISSIONS_RESOURCE;
+    private String permissionsPath;
     private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
 
     /**
@@ -52,26 +49,22 @@ public class AuthenticationServerConfigProperties {
     }
 
     /**
-     * Get the resource that the authorization rules should be loaded from.
-     * <p>
-     * If not set the default permissions will be loaded from <em>classpath:permissions.json</em>.
+     * Gets the path to the file that the authorization rules are loaded from.
      *
-     * @return The resource.
+     * @return The path.
      */
-    public final Resource getPermissionsPath() {
-        return permissionsResource;
+    public final String getPermissionsPath() {
+        return permissionsPath;
     }
 
     /**
-     * Set the resource that the authorization rules should be loaded from.
-     * <p>
-     * If not set the default permissions will be loaded from <em>classpath:permissions.json</em>.
+     * Sets the path to the file that the authorization rules should be loaded from.
      *
-     * @param permissionsResource The resource.
-     * @throws NullPointerException if the resource is {@code null}.
+     * @param permissionsPath The path.
+     * @throws NullPointerException if the path is {@code null}.
      */
-    public final void setPermissionsPath(final Resource permissionsResource) {
-        this.permissionsResource = Objects.requireNonNull(permissionsResource);
+    public final void setPermissionsPath(final String permissionsPath) {
+        this.permissionsPath = Objects.requireNonNull(permissionsPath);
     }
 
     /**

@@ -39,6 +39,14 @@ title = "Release Notes"
 * The public interfaces of the legacy `client` module have been deprecated. Client code should be
   adapted to use the corresponding interfaces and implementations from the `clients/adapter` and
   `clients/adapter-amqp` modules instead.
+* The Authentication server's `HONO_AUTH_SVC_PERMISSIONS_PATH` configuration property has been changed to no
+  longer accept generic Spring resource URIs. The value is now required to be a file system path. The path
+  may still contain a `file://` prefix in order to not break existing configurations. However, users are encouraged
+  to remove the prefix as it will no longer be supported in versions starting with 2.0.0.
+  The default permissions file has been removed from the Authentication server code base. Consequently,
+  permissions can no longer be loaded from the class path using a `classpath://` URI. In practice this should
+  have no impact because the Hono chart comes with a default permissions file which the Authentication
+  server is pre-configured to load from the file system.
 
 ## 1.5.0
 
