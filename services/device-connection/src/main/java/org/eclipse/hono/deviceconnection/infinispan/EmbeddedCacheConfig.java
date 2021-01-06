@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceconnection.infinispan;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
@@ -54,7 +55,7 @@ public class EmbeddedCacheConfig {
      */
     @Bean
     public BasicCache<String, String> embeddedCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
-        LOG.info("Common Config: {}", cacheConfig);
+        LOG.info("common cache config: {}", cacheConfig);
         return new EmbeddedCache<>(
                 vertx,
                 embeddedCacheManager(cacheConfig),
@@ -70,16 +71,17 @@ public class EmbeddedCacheConfig {
      */
     @Bean
     public ConfigurationBuilderHolder configuration(final CommonCacheConfig cacheConfig) {
-        if (this.configuration != null) {
+        if (this.configuration != null && Files.exists(configuration)) {
             try {
                 final ConfigurationBuilderHolder holder = new ParserRegistry().parseFile(configuration.toFile());
                 LOG.info("successfully configured embedded cache from file [{}]", configuration);
                 return holder;
             } catch (final IOException e) {
-                LOG.error("failed to read configuration file [{}], falling back to default configuration", configuration, e);
+                LOG.error("failed to read configuration file [{}]", configuration, e);
                 throw new IllegalStateException("failed to configure embedded cache", e);
             }
         } else {
+            LOG.info("using default embedded cache configuration");
             final var builderHolder = new ConfigurationBuilderHolder();
             builderHolder.newConfigurationBuilder(cacheConfig.getCacheName());
             return builderHolder;
