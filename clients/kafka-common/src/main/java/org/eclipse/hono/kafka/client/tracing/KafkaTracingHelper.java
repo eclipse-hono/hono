@@ -80,7 +80,7 @@ public final class KafkaTracingHelper {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(referenceType);
 
-        return TracingHelper.buildSpan(tracer, parent, "To_" + topic.toString(), referenceType)
+        return TracingHelper.buildSpan(tracer, parent, "To_" + topic.getType().endpoint, referenceType)
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), "hono-client-kafka")
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_PRODUCER)
