@@ -93,17 +93,19 @@
           </systemProperties>
         </configuration>
         <executions>
-            <execution>
-                <id>postgresql-tests</id>
-                <goals>
-                    <goal>test</goal>
-                </goals>
-                <configuration>
-                    <systemProperties>
-                        <AbstractJdbcRegistryTest.databaseType>postgresql</AbstractJdbcRegistryTest.databaseType>
-                    </systemProperties>
-                </configuration>
-            </execution>
+          <execution>
+            <id>postgresql-tests</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <skipTests>${no.docker}</skipTests>
+              <systemProperties>
+                <AbstractJdbcRegistryTest.databaseType>postgresql</AbstractJdbcRegistryTest.databaseType>
+                <AbstractJdbcRegistryTest.postgresqlImageName>${postgresql-image.name}</AbstractJdbcRegistryTest.postgresqlImageName>
+              </systemProperties>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
     </plugins>

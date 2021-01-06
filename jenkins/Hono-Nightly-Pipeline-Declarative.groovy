@@ -110,7 +110,7 @@ spec:
                     userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
 
           echo "building and deploying nightly artifacts ..."
-          sh 'mvn -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
+          sh 'mvn -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true'
 
           echo "recording JUnit test results ..."
           junit '**/surefire-reports/*.xml'

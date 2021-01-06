@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,9 +63,11 @@ abstract class AbstractJdbcRegistryTest {
     protected static final Span SPAN = NoopSpan.INSTANCE;
 
     private static final DatabaseType DEFAULT_DATABASE_TYPE = DatabaseType.H2;
-    private static final DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName() + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
+    private static final DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
+            + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
     private static final Map<DatabaseType, JdbcDatabaseContainer<?>> DATABASE_CONTAINER_CACHE = new ConcurrentHashMap<>();
-    private static final String POSTGRESQL_DOCKER_IMAGE = "postgres:12-alpine";
+    private static final String POSTGRESQL_IMAGE_NAME = System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
+            + ".postgresqlImageName", "postgres:12-alpine");
 
     private static final AtomicLong UNIQUE_ID_GENERATOR = new AtomicLong(System.currentTimeMillis());
 
@@ -150,7 +152,7 @@ abstract class AbstractJdbcRegistryTest {
                     final JdbcDatabaseContainer<?> container;
                     switch (DATABASE_TYPE) {
                         case POSTGRESQL:
-                            container = new PostgreSQLContainer<>(POSTGRESQL_DOCKER_IMAGE);
+                            container = new PostgreSQLContainer<>(POSTGRESQL_IMAGE_NAME);
                             final List<String> commandLine = new ArrayList<>(Arrays.asList(container.getCommandParts()));
                             // resolve issue "FATAL: sorry, too many clients already"
                             commandLine.add("-N");

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -184,6 +184,11 @@
       when doing a release build, set this property to false.
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
+
+    <!--
+      Needs to be set to true on platforms where no Docker daemon is available.
+    -->
+    <no.docker>false</no.docker>
 
     <!--
       Build images defined in modules with packaging type "pom".
@@ -514,6 +519,18 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>no_docker</id>
+      <activation>
+        <property>
+          <name>noDocker</name>
+        </property>
+      </activation>
+      <properties>
+        <!-- this will prevent (unit) tests from being run that require test containers -->
+        <no.docker>true</no.docker>
+      </properties>
+    </profile>
     <profile>
       <id>nexus</id>
       <activation>

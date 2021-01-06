@@ -95,6 +95,17 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/google/gson/tree/gson-parent-${gson.version}).
 
+### H2 Database ${h2.version}
+
+This product includes software developed by the [H2 Database project](https://github.com/h2database/h2database).
+
+Your use of the *H2 Database* is subject to the terms and conditions of the
+Eclipse Public License 1.0.
+A copy of the license is contained in the file [EPL-1.0.txt](EPL-1.0.txt) and is also available at
+https://www.eclipse.org/legal/.
+
+The source code is available from [GitHub](https://github.com/h2database/h2database/tree/version-${h2.version})
+
 ### Infinispan Hotrod Client ${infinispan.version}
 
 This product includes software developed by the [Infinispan project](https://infinispan.org).
@@ -303,6 +314,15 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-vertx-web/${opentracing-vertx-web.version}/opentracing-vertx-web-${opentracing-vertx-web.version}-sources.jar).
+
+### PostgreSQL JDBC Driver ${postgresql-jdbc.version}
+
+This product includes software developed by the PostgreSQL Global Development Group.
+
+Your use of the *PostgreSQL JDBC Driver* is subject to the terms and conditions defined in the file
+[LICENSE.postgresql-jdbc.txt](LICENSE.postgresql-jdbc.txt).
+
+The source code is available from [GitHub](https://github.com/pgjdbc/pgjdbc/tree/REL${postgresql-jdbc.version}).
 
 ### Protobuf ${protobuf.version}
 

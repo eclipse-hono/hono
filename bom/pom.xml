@@ -61,7 +61,8 @@
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
-    <postgresql.version>42.2.15</postgresql.version>
+    <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
+    <postgresql-jdbc.version>42.2.18</postgresql-jdbc.version>
     <protobuf.version>3.6.1</protobuf.version>
     <protoparser.version>4.0.3</protoparser.version>
     <protostream.version>4.3.2.Final</protostream.version>
@@ -707,7 +708,7 @@
       <dependency>
         <groupId>org.postgresql</groupId>
         <artifactId>postgresql</artifactId>
-        <version>${postgresql.version}</version>
+        <version>${postgresql-jdbc.version}</version>
         <scope>runtime</scope>
       </dependency>
 
