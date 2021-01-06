@@ -187,7 +187,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                         .start();
                 return deviceConnectionInfo
-                        .getCommandHandlingAdapterInstances(tenant, deviceId, new HashSet<>(viaGateways), span);
+                        .getCommandHandlingAdapterInstances(tenant, deviceId, new HashSet<>(viaGateways), span)
+                        .onFailure(thr -> TracingHelper.logError(span, thr))
+                        .onComplete(ar -> span.finish());
             }
         });
         commandConsumerFactory.initialize(commandTargetMapper);
