@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,23 +16,20 @@ package org.eclipse.hono.commandrouter.impl;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.util.ServiceClient;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
+import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,15 +37,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
-import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 
@@ -155,43 +149,8 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         }
         startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
 
-        // initialize components dependent on the above clientFactories
-        commandTargetMapper.initialize(new CommandTargetMapper.CommandTargetMapperContext() {
-
-            @Override
-            public Future<List<String>> getViaGateways(
-                    final String tenant,
-                    final String deviceId,
-                    final SpanContext context) {
-
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-
-                return registrationClient.assertRegistration(tenant, deviceId, null, context)
-                        .map(RegistrationAssertion::getAuthorizedGateways);
-            }
-
-            @Override
-            public Future<JsonObject> getCommandHandlingAdapterInstances(
-                    final String tenant,
-                    final String deviceId,
-                    final List<String> viaGateways,
-                    final SpanContext context) {
-
-                Objects.requireNonNull(tenant);
-                Objects.requireNonNull(deviceId);
-                Objects.requireNonNull(viaGateways);
-
-                final Span span = TracingHelper.buildChildSpan(tracer, context, "getCommandHandlingAdapterInstances",
-                        getClass().getSimpleName())
-                        .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                        .start();
-                return deviceConnectionInfo
-                        .getCommandHandlingAdapterInstances(tenant, deviceId, new HashSet<>(viaGateways), span)
-                        .onFailure(thr -> TracingHelper.logError(span, thr))
-                        .onComplete(ar -> span.finish());
-            }
-        });
+        // initialize components dependent on the above clients
+        commandTargetMapper.initialize(registrationClient, deviceConnectionInfo);
         commandConsumerFactory.initialize(commandTargetMapper);
         return Future.succeededFuture();
     }
