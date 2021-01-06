@@ -24,7 +24,10 @@ import javax.annotation.PostConstruct;
 import org.eclipse.hono.cli.AbstractCliClient;
 import org.eclipse.hono.kafka.client.HonoTopic;
 import org.eclipse.hono.kafka.client.KafkaConsumerConfigProperties;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -138,7 +141,7 @@ public class KafkaReceiver extends AbstractCliClient {
         if (isPrintVerbose) {
             logVerbosely(record);
         } else {
-            log.info("received message [topic: {}, key: {}]: {}", record.topic(), record.key(), record.value());
+            logBriefly(record);
         }
 
     }
@@ -162,6 +165,21 @@ public class KafkaReceiver extends AbstractCliClient {
                 record.topic(), record.partition(), record.offset(), timestamp, time, headers, record.key(),
                 record.value());
 
+    }
+
+    private void logBriefly(final KafkaConsumerRecord<String, Buffer> record) {
+        final String endpoint = record.topic().equals(new HonoTopic(HonoTopic.Type.EVENT, tenantId).toString())
+                ? EventConstants.EVENT_ENDPOINT
+                : TelemetryConstants.TELEMETRY_ENDPOINT;
+
+        final String contentType = record.headers().stream()
+                .filter(h -> h.key().equals(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
+                .findAny()
+                .map(h -> h.value().toString())
+                .orElse("");
+
+        log.info("received {} message [device: {}, content-type: {}]: {}", endpoint, record.key(), contentType,
+                record.value());
     }
 
 }
