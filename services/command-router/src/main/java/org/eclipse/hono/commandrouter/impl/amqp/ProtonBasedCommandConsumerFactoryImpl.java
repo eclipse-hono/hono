@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -31,6 +30,7 @@ import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
+import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 

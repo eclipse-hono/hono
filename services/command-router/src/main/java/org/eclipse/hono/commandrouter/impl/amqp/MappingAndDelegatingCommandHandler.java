@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.DelegatedCommandSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -30,6 +29,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.impl.DelegatedCommandSenderImpl;
+import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;

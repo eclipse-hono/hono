@@ -17,7 +17,6 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
-import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
