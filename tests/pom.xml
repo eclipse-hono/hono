@@ -466,7 +466,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <build>
                     <skip>${hono.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>mongo:${mongodb.version}</from>
+                    <from>${mongodb-image.name}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>

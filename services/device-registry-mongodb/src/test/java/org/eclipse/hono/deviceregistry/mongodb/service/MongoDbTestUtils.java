@@ -15,6 +15,8 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import io.vertx.core.Vertx;
 import io.vertx.ext.mongo.MongoClient;
@@ -24,8 +26,13 @@ import io.vertx.ext.mongo.MongoClient;
  */
 public final class MongoDbTestUtils {
 
-    private static final String MONGO_DB_HOST = System.getProperty("mongodb.host", "127.0.0.1");
-    private static final int MONGO_DB_PORT = Integer.getInteger("mongodb.port", -1);
+    private static final MongoDBContainer MONGO_DB_CONTAINER;
+    private static final String MONGO_DB_IMAGE_NAME = System.getProperty("mongoDbImageName", "mongo:4.2");
+
+    static {
+        MONGO_DB_CONTAINER = new MongoDBContainer(DockerImageName.parse(MONGO_DB_IMAGE_NAME));
+        MONGO_DB_CONTAINER.start();
+    }
 
     private MongoDbTestUtils() {
         // prevent instantiation
@@ -44,13 +51,8 @@ public final class MongoDbTestUtils {
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(dbName);
 
-        if (MONGO_DB_PORT == -1) {
-            throw new RuntimeException("Missing 'mongodb.port' system property; ensure test is run via maven.");
-        }
         final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
-                .setHost(MongoDbTestUtils.MONGO_DB_HOST)
-                .setPort(MongoDbTestUtils.MONGO_DB_PORT)
-                .setDbName(dbName);
+                .setConnectionString(MONGO_DB_CONTAINER.getReplicaSetUrl(dbName));
         return MongoClient.createShared(vertx, mongoDbConfig.getMongoClientConfig());
     }
 }

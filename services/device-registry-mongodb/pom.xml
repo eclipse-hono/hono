@@ -33,14 +33,6 @@
       <artifactId>hono-service-device-registry-base</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-device-registry-base</artifactId>
-      <version>${project.version}</version>
-      <classifier>tests</classifier>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mongo-client</artifactId>
     </dependency>
@@ -49,8 +41,17 @@
       <artifactId>vertx-auth-mongo</artifactId>
     </dependency>
     <dependency>
-      <groupId>de.flapdoodle.embed</groupId>
-      <artifactId>de.flapdoodle.embed.mongo</artifactId>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-device-registry-base</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>mongodb</artifactId>
+      <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -58,95 +59,13 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>com.github.joelittlejohn.embedmongo</groupId>
-        <artifactId>embedmongo-maven-plugin</artifactId>
-        <version>0.4.2</version>
-        <executions>
-          <execution>
-            <id>start-mongodb</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>start</goal>
-            </goals>
-            <configuration>
-              <randomPort>true</randomPort>
-              <!-- optional, default is false, if true allocates a random port and overrides embedmongo.port -->
-
-              <version>${mongodb.version}</version>
-              <!-- optional, default 2.2.1 -->
-
-              <features>ONLY_WITH_SSL, ONLY_WINDOWS_2008_SERVER, NO_HTTP_INTERFACE_ARG</features>
-              <!-- optional, default is none. Enables flapdoodle.embed.mongo features, for example to build Windows 
-                download URLs since 3.6 -->
-
-              <!-- databaseDirectory>/tmp/mongotest</databaseDirectory -->
-              <!-- optional, default is a new dir in java.io.tmpdir -->
-
-              <logging>none</logging>
-              <!-- optional (file|console|none), default console -->
-
-              <logFile>${project.build.directory}/myfile.log</logFile>
-              <!-- optional, can be used when logging=file, default is ./embedmongo.log -->
-
-              <logFileEncoding>utf-8</logFileEncoding>
-              <!-- optional, can be used when logging=file, default is utf-8 -->
-
-              <bindIp>127.0.0.1</bindIp>
-              <!-- optional, default is to listen on all interfaces -->
-
-              <!-- downloadPath>http://internal-mongo-repo/</downloadPath -->
-              <!-- optional, default is http://fastdl.mongodb.org/ -->
-
-              <unixSocketPrefix>${user.home}/.embedmongo</unixSocketPrefix>
-              <!-- optional, default is /tmp -->
-
-              <storageEngine>wiredTiger</storageEngine>
-              <!--optional, one of wiredTiger or mmapv1 (default is mmapv1) -->
-
-              <skip>false</skip>
-              <!-- optional, skips this plugin entirely, use on the command line like -Dembedmongo.skip -->
-
-            </configuration>
-          </execution>
-          <execution>
-            <id>stop-mongodb</id>
-            <phase>post-integration-test</phase>
-            <goals>
-              <goal>stop</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <skip>true</skip>
+          <systemProperties>
+            <mongoDbImageName>${mongodb-image.name}</mongoDbImageName>
+          </systemProperties>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>**/*Test.java</include>
-          </includes>
-          <systemPropertyVariables>
-            <mongodb.port>${embedmongo.port}</mongodb.port>
-            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
-            <!-- javax.net.debug>ssl:handshake</javax.net.debug -->
-          </systemPropertyVariables>
-        </configuration>
-        <executions>
-          <execution>
-            <id>run-tests</id>
-            <phase>integration-test</phase>
-            <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
@@ -204,15 +123,6 @@
     </profile>
 
     <profile>
-      <id>jaeger</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.jaegertracing</groupId>
-          <artifactId>jaeger-client</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
       <id>docker-push-image</id>
       <build>
         <plugins>
@@ -232,6 +142,17 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>jaeger</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.jaegertracing</groupId>
+          <artifactId>jaeger-client</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+
   </profiles>
 
 </project>
