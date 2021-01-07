@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,8 +51,8 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
-import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
-import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
+import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
+import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
@@ -209,7 +209,7 @@ public abstract class CoapTestBase {
      * @return The client.
      */
     protected CoapClient getCoapsClient(final String deviceId, final String tenant, final String sharedSecret) {
-        return getCoapsClient(new StaticPskStore(
+        return getCoapsClient(new AdvancedSinglePskStore(
                 IntegrationTestSupport.getUsername(deviceId, tenant),
                 sharedSecret.getBytes(StandardCharsets.UTF_8)));
     }
@@ -221,11 +221,11 @@ public abstract class CoapTestBase {
      * @param pskStoreToUse The store to retrieve shared secrets from.
      * @return The client.
      */
-    protected CoapClient getCoapsClient(final PskStore pskStoreToUse) {
+    protected CoapClient getCoapsClient(final AdvancedPskStore pskStoreToUse) {
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
         dtlsConfig.setAddress(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
-        dtlsConfig.setPskStore(pskStoreToUse);
+        dtlsConfig.setAdvancedPskStore(pskStoreToUse);
         dtlsConfig.setMaxRetransmissions(1);
         final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
         builder.setNetworkConfig(NetworkConfig.createStandardWithoutFile());
