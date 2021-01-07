@@ -1408,6 +1408,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>read-project-properties</goal>
                 </goals>
                 <configuration>
+                  <quiet>true</quiet>
                   <files>
                     <file>${project.build.directory}/docker/jaeger.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
