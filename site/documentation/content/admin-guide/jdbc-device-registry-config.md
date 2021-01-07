@@ -15,10 +15,10 @@ The application is implemented as a Spring Boot application, and it uses a JDBC 
 provides the following features:
 
 * Run only the registration and credentials service, or run including the tenant service.
-* By default, supports H2 and PostgreSQL
+* By default, supports H2, PostgreSQL and MS SQL Server
 * Supports different JDBC connections for read-only and read-write operations, to support read-only replicas
 
-**Note:** The provided container images contains only the H2 and PostgreSQL configuration and JDBC driver. While it is
+**Note:** The provided container images contains only the H2, PostgreSQL and MS SQL Server configuration and JDBC driver. While it is
 possible to use other JDBC compliant databases, database specific configuration and JDBC driver have to be provided
 by the user.
 

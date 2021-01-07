@@ -1,0 +1,9 @@
+resolveGroups: |
+   SELECT
+      device_id
+   FROM
+      %3$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      group_id in (SELECT Value FROM string_split(:group_ids,','))

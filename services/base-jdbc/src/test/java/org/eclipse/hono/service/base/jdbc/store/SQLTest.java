@@ -33,7 +33,9 @@ public class SQLTest {
     public static Stream<Arguments> typeDetectorValue() {
         return Stream.of(
                 Arguments.of("jdbc:postgresql://localhost:1234/device-registry", "postgresql"),
-                Arguments.of("jdbc:h2:~/test;ACCESS_MODE_DATA=rws", "h2"));
+                Arguments.of("jdbc:h2:~/test;ACCESS_MODE_DATA=rws", "h2"),
+                Arguments.of("jdbc:sqlserver://localhost:1433;databaseName=hono", "sqlserver")
+        );
     }
 
     /**

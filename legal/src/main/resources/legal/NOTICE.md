@@ -261,6 +261,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.micrometer%22%20AND%20v%3A%22${micrometer.version}%22).
 
+### Microsoft JDBC Driver for SQL Server ${mssql-jdbc.version}
+
+This product includes software developed by Microsoft.
+
+Your use of the *Microsoft JDBC Driver for SQL Server* is subject to the terms and conditions defined in the file
+[LICENSE.mssql-jdbc.txt](LICENSE.mssql-jdbc.txt).
+
+The source code is available from [Maven Central](https://search.maven.org/remotecontent?filepath=com/microsoft/sqlserver/mssql-jdbc/${mssql-jdbc.version}/mssql-jdbc-${mssql-jdbc.version}-sources.jar).
+
 ### Mongo Java Driver
 
 This product includes software developed by the [MongoDB Java Drivers project](https://mongodb.github.io/mongo-java-driver/).

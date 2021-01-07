@@ -1,0 +1,33 @@
+updateLastKnownGateway: |
+   MERGE
+     %s AS Target
+   USING
+     (VALUES (:tenant_id, :device_id, :gateway_id))
+     AS Source (tenant_id, device_id, last_known_gateway)
+   ON
+     Target.tenant_id=Source.tenant_id AND
+     Target.device_id=Source.device_id
+   WHEN NOT MATCHED THEN
+     INSERT (tenant_id, device_id, last_known_gateway)
+     VALUES (Source.tenant_id, Source.device_id, Source.last_known_gateway)
+   WHEN MATCHED THEN
+     UPDATE
+     SET last_known_gateway=Source.last_known_gateway
+   ;
+
+updateAdapterInstance: |
+   MERGE
+     %s AS Target
+   USING
+     (VALUES (:tenant_id, :device_id, :adapter_instance_id))
+     AS Source (tenant_id, device_id, adapter_instance_id)
+   ON
+     Target.tenant_id=Source.tenant_id AND
+     Target.device_id=Source.device_id
+   WHEN NOT MATCHED THEN
+     INSERT (tenant_id, device_id, adapter_instance_id)
+     VALUES (Source.tenant_id, Source.device_id, Source.adapter_instance_id)
+   WHEN MATCHED THEN
+     UPDATE
+     SET adapter_instance_id=Source.adapter_instance_id
+   ;
