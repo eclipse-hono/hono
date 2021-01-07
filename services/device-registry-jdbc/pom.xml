@@ -88,9 +88,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <systemProperties>
+          <systemPropertyVariables>
             <org.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration>true</org.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration>
-          </systemProperties>
+          </systemPropertyVariables>
         </configuration>
         <executions>
           <execution>
@@ -100,10 +100,10 @@
             </goals>
             <configuration>
               <skipTests>${no.docker}</skipTests>
-              <systemProperties>
+              <systemPropertyVariables>
                 <AbstractJdbcRegistryTest.databaseType>postgresql</AbstractJdbcRegistryTest.databaseType>
                 <AbstractJdbcRegistryTest.postgresqlImageName>${postgresql-image.name}</AbstractJdbcRegistryTest.postgresqlImageName>
-              </systemProperties>
+              </systemPropertyVariables>
             </configuration>
           </execution>
         </executions>
