@@ -116,7 +116,7 @@ spec:
           junit '**/surefire-reports/*.xml'
 
           echo "publishing JavaDoc ..."
-          sh 'mvn package javadoc:aggregate -DskipTests'
+          sh 'mvn package javadoc:aggregate -DskipTests -DnoDocker'
           step([$class: 'JavadocArchiver', javadocDir: 'target/site/apidocs'])
 
           echo "archiving Command Line Client ..."

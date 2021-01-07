@@ -86,7 +86,7 @@ def setReleaseVersionAndBuild(def utils) {
     stage('Build') {
         withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [artifactsPublisher(disabled: true)]) {
             sh "mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${RELEASE_VERSION}"
-            sh 'mvn clean install javadoc:aggregate -Dmaven.test.failure.ignore=false -DenableEclipseJarSigner=true -DsnapshotDependencyAllowed=false -Ddocker.skip.build=true'
+            sh 'mvn clean install javadoc:aggregate -Dmaven.test.failure.ignore=false -DenableEclipseJarSigner=true -DsnapshotDependencyAllowed=false -Ddocker.skip.build=true -DnoDocker'
         }
     }
 }

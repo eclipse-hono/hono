@@ -127,7 +127,7 @@ spec:
           withCredentials([file(credentialsId: 'secret-subkeys.asc', variable: 'KEYRING')]) {
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
           }
-          sh "mvn deploy -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am -DskipTests=true -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
+          sh "mvn deploy -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
         }
       }
     }
