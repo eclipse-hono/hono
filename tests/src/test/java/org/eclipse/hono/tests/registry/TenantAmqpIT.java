@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,11 @@
 
 package org.eclipse.hono.tests.registry;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,52 +34,50 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class TenantAmqpIT extends TenantApiTests {
 
-    private static TenantClientFactory allTenantClientFactory;
-    private static TenantClientFactory defaultTenantClientFactory;
     private static TenantClient allTenantClient;
     private static TenantClient defaultTenantClient;
 
     /**
-     * Creates {@link TenantClient}s for invoking operations of the
+     * Creates clients for invoking operations of the
      * Tenant API.
      *
      * @param vertx The vert.x instance to run the clients on.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void createTenantClientFactories(final Vertx vertx, final VertxTestContext ctx) {
+    public static void createTenantClients(final Vertx vertx, final VertxTestContext ctx) {
 
         final Checkpoint connections = ctx.checkpoint(2);
 
-        allTenantClientFactory = TenantClientFactory.create(
+        allTenantClient = new ProtonBasedTenantClient(
                 HonoConnection.newConnection(
                         vertx,
                         IntegrationTestSupport.getDeviceRegistryProperties(
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
-                                IntegrationTestSupport.TENANT_ADMIN_PWD)));
+                                IntegrationTestSupport.TENANT_ADMIN_PWD)),
+                SendMessageSampler.Factory.noop(),
+                new ProtocolAdapterProperties(),
+                null);
 
-        allTenantClientFactory
-        .connect()
-        .compose(c -> allTenantClientFactory.getOrCreateTenantClient())
-        .onComplete(ctx.succeeding(r -> {
-            allTenantClient = r;
-            connections.flag();
-        }));
+        allTenantClient.start()
+            .onComplete(ctx.succeeding(r -> {
+                connections.flag();
+            }));
 
-        defaultTenantClientFactory = TenantClientFactory.create(
+        defaultTenantClient = new ProtonBasedTenantClient(
                 HonoConnection.newConnection(
                         vertx,
                         IntegrationTestSupport.getDeviceRegistryProperties(
                                 IntegrationTestSupport.HONO_USER,
-                                IntegrationTestSupport.HONO_PWD)));
+                                IntegrationTestSupport.HONO_PWD)),
+                SendMessageSampler.Factory.noop(),
+                new ProtocolAdapterProperties(),
+                null);
 
-        defaultTenantClientFactory
-        .connect()
-        .compose(c -> defaultTenantClientFactory.getOrCreateTenantClient())
-        .onComplete(ctx.succeeding(r -> {
-            defaultTenantClient = r;
-            connections.flag();
-        }));
+        defaultTenantClient.start()
+            .onComplete(ctx.succeeding(r -> {
+                connections.flag();
+            }));
     }
 
     /**
@@ -89,8 +89,8 @@ public class TenantAmqpIT extends TenantApiTests {
     public static void shutdown(final VertxTestContext ctx) {
 
         final Checkpoint connections = ctx.checkpoint(2);
-        disconnect(ctx, connections, allTenantClientFactory);
-        disconnect(ctx, connections, defaultTenantClientFactory);
+        stop(ctx, connections, allTenantClient);
+        stop(ctx, connections, defaultTenantClient);
     }
 
     /**

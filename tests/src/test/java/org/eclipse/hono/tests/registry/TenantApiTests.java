@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -38,6 +38,7 @@ import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
@@ -113,7 +114,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
         .addTenant(tenantId, tenant)
-        .compose(ok -> getAdminClient().get(tenantId))
+        .compose(ok -> getAdminClient().get(tenantId, NoopSpan.INSTANCE.context()))
         .onComplete(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
@@ -154,7 +155,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
         .addTenant(tenantId, tenant)
-        .compose(r -> getRestrictedClient().get(tenantId))
+        .compose(r -> getRestrictedClient().get(tenantId, NoopSpan.INSTANCE.context()))
         .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
             ctx.completeNow();
@@ -172,7 +173,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
     public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
 
         getAdminClient()
-        .get("non-existing-tenant")
+        .get("non-existing-tenant", NoopSpan.INSTANCE.context())
         .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
@@ -196,7 +197,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
         .addTenant(tenantId, tenant)
-        .compose(r -> getAdminClient().get(subjectDn))
+        .compose(r -> getAdminClient().get(subjectDn, NoopSpan.INSTANCE.context()))
         .onComplete(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
@@ -229,7 +230,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
         .addTenant(tenantId, tenant)
-        .compose(r -> getRestrictedClient().get(subjectDn))
+        .compose(r -> getRestrictedClient().get(subjectDn, NoopSpan.INSTANCE.context()))
         .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
             ctx.completeNow();

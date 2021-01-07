@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,7 @@ package org.eclipse.hono.tests.registry;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedCredentialsClient;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
@@ -28,7 +27,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
@@ -42,23 +40,24 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class CredentialsJmsIT extends CredentialsApiTests {
 
-    private static JmsBasedHonoConnection connection;
-    private static ClientConfigProperties props;
+    private static JmsBasedCredentialsClient client;
 
     /**
-     * Creates the JMS connection to the registry's Credentials service.
+     * Creates the client for the registry's Credentials service.
      *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void createJmsConnection(final VertxTestContext ctx) {
+    public static void createClient(final VertxTestContext ctx) {
 
-        props = IntegrationTestSupport.getDeviceRegistryProperties(
+        final var props = IntegrationTestSupport.getDeviceRegistryProperties(
                 IntegrationTestSupport.TENANT_ADMIN_USER,
                 IntegrationTestSupport.TENANT_ADMIN_PWD);
 
-        connection = JmsBasedHonoConnection.newConnection(props);
-        connection.connect().onComplete(ctx.completing());
+        client = new JmsBasedCredentialsClient(
+                JmsBasedHonoConnection.newConnection(props),
+                props);
+        client.start().onComplete(ctx.completing());
 
     }
 
@@ -70,24 +69,22 @@ public class CredentialsJmsIT extends CredentialsApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
-        disconnect(ctx, cons, connection);
+        stop(ctx, cons, client);
     }
 
-    private Future<JmsBasedCredentialsClient> getJmsBasedClient(final String tenant) {
-        if (connection == null) {
+    private JmsBasedCredentialsClient getJmsBasedClient() {
+        if (client == null) {
             throw new IllegalStateException("no connection to Credentials service");
         }
-        return connection
-                .isConnected()
-                .compose(ok -> JmsBasedCredentialsClient.create(connection, props, tenant));
+        return client;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Future<CredentialsClient> getClient(final String tenant) {
-        return getJmsBasedClient(tenant).map(client -> (CredentialsClient) client);
+    protected CredentialsClient getClient() {
+        return getJmsBasedClient();
     }
 
     /**
@@ -100,11 +97,11 @@ public class CredentialsJmsIT extends CredentialsApiTests {
     @Test
     public void testGetCredentialsFailsForMalformedSearchCriteria(final VertxTestContext ctx) {
 
-        getJmsBasedClient(tenantId)
-            .compose(client -> client.sendRequest(
-                    CredentialsAction.get.toString(),
-                    null,
-                    Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 }))) // no JSON
+        getJmsBasedClient().sendRequest(
+                tenantId,
+                CredentialsAction.get.toString(),
+                null,
+                Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 })) // no JSON
             .onComplete(ctx.failing(t -> {
                 assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 ctx.completeNow();
@@ -124,11 +121,11 @@ public class CredentialsJmsIT extends CredentialsApiTests {
         final JsonObject searchCriteria = CredentialsConstants.getSearchCriteria(
                 CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "device");
 
-        getJmsBasedClient(tenantId)
-            .compose(client -> client.sendRequest(
-                    null,
-                    null,
-                    searchCriteria.toBuffer()))
+        getJmsBasedClient().sendRequest(
+                tenantId,
+                null,
+                null,
+                searchCriteria.toBuffer())
             .onComplete(ctx.failing(t -> {
                 assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 ctx.completeNow();
@@ -148,11 +145,11 @@ public class CredentialsJmsIT extends CredentialsApiTests {
         final JsonObject searchCriteria = CredentialsConstants.getSearchCriteria(
                 CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "device");
 
-        getJmsBasedClient(tenantId)
-            .compose(client -> client.sendRequest(
-                    "unsupported-operation",
-                    null,
-                    searchCriteria.toBuffer()))
+        getJmsBasedClient().sendRequest(
+                tenantId,
+                "unsupported-operation",
+                null,
+                searchCriteria.toBuffer())
             .onComplete(ctx.failing(t -> {
                 assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 ctx.completeNow();

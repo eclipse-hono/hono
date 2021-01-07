@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,16 +12,16 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import org.eclipse.hono.client.DeviceConnectionClient;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -33,26 +33,27 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
 
-    private static DeviceConnectionClientFactory clientFactory;
+    private static DeviceConnectionClient client;
 
     /**
-     * Connects the factory.
+     * Creates the client.
      *
      * @param vertx The vert.x instance.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void createDeviceConnectionClientFactory(final Vertx vertx, final VertxTestContext ctx) {
+    public static void createDeviceConnectionClient(final Vertx vertx, final VertxTestContext ctx) {
 
-        clientFactory = DeviceConnectionClientFactory.create(
+        client = new ProtonBasedDeviceConnectionClient(
                 HonoConnection.newConnection(
                         vertx,
                         IntegrationTestSupport.getDeviceConnectionServiceProperties(
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
-                SendMessageSampler.Factory.noop());
+                SendMessageSampler.Factory.noop(),
+                new ProtocolAdapterProperties());
 
-        clientFactory.connect().onComplete(ctx.completing());
+        client.start().onComplete(ctx.completing());
     }
 
     /**
@@ -63,15 +64,15 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint connections = ctx.checkpoint();
-        disconnect(ctx, connections, clientFactory);
+        stop(ctx, connections, client);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Future<DeviceConnectionClient> getClient(final String tenant) {
-        return clientFactory.getOrCreateDeviceConnectionClient(tenant);
+    protected DeviceConnectionClient getClient() {
+        return client;
     }
 
 }

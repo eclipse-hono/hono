@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,17 +21,19 @@ import java.util.Objects;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsConstants.CredentialsAction;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -43,66 +45,62 @@ import io.vertx.core.json.JsonObject;
  * A client for interacting with a Credentials service implementation.
  *
  */
-public class JmsBasedCredentialsClient extends JmsBasedRequestResponseClient<CredentialsResult<CredentialsObject>> implements CredentialsClient {
+public class JmsBasedCredentialsClient extends JmsBasedRequestResponseServiceClient<CredentialsObject, CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
-    private JmsBasedCredentialsClient(
-            final JmsBasedHonoConnection connection,
-            final ClientConfigProperties clientConfig,
-            final String tenant) {
-
-        super(connection, CredentialsConstants.CREDENTIALS_ENDPOINT, tenant, clientConfig);
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(JmsBasedCredentialsClient.class);
 
     /**
-     * Creates a new client for a connection.
+     * Creates a new client.
      *
-     * @param connection The connection to the Credentials service.
-     * @param clientConfig The configuration properties for the connection to the
-     *                     Credentials service.
-     * @param tenant The tenant to create the client for.
-     * @return A future indicating the outcome of the operation.
+     * @param connection The JMS connection to use.
+     * @param clientConfig The client configuration properties.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Future<JmsBasedCredentialsClient> create(
+    public JmsBasedCredentialsClient(
             final JmsBasedHonoConnection connection,
-            final ClientConfigProperties clientConfig,
-            final String tenant) {
+            final ClientConfigProperties clientConfig) {
 
-        try {
-            final JmsBasedCredentialsClient client = new JmsBasedCredentialsClient(connection, clientConfig, tenant);
-            client.createLinks();
-            return Future.succeededFuture(client);
-        } catch (JMSException e) {
-            return Future.failedFuture(e);
-        }
+        super(connection, clientConfig);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<CredentialsObject> get(final String type, final String authId) {
+    public Future<CredentialsObject> get(
+            final String tenantId,
+            final String type,
+            final String authId,
+            final SpanContext context) {
 
-        return get(type, authId, new JsonObject());
+        return get(tenantId, type, authId, new JsonObject(), context);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<CredentialsObject> get(final String type, final String authId, final JsonObject clientContext) {
+    public Future<CredentialsObject> get(
+            final String tenantId,
+            final String type,
+            final String authId,
+            final JsonObject clientContext,
+            final SpanContext context) {
 
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
         Objects.requireNonNull(clientContext);
 
         final JsonObject searchCriteria = CredentialsConstants.getSearchCriteria(type, authId);
         searchCriteria.mergeIn(clientContext);
-        return sendRequest(CredentialsAction.get.toString(), null, searchCriteria.toBuffer());
+        return sendRequest(tenantId, CredentialsAction.get.toString(), null, searchCriteria.toBuffer());
     }
 
     /**
      * Sends a request for an operation.
      *
+     * @param tenantId The tenant to send the message for.
      * @param operation The name of the operation to invoke or {@code null} if the message
      *                  should not have a subject.
      * @param applicationProperties Application properties to set on the request message or
@@ -111,13 +109,15 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseClient<Cre
      * @return A future indicating the outcome of the operation.
      */
     public Future<CredentialsObject> sendRequest(
+            final String tenantId,
             final String operation,
             final Map<String, Object> applicationProperties,
             final Buffer payload) {
 
+        final Message request;
         try {
-            final Message request = createMessage(payload);
-
+            request = createMessage(payload);
+            addProperties(request, applicationProperties);
             if  (operation != null) {
                 request.setJMSType(operation);
             }
@@ -131,47 +131,49 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseClient<Cre
                     }
                 }
             }
-
-            return send(request)
-                    .compose(credentialsResult -> {
-                        final Promise<CredentialsObject> result = Promise.promise();
-                        switch (credentialsResult.getStatus()) {
-                        case HttpURLConnection.HTTP_OK:
-                        case HttpURLConnection.HTTP_CREATED:
-                            result.complete(credentialsResult.getPayload());
-                            break;
-                        case HttpURLConnection.HTTP_NOT_FOUND:
-                            result.fail(new ClientErrorException(credentialsResult.getStatus(), "no such credentials"));
-                            break;
-                        default:
-                            result.fail(StatusCodeMapper.from(credentialsResult));
-                        }
-                        return result.future();
-                    });
-        } catch (JMSException e) {
-            return Future.failedFuture(getServiceInvocationException(e));
+        } catch (final JMSException e) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e));
         }
+
+        final Future<JmsBasedRequestResponseClient<CredentialsResult<CredentialsObject>>> client = JmsBasedRequestResponseClient.forEndpoint(
+                connection, CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId);
+
+        return client.compose(c -> c.send(request, this::getResult))
+                .compose(credentialsResult -> {
+                    final Promise<CredentialsObject> result = Promise.promise();
+                    switch (credentialsResult.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                    case HttpURLConnection.HTTP_CREATED:
+                        result.complete(credentialsResult.getPayload());
+                        break;
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        result.fail(new ClientErrorException(credentialsResult.getStatus(), "no such credentials"));
+                        break;
+                    default:
+                        result.fail(StatusCodeMapper.from(credentialsResult));
+                    }
+                    return result.future();
+                });
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected CredentialsResult<CredentialsObject> getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+    private Future<CredentialsResult<CredentialsObject>> getResult(final Message message) {
 
-        if (payload == null) {
-            return CredentialsResult.from(status);
-        } else {
-            try {
-                final JsonObject json = payload.toJsonObject();
-                final CredentialsObject credentials = json.mapTo(CredentialsObject.class);
-                return CredentialsResult.from(status, credentials, cacheDirective);
-            } catch (DecodeException e) {
-                LOGGER.warn("Credentials service returned malformed payload", e);
-                throw new ServiceInvocationException(
-                        HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        "Credentials service returned malformed payload");
-            }
-        }
+        return getPayload(message)
+                .map(payload -> {
+                    if (payload == null) {
+                        return CredentialsResult.from(getStatus(message));
+                    } else {
+                        try {
+                            final JsonObject json = payload.toJsonObject();
+                            final CredentialsObject credentials = json.mapTo(CredentialsObject.class);
+                            return CredentialsResult.from(getStatus(message), credentials, getCacheDirective(message));
+                        } catch (DecodeException e) {
+                            LOG.warn("Credentials service returned malformed payload", e);
+                            throw new ServiceInvocationException(
+                                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                    "Credentials service returned malformed payload");
+                        }
+                    }
+                });
     }
 }

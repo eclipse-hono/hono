@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,13 +23,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.DeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -51,10 +50,9 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     /**
      * Gets a client for interacting with the Device Connection service.
      *
-     * @param tenant The tenant to scope the client to.
      * @return The client.
      */
-    protected abstract Future<DeviceConnectionClient> getClient(String tenant);
+    protected abstract DeviceConnectionClient getClient();
 
     /**
      * Creates a random identifier.
@@ -76,10 +74,10 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
         final String gwId = randomId();
+        final String tenantId = randomId();
 
-        getClient(randomId())
-            .compose(client -> client.setLastKnownGatewayForDevice(deviceId, gwId, null).map(client))
-            .compose(client -> client.getLastKnownGatewayForDevice(deviceId, null))
+        getClient().setLastKnownGatewayForDevice(tenantId, deviceId, gwId, null)
+            .compose(ok -> getClient().getLastKnownGatewayForDevice(tenantId, deviceId, null))
             .onComplete(ctx.succeeding(r -> {
                 ctx.verify(() -> {
                     assertThat(r.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo(gwId);
@@ -100,8 +98,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
 
-        getClient(randomId())
-            .compose(client -> client.getLastKnownGatewayForDevice(deviceId, null))
+        getClient().getLastKnownGatewayForDevice(randomId(), deviceId, null)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
@@ -119,10 +116,10 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
         final String adapterInstance = randomId();
+        final String tenantId = randomId();
 
-        getClient(randomId())
-            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null).map(client))
-            .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
+        getClient().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstance, null, null)
+            .compose(ok -> getClient().getCommandHandlingAdapterInstances(tenantId, deviceId, List.of(), null))
             .onComplete(ctx.succeeding(r -> {
                 ctx.verify(() -> {
                     final JsonArray instanceList = r.getJsonArray(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES);
@@ -149,16 +146,14 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String deviceId = randomId();
         final String adapterInstance = randomId();
         final Duration lifespan = Duration.ofSeconds(1);
+        final String tenantId = randomId();
 
-        getClient(randomId())
-                .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespan, null)
-                        .map(client))
-                .compose(client -> {
+        getClient().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstance, lifespan, null)
+                .compose(ok -> {
                     final Promise<JsonObject> instancesPromise = Promise.promise();
                     // wait 1s to make sure that entry has expired after that
                     vertx.setTimer(1002, tid -> {
-                        client.getCommandHandlingAdapterInstances(deviceId, List.of(), null)
+                        getClient().getCommandHandlingAdapterInstances(tenantId, deviceId, List.of(), null)
                                 .onComplete(instancesPromise.future());
                     });
                     return instancesPromise.future();
@@ -181,8 +176,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
 
-        getClient(randomId())
-            .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
+        getClient().getCommandHandlingAdapterInstances(randomId(), deviceId, List.of(), null)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
@@ -201,14 +195,13 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
         final String adapterInstance = randomId();
+        final String tenantId = randomId();
 
-        getClient(randomId())
+        getClient()
                 // add the entry
-                .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null)
-                        .map(client))
+                .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstance, null, null)
                 // then remove it
-                .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstance, null))
+                .compose(ok -> getClient().removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstance, null))
                 .onComplete(ctx.completing());
     }
 
@@ -222,8 +215,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     @Test
     public void testRemoveCommandHandlingAdapterInstanceFailsForNonExistingEntry(final VertxTestContext ctx) {
 
-        getClient(randomId())
-            .compose(client -> client.removeCommandHandlingAdapterInstance("non-existing-device", "adapterOne", null))
+        getClient().removeCommandHandlingAdapterInstance(randomId(), "non-existing-device", "adapterOne", null)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_PRECON_FAILED));
                 ctx.completeNow();
@@ -240,11 +232,11 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     @Test
     public void testRemoveCommandHandlingAdapterInstanceFailsForNonMatchingAdapterInstanceId(final VertxTestContext ctx) {
 
+        final String tenantId = randomId();
         final String deviceId = randomId();
 
-        getClient(randomId())
-            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, "adapterOne", Duration.ofMinutes(5), null).map(client))
-            .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "notAdapterOne", null))
+        getClient().setCommandHandlingAdapterInstance(tenantId, deviceId, "adapterOne", Duration.ofMinutes(5), null)
+            .compose(ok -> getClient().removeCommandHandlingAdapterInstance(tenantId, deviceId, "notAdapterOne", null))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_PRECON_FAILED));
                 ctx.completeNow();

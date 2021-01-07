@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,8 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
@@ -43,14 +43,12 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class TenantJmsIT extends TenantApiTests {
 
-    private static JmsBasedHonoConnection allTenantConnection;
-    private static JmsBasedHonoConnection defaultTenantConnection;
     private static JmsBasedTenantClient allTenantClient;
     private static JmsBasedTenantClient defaultTenantClient;
 
     /**
      * Creates an HTTP client for managing the fixture of test cases
-     * and creates a {@link TenantClient} for invoking operations of the
+     * and creates clients for invoking operations of the
      * Tenant API.
      *
      * @param ctx The vert.x test context.
@@ -63,30 +61,26 @@ public class TenantJmsIT extends TenantApiTests {
         final ClientConfigProperties allTenantConfig = IntegrationTestSupport.getDeviceRegistryProperties(
                 IntegrationTestSupport.TENANT_ADMIN_USER, IntegrationTestSupport.TENANT_ADMIN_PWD);
 
-        JmsBasedHonoConnection.newConnection(allTenantConfig).connect()
-        .map(con -> {
-            allTenantConnection = con;
-            return con;
-        })
-        .compose(con -> JmsBasedTenantClient.create(con, allTenantConfig))
-        .onComplete(ctx.succeeding(client -> {
-            allTenantClient = client;
-            connections.flag();
-        }));
+        allTenantClient = new JmsBasedTenantClient(
+                JmsBasedHonoConnection.newConnection(allTenantConfig),
+                allTenantConfig);
+
+        allTenantClient.start()
+            .onComplete(ctx.succeeding(client -> {
+                connections.flag();
+            }));
 
         final ClientConfigProperties defaultTenantConfig = IntegrationTestSupport.getDeviceRegistryProperties(
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
 
-        JmsBasedHonoConnection.newConnection(defaultTenantConfig).connect()
-        .map(con -> {
-            defaultTenantConnection = con;
-            return con;
-        })
-        .compose(con -> JmsBasedTenantClient.create(con, defaultTenantConfig))
-        .onComplete(ctx.succeeding(client -> {
-            defaultTenantClient = client;
-            connections.flag();
-        }));
+        defaultTenantClient = new JmsBasedTenantClient(
+                JmsBasedHonoConnection.newConnection(defaultTenantConfig),
+                defaultTenantConfig);
+
+        defaultTenantClient.start()
+            .onComplete(ctx.succeeding(client -> {
+                connections.flag();
+            }));
     }
 
     /**
@@ -98,8 +92,8 @@ public class TenantJmsIT extends TenantApiTests {
     public static void shutdown(final VertxTestContext ctx) {
 
         final Checkpoint connectionClosed = ctx.checkpoint(2);
-        disconnect(ctx, connectionClosed, defaultTenantConnection);
-        disconnect(ctx, connectionClosed, allTenantConnection);
+        stop(ctx, connectionClosed, defaultTenantClient);
+        stop(ctx, connectionClosed, allTenantClient);
     }
 
     /**

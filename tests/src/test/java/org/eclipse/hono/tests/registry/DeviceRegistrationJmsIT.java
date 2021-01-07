@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,8 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.tests.jms.JmsBasedRegistrationClient;
@@ -29,7 +28,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Future;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -41,23 +39,24 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
 
-    private static JmsBasedHonoConnection registrationConnection;
-    private static ClientConfigProperties props;
+    private static JmsBasedRegistrationClient registrationClient;
 
     /**
-     * Creates a JMS connection to the Device Registration service.
+     * Creates a client for the Device Registration service.
      *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void createJmsConnection(final VertxTestContext ctx) {
+    public static void createClient(final VertxTestContext ctx) {
 
-        props = IntegrationTestSupport.getDeviceRegistryProperties(
+        final var props = IntegrationTestSupport.getDeviceRegistryProperties(
                 IntegrationTestSupport.TENANT_ADMIN_USER,
                 IntegrationTestSupport.TENANT_ADMIN_PWD);
 
-        registrationConnection = JmsBasedHonoConnection.newConnection(props);
-        registrationConnection.connect().onComplete(ctx.completing());
+        registrationClient = new JmsBasedRegistrationClient(
+                JmsBasedHonoConnection.newConnection(props),
+                props);
+        registrationClient.start().onComplete(ctx.completing());
     }
 
     /**
@@ -68,24 +67,22 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
-        disconnect(ctx, cons, registrationConnection);
+        stop(ctx, cons, registrationClient);
     }
 
-    private Future<JmsBasedRegistrationClient> getJmsBasedClient(final String tenant) {
-        if (registrationConnection == null) {
+    private JmsBasedRegistrationClient getJmsBasedClient() {
+        if (registrationClient == null) {
             throw new IllegalStateException("no connection to Device Registration service");
         }
-        return registrationConnection
-                .isConnected()
-                .compose(ok -> JmsBasedRegistrationClient.create(registrationConnection, props, tenant));
+        return registrationClient;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Future<RegistrationClient> getClient(final String tenant) {
-        return getJmsBasedClient(tenant).map(client -> (RegistrationClient) client);
+    protected DeviceRegistrationClient getClient() {
+        return getJmsBasedClient();
     }
 
     /**
@@ -98,8 +95,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
     @Test
     public void testAssertRegistrationFailsForMissingDeviceId(final VertxTestContext ctx) {
 
-        getJmsBasedClient(tenantId)
-            .compose(client -> client.sendRequest(RegistrationConstants.ACTION_ASSERT, null, null))
+        getJmsBasedClient().sendRequest(tenantId, RegistrationConstants.ACTION_ASSERT, null, null)
             .onComplete(ctx.failing(t -> {
                 DeviceRegistrationApiTests.assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 ctx.completeNow();
@@ -118,8 +114,8 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         getHelper().registry.registerDevice(tenantId, deviceId)
-            .compose(ok -> getJmsBasedClient(tenantId))
-            .compose(client -> client.sendRequest(
+            .compose(ok -> getJmsBasedClient().sendRequest(
+                    tenantId,
                     null,
                     Collections.singletonMap(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
                     null))
@@ -141,8 +137,8 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         getHelper().registry.registerDevice(tenantId, deviceId)
-            .compose(ok -> getJmsBasedClient(tenantId))
-            .compose(client -> client.sendRequest(
+            .compose(ok -> getJmsBasedClient().sendRequest(
+                    tenantId,
                     "unsupported-operation",
                     Collections.singletonMap(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
                     null))

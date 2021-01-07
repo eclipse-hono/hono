@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,16 @@
 
 package org.eclipse.hono.tests.registry;
 
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -33,24 +34,27 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
 
-    private static RegistrationClientFactory registrationClientFactory;
+    private static DeviceRegistrationClient registrationClient;
 
     /**
-     * Creates a new client factory for accessing the Device Registration API.
+     * Creates a new client for accessing the Device Registration API.
      *
      * @param vertx The vert.x instance.
      * @param ctx The vert.x test context.
      */
     @BeforeAll
-    public static void createRegistrationClientFactory(final Vertx vertx, final VertxTestContext ctx) {
+    public static void createRegistrationClient(final Vertx vertx, final VertxTestContext ctx) {
 
-        registrationClientFactory = RegistrationClientFactory.create(
+        registrationClient = new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(
                         vertx,
                         IntegrationTestSupport.getDeviceRegistryProperties(
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
-                                IntegrationTestSupport.TENANT_ADMIN_PWD)));
-        registrationClientFactory.connect().onComplete(ctx.completing());
+                                IntegrationTestSupport.TENANT_ADMIN_PWD)),
+                SendMessageSampler.Factory.noop(),
+                new ProtocolAdapterProperties(),
+                null);
+        registrationClient.start().onComplete(ctx.completing());
     }
 
     /**
@@ -61,15 +65,15 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
-        disconnect(ctx, cons, registrationClientFactory);
+        stop(ctx, cons, registrationClient);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Future<RegistrationClient> getClient(final String tenant) {
-        return registrationClientFactory.getOrCreateRegistrationClient(tenant);
+    protected DeviceRegistrationClient getClient() {
+        return registrationClient;
     }
 }
 

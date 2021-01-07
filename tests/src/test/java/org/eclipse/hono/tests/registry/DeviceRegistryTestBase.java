@@ -15,9 +15,12 @@ package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Objects;
+
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Lifecycle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -60,7 +63,7 @@ abstract class DeviceRegistryTestBase {
     }
 
     /**
-     * Closes the connection of the provided factory.
+     * Closes the connection of a factory and flags the given checkpoint accordingly.
      * <p>
      * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to
      * connect this client again will fail.
@@ -68,16 +71,44 @@ abstract class DeviceRegistryTestBase {
      * @param ctx The test context that the tests are executed on.
      * @param checkpoint The checkpoint to flag on successful closing.
      * @param factory The factory to disconnect.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters other than factory are {@code null}.
      */
     static void disconnect(
             final VertxTestContext ctx,
             final Checkpoint checkpoint,
             final ConnectionLifecycle<?> factory) {
 
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(checkpoint);
+
         final Promise<Void> clientTracker = Promise.promise();
         if (factory != null) {
             factory.disconnect(clientTracker);
+        } else {
+            clientTracker.complete();
+        }
+        clientTracker.future().otherwiseEmpty().onComplete(ctx.succeeding(ok -> checkpoint.flag()));
+    }
+
+    /**
+     * Stops a component and flags the given checkpoint accordingly.
+     *
+     * @param ctx The test context that the tests are executed on.
+     * @param checkpoint The checkpoint to flag on successful stopping.
+     * @param component The component to stop.
+     * @throws NullPointerException if any of the parameters other than component are {@code null}.
+     */
+    static void stop(
+            final VertxTestContext ctx,
+            final Checkpoint checkpoint,
+            final Lifecycle component) {
+
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(checkpoint);
+
+        final Promise<Void> clientTracker = Promise.promise();
+        if (component != null) {
+            component.stop().onComplete(clientTracker);
         } else {
             clientTracker.complete();
         }

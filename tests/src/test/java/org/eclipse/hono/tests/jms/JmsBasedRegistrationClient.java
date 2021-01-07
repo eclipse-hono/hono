@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,16 +22,19 @@ import java.util.Objects;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -40,70 +43,56 @@ import io.vertx.core.json.JsonObject;
 
 
 /**
- * A JmsBasedRegistrationClient.
+ * A JMS based client for the Device Registration service.
  *
  */
-public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<RegistrationResult> implements RegistrationClient {
+public class JmsBasedRegistrationClient extends JmsBasedRequestResponseServiceClient<JsonObject, RegistrationResult> implements DeviceRegistrationClient {
 
-    private JmsBasedRegistrationClient(
-            final JmsBasedHonoConnection connection,
-            final ClientConfigProperties clientConfig,
-            final String tenant) {
-
-        super(connection, RegistrationConstants.REGISTRATION_ENDPOINT, tenant, clientConfig);
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(JmsBasedRegistrationClient.class);
 
     /**
-     * Creates a new client for a connection.
+     * Creates a new client.
      *
-     * @param connection The connection to the Device Registration service.
-     * @param clientConfig The configuration properties for the connection to the
-     *                     Device Registration service.
-     * @param tenant The tenant to create the client for.
-     * @return A future indicating the outcome of the operation.
+     * @param connection The JMS connection to use.
+     * @param clientConfig The client configuration properties.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Future<JmsBasedRegistrationClient> create(
+    public JmsBasedRegistrationClient(
             final JmsBasedHonoConnection connection,
-            final ClientConfigProperties clientConfig,
-            final String tenant) {
+            final ClientConfigProperties clientConfig) {
 
-        try {
-            final JmsBasedRegistrationClient client = new JmsBasedRegistrationClient(connection, clientConfig, tenant);
-            client.createLinks();
-            return Future.succeededFuture(client);
-        } catch (JMSException e) {
-            return Future.failedFuture(e);
-        }
+        super(connection, clientConfig);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<JsonObject> assertRegistration(final String deviceId) {
+    public Future<RegistrationAssertion> assertRegistration(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
+            final SpanContext context) {
 
-        return assertRegistration(deviceId, null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<JsonObject> assertRegistration(final String deviceId, final String gatewayId) {
-
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        final Map<String, Object> props = new HashMap<>();
-        props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        final Map<String, Object> applicationProperties = new HashMap<>();
+        applicationProperties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         if (gatewayId != null) {
-            props.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+            applicationProperties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
         }
-        return sendRequest(RegistrationConstants.ACTION_ASSERT, props, null);
+        return sendRequest(
+                tenantId,
+                RegistrationConstants.ACTION_ASSERT,
+                applicationProperties,
+                null);
     }
 
     /**
      * Sends a request for an operation.
      *
+     * @param tenantId The tenant to send the request for.
      * @param operation The name of the operation to invoke or {@code null} if the message
      *                  should not have a subject.
      * @param applicationProperties Application properties to set on the request message or
@@ -111,66 +100,70 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<Re
      * @param payload Payload to include or {@code null} if the message should have no body.
      * @return A future indicating the outcome of the operation.
      */
-    public Future<JsonObject> sendRequest(
+    public Future<RegistrationAssertion> sendRequest(
+            final String tenantId,
             final String operation,
             final Map<String, Object> applicationProperties,
             final Buffer payload) {
 
-        try {
-            final Message request = createMessage(payload);
+        final Message request;
 
+        try {
+            request = createMessage(payload);
+            addProperties(request, applicationProperties);
             if  (operation != null) {
                 request.setJMSType(operation);
             }
 
-            if (applicationProperties != null) {
-                for (Map.Entry<String, Object> entry : applicationProperties.entrySet()) {
-                    if (entry.getValue() instanceof String) {
-                        request.setStringProperty(entry.getKey(), (String) entry.getValue());
-                    } else {
-                        request.setObjectProperty(entry.getKey(), entry.getValue());
-                    }
-                }
-            }
-
-            return send(request)
-                    .compose(registrationResult -> {
-                        final Promise<JsonObject> result = Promise.promise();
-                        switch (registrationResult.getStatus()) {
-                        case HttpURLConnection.HTTP_OK:
-                            result.complete(registrationResult.getPayload());
-                            break;
-                        case HttpURLConnection.HTTP_NOT_FOUND:
-                            result.fail(new ClientErrorException(registrationResult.getStatus(), "no such device"));
-                            break;
-                        default:
-                            result.fail(StatusCodeMapper.from(registrationResult));
-                        }
-                        return result.future();
-                    });
-        } catch (JMSException e) {
-            return Future.failedFuture(getServiceInvocationException(e));
+        } catch (final JMSException e) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+
+        final Future<JmsBasedRequestResponseClient<RegistrationResult>> client = JmsBasedRequestResponseClient.forEndpoint(
+                connection,
+                RegistrationConstants.REGISTRATION_ENDPOINT,
+                tenantId);
+
+        return client
+            .compose(c -> c.send(request, this::getResult))
+            .compose(registrationResult -> {
+                final Promise<RegistrationAssertion> result = Promise.promise();
+                switch (registrationResult.getStatus()) {
+                case HttpURLConnection.HTTP_OK:
+                    try {
+                        final var assertion = registrationResult.getPayload().mapTo(RegistrationAssertion.class);
+                        result.complete(assertion);
+                    } catch (final DecodeException e) {
+                        result.fail(e);
+                    }
+                    break;
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    result.fail(new ClientErrorException(registrationResult.getStatus(), "no such device"));
+                    break;
+                default:
+                    result.fail(StatusCodeMapper.from(registrationResult));
+                }
+                return result.future();
+            });
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected RegistrationResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+    private Future<RegistrationResult> getResult(final Message message) {
 
-        if (payload == null) {
-            return RegistrationResult.from(status);
-        } else {
-            try {
-                final JsonObject json = payload.toJsonObject();
-                return RegistrationResult.from(status, json, cacheDirective);
-            } catch (DecodeException e) {
-                LOGGER.warn("Device Registration service returned malformed payload", e);
-                throw new ServiceInvocationException(
-                        HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        "Device Registration service returned malformed payload");
-            }
-        }
+        return getPayload(message)
+                .map(payload -> {
+                    if (payload == null) {
+                        return RegistrationResult.from(getStatus(message));
+                    } else {
+                        try {
+                            final JsonObject json = payload.toJsonObject();
+                            return RegistrationResult.from(getStatus(message), json, getCacheDirective(message));
+                        } catch (DecodeException e) {
+                            LOG.warn("Device Registration service returned malformed payload", e);
+                            throw new ServiceInvocationException(
+                                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                    "Device Registration service returned malformed payload");
+                        }
+                    }
+                });
     }
 }

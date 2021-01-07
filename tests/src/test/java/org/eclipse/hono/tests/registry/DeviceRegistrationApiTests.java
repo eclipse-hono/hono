@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,13 +21,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -63,10 +63,9 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     /**
      * Gets a client for interacting with the Device Registration service.
      *
-     * @param tenant The tenant to scope the client to.
      * @return The client.
      */
-    protected abstract Future<RegistrationClient> getClient(String tenant);
+    protected abstract DeviceRegistrationClient getClient();
 
     private Boolean isGatewayModeSupported() {
         return getHelper().isGatewayModeSupported();
@@ -89,13 +88,11 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
                 .registerDevice(tenantId, deviceId, device)
-                .compose(r -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId))
+                .compose(r -> getClient().assertRegistration(tenantId, deviceId, null, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
-                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                        assertThat(resp.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS))
-                                .isEqualTo(defaults);
+                        assertThat(resp.getDeviceId()).isEqualTo(deviceId);
+                        assertThat(resp.getDefaults()).containsAllEntriesOf(defaults.getMap());
                     });
                     ctx.completeNow();
                 }));
@@ -123,12 +120,11 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .compose(ok -> getHelper().registry.registerDevice(
                         tenantId,
                         deviceId, device))
-                .compose(ok -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, gatewayId))
+                .compose(ok -> getClient().assertRegistration(tenantId, deviceId, gatewayId, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
-                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactlyElementsOf(via);
+                        assertThat(resp.getDeviceId()).isEqualTo(deviceId);
+                        assertThat(resp.getAuthorizedGateways()).containsExactlyElementsOf(via);
                     });
                     ctx.completeNow();
                 }));
@@ -158,14 +154,11 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                         tenantId, gatewayId, gateway))
                 .compose(ok -> getHelper().registry.registerDevice(
                         tenantId, deviceId, device))
-                .compose(ok -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, gatewayId))
+                .compose(ok -> getClient().assertRegistration(tenantId, deviceId, gatewayId, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
-                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID))
-                                .isEqualTo(deviceId);
-                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA))
-                                .containsExactly(gatewayId);
+                        assertThat(resp.getDeviceId()).isEqualTo(deviceId);
+                        assertThat(resp.getAuthorizedGateways()).containsExactly(gatewayId);
                     });
                     ctx.completeNow();
                 }));
@@ -181,12 +174,11 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationFailsForUnknownDevice(final VertxTestContext ctx) {
 
-        getClient(tenantId)
-        .compose(client -> client.assertRegistration(NON_EXISTING_DEVICE_ID))
-        .onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
-            ctx.completeNow();
-        }));
+        getClient().assertRegistration(tenantId, NON_EXISTING_DEVICE_ID, null, NoopSpan.INSTANCE.context())
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -203,8 +195,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
                 .registerDevice(tenantId, deviceId)
-                .compose(r -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATEWAY_ID))
+                .compose(r -> getClient().assertRegistration(tenantId, deviceId, NON_EXISTING_GATEWAY_ID, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN));
                     ctx.completeNow();
@@ -235,8 +226,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .registerDevice(tenantId, gatewayId, gateway)
                 .compose(ok -> getHelper().registry.registerDevice(
                         tenantId, deviceId, device))
-                .compose(r -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, gatewayId))
+                .compose(r -> getClient().assertRegistration(tenantId, deviceId, gatewayId, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.failing(t -> {
                     assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
@@ -267,8 +257,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .registerDevice(tenantId, authorizedGateway)
                 .compose(ok -> getHelper().registry.registerDevice(tenantId, unauthorizedGateway))
                 .compose(ok -> getHelper().registry.registerDevice(tenantId, deviceId, device))
-                .compose(ok -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, unauthorizedGateway))
+                .compose(ok -> getClient().assertRegistration(tenantId, deviceId, unauthorizedGateway, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.failing(t -> {
                     assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
@@ -291,8 +280,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         getHelper().registry
                 .registerDevice(tenantId, deviceId, device)
-                .compose(ok -> getClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId))
+                .compose(ok -> getClient().assertRegistration(tenantId, deviceId, null, NoopSpan.INSTANCE.context()))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();

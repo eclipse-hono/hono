@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,18 +18,21 @@ import java.net.HttpURLConnection;
 
 import javax.jms.BytesMessage;
 import javax.jms.JMSException;
+import javax.jms.Message;
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -41,38 +44,29 @@ import io.vertx.core.json.JsonObject;
  * A {@link TenantClient} implementation that uses the JMS API to interact
  * with a Tenant service.
  */
-public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantResult<TenantObject>> implements TenantClient {
+public class JmsBasedTenantClient extends JmsBasedRequestResponseServiceClient<TenantObject, TenantResult<TenantObject>> implements TenantClient {
 
-
-    private JmsBasedTenantClient(final JmsBasedHonoConnection connection, final ClientConfigProperties clientConfig) {
-
-        super(connection, TenantConstants.TENANT_ENDPOINT, clientConfig);
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(JmsBasedTenantClient.class);
 
     /**
-     * Creates a new client for a connection.
+     * Creates a new client.
      *
-     * @param connection The connection to the Tenant service.
-     * @param clientConfig The configuration properties for the connection to the
-     *                     Tenant service.
-     * @return A future indicating the outcome of the operation.
+     * @param connection The JMS connection to use.
+     * @param clientConfig The client configuration properties.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Future<JmsBasedTenantClient> create(final JmsBasedHonoConnection connection, final ClientConfigProperties clientConfig) {
+    public JmsBasedTenantClient(
+            final JmsBasedHonoConnection connection,
+            final ClientConfigProperties clientConfig) {
 
-        try {
-            final JmsBasedTenantClient client = new JmsBasedTenantClient(connection, clientConfig);
-            client.createLinks();
-            return Future.succeededFuture(client);
-        } catch (JMSException e) {
-            return Future.failedFuture(e);
-        }
+        super(connection, clientConfig);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<TenantObject> get(final String tenantId) {
+    public Future<TenantObject> get(final String tenantId, final SpanContext context) {
 
         return get(new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId).toBuffer());
     }
@@ -81,7 +75,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
      * {@inheritDoc}
      */
     @Override
-    public Future<TenantObject> get(final X500Principal subjectDn) {
+    public Future<TenantObject> get(final X500Principal subjectDn, final SpanContext context) {
 
         final String subjectDnRfc2253 = subjectDn.getName(X500Principal.RFC2253);
         return get(new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253).toBuffer());
@@ -99,60 +93,63 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
     }
 
     /**
-     * Sends a request for retrieving tenant information using arbitrary
-     * search criteria.
+     * Sends a request for an operation.
      *
-     * @param operation The name of the operation to invoke.
-     * @param searchCriteria The search criteria.
+     * @param operation The name of the operation to invoke or {@code null} if the message
+     *                  should not have a subject.
+     * @param searchCriteria The search criteria to include in the body.
      * @return A future indicating the outcome of the operation.
      */
     public Future<TenantObject> sendRequest(final String operation, final Buffer searchCriteria) {
 
+        final BytesMessage request;
         try {
-            final BytesMessage request = createMessage(searchCriteria);
+            request = createMessage(searchCriteria);
             if  (operation != null) {
                 request.setJMSType(operation);
             }
-
-            return send(request)
-                    .compose(tenantResult -> {
-                        final Promise<TenantObject> result = Promise.promise();
-                        switch (tenantResult.getStatus()) {
-                        case HttpURLConnection.HTTP_OK:
-                            result.complete(tenantResult.getPayload());
-                            break;
-                        case HttpURLConnection.HTTP_NOT_FOUND:
-                            result.fail(new ClientErrorException(tenantResult.getStatus(), "no such tenant"));
-                            break;
-                        default:
-                            result.fail(StatusCodeMapper.from(tenantResult));
-                        }
-                        return result.future();
-                    });
         } catch (JMSException e) {
-            return Future.failedFuture(getServiceInvocationException(e));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+
+        final Future<JmsBasedRequestResponseClient<TenantResult<TenantObject>>> client = JmsBasedRequestResponseClient.forEndpoint(
+                connection, TenantConstants.TENANT_ENDPOINT, null);
+
+        return client.compose(c -> c.send(request, this::getResult))
+                .compose(tenantResult -> {
+                    final Promise<TenantObject> result = Promise.promise();
+                    switch (tenantResult.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        result.complete(tenantResult.getPayload());
+                        break;
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        result.fail(new ClientErrorException(tenantResult.getStatus(), "no such tenant"));
+                        break;
+                    default:
+                        result.fail(StatusCodeMapper.from(tenantResult));
+                    }
+                    return result.future();
+                });
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected TenantResult<TenantObject> getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+    private Future<TenantResult<TenantObject>> getResult(final Message message) {
 
-        if (payload == null) {
-            return TenantResult.from(status);
-        } else {
-            try {
-                final JsonObject json = payload.toJsonObject();
-                final TenantObject tenant = json.mapTo(TenantObject.class);
-                return TenantResult.from(status, tenant, cacheDirective);
-            } catch (DecodeException e) {
-                LOGGER.warn("Tenant service returned malformed payload", e);
-                throw new ServiceInvocationException(
-                        HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        "Tenant service returned malformed payload");
-            }
-        }
+        return getPayload(message)
+            .map(payload -> {
+                if (payload == null) {
+                    return TenantResult.from(getStatus(message));
+                } else {
+                    try {
+                        final JsonObject json = payload.toJsonObject();
+                        final TenantObject tenant = json.mapTo(TenantObject.class);
+                        return TenantResult.from(getStatus(message), tenant, getCacheDirective(message));
+                    } catch (DecodeException e) {
+                        LOG.warn("Tenant service returned malformed payload", e);
+                        throw new ServiceInvocationException(
+                                HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                "Tenant service returned malformed payload");
+                    }
+                }
+            });
     }
 }

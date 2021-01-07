@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,15 +12,16 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.Future;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -31,7 +32,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class CredentialsAmqpIT extends CredentialsApiTests {
 
-    private static CredentialsClientFactory clientFactory;
+    private static CredentialsClient client;
 
     /**
      * Creates an AMQP 1.0 based client for the Credentials API.
@@ -41,14 +42,17 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
     @BeforeAll
     public static void createCredentialsClientFactory(final VertxTestContext ctx) {
 
-        clientFactory = CredentialsClientFactory.create(
+        client = new ProtonBasedCredentialsClient(
                 HonoConnection.newConnection(
                         VERTX,
                         IntegrationTestSupport.getDeviceRegistryProperties(
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
-                                IntegrationTestSupport.TENANT_ADMIN_PWD)));
+                                IntegrationTestSupport.TENANT_ADMIN_PWD)),
+                SendMessageSampler.Factory.noop(),
+                new ProtocolAdapterProperties(),
+                null);
 
-        clientFactory.connect().onComplete(ctx.completing());
+        client.start().onComplete(ctx.completing());
 
     }
 
@@ -60,14 +64,14 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint connections = ctx.checkpoint();
-        disconnect(ctx, connections, clientFactory);
+        stop(ctx, connections, client);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Future<CredentialsClient> getClient(final String tenant) {
-        return clientFactory.getOrCreateCredentialsClient(tenant);
+    protected CredentialsClient getClient() {
+        return client;
     }
 }
