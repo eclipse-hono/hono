@@ -1,6 +1,6 @@
 ---
 title: "Event API for Kafka Specification"
-linkTitle: "Event API - Kafka"
+linkTitle: "Event API for Kafka"
 weight: 418
 resources:
   - src: produce_kafka.svg
@@ -13,7 +13,7 @@ The *Event* API is used by *Protocol Adapters* to send event messages downstream
 The Event API for Kafka is an alternative to the [Event API for AMQP]({{< relref "/api/event" >}}).
 With this API clients publish event messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
-The definitions in [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry#kafka-based-messaging" >}}) 
+The definitions in [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#kafka-based-messaging" >}}) 
 also apply to the *Event* API for Kafka.   
 
 {{% note title="Tech preview" %}}
@@ -38,7 +38,7 @@ The protocol adapter writes messages to the tenant-specific topic `hono.event.${
 
 **Message Flow**
 
-Hono supports *AT LEAST ONCE* delivery of *Event* messages only, as defined in [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry#at-least-once-producers" >}}).
+Hono supports *AT LEAST ONCE* delivery of *Event* messages only, as defined in [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#at-least-once-producers" >}}).
 
 The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* producing an event to the Kafka cluster.
 
@@ -53,7 +53,7 @@ When a Kafka producer raises an exception while sending an event message to Kafk
 
 **Message Format**
 
-See [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry#produce-telemetry-data" >}}) for the definition of the message format.
+See [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry-data" >}}) for the definition of the message format.
 
 ## Northbound Operations
 
@@ -87,7 +87,7 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 **Message Format**
 
-See [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry#produce-telemetry-data" >}}) for the definition of the message format. 
+See [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry-data" >}}) for the definition of the message format. 
 
 
 
@@ -99,14 +99,14 @@ Hono defines several *well-known* event types which have specific semantics. Eve
 
 A Kafka message containing this type of event does not have any payload so the value of the message MUST be empty.
 
-The headers an event sender needs to set for an *empty notification* event are defined in the [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry#produce-telemetry-data" >}}).
+The headers an event sender needs to set for an *empty notification* event are defined in the [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry-data" >}}).
 
 The relevant headers are listed again in the following table:
 
 | Name            | Mandatory       | Type        | Description |
 | :-------------- | :-------------: | :---------- | :---------- |
 | *content-type*  | yes             | *string*    | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
-| *ttd*           | no              | *int*       | The *time 'til disconnect* as described in the [Telemetry API for Kafka]({{< relref "/api/kafka/telemetry#produce-telemetry-data" >}}). |
+| *ttd*           | no              | *int*       | The *time 'til disconnect* as described in the [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry-data" >}}). |
 
 **NB** An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. 
 *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
