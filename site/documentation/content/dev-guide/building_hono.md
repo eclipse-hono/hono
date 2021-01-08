@@ -81,6 +81,8 @@ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-native-image,metri
 
 {{% note title="Experimental" %}}
 Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are mutually exclusive.
+Using Jaeger tracing with native images doesn't work yet, i.e. the `jaeger` Maven profile must not be activated when building
+native images.
 {{% /note %}}
 
 #### Pushing Images
@@ -103,4 +105,5 @@ The source code for Hono comes with a test suite for integration testing. To tri
 mvn verify -Prun-tests
 ```
 
-The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the respective images as described above before the execution of the tests. The respective `Readme.md` file in the folder `hono/tests` contains more information regarding the test suite.
+The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the respective images as
+described above before the execution of the tests. The respective `Readme.md` file in the folder `hono/tests` contains more information regarding the test suite.
