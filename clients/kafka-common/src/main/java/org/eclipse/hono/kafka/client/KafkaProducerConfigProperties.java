@@ -30,9 +30,9 @@ import org.slf4j.LoggerFactory;
  * provide the expected quality of service.
  *
  * @see <a href="https://kafka.apache.org/documentation/#producerconfigs">Kafka Producer Configs</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/kafka">Documentation of Hono's Kafka-based APIs</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
  */
-// TODO check link to Hono documentation after the API specs are on master
 public class KafkaProducerConfigProperties {
 
     private final Logger log = LoggerFactory.getLogger(KafkaProducerConfigProperties.class);
@@ -63,7 +63,7 @@ public class KafkaProducerConfigProperties {
         this.clientId = Objects.requireNonNull(clientId);
     }
 
-    /*
+    /**
      * Checks if a configuration has been set.
      *
      * @return true if configuration is present.

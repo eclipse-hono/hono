@@ -1,6 +1,6 @@
 ---
 title: "Telemetry API for Kafka Specification"
-linkTitle: "Telemetry API - Kafka"
+linkTitle: "Telemetry API for Kafka"
 weight: 417
 resources:
   - src: produce_kafka_qos0.svg

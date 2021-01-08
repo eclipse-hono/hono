@@ -30,9 +30,9 @@ import org.slf4j.LoggerFactory;
  * provide the expected quality of service.
  *
  * @see <a href="https://kafka.apache.org/documentation/#consumerconfigs">Kafka Consumer Configs</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/kafka">Documentation of Hono's Kafka-based APIs</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
  */
-// TODO check link to Hono documentation after the API specs are on master
 public class KafkaConsumerConfigProperties {
 
     private final Logger log = LoggerFactory.getLogger(KafkaConsumerConfigProperties.class);
