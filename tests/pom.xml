@@ -286,6 +286,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     </profile>
     <profile>
       <id>device-registry-jdbc</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>jdbc</value>
+        </property>
+      </activation>
       <properties>
         <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
         <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
