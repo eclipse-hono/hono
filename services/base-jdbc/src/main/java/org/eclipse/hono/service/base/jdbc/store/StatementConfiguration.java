@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -237,9 +238,11 @@ public class StatementConfiguration {
             .append(System.lineSeparator());
 
         b.append("Statements:").append(System.lineSeparator());
-        final Set<String> sortedKeys = new HashSet<>(this.statements.keySet());
-        b.append(sortedKeys.stream()
-                .map(key -> String.format("%s%s%s", key, System.lineSeparator(), this.statements.get(key)))
+        final String[] keys = this.statements.keySet().toArray(String[]::new);
+        Arrays.sort(keys);
+        b.append(Arrays.stream(keys)
+                .map(key -> String.format("name: %s%s%s%s",
+                        System.lineSeparator(), key, System.lineSeparator(), this.statements.get(key)))
                 .collect(Collectors.joining(System.lineSeparator())));
         logger.info(b.toString());
     }
