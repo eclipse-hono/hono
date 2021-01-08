@@ -82,7 +82,7 @@ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-native-image,metri
 {{% note title="Experimental" %}}
 Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are mutually exclusive.
 Using Jaeger tracing with native images doesn't work yet, i.e. the `jaeger` Maven profile must not be activated when building
-ntive images.
+native images.
 {{% /note %}}
 
 #### Pushing Images
