@@ -60,7 +60,10 @@ import io.vertx.proton.ProtonReceiver;
  * a consumer and corresponding command handler for the command message's target device or one of the device's
  * possible gateways. If found, that handler is either invoked directly, or, if it is on another protocol adapter
  * instance, the command message is sent to that protocol adapter instance to be handled there.
+ *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory} instead.
  */
+@Deprecated
 public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClientFactory implements ProtocolAdapterCommandConsumerFactory {
 
     private static final int RECREATE_CONSUMERS_DELAY = 20;

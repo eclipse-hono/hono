@@ -149,9 +149,7 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
         return factory.createCommandConsumer(
                 tenantId,
                 deviceId,
-                ctx -> {
-                    commandHandler.handle(new ProtonBasedCommandContext(ctx));
-                },
+                ctx -> commandHandler.handle(new ProtonBasedLegacyCommandContextWrapper(ctx)),
                 lifespan,
                 context)
                 .map(adapterCommandConsumer -> {
@@ -181,9 +179,7 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
                 tenantId,
                 deviceId,
                 gatewayId,
-                ctx -> {
-                    commandHandler.handle(new ProtonBasedCommandContext(ctx));
-                },
+                ctx -> commandHandler.handle(new ProtonBasedLegacyCommandContextWrapper(ctx)),
                 lifespan,
                 context)
                 .map(adapterCommandConsumer -> {

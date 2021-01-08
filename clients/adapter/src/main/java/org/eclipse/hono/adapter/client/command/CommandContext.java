@@ -24,7 +24,7 @@ import io.opentracing.Span;
 public interface CommandContext extends ExecutionContext {
 
     /**
-     * The key under which the current CommandContext is stored.
+     * The key under which the current CommandContext is stored in an ExecutionContext container.
      */
     String KEY_COMMAND_CONTEXT = "command-context";
 
