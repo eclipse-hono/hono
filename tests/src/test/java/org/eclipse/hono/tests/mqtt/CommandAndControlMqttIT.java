@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,8 +32,8 @@ import javax.jms.IllegalStateException;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -52,6 +52,7 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -373,7 +374,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
-        final AtomicReference<MessageSender> sender = new AtomicReference<>();
+        final AtomicReference<GenericSenderLink> sender = new AtomicReference<>();
         final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
@@ -395,7 +396,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             // all commands should get rejected because they fail to pass the validity check
             ctx.failNow(new IllegalStateException("should not have received command"));
         }, endpointConfig, MqttQoS.AT_MOST_ONCE))
-        .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(linkTargetAddress))
+        .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(
+                endpointConfig.getNorthboundEndpoint(), tenantId))
         .onComplete(setup.succeeding(genericSender -> {
             LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
             sender.set(genericSender);
@@ -416,7 +418,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         messageWithoutSubject.setAddress(messageAddress);
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutSubject).onComplete(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             failedAttempts.flag();
         }));
@@ -426,7 +428,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         messageWithoutId.setAddress(messageAddress);
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutId).onComplete(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             failedAttempts.flag();
         }));

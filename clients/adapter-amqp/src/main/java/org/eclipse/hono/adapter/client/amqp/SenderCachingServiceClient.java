@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.AddressHelper;
@@ -41,7 +42,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     /**
      * The factory for creating downstream sender links.
      */
-    private final CachingClientFactory<DownstreamSenderLink> clientFactory;
+    private final CachingClientFactory<GenericSenderLink> clientFactory;
 
     /**
      * Creates a new client.
@@ -57,7 +58,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
             final ProtocolAdapterProperties adapterConfig) {
 
         super(connection, samplerFactory, adapterConfig);
-        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), DownstreamSenderLink::isOpen);
+        this.clientFactory = new CachingClientFactory<>(connection.getVertx(), GenericSenderLink::isOpen);
         connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
@@ -85,7 +86,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
      *         if no sender link could be created.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected final Future<DownstreamSenderLink> getOrCreateSenderLink(
+    protected final Future<GenericSenderLink> getOrCreateSenderLink(
             final String endpoint,
             final String tenantId) {
 
@@ -102,7 +103,7 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
                             connection.getConfig());
                     clientFactory.getOrCreateClient(
                             key,
-                            () -> DownstreamSenderLink.create(
+                            () -> GenericSenderLink.create(
                                     connection,
                                     endpoint,
                                     tenantId,

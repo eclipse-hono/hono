@@ -18,12 +18,12 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
-import org.eclipse.hono.adapter.client.amqp.DownstreamSenderLink;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -55,9 +55,9 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         super(connection, samplerFactory, adapterConfig);
     }
 
-    private Future<DownstreamSenderLink> createSender(final String tenantId, final String replyId) {
+    private Future<GenericSenderLink> createSender(final String tenantId, final String replyId) {
         return connection.executeOnContext(result -> {
-            DownstreamSenderLink.create(
+            GenericSenderLink.create(
                     connection,
                     CommandConstants.COMMAND_RESPONSE_ENDPOINT,
                     tenantId,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.tests;
 
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
 
 import io.vertx.core.Future;
 
@@ -40,9 +40,12 @@ public interface IntegrationTestApplicationClientFactory extends ApplicationClie
      * <p>
      * Note that this method returns a newly created sender on each invocation.
      *
-     * @param targetAddress The target address to create the sender for.
+     * @param endpointName The name of the endpoint to send messages to.
+     * @param tenantId The identifier of the tenant to send messages to.
      * @return The sender.
      */
-    Future<MessageSender> createGenericMessageSender(String targetAddress);
+    Future<GenericSenderLink> createGenericMessageSender(
+            String endpointName,
+            String tenantId);
 
 }

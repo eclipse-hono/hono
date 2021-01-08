@@ -25,11 +25,11 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;

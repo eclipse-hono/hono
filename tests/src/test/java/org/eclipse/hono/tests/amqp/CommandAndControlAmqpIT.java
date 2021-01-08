@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,8 +37,8 @@ import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.BufferResult;
@@ -55,6 +55,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -512,7 +513,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
-        final AtomicReference<MessageSender> sender = new AtomicReference<>();
+        final AtomicReference<GenericSenderLink> sender = new AtomicReference<>();
         final String targetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
@@ -537,7 +538,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         .failNow(new IllegalStateException("should not have received command")));
                 return null;
             }))
-            .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(targetAddress))
+            .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(
+                    endpointConfig.getNorthboundEndpoint(), tenantId))
             .map(s -> {
                 log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
                 sender.set(s);
@@ -561,7 +563,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutSubject.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutSubject).onComplete(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             expectedFailures.flag();
         }));
@@ -571,7 +573,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutId.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutId).onComplete(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             expectedFailures.flag();
         }));

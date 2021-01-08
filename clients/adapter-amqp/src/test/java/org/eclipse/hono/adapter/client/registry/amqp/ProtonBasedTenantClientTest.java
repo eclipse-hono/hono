@@ -32,11 +32,11 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;

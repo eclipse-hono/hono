@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.client.amqp;
+package org.eclipse.hono.client.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +24,8 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
@@ -40,16 +42,16 @@ import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 
 /**
- * Tests verifying behavior of {@link DownstreamSenderLink}.
+ * Tests verifying behavior of {@link GenericSenderLink}.
  *
  */
-public class DownstreamSenderLinkTest {
+public class GenericSenderLinkTest {
 
     private Vertx vertx;
     private ProtonSender sender;
     private ClientConfigProperties config;
     private HonoConnection connection;
-    private DownstreamSenderLink messageSender;
+    private GenericSenderLink messageSender;
 
     /**
      * Sets up the fixture.
@@ -61,7 +63,7 @@ public class DownstreamSenderLinkTest {
         sender = AmqpClientUnitTestHelper.mockProtonSender();
         config = new ClientConfigProperties();
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, config);
-        messageSender = new DownstreamSenderLink(connection, sender, "tenant", "telemetry/tenant", SendMessageSampler.noop());
+        messageSender = new GenericSenderLink(connection, sender, "tenant", "telemetry/tenant", SendMessageSampler.noop());
     }
 
     /**

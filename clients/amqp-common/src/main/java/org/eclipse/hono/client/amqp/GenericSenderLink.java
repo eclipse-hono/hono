@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.client.amqp;
+package org.eclipse.hono.client.amqp;
 
 import java.net.HttpURLConnection;
 import java.util.Arrays;
@@ -60,13 +60,14 @@ import io.vertx.proton.ProtonSender;
 
 /**
  * A wrapper around a vertx-proton based AMQP sender link.
+ * <p>
  * Exposes methods for sending messages using {@linkplain #send(Message, Span) AT_MOST_ONCE}
  * and {@linkplain #sendAndWaitForOutcome(Message, Span) AT_LEAST_ONCE} delivery semantics.
  */
-public class DownstreamSenderLink extends AbstractHonoClient {
+public class GenericSenderLink extends AbstractHonoClient {
 
     private static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
-    private static final Logger log = LoggerFactory.getLogger(DownstreamSenderLink.class);
+    private static final Logger log = LoggerFactory.getLogger(GenericSenderLink.class);
 
     private final String tenantId;
     private final String targetAddress;
@@ -84,7 +85,7 @@ public class DownstreamSenderLink extends AbstractHonoClient {
      * @param targetAddress The target address to send the messages to.
      * @throws NullPointerException if any of the parameters except targetAddress is {@code null}.
      */
-    protected DownstreamSenderLink(
+    protected GenericSenderLink(
             final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
@@ -115,7 +116,7 @@ public class DownstreamSenderLink extends AbstractHonoClient {
      * @return A future indicating the outcome.
      * @throws NullPointerException if any of the parameters except remoteCloseHook is {@code null}.
      */
-    public static Future<DownstreamSenderLink> create(
+    public static Future<GenericSenderLink> create(
             final HonoConnection con,
             final String endpoint,
             final String tenantId,
@@ -143,7 +144,7 @@ public class DownstreamSenderLink extends AbstractHonoClient {
      * @return A future indicating the outcome.
      * @throws NullPointerException if any of the parameters except remoteCloseHook and resource ID are {@code null}.
      */
-    public static Future<DownstreamSenderLink> create(
+    public static Future<GenericSenderLink> create(
             final HonoConnection con,
             final String endpoint,
             final String tenantId,
@@ -158,7 +159,7 @@ public class DownstreamSenderLink extends AbstractHonoClient {
 
         final String targetAddress = AddressHelper.getTargetAddress(endpoint, tenantId, resourceId, con.getConfig());
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
-                .map(sender -> new DownstreamSenderLink(con, sender, tenantId, targetAddress, sampler));
+                .map(sender -> new GenericSenderLink(con, sender, tenantId, targetAddress, sampler));
     }
 
     /**

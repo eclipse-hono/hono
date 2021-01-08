@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,13 +22,13 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.adapter.client.amqp.AmqpClientUnitTestHelper;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;
@@ -100,7 +100,7 @@ public class ProtonBasedCommandResponseSenderTest {
 
         // WHEN sending a command response message
         final CommandResponse commandResponse = CommandResponse.fromRequestId(
-                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
+                Commands.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
                 TENANT_ID,
                 DEVICE_ID,
                 null,
