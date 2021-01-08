@@ -23,13 +23,13 @@ import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.adapter.client.command.CommandHandlerWrapper;
+import org.eclipse.hono.adapter.client.command.CommandHandlers;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.AdapterInstanceCommandHandler;
-import org.eclipse.hono.client.impl.CommandHandlerWrapper;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CommandConstants;
 
@@ -57,7 +57,8 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
      * when registering command handlers with the command router service client.
      */
     private final String adapterInstanceId;
-    private final AdapterInstanceCommandHandler adapterInstanceCommandHandler;
+    private final CommandHandlers commandHandlers = new CommandHandlers();
+    private final ProtonBasedAdapterInstanceCommandHandler adapterInstanceCommandHandler;
     private final AtomicBoolean recreatingConsumer = new AtomicBoolean(false);
     private final AtomicBoolean tryAgainRecreatingConsumer = new AtomicBoolean(false);
 
@@ -83,7 +84,7 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
 
         // the container id contains a UUID therefore it can be used as a unique adapter instance id
         adapterInstanceId = connection.getContainerId();
-        adapterInstanceCommandHandler = new AdapterInstanceCommandHandler(connection.getTracer(), adapterInstanceId);
+        adapterInstanceCommandHandler = new ProtonBasedAdapterInstanceCommandHandler(connection.getTracer(), adapterInstanceId);
     }
 
     @Override
@@ -156,9 +157,8 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
                     tenantId,
                     deviceId,
                     gatewayId,
-                    ctx -> commandHandler.handle(new ProtonBasedCommandContext(ctx)));
-            final CommandHandlerWrapper replacedHandler = adapterInstanceCommandHandler
-                    .putDeviceSpecificCommandHandler(commandHandlerWrapper);
+                    commandHandler);
+            final CommandHandlerWrapper replacedHandler = commandHandlers.putCommandHandler(commandHandlerWrapper);
             if (replacedHandler != null) {
                 // TODO find a way to provide a notification here so that potential resources associated with the replaced consumer can be freed (maybe add a commandHandlerOverwritten Handler param to createCommandConsumer())
             }
@@ -189,7 +189,7 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
                     log.info("error registering consumer with the command router service [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);
                     // handler association failed - unregister the handler
-                    adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(tenantId, deviceId);
+                    commandHandlers.removeCommandHandler(tenantId, deviceId);
                     return Future.failedFuture(thr);
                 });
     }
@@ -204,7 +204,7 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
         final String deviceId = commandHandlerWrapper.getDeviceId();
 
         log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
-        if (!adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(commandHandlerWrapper)) {
+        if (!commandHandlers.removeCommandHandler(commandHandlerWrapper)) {
             // This case happens when trying to remove a command consumer which has been overwritten since its creation
             // via a 2nd invocation of 'createCommandConsumer' with the same device/tenant id. Since the 2nd 'createCommandConsumer'
             // invocation has registered a different 'commandHandlerWrapper' instance (and possibly already removed it),
@@ -259,7 +259,7 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
         return connection.createReceiver(
                 adapterInstanceConsumerAddress,
                 ProtonQoS.AT_LEAST_ONCE,
-                (delivery, msg) -> adapterInstanceCommandHandler.handleCommandMessage(msg, delivery),
+                (delivery, msg) -> adapterInstanceCommandHandler.handleCommandMessage(msg, delivery, commandHandlers),
                 connection.getConfig().getInitialCredits(),
                 false, // no auto-accept
                 sourceAddress -> { // remote close hook

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.client.command;
 
+import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -144,4 +145,12 @@ public interface Command {
      * @throws IllegalStateException if this command is invalid.
      */
     String getCorrelationId();
+
+    /**
+     * Logs information about the command.
+     *
+     * @param span The span to log to.
+     * @throws NullPointerException if span is {@code null}.
+     */
+    void logToSpan(Span span);
 }

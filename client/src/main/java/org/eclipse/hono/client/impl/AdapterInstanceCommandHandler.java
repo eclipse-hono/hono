@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,10 @@ import io.vertx.proton.ProtonHelper;
 
 /**
  * Handler for commands received at the protocol adapter instance specific address.
+ *
+ * @deprecated Use {@code org.eclipse.hono.adapter.client.command.amqp.ProtonBasedAdapterInstanceCommandHandler} instead.
  */
+@Deprecated
 public final class AdapterInstanceCommandHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(AdapterInstanceCommandHandler.class);
