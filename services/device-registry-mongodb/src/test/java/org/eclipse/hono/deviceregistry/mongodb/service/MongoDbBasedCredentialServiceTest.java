@@ -12,13 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
@@ -36,7 +32,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -74,8 +69,6 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
 
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
-        final DownstreamSenderFactory downstreamSenderFactoryMock = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactoryMock.connect()).thenReturn(Future.succeededFuture());
 
         credentialsService = new MongoDbBasedCredentialsService(
                 vertx,
