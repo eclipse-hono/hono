@@ -9,6 +9,9 @@ title = "Release Notes"
 * The Mongo DB based Credentials service implementation failed to return the credentials matching the given
   *type* and *auth-id* if multiple credentials of the same *type* but with different *auth-id* values were
   registered for a device. This has been fixed.
+* When using the Command Router or Device Connection service component with an embedded cache, a cache
+  configuration file was required. Now, a default configuration will be used if no configuration file is
+  given.
 
 ## 1.5.0
 
