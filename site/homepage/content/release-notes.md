@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.5.1 (not yet released)
+
+### Fixes & Enhancements
+
+* The Mongo DB based Credentials service implementation failed to return the credentials matching the given
+  *type* and *auth-id* if multiple credentials of the same *type* but with different *auth-id* values were
+  registered for a device. This has been fixed.
+
 ## 1.5.0
 
 ### New Features

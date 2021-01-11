@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalInt;
@@ -114,21 +113,21 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final String otherAuthId = UUID.randomUUID().toString();
+        final List<CommonCredential> credentials = List.of(
+                getRandomHashedPasswordCredential(authId),
+                getRandomHashedPasswordCredential(otherAuthId));
 
         getHelper().registry
                 .registerDevice(tenantId, deviceId)
-                .compose(ok -> {
-                    return getHelper().registry
-                            .addCredentials(tenantId, deviceId, credentials)
-                            .compose(ok2 -> getClient(tenantId))
-                            .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId));
-                })
+                .compose(ok -> getHelper().registry.addCredentials(tenantId, deviceId, credentials))
+                .compose(ok -> getClient(tenantId))
+                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, otherAuthId))
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> assertStandardProperties(
                             result,
                             deviceId,
-                            authId,
+                            otherAuthId,
                             CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                             2));
                     ctx.completeNow();
@@ -307,11 +306,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
             }));
     }
 
-    private Collection<CommonCredential> getRandomHashedPasswordCredentials(final String authId) {
-        return Collections.singleton(getRandomHashedPasswordCredential(authId));
-    }
-
-    private CommonCredential getRandomHashedPasswordCredential(final String authId) {
+    private static CommonCredential getRandomHashedPasswordCredential(final String authId) {
 
         final var secret1 = Credentials.createPasswordSecret("ClearTextPWD",
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR));
