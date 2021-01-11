@@ -23,7 +23,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalInt;
@@ -115,17 +114,20 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final String otherAuthId = UUID.randomUUID().toString();
+        final List<CommonCredential> credentials = List.of(
+                getRandomHashedPasswordCredential(authId),
+                getRandomHashedPasswordCredential(otherAuthId));
 
         getHelper().registry
                 .registerDevice(tenantId, deviceId)
                 .compose(ok -> getHelper().registry.addCredentials(tenantId, deviceId, credentials))
-                .compose(ok -> getClient().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, spanContext))
+                .compose(ok -> getClient().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, otherAuthId, spanContext))
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> assertStandardProperties(
                             result,
                             deviceId,
-                            authId,
+                            otherAuthId,
                             CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                             2));
                     ctx.completeNow();
@@ -297,11 +299,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
             }));
     }
 
-    private Collection<CommonCredential> getRandomHashedPasswordCredentials(final String authId) {
-        return Collections.singleton(getRandomHashedPasswordCredential(authId));
-    }
-
-    private CommonCredential getRandomHashedPasswordCredential(final String authId) {
+    private static CommonCredential getRandomHashedPasswordCredential(final String authId) {
 
         final var secret1 = Credentials.createPasswordSecret("ClearTextPWD",
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR));
