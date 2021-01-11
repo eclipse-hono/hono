@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -190,6 +190,7 @@ public interface AbstractCredentialsServiceTest {
             final String expectedDeviceId,
             final String expectedType,
             final String expectedAuthId) {
+
         assertThat(response).as("response is not empty").isNotNull();
         assertThat(response.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
             .as("credentials contain expected device-id").isEqualTo(expectedDeviceId);
@@ -333,12 +334,12 @@ public interface AbstractCredentialsServiceTest {
     }
 
     /**
-     * Verifies that the service returns credentials for an existing device.
+     * Verifies that the Registry Management API returns an empty set of credentials for a newly created device.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    default void testGetCredentialsSucceedsForExistingDevice(final VertxTestContext ctx) {
+    default void testReadCredentialsSucceedsForNewlyCreatedDevice(final VertxTestContext ctx) {
 
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
@@ -350,11 +351,11 @@ public interface AbstractCredentialsServiceTest {
                         .onComplete(ctx.succeeding(s -> assertGet(ctx, tenantId, deviceId, authId,
                                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
-                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
-                                    assertNotNull(r.getPayload());
-                                    assertTrue(r.getPayload().isEmpty());
+                                    assertThat(r.isOk()).isTrue();
+                                    assertThat(r.getPayload()).isNotNull();
+                                    assertThat(r.getPayload()).isEmpty();
                                 },
-                                r -> assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus()),
+                                r -> assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND),
                                 ctx::completeNow))));
     }
 
@@ -374,21 +375,27 @@ public interface AbstractCredentialsServiceTest {
         final var tenantId = "tenant";
         final var deviceId = UUID.randomUUID().toString();
         final var authId = UUID.randomUUID().toString();
+        final var otherAuthId = UUID.randomUUID().toString();
         final var pwdCredentials = Credentials.createPasswordCredential(authId, "bar");
+        final var otherPwdCredentials = Credentials.createPasswordCredential(otherAuthId, "bar");
         final var pskCredentials = Credentials.createPSKCredential("psk-id", "the-shared-key");
         final String subjectDn = new X500Principal("emailAddress=foo@bar.com, CN=foo, O=bar").getName(X500Principal.RFC2253);
         final var x509Credentials = new X509CertificateCredential(subjectDn, List.of(new X509CertificateSecret()));
 
-        //create device and set credentials.
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                 () -> getDeviceManagementService()
+                        //create device
                         .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                        .compose(response -> getCredentialsManagementService().updateCredentials(
+                        .compose(response -> {
+                            ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                            // and set credentials
+                            return getCredentialsManagementService().updateCredentials(
                                 tenantId,
                                 deviceId,
-                                List.of(pwdCredentials, pskCredentials, x509Credentials),
+                                List.of(pwdCredentials, otherPwdCredentials, pskCredentials, x509Credentials),
                                 Optional.empty(),
-                                NoopSpan.INSTANCE))
+                                NoopSpan.INSTANCE);
+                        })
                         .compose(response -> {
                             ctx.verify(() -> {
                                 assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
@@ -398,16 +405,20 @@ public interface AbstractCredentialsServiceTest {
                         })
                         .compose(response -> {
                             ctx.verify(() -> {
-                                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(response.isOk()).isTrue();
                                 assertResourceVersion(response);
-                                assertThat(response.getPayload()).hasSize(3);
+                                assertThat(response.getPayload()).hasSize(4);
                                 assertReadCredentialsResponseProperties(response.getPayload());
                             });
+                            // WHEN looking up X.509 credentials via the Credentials API
                             return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, subjectDn);
                         })
                         .compose(response -> {
                             ctx.verify(() -> {
-                                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(response.isOk()).isTrue();
+                                // THEN the response contains a cache directive
+                                assertThat(response.getCacheDirective()).isNotNull();
+                                // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
                                         deviceId,
@@ -415,26 +426,34 @@ public interface AbstractCredentialsServiceTest {
                                         subjectDn);
                                 assertThat(response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS)).isNotEmpty();
                             });
-                            return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId);
+                            // WHEN looking up hashed password credentials via the Credentials API
+                            return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, otherAuthId);
                         })
                         .compose(response -> {
                             ctx.verify(() -> {
-                                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(response.isOk()).isTrue();
+                                // THEN the response contains a cache directive
+                                assertThat(response.getCacheDirective()).isNotNull();
+                                // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
                                         deviceId,
                                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                                        authId);
+                                        otherAuthId);
                                 final JsonArray secrets = response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS);
                                 secrets.stream()
                                     .map(JsonObject.class::cast)
                                     .forEach(secret -> assertPwdSecretContainsHash(secret, false));
                             });
+                            // WHEN looking up PSK credentials via the Credentials API
                             return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "psk-id");
                         })
                         .onComplete(ctx.succeeding(response -> {
                             ctx.verify(() -> {
-                                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(response.isOk()).isTrue();
+                                // THEN the response contains a cache directive
+                                assertThat(response.getCacheDirective()).isNotNull();
+                                // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
                                         deviceId,

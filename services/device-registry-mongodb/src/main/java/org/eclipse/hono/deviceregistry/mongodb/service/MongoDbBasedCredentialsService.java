@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -348,24 +348,27 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .document();
         final Promise<JsonObject> findCredentialsPromise = Promise.promise();
 
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("retrieving credentials using search criteria: {}", findCredentialsQuery.encodePrettily());
+        }
         mongoClient.findOne(
                 config.getCollectionName(),
                 findCredentialsQuery,
-                new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
-                        .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
-                        .put("_id", 0),
+                new JsonObject()
+                    .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
+                    .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
+                    .put("_id", 0),
                 findCredentialsPromise);
 
         return findCredentialsPromise.future()
                 .map(result -> Optional.ofNullable(result)
-                        .flatMap(ok -> Optional
-                                .ofNullable(result.getJsonArray(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS))
-                                .map(credential -> credential.getJsonObject(0))
-                                .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential,
-                                        clientContext))
-                                .map(credential -> credential.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID,
-                                        result.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID))))
+                        .flatMap(json -> Optional.ofNullable(json.getJsonArray(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS)))
+                        .map(credential -> credential.getJsonObject(0))
                         .filter(this::isCredentialEnabled)
+                        .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential, clientContext))
+                        .map(credential -> credential.put(
+                                RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID,
+                                result.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)))
                         .map(credential -> CredentialsResult.from(
                                 HttpURLConnection.HTTP_OK,
                                 credential,

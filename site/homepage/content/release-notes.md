@@ -8,6 +8,9 @@ title = "Release Notes"
 
 * The tenant timeout mechanism doesn't close command consumer resources anymore if there are still active
   command subscriptions from AMQP or MQTT devices of the corresponding tenant.
+* The Mongo DB based Credentials service implementation failed to return the credentials matching the given
+  *type* and *auth-id* if multiple credentials of the same *type* but with different *auth-id* values were
+  registered for a device. This has been fixed.
 
 ## 1.4.4
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,14 +32,12 @@ import io.vertx.core.json.pointer.JsonPointer;
 public final class MongoDbDocumentBuilder {
 
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
-    private static final String FIELD_CREDENTIALS_AUTH_ID_KEY = String.format("%s.%s",
-            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_AUTH_ID);
-    private static final String FIELD_CREDENTIALS_TYPE_KEY = String.format("%s.%s",
-            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_TYPE);
     private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
             RegistryManagementConstants.FIELD_TENANT,
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
             AuthenticationConstants.FIELD_SUBJECT_DN);
+    private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
+
     private final JsonObject document;
 
     private MongoDbDocumentBuilder() {
@@ -117,8 +115,7 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withType(final String type) {
-        document.put(FIELD_CREDENTIALS_TYPE_KEY, type);
-        return this;
+        return withCredentialsPredicate(RegistryManagementConstants.FIELD_TYPE, type);
     }
 
     /**
@@ -128,10 +125,17 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withAuthId(final String authId) {
-        document.put(FIELD_CREDENTIALS_AUTH_ID_KEY, authId);
-        return this;
+        return withCredentialsPredicate(RegistryManagementConstants.FIELD_AUTH_ID, authId);
     }
 
+    private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {
+        final var credentialsArraySpec = document.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, new JsonObject());
+        final var elementMatchSpec = credentialsArraySpec.getJsonObject(MONGODB_OPERATOR_ELEM_MATCH, new JsonObject());
+        elementMatchSpec.put(field, value);
+        credentialsArraySpec.put(MONGODB_OPERATOR_ELEM_MATCH, elementMatchSpec);
+        document.put(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, credentialsArraySpec);
+        return this;
+    }
 
     /**
      * Sets the json object with the given device filters.
