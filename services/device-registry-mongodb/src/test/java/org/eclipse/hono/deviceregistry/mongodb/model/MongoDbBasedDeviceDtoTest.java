@@ -56,8 +56,10 @@ class MongoDbBasedDeviceDtoTest {
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
         assertThat(json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isNotNull();
         assertThat(json.getString(BaseDto.FIELD_VERSION)).isEqualTo(version);
-        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isTrue();
-        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isFalse();
+        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+                .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
+        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
+                .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
         assertThat(json.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)).isNotNull();
     }
 
@@ -90,8 +92,10 @@ class MongoDbBasedDeviceDtoTest {
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
         assertThat(json.getInstant(BaseDto.FIELD_UPDATED_ON)).isEqualTo(updated);
         assertThat(json.getString(BaseDto.FIELD_VERSION)).isEqualTo(version);
-        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isFalse();
-        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isTrue();
+        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+                .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
+        assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
+                .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
         assertThat(json.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)).isNotNull();
     }
 }
