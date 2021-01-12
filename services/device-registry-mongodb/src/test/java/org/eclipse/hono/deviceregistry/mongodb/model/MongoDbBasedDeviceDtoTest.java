@@ -54,7 +54,8 @@ class MongoDbBasedDeviceDtoTest {
 
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-        assertThat(json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isNotNull();
+        // make sure that the creation date set on the new device is not the one contained in the DeviceStatus
+        assertThat(json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isBefore(deviceStatus.getCreationTime());
         assertThat(json.getString(BaseDto.FIELD_VERSION)).isEqualTo(version);
         assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
