@@ -16,6 +16,7 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceStatus;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -53,6 +54,27 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
             recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
             recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
             recordJson.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION));
+    }
+
+    /**
+     * Returns the value of the auto-provisioned flag.
+     *
+     * @return the auto-provisioned flag.
+     */
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
+    public boolean isAutoProvisioned() {
+        return getDeviceStatus().isAutoProvisioned();
+    }
+
+    /**
+     * Returns the value of the auto-provisioning-notification-sent flag.
+     * Required
+     *
+     * @return the auto-provisioning-notification-sent flag.
+     */
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
+    public boolean isAutoProvisioningNotificationSent() {
+        return getDeviceStatus().isAutoProvisioningNotificationSent();
     }
 
     @Override

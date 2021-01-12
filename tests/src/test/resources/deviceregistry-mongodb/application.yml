@@ -5,6 +5,17 @@ hono:
   healthCheck:
     insecurePortBindAddress: 0.0.0.0
     insecurePort: ${vertx.health.port}
+  messaging:
+    name: 'Hono Device Registry MongoDb'
+    host: ${hono.amqp-network.host}
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/device-registry-key.pem
+    certPath: /etc/hono/certs/device-registry-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   auth:
     host: ${hono.auth.host}
     port: 5672

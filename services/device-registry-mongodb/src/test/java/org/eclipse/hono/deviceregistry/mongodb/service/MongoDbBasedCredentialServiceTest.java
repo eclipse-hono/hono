@@ -69,6 +69,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
 
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
+
         credentialsService = new MongoDbBasedCredentialsService(
                 vertx,
                 mongoClient,

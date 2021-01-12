@@ -21,7 +21,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 /**
  * A base class for a device DTO.
@@ -33,7 +32,7 @@ public class DeviceDto extends BaseDto<Device> {
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)
     private String deviceId;
 
-    @JsonUnwrapped
+    @JsonIgnore
     private DeviceStatus deviceStatus = new DeviceStatus();
 
     /**
