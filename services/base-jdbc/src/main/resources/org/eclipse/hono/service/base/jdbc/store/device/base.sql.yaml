@@ -43,7 +43,7 @@ updateRegistrationVersioned: |
       data=:data,
       version=:next_version,
       updated_on=:updated_on,
-      auto_provisioning_notification_sent=IsNull(:auto_provisioning_notification_sent,auto_provisioning_notification_sent)
+      auto_provisioning_notification_sent=COALESCE(:auto_provisioning_notification_sent,auto_provisioning_notification_sent)
    WHERE
       tenant_id=:tenant_id
    AND
