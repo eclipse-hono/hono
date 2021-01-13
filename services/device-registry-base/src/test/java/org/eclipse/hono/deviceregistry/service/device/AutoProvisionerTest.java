@@ -154,6 +154,29 @@ class AutoProvisionerTest {
     }
 
     /**
+     * Verifies that auto-provisioning fails if two different gateways try to provision the same device concurrently.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAutoProvisioningFailsWhenTriggeredConcurrentlyByDifferentGatewaysForTheSameDevice(final VertxTestContext ctx) {
+        mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.singletonList(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+        mockAssertRegistration(DEVICE_ID, true);
+        mockAddEdgeDevice(HttpURLConnection.HTTP_CONFLICT);
+
+        autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, "another-" + GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
+                .onComplete(ctx.failing(throwable -> {
+                    ctx.verify(() -> {
+                        verify(deviceManagementService).createDevice(any(), any(), any(), any());
+
+                        verify(sender, never()).sendAndWaitForOutcome(any(), any());
+                        verify(deviceManagementService, never()).updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(), any(), any());
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that auto-provisioning still succeeds if the flag device in the device registration cannot be updated
      * after the device notification has been sent. In that case another device notification will be sent when the next
      * telemetry message is received, i.e. the application will receive a duplicate event.

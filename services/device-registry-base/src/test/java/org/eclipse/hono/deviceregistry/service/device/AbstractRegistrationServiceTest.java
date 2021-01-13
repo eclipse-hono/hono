@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.management.OperationResult;
@@ -174,6 +175,28 @@ public class AbstractRegistrationServiceTest {
                     ctx.verify(() -> {
                         verifyNoInteractions(autoProvisioner);
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that auto-provisioning errors are propagated correctly.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertRegistrationPropagatesAutoProvisioningErrorsCorrectly(final VertxTestContext ctx) {
+        mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.singletonList(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+        mockAssertRegistration(DEVICE_ID);
+
+        when(autoProvisioner.performAutoProvisioning(any(), any(), any(), any(), any())).thenReturn(Future.failedFuture(
+                StatusCodeMapper.from(HttpURLConnection.HTTP_FORBIDDEN, "foobar")));
+
+        service.assertRegistration(Constants.DEFAULT_TENANT, AbstractRegistrationServiceTest.DEVICE_ID, AbstractRegistrationServiceTest.GATEWAY_ID, span)
+                .onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     });
                     ctx.completeNow();
                 }));

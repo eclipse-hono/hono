@@ -278,11 +278,19 @@ public class AutoProvisioner implements Lifecycle {
                                 .compose(readDeviceResult -> {
                                     if (!readDeviceResult.isOk()) {
                                         span.log("reading device after conflict failed");
-                                        LOG.warn("reading device after conflict failed for device [{}] of gateway [{}] of tenant [tenant-id: {}]: status: {}",
+                                        LOG.warn("reading device after conflict failed for device [{}] of gateway [{}] of tenant [{}]: status: {}",
                                                 deviceId, gatewayId, tenantId, readDeviceResult.getStatus());
                                         return Future.failedFuture(StatusCodeMapper.from(readDeviceResult.getStatus(),
                                                 String.format("reading device after conflict failed (status %d)",
                                                         readDeviceResult.getStatus())));
+                                    }
+
+                                    if (!readDeviceResult.getPayload().getVia().contains(gatewayId)) {
+                                        span.log("attempted to auto-provision same device via two different gateways at the same time");
+                                        LOG.info("attempted to auto-provision device [{}] via gateway [{}] of tenant [{}] but the registration data's via contains only {}",
+                                                deviceId, gatewayId, tenantId, readDeviceResult.getPayload().getVia());
+                                        return Future.failedFuture(StatusCodeMapper.from(HttpURLConnection.HTTP_FORBIDDEN,
+                                                "device already auto-provisioned for another gateway"));
                                     }
 
                                     final Device readDevice = readDeviceResult.getPayload();
