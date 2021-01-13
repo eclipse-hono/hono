@@ -25,7 +25,7 @@ public interface Command {
     /**
      * Checks if this command is a <em>one-way</em> command (meaning there is no response expected).
      *
-     * @return {@code true} if the message's <em>reply-to</em> property is empty or invalid.
+     * @return {@code true} if this is a one-way command.
      */
     boolean isOneWay();
 
@@ -97,7 +97,10 @@ public interface Command {
     String getOriginalDeviceId();
 
     /**
-     * Gets the request identifier of this command.
+     * Gets the request identifier of this command. Can be used to correlate this command
+     * with a corresponding command response.
+     * <p>
+     * May be {@code null} for a one-way command.
      *
      * @return The identifier or {@code null} if not set.
      * @throws IllegalStateException if this command is invalid.
@@ -132,8 +135,12 @@ public interface Command {
      * <p>
      * Note that an outgoing command message targeted at the device will contain an
      * adapted reply-to address containing the device id.
+     * <p>
+     * For certain command &amp; control implementations (e.g. using Kafka), the command
+     * message doesn't contain such an id, so that this method will always return
+     * {@code null} in that case.
      *
-     * @return The identifier.
+     * @return The identifier or {@code null} if not set.
      * @throws IllegalStateException if this command is invalid.
      */
     String getReplyToId();
