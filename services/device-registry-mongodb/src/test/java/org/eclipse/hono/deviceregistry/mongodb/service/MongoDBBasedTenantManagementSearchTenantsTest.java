@@ -59,7 +59,7 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-search-tenants-test");
         tenantManagementService = new MongoDbBasedTenantService(vertx, mongoClient, config);
-        tenantManagementService.start().onComplete(testContext.completing());
+        tenantManagementService.createIndices().onComplete(testContext.completing());
     }
 
     /**

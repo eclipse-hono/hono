@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,9 +15,11 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
@@ -30,6 +32,7 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -54,6 +57,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -68,14 +73,15 @@ import io.vertx.ext.mongo.UpdateOptions;
  * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
-public final class MongoDbBasedTenantService implements TenantService, TenantManagementService, Lifecycle {
+public final class MongoDbBasedTenantService implements TenantService, TenantManagementService, Lifecycle, HealthCheckProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantService.class);
 
-    private static final int INDEX_CREATION_MAX_RETRIES = 3;
     private final MongoClient mongoClient;
     private final MongoDbCallExecutor mongoDbCallExecutor;
     private final MongoDbBasedTenantsConfigProperties config;
+    private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
+    private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
 
     /**
      * Creates a new service for configuration properties.
@@ -99,20 +105,16 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         this.config = Objects.requireNonNull(config);
     }
 
-    @Override
-    public Future<Void> start() {
-
-        // initialize indexes
-        return mongoDbCallExecutor.createCollectionIndex(
-                config.getCollectionName(),
-                new JsonObject().put(
-                        RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
-                new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES)
-
-            // add unique index predicate for tenants with field of trusted-ca inside tenant object
-            // to ensure that no tenants have the same trusted-ca but only if trusted-ca exist
-            // to to deal with creating/updating tenants containing unique ids.
-            .compose(ok -> mongoDbCallExecutor.createCollectionIndex(
+    Future<Void> createIndices() {
+        if (creatingIndices.compareAndSet(false, true)) {
+            // create unique index on tenant ID
+            return mongoDbCallExecutor.createIndex(
+                    config.getCollectionName(),
+                    new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
+                    new IndexOptions().unique(true))
+            // create unique index on tenant.trusted-ca.subject-dn
+            // to ensure that two tenants never share a trusted-ca
+            .compose(ok -> mongoDbCallExecutor.createIndex(
                     config.getCollectionName(),
                     new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
                             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
@@ -121,11 +123,46 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                             .partialFilterExpression(new JsonObject().put(
                                     RegistryManagementConstants.FIELD_TENANT + "." +
                                             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                    new JsonObject().put("$exists", true))),
-                    INDEX_CREATION_MAX_RETRIES))
-            .onSuccess(ok -> {
-                LOG.info("MongoDB Tenant service started");
-            });
+                                    new JsonObject().put("$exists", true)))))
+            .onSuccess(ok -> indicesCreated.set(true))
+            .onComplete(r -> creatingIndices.set(false));
+        } else {
+            return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Registers a check that, when invoked, verifies that Tenant collection related indices have been
+     * created and, if not, triggers the creation of the indices (again).
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        readinessHandler.register("indices created", status -> {
+            if (indicesCreated.get()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+                createIndices();
+            }
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // nothing to register
+    }
+
+    @Override
+    public Future<Void> start() {
+
+        createIndices();
+        LOG.info("MongoDB Tenant service started");
+        return Future.succeededFuture();
     }
 
     @Override

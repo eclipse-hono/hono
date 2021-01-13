@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,7 +64,7 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
                 vertx,
                 mongoClient,
                 config);
-        tenantService.start().onComplete(testContext.completing());
+        tenantService.createIndices().onComplete(testContext.completing());
     }
 
     /**

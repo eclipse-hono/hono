@@ -40,6 +40,8 @@ title = "Release Notes"
 * The Mongo DB based Credentials service implementation failed to return the credentials matching the given
   *type* and *auth-id* if multiple credentials of the same *type* but with different *auth-id* values were
   registered for a device. This has been fixed.
+* The Mongo DB based registry container would have failed to start if the connection to the Mongo DB could not
+  be established quickly enough. This has been fixed by decoupling the creation of indices from the start up process.
 
 ### Deprecations
 

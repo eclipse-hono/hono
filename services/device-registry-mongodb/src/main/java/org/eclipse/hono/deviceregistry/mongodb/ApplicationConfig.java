@@ -355,8 +355,8 @@ public class ApplicationConfig {
     @Scope("prototype")
     public MongoDbBasedRegistrationService registrationService(final Vertx vertx, final Tracer tracer) {
         final AutowiredTenantInformationService tenantInformationService = tenantInformationService();
-        final MongoDbBasedRegistrationService mongoDbBasedRegistrationService = new MongoDbBasedRegistrationService(
-                vertx,
+        final var service = new MongoDbBasedRegistrationService(
+                vertx(),
                 mongoClient(),
                 registrationServiceProperties(),
                 tenantInformationService);
@@ -364,14 +364,14 @@ public class ApplicationConfig {
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
-        autoProvisioner.setDeviceManagementService(mongoDbBasedRegistrationService);
+        autoProvisioner.setDeviceManagementService(service);
         autoProvisioner.setTenantInformationService(tenantInformationService);
         autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactory(vertx));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
-        mongoDbBasedRegistrationService.setAutoProvisioner(autoProvisioner);
-
-        return mongoDbBasedRegistrationService;
+        service.setAutoProvisioner(autoProvisioner);
+        healthCheckServer().registerHealthCheckResources(service);
+        return service;
     }
 
     /**
@@ -382,12 +382,14 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedCredentialsService credentialsService() {
-        return new MongoDbBasedCredentialsService(
+        final var service = new MongoDbBasedCredentialsService(
                 vertx(),
                 mongoClient(),
                 credentialsServiceProperties(),
                 passwordEncoder()
         );
+        healthCheckServer().registerHealthCheckResources(service);
+        return service;
     }
 
     /**
@@ -398,11 +400,13 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedTenantService tenantService() {
-        return new MongoDbBasedTenantService(
+        final var service = new MongoDbBasedTenantService(
                 vertx(),
                 mongoClient(),
                 tenantsServiceProperties()
         );
+        healthCheckServer().registerHealthCheckResources(service);
+        return service;
     }
 
     /**
@@ -518,7 +522,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
-        if (httpServiceConfigProperties != null && httpServiceConfigProperties.isAuthenticationRequired()) {
+        if (httpServiceConfigProperties.isAuthenticationRequired()) {
             return new HonoBasicAuthHandler(
                     MongoAuth.create(mongoClient(), new JsonObject()),
                     httpServerProperties().getRealm(),

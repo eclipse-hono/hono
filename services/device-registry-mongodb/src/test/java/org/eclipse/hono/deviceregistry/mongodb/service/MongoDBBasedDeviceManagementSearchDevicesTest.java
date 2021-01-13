@@ -66,7 +66,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
                 mongoClient,
                 config,
                 new NoopTenantInformationService());
-        registrationService.start().onComplete(testContext.completing());
+        registrationService.createIndices().onComplete(testContext.completing());
     }
 
     /**
