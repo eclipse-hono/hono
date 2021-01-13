@@ -12,6 +12,8 @@ title = "Release Notes"
 * When using the Command Router or Device Connection service component with an embedded cache, a cache
   configuration file was required. Now, a default configuration will be used if no configuration file is
   given.
+* The Mongo DB based registry container would have failed to start if the connection to the Mongo DB could not
+  be established quickly enough. This has been fixed by decoupling the creation of indices from the start up process.
 
 ## 1.5.0
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,10 +15,12 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -33,6 +35,7 @@ import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -57,6 +60,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -69,7 +74,7 @@ import io.vertx.ext.mongo.UpdateOptions;
  * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
-public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Lifecycle {
+public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Lifecycle, HealthCheckProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
     /**
@@ -77,7 +82,6 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      */
     private static final String PROPERTY_DEVICE_MEMBER_OF = String.format("%s.%s",
             MongoDbDeviceRegistryUtils.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
-    private static final int INDEX_CREATION_MAX_RETRIES = 3;
     private static final String FIELD_SEARCH_DEVICES_COUNT = "count";
     private static final String FIELD_SEARCH_DEVICES_TOTAL_COUNT = String.format("$%s.%s",
             RegistryManagementConstants.FIELD_RESULT_SET_SIZE, FIELD_SEARCH_DEVICES_COUNT);
@@ -85,6 +89,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     private final MongoClient mongoClient;
     private final MongoDbBasedRegistrationConfigProperties config;
     private final MongoDbCallExecutor mongoDbCallExecutor;
+    private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
+    private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
 
     /**
      * Creates a new service for configuration properties.
@@ -111,18 +117,53 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         this.config = config;
     }
 
+    Future<Void> createIndices() {
+        if (creatingIndices.compareAndSet(false, true)) {
+            // create unique index on device ID
+            return mongoDbCallExecutor.createIndex(
+                    config.getCollectionName(),
+                    new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
+                    new IndexOptions().unique(true))
+            .onSuccess(ok -> indicesCreated.set(true))
+            .onComplete(r -> creatingIndices.set(false));
+        } else {
+            return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Registers a check that, when invoked, verifies that Device collection related indices have been
+     * created and, if not, triggers the creation of the indices (again).
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        readinessHandler.register("indices created", status -> {
+            if (indicesCreated.get()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+                createIndices();
+            }
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // nothing to register
+    }
+
     @Override
     public Future<Void> startInternal() {
 
-        return mongoDbCallExecutor.createCollectionIndex(
-                config.getCollectionName(),
-                new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                        .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
-                new IndexOptions().unique(true),
-                INDEX_CREATION_MAX_RETRIES)
-            .onSuccess(ok -> {
-                LOG.info("MongoDB Registration service started");
-            });
+        createIndices();
+        LOG.info("MongoDB Device Registration service started");
+        return Future.succeededFuture();
     }
 
     @Override

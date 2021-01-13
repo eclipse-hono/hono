@@ -82,8 +82,8 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
         // start services sequentially as concurrent startup seems to cause
         // concurrency issues sometimes
-        credentialsService.start()
-            .compose(ok -> registrationService.start())
+        credentialsService.createIndices()
+            .compose(ok -> registrationService.createIndices())
             .onComplete(testContext.completing());
     }
 
