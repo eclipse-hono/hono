@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,12 +26,11 @@ import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
- * Utility class for Vert.x mongodb client access.
+ * Utility class for invoking methods of the Vert.x Mongo DB client.
  */
 public final class MongoDbCallExecutor {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbCallExecutor.class);
-    private static final int INDEX_CREATION_RETRY_INTERVAL_IN_MS = 3000;
 
     private final MongoClient mongoClient;
     private final Vertx vertx;
@@ -54,35 +53,29 @@ public final class MongoDbCallExecutor {
      * @param collectionName The name of the collection.
      * @param keys The keys to be indexed.
      * @param options The options for configuring the index (may be {@code null}).
-     * @param noOfRetries The number of retries in case the index creation fails.
      * @return A future indicating the outcome of the index creation operation.
-     * @throws NullPointerException if any of the parameters except options are {@code null}.
+     * @throws NullPointerException if collection name or keys are {@code null}.
      */
-    public Future<Void> createCollectionIndex(
+    public Future<Void> createIndex(
             final String collectionName,
             final JsonObject keys,
-            final IndexOptions options,
-            final int noOfRetries) {
+            final IndexOptions options) {
 
-        final Promise<Void> indexCreationPromise = Promise.promise();
-        LOG.debug("creating index [collection: {}]", collectionName);
+        Objects.requireNonNull(collectionName);
+        Objects.requireNonNull(keys);
 
-        mongoClient.createIndexWithOptions(collectionName, keys, options, res -> {
-            if (res.succeeded()) {
-                LOG.debug("successfully created index [collection: {}]", collectionName);
-                indexCreationPromise.complete();
-            } else {
-                if (noOfRetries > 0) {
-                    LOG.error("failed to create index [collection: {}], scheduling new attempt to create index",
-                            collectionName, res.cause());
-                    vertx.setTimer(INDEX_CREATION_RETRY_INTERVAL_IN_MS,
-                            id -> createCollectionIndex(collectionName, keys, options, noOfRetries - 1));
-                } else {
-                    LOG.error("failed to create index [collection: {}]", collectionName, res.cause());
-                    indexCreationPromise.fail(res.cause());
-                }
-            }
+        final Promise<Void> result = Promise.promise();
+
+        vertx.runOnContext(s -> {
+            LOG.info("creating index [collection: {}]", collectionName);
+            mongoClient.createIndexWithOptions(collectionName, keys, options, result);
         });
-        return indexCreationPromise.future();
+        return result.future()
+                .onSuccess(ok -> {
+                    LOG.info("successfully created index [collection: {}]", collectionName);
+                })
+                .onFailure(t -> {
+                    LOG.error("failed to create index [collection: {}]", collectionName, t);
+                });
     }
 }

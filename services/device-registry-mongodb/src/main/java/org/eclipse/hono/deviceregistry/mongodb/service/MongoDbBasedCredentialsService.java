@@ -13,9 +13,11 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -27,6 +29,7 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
@@ -41,11 +44,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -59,17 +63,22 @@ import io.vertx.ext.mongo.UpdateOptions;
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
 public final class MongoDbBasedCredentialsService extends AbstractCredentialsManagementService
-        implements CredentialsService, Lifecycle {
+        implements CredentialsService, Lifecycle, HealthCheckProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsService.class);
 
     private static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
             MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS);
-    private static final int INDEX_CREATION_MAX_RETRIES = 3;
+    private static final String KEY_AUTH_ID = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
+            RegistryManagementConstants.FIELD_AUTH_ID);
+    private static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
+            RegistryManagementConstants.FIELD_TYPE);
 
     private final MongoDbBasedCredentialsConfigProperties config;
     private final MongoClient mongoClient;
     private final MongoDbCallExecutor mongoDbCallExecutor;
+    private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
+    private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
 
     /**
      * Creates a new service for configuration properties.
@@ -99,16 +108,69 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);
     }
 
+    Future<Void> createIndices() {
+
+        if (creatingIndices.compareAndSet(false, true)) {
+
+            // create unique index on tenant and device ID
+            return mongoDbCallExecutor.createIndex(
+                    config.getCollectionName(),
+                    new JsonObject()
+                            .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
+                    new IndexOptions().unique(true))
+            // create unique index on tenant, auth ID and type
+            .compose(ok -> mongoDbCallExecutor.createIndex(
+                    config.getCollectionName(),
+                    new JsonObject()
+                            .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .put(KEY_AUTH_ID, 1)
+                            .put(KEY_CREDENTIALS_TYPE, 1),
+                    new IndexOptions().unique(true)
+                            .partialFilterExpression(new JsonObject()
+                                    .put(KEY_AUTH_ID, new JsonObject().put("$exists", true))
+                                    .put(KEY_CREDENTIALS_TYPE, new JsonObject().put("$exists", true)))))
+            .onSuccess(ok -> indicesCreated.set(true))
+            .onComplete(r -> creatingIndices.set(false));
+        } else {
+            return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Registers a check that, when invoked, verifies that Tenant collection related indices have been
+     * created and, if not, triggers the creation of the indices (again).
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        readinessHandler.register("indices created", status -> {
+            if (indicesCreated.get()) {
+                status.complete(Status.OK());
+            } else {
+                status.complete(Status.KO());
+                createIndices();
+            }
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // nothing to register
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public Future<Void> start() {
-        return createIndices()
-                .map(ok -> {
-                    LOG.debug("MongoDB credentials service started");
-                    return null;
-                });
+        createIndices();
+        LOG.info("MongoDB Credentials service started");
+        return Future.succeededFuture();
     }
 
     /**
@@ -282,34 +344,6 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
-    private CompositeFuture createIndices() {
-        final String authIdKey = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
-                RegistryManagementConstants.FIELD_AUTH_ID);
-        final String credentialsTypeKey = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
-                RegistryManagementConstants.FIELD_TYPE);
-
-        return CompositeFuture.all(
-                // index based on tenantId & deviceId
-                mongoDbCallExecutor.createCollectionIndex(
-                        config.getCollectionName(),
-                        new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
-                        new IndexOptions().unique(true),
-                        INDEX_CREATION_MAX_RETRIES),
-                // index based on tenantId, authId & type
-                mongoDbCallExecutor.createCollectionIndex(
-                        config.getCollectionName(),
-                        new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                                .put(authIdKey, 1)
-                                .put(credentialsTypeKey, 1),
-                        new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject()
-                                        .put(authIdKey, new JsonObject().put("$exists", true))
-                                        .put(credentialsTypeKey, new JsonObject().put("$exists", true))),
-                        INDEX_CREATION_MAX_RETRIES));
-    }
     private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey) {
 
         return getCredentialsDto(deviceKey, Optional.empty());

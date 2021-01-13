@@ -294,11 +294,13 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedRegistrationService registrationService() {
-        return new MongoDbBasedRegistrationService(
+        final var service = new MongoDbBasedRegistrationService(
                 vertx(),
                 mongoClient(),
                 registrationServiceProperties(),
                 tenantInformationService());
+        healthCheckServer().registerHealthCheckResources(service);
+        return service;
     }
 
     /**
@@ -309,12 +311,14 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedCredentialsService credentialsService() {
-        return new MongoDbBasedCredentialsService(
+        final var service = new MongoDbBasedCredentialsService(
                 vertx(),
                 mongoClient(),
                 credentialsServiceProperties(),
                 passwordEncoder()
         );
+        healthCheckServer().registerHealthCheckResources(service);
+        return service;
     }
 
     /**
@@ -325,11 +329,13 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedTenantService tenantService() {
-        return new MongoDbBasedTenantService(
+        final var service = new MongoDbBasedTenantService(
                 vertx(),
                 mongoClient(),
                 tenantsServiceProperties()
         );
+        healthCheckServer().registerHealthCheckResources(service);
+        return service;
     }
 
     /**
@@ -439,7 +445,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
-        if (httpServiceConfigProperties != null && httpServiceConfigProperties.isAuthenticationRequired()) {
+        if (httpServiceConfigProperties.isAuthenticationRequired()) {
             return new HonoBasicAuthHandler(
                     MongoAuth.create(mongoClient(), new JsonObject()),
                     httpServerProperties().getRealm(),

@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -83,8 +83,11 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 registrationServiceConfig,
                 new NoopTenantInformationService());
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
-        credentialsService.start().onSuccess(ok -> started.flag());
-        registrationService.start().onSuccess(ok -> started.flag());
+        // start services sequentially as concurrent startup seems to cause
+        // concurrency issues sometimes
+        credentialsService.createIndices()
+            .compose(ok -> registrationService.createIndices())
+            .onComplete(testContext.completing());
     }
 
     /**
