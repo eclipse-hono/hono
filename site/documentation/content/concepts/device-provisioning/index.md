@@ -34,21 +34,19 @@ as described in the credentials section of the [Device Registry Management API](
 
 The term *Auto-Provisioning* denotes a feature of Hono where the Device Registry automatically generates 
 the credentials and registration information for a device the first time it connects.
-Auto-Provisioning is supported by Hono's protocol adapters for devices that authenticate with client certificates.
-The feature can be enabled per certificate authority (CA) at the tenant.
-
+Auto-Provisioning is supported by Hono's protocol adapters for devices that authenticate with client certificates or for
+devices that are connected via a gateway.
 
 ### Prerequisites
 
 Hono does not require a specific Device Registry implementation, but only specifies a set of APIs that must be provided by a compatible implementation.
 Since the main part of the *Auto-Provisioning* has to be done by the Device Registry, the used implementation must explicitly support this feature.
 
+#### Client certificate based Auto-Provisioning
 
-### Sequence of steps in Auto-Provisioning
+This feature can be enabled by supplying a certificate authority (CA) for a certain tenant:
 
-*Auto-Provisioning* consists of two steps. 
-
-#### Step 1: Configure the Tenant
+##### Step 1: Configure the Tenant
 
 The CA to be used by the devices needs to be configured. The following tasks must be performed:
 
@@ -59,7 +57,7 @@ The CA to be used by the devices needs to be configured. The following tasks mus
 If the Device Registry implementation provides the [Management API]({{< ref "/api/management" >}}), this could be done in a single step. 
 For details refer to the [Tenant API specification]({{< ref "/api/tenant#trusted-ca-format" >}}).
 
-#### Step 2: Connect an unregistered Device to Hono
+##### Step 2: Connect an unregistered Device to Hono
 
 {{< figure src="auto-provisioning.svg" alt="A unregistered device connects to a protocol adapter which uses the Credentials API to provision it" title="Automatic Provisioning of a Device" >}}
 
@@ -83,3 +81,34 @@ The newly created credentials are returned to the protocol adapter in the respon
 The following query of the Device Registration API returns the previously generated registration data.
 
 The provisioning is, of course, a one-time action, on subsequent connections the APIs simply return the stored records.
+
+#### Gateway based Auto-Provisioning
+
+Enabling gateway based auto-provisioning requires configuration of the gateway device:
+
+##### Step 1: Configure the Gateway Device
+
+The gateway device must have the corresponding authority (`auto-provisioning-enabled`) set.
+Refer to the [Management API]({{< ref "/api/management" >}}) for creating or updating a 
+corresponding device.
+
+##### Step 2: Connect an unregistered Device via Gateway to Hono
+
+{{< figure src="auto-provisioning-gateway.svg" alt="A unregistered device connects to a gateway which uses the 
+Device Registration API to provision it" title="Automatic Provisioning of a Device via gateway" >}}
+
+The yet unregistered edge device sends telemetry data via a gateway (1) to a protocol adapter which then checks if the 
+edge device is already registered by calling the *assert* operation of Device Registration API (2). If the device 
+registration service finds that the device isn't registered yet and the gateway has the `auto-provisioning-enabled` 
+authority set, it creates the edge device (3). 
+
+Subsequently, after it made sure that it hasn't already done so, it sends an 
+[Empty Notification]({{< ref "/api/event##empty-notification" >}}) with the  `hono_registration_status` application 
+property being set to `NEW` to the AMQP network (4). Once the event has been accepted by the peer (5), the registration 
+service marks the event as delivered (6). The persistent flag guarantees that the Empty Notification is sent 
+AT_LEAST_ONCE. 
+(*NB*: applications may receive duplicates of the empty notification!).
+
+Finally, the device registration service returns the registration information to the protocol adapter (7) which then 
+forwards the telemetry data to the AMQP network (8).
+
