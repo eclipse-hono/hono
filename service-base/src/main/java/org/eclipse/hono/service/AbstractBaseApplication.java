@@ -146,23 +146,18 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
                     Runtime.getRuntime().availableProcessors());
         }
 
+        final int startupTimeoutSeconds = config.getStartupTimeout();
+        log.info("Waiting {} seconds for components to start ...", startupTimeoutSeconds);
+
         final CompletableFuture<Void> started = new CompletableFuture<>();
 
         deployVerticles()
-        .compose(s -> postRegisterServiceVerticles())
-        .compose(s -> healthCheckServer.start())
-        .onComplete(result -> {
-            if (result.failed()) {
-                started.completeExceptionally(result.cause());
-            } else {
-                started.complete(null);
-            }
-        });
-
-        final int startupTimeoutSeconds = config.getStartupTimeout();
+            .compose(s -> postRegisterServiceVerticles())
+            .compose(s -> healthCheckServer.start())
+            .onSuccess(started::complete)
+            .onFailure(started::completeExceptionally);
 
         try {
-            log.debug("Waiting {} seconds for application to start up", startupTimeoutSeconds);
             started.get(startupTimeoutSeconds, TimeUnit.SECONDS);
         } catch (final TimeoutException e) {
             log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
