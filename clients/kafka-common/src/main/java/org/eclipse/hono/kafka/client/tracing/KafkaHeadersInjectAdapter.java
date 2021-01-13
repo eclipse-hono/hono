@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,10 +22,10 @@ import io.opentracing.propagation.TextMap;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
 /**
- * An adapter for injecting properties as a new {@link KafkaHeader} to a list of Vert.x Kafka producer headers.
+ * An adapter for injecting properties into a list of {@link KafkaHeader} objects.
  *
  */
-public final class KafkaHeaderInjectAdapter implements TextMap {
+public final class KafkaHeadersInjectAdapter implements TextMap {
 
     private final List<KafkaHeader> headers;
 
@@ -33,9 +33,9 @@ public final class KafkaHeaderInjectAdapter implements TextMap {
      * Creates an adapter for a list of {@link KafkaHeader} objects.
      *
      * @param headers The list of {@link KafkaHeader} objects.
-     * @throws NullPointerException if header is {@code null}.
+     * @throws NullPointerException if headers is {@code null}.
      */
-    public KafkaHeaderInjectAdapter(final List<KafkaHeader> headers) {
+    public KafkaHeadersInjectAdapter(final List<KafkaHeader> headers) {
         this.headers = Objects.requireNonNull(headers);
     }
 

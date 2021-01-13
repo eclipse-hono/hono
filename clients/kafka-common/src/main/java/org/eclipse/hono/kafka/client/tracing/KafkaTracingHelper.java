@@ -26,6 +26,7 @@ import io.opentracing.propagation.Format;
 import io.opentracing.tag.IntTag;
 import io.opentracing.tag.Tags;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import io.vertx.kafka.client.producer.RecordMetadata;
 
@@ -113,7 +114,7 @@ public final class KafkaTracingHelper {
     /**
      * Injects a {@code SpanContext} into a Kafka record.
      * <p>
-     * The span context will be added as a Kafka producer header.
+     * The span context will be written to the record headers.
      *
      * @param tracer The Tracer to use for injecting the context.
      * @param record The Kafka record to inject the context into.
@@ -127,8 +128,25 @@ public final class KafkaTracingHelper {
         Objects.requireNonNull(record);
 
         if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
-            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new KafkaHeaderInjectAdapter(record.headers()));
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new KafkaHeadersInjectAdapter(record.headers()));
         }
     }
 
+    /**
+     * Extracts a {@code SpanContext} from a Kafka record.
+     * <p>
+     * The span context will be read from the record headers.
+     *
+     * @param tracer The Tracer to use for extracting the context.
+     * @param record The Kafka record to extract the context from.
+     * @return The context or {@code null} if the given Kafka record does not contain a context.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static SpanContext extractSpanContext(final Tracer tracer, final KafkaConsumerRecord<String, Buffer> record) {
+
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(record);
+
+        return tracer.extract(Format.Builtin.TEXT_MAP, new KafkaHeadersExtractAdapter(record.headers()));
+    }
 }
