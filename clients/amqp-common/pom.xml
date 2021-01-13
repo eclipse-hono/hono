@@ -30,9 +30,16 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
     </dependency>
+
+    <!-- Testing -->
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>client-test-utils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
