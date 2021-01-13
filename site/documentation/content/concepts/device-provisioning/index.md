@@ -94,8 +94,8 @@ corresponding device.
 
 ##### Step 2: Connect an unregistered Device via Gateway to Hono
 
-{{< figure src="auto-provisioning-gateway.svg" alt="A unregistered device connects to a gateway which uses the 
-Device Registration API to provision it" title="Automatic Provisioning of a Device via gateway" >}}
+{{< figure src="auto-provisioning-gateway.svg" alt="A unregistered device connects to a gateway which uses the Device Registration API to provision it" 
+title="Automatic Provisioning of a Device via gateway" >}}
 
 The yet unregistered edge device sends telemetry data via a gateway (1) to a protocol adapter which then checks if the 
 edge device is already registered by calling the *assert* operation of Device Registration API (2). If the device 
