@@ -98,15 +98,16 @@ corresponding device.
 Device Registration API to provision it" title="Automatic Provisioning of a Device via gateway" >}}
 
 The yet unregistered edge device sends telemetry data via a gateway (1) to a protocol adapter which then checks if the 
-edge device is already registered by calling the "assert" operation of Device Registration API (2). If the device 
+edge device is already registered by calling the *assert* operation of Device Registration API (2). If the device 
 registration service finds that the device isn't registered yet and the gateway has the `auto-provisioning-enabled` 
 authority set, it creates the edge device (3). 
 
-Subsequently, after it made sure that it hasn't already done so, it sends an empty event 
-(see [Event API]({{< ref "/api/event" >}})) with the `hono_registration_status` application property being set to `NEW` 
-to the AMQP network (4). Upon receiving the disposition for the sent event (5), it marks the event as having been 
-delivered (6) in order to prevent sending duplicate events 
-(*NB*: Hono only supports *AT_LEAST_ONCE* delivery, duplicates may still happen!).
+Subsequently, after it made sure that it hasn't already done so, it sends an 
+[Empty Notification]({{< ref "/api/event##empty-notification" >}}) with the  `hono_registration_status` application 
+property being set to `NEW` to the AMQP network (4). Once the event has been accepted by the peer (5), the registration 
+service marks the event as delivered (6). The persistent flag guarantees that the Empty Notification is sent 
+AT_LEAST_ONCE. 
+(*NB*: applications may receive duplicates of the empty notification!).
 
 Finally, the device registration service returns the registration information to the protocol adapter (7) which then 
 forwards the telemetry data to the AMQP network (8).
