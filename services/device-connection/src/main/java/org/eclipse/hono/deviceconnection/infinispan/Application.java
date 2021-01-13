@@ -98,6 +98,7 @@ public class Application extends AbstractApplication {
                     component.getClass().getName()));
         }
     }
+
     /**
      * {@inheritDoc}
      * <p>
