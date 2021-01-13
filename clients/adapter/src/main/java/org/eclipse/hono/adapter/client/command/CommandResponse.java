@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.client.command;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
@@ -91,25 +92,20 @@ public final class CommandResponse {
         } else if (INVALID_STATUS_CODE.test(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
-        } else if (requestId.length() < 3) {
-            LOG.debug("cannot create CommandResponse: request id invalid: {}", requestId);
-            return null;
         } else {
             try {
-                final String replyToOptionsBitFlag = requestId.substring(0, 1);
-                final boolean addDeviceIdToReply = Commands.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
-                final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
-                final String replyId = requestId.substring(3 + lengthStringOne);
+                final Pair<String, String> correlationAndReplyToId = Commands
+                        .getCorrelationAndReplyToId(requestId, deviceId);
                 return new CommandResponse(
                         tenantId,
                         deviceId,
                         payload,
                         contentType,
                         status,
-                        requestId.substring(3, 3 + lengthStringOne), // correlation ID
-                        addDeviceIdToReply ? deviceId + "/" + replyId : replyId);
-            } catch (NumberFormatException | StringIndexOutOfBoundsException se) {
-                LOG.debug("error creating CommandResponse", se);
+                        correlationAndReplyToId.one(),
+                        correlationAndReplyToId.two());
+            } catch (final IllegalArgumentException e) {
+                LOG.debug("error creating CommandResponse", e);
                 return null;
             }
         }
@@ -149,20 +145,12 @@ public final class CommandResponse {
             LOG.debug("cannot create CommandResponse: invalid address, missing tenant and/or device identifier");
             return null;
         }
-        final String pathWithoutBase = resource.getPathWithoutBase();
-        if (pathWithoutBase.length() < deviceId.length() + 3) {
-            LOG.debug("cannot create CommandResponse: invalid address resource length");
-            return null;
-        }
         try {
-            // pathWithoutBase starts with deviceId/[bit flag]
-            final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
-            final boolean replyToContainedDeviceId = Commands.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
-            final String replyToId = pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
-                    replyToContainedDeviceId ? deviceId + "/" : "");
+            // resource.getPathWithoutBase() represents the result of Commands.getDeviceFacingReplyToId()
+            final String replyToId = Commands.getOriginalReplyToId(resource.getPathWithoutBase(), deviceId);
             return new CommandResponse(tenantId, deviceId, payload, contentType, status, correlationId, replyToId);
-        } catch (final NumberFormatException e) {
-            LOG.debug("error creating CommandResponse, invalid bit flag value", e);
+        } catch (final IllegalArgumentException e) {
+            LOG.debug("error creating CommandResponse: invalid address, invalid last path component", e);
             return null;
         }
     }

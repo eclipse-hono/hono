@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,7 +72,7 @@ public final class Command {
     }
 
     /**
-     * Creates a command for an AMQP 1.0 message that should be sent to a device.
+     * Creates a command from an AMQP 1.0 message.
      * <p>
      * The message is expected to contain
      * <ul>
@@ -305,9 +305,12 @@ public final class Command {
 
     /**
      * Gets the request identifier of this command.
+     * <p>
+     * May be {@code null} for a one-way command.
      *
      * @return The identifier or {@code null} if not set.
      * @throws IllegalStateException if this command is invalid.
+     * @see #getRequestId(String, String, String)
      */
     public String getRequestId() {
         if (isValid()) {
@@ -355,12 +358,13 @@ public final class Command {
     }
 
     /**
-     * Gets this command's reply-to-id as given in the incoming command message.
+     * Gets this command's reply-to-id. It is the last part of the command message's <em>reply-to</em> property
+     * value {@code command_response/${tenant_id}/${reply_id}}.
      * <p>
      * Note that an outgoing command message targeted at the device will contain an
      * adapted reply-to address containing the device id.
      *
-     * @return The identifier.
+     * @return The identifier or {@code null} if not set (meaning the command is a one-way command).
      * @throws IllegalStateException if this command is invalid.
      */
     public String getReplyToId() {
@@ -418,13 +422,17 @@ public final class Command {
             throw new IllegalStateException("command is invalid");
         }
     }
+
     /**
      * Creates a request ID for a command.
+     * <p>
+     * Incorporates the given correlationId and replyToId (minus deviceId if contained in the replyToId).
      *
      * @param correlationId The identifier to use for correlating the response with the request.
      * @param replyToId An arbitrary identifier to encode into the request ID.
      * @param deviceId The target of the command.
      * @return The request identifier or {@code null} if correlationId or deviceId is {@code null}.
+     * @deprecated Use {@code org.eclipse.hono.adapter.client.command.Commands#getRequestId(String, String, String)} instead.
      */
     public static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
 
@@ -491,10 +499,9 @@ public final class Command {
     /**
      * Gets the reply-to-id that will be set when forwarding the command to the device.
      * <p>
-     * It is ensured that this id starts with the device id.
+     * It is ensured that this id starts with {@code ${deviceId}/}.
      *
-     * @param replyToId The reply-to-id as extracted from the 'reply-to' of the command AMQP message. Potentially not
-     *            containing the device id.
+     * @param replyToId The reply-to-id as extracted from the 'reply-to' of the command AMQP message.
      * @param deviceId The device id.
      * @return The reply-to-id, starting with the device id.
      */

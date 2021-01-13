@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,8 @@ public final class HonoTopic {
     private static final String SEPARATOR = ".";
     private static final String NAMESPACE = "hono" + SEPARATOR;
 
+    private final Type type;
+    private final String tenantId;
     private final String topicString;
 
     /**
@@ -40,7 +42,9 @@ public final class HonoTopic {
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
 
-        topicString = type.prefix + tenantId;
+        this.type = type;
+        this.tenantId = tenantId;
+        this.topicString = type.prefix + tenantId;
     }
 
     /**
@@ -48,18 +52,45 @@ public final class HonoTopic {
      *
      * @param topicString The string to create a topic from.
      * @return The topic or {@code null} if the string does not contain a valid Hono topic.
+     * @throws NullPointerException if topicString is {@code null}.
      */
     public static HonoTopic fromString(final String topicString) {
+        Objects.requireNonNull(topicString);
+
+        HonoTopic.Type type = null;
         if (topicString.startsWith(Type.TELEMETRY.prefix)) {
-            return new HonoTopic(Type.TELEMETRY, topicString.substring(Type.TELEMETRY.prefix.length()));
+            type = Type.TELEMETRY;
         } else if (topicString.startsWith(Type.EVENT.prefix)) {
-            return new HonoTopic(Type.EVENT, topicString.substring(Type.EVENT.prefix.length()));
+            type = Type.EVENT;
         } else if (topicString.startsWith(Type.COMMAND.prefix)) {
-            return new HonoTopic(Type.COMMAND, topicString.substring(Type.COMMAND.prefix.length()));
+            type = Type.COMMAND;
         } else if (topicString.startsWith(Type.COMMAND_RESPONSE.prefix)) {
-            return new HonoTopic(Type.COMMAND_RESPONSE, topicString.substring(Type.COMMAND_RESPONSE.prefix.length()));
+            type = Type.COMMAND_RESPONSE;
         }
-        return null;
+        if (type != null) {
+            final String tenantId = topicString.substring(type.prefix.length());
+            return !tenantId.isEmpty() ? new HonoTopic(type, tenantId) : null;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the tenantId from the topic.
+     *
+     * @return The tenantId.
+     */
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * Gets the type of the topic.
+     *
+     * @return The topic type.
+     */
+    public Type getType() {
+        return type;
     }
 
     /**
