@@ -33,6 +33,9 @@
     <module>adapter-kafka</module>
     <module>amqp-common</module>
     <module>kafka-common</module>
+    <module>application</module>
+    <module>application-kafka</module>
+    <module>application-amqp</module>
   </modules>
 
   <dependencies>

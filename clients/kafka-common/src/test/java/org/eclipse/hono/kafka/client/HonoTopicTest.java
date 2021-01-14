@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,12 +22,13 @@ import org.junit.jupiter.api.Test;
  */
 public class HonoTopicTest {
 
+    private final String tenantId = "the-tenant";
+
     /**
      * Verifies that the toString method returns the expected string.
      */
     @Test
     public void testToString() {
-        final String tenantId = "the-tenant";
 
         final HonoTopic telemetry = new HonoTopic(HonoTopic.Type.TELEMETRY, tenantId);
         assertThat(telemetry.toString()).isEqualTo("hono.telemetry." + tenantId);
@@ -48,24 +49,22 @@ public class HonoTopicTest {
      */
     @Test
     public void testFromString() {
-        final String tenantId = "the-tenant";
 
-        final HonoTopic telemetry = HonoTopic.fromString("hono.telemetry." + tenantId);
-        assertThat(telemetry).isNotNull();
-        assertThat(telemetry.toString()).isEqualTo(HonoTopic.Type.TELEMETRY.prefix + tenantId);
+        assertTopicProperties(HonoTopic.fromString("hono.telemetry." + tenantId), HonoTopic.Type.TELEMETRY);
 
-        final HonoTopic event = HonoTopic.fromString("hono.event." + tenantId);
-        assertThat(event).isNotNull();
-        assertThat(event.toString()).isEqualTo(HonoTopic.Type.EVENT.prefix + tenantId);
+        assertTopicProperties(HonoTopic.fromString("hono.event." + tenantId), HonoTopic.Type.EVENT);
 
-        final HonoTopic command = HonoTopic.fromString("hono.command." + tenantId);
-        assertThat(command).isNotNull();
-        assertThat(command.toString()).isEqualTo(HonoTopic.Type.COMMAND.prefix + tenantId);
+        assertTopicProperties(HonoTopic.fromString("hono.command." + tenantId), HonoTopic.Type.COMMAND);
 
-        final HonoTopic commandResponse = HonoTopic.fromString("hono.command_response." + tenantId);
-        assertThat(commandResponse).isNotNull();
-        assertThat(commandResponse.toString()).isEqualTo(HonoTopic.Type.COMMAND_RESPONSE.prefix + tenantId);
+        assertTopicProperties(HonoTopic.fromString("hono.command_response." + tenantId), HonoTopic.Type.COMMAND_RESPONSE);
 
+    }
+
+    private void assertTopicProperties(final HonoTopic actual, final HonoTopic.Type expectedType) {
+        assertThat(actual).isNotNull();
+        assertThat(actual.getTenantId()).isEqualTo(tenantId);
+        assertThat(actual.getType()).isEqualTo(expectedType);
+        assertThat(actual.toString()).isEqualTo(expectedType.prefix + tenantId);
     }
 
     /**
@@ -85,14 +84,37 @@ public class HonoTopicTest {
     @Test
     public void testEquals() {
 
-        assertThat(new HonoTopic(HonoTopic.Type.EVENT, "foo"))
-                .isEqualTo(new HonoTopic(HonoTopic.Type.EVENT, "foo"));
+        assertThat(new HonoTopic(HonoTopic.Type.EVENT, tenantId))
+                .isEqualTo(new HonoTopic(HonoTopic.Type.EVENT, tenantId));
 
-        assertThat(new HonoTopic(HonoTopic.Type.EVENT, "foo"))
+        assertThat(new HonoTopic(HonoTopic.Type.EVENT, tenantId))
                 .isNotEqualTo(new HonoTopic(HonoTopic.Type.EVENT, "bar"));
 
-        assertThat(new HonoTopic(HonoTopic.Type.EVENT, "foo"))
-                .isNotEqualTo(new HonoTopic(HonoTopic.Type.COMMAND, "foo"));
+        assertThat(new HonoTopic(HonoTopic.Type.EVENT, tenantId))
+                .isNotEqualTo(new HonoTopic(HonoTopic.Type.COMMAND, tenantId));
+    }
+
+    /**
+     * Verifies the properties of the enum <em>Type</em>.
+     */
+    @Test
+    public void testType() {
+        assertThat(HonoTopic.Type.TELEMETRY.endpoint).isEqualTo("telemetry");
+        assertThat(HonoTopic.Type.TELEMETRY.prefix).isEqualTo("hono.telemetry.");
+        assertThat(HonoTopic.Type.TELEMETRY.toString()).isEqualTo("telemetry");
+
+        assertThat(HonoTopic.Type.EVENT.endpoint).isEqualTo("event");
+        assertThat(HonoTopic.Type.EVENT.prefix).isEqualTo("hono.event.");
+        assertThat(HonoTopic.Type.EVENT.toString()).isEqualTo("event");
+
+        assertThat(HonoTopic.Type.COMMAND.endpoint).isEqualTo("command");
+        assertThat(HonoTopic.Type.COMMAND.prefix).isEqualTo("hono.command.");
+        assertThat(HonoTopic.Type.COMMAND.toString()).isEqualTo("command");
+
+        assertThat(HonoTopic.Type.COMMAND_RESPONSE.endpoint).isEqualTo("command_response");
+        assertThat(HonoTopic.Type.COMMAND_RESPONSE.prefix).isEqualTo("hono.command_response.");
+        assertThat(HonoTopic.Type.COMMAND_RESPONSE.toString()).isEqualTo("command_response");
+
     }
 
 }

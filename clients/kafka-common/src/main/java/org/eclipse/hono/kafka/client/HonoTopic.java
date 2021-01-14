@@ -24,9 +24,6 @@ import org.eclipse.hono.util.TelemetryConstants;
  */
 public final class HonoTopic {
 
-    private static final String SEPARATOR = ".";
-    private static final String NAMESPACE = "hono" + SEPARATOR;
-
     private final Type type;
     private final String tenantId;
     private final String topicString;
@@ -44,7 +41,7 @@ public final class HonoTopic {
 
         this.type = type;
         this.tenantId = tenantId;
-        this.topicString = type.prefix + tenantId;
+        topicString = type.prefix + tenantId;
     }
 
     /**
@@ -125,15 +122,26 @@ public final class HonoTopic {
      */
     public enum Type {
 
-        TELEMETRY(NAMESPACE + TelemetryConstants.TELEMETRY_ENDPOINT + SEPARATOR),
-        EVENT(NAMESPACE + EventConstants.EVENT_ENDPOINT + SEPARATOR),
-        COMMAND(NAMESPACE + CommandConstants.COMMAND_ENDPOINT + SEPARATOR),
-        COMMAND_RESPONSE(NAMESPACE + CommandConstants.COMMAND_RESPONSE_ENDPOINT + SEPARATOR);
+        TELEMETRY(TelemetryConstants.TELEMETRY_ENDPOINT),
+        EVENT(EventConstants.EVENT_ENDPOINT),
+        COMMAND(CommandConstants.COMMAND_ENDPOINT),
+        COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT);
 
-        final String prefix;
+        private static final String SEPARATOR = ".";
+        private static final String NAMESPACE = "hono";
 
-        Type(final String prefix) {
-            this.prefix = prefix;
+        /**
+         * The name of the endpoint (e.g. "event").
+         */
+        public final String endpoint;
+        /**
+         * The prefix of a Hono topic (e.g. "hono.event.").
+         */
+        public final String prefix;
+
+        Type(final String endpoint) {
+            this.endpoint = endpoint;
+            this.prefix = NAMESPACE + SEPARATOR + endpoint + SEPARATOR;
         }
 
         @Override
