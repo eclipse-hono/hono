@@ -94,4 +94,27 @@ public class HonoTopicTest {
                 .isNotEqualTo(new HonoTopic(HonoTopic.Type.COMMAND, tenantId));
     }
 
+    /**
+     * Verifies the properties of the enum <em>Type</em>.
+     */
+    @Test
+    public void testType() {
+        assertThat(HonoTopic.Type.TELEMETRY.endpoint).isEqualTo("telemetry");
+        assertThat(HonoTopic.Type.TELEMETRY.prefix).isEqualTo("hono.telemetry.");
+        assertThat(HonoTopic.Type.TELEMETRY.toString()).isEqualTo("telemetry");
+
+        assertThat(HonoTopic.Type.EVENT.endpoint).isEqualTo("event");
+        assertThat(HonoTopic.Type.EVENT.prefix).isEqualTo("hono.event.");
+        assertThat(HonoTopic.Type.EVENT.toString()).isEqualTo("event");
+
+        assertThat(HonoTopic.Type.COMMAND.endpoint).isEqualTo("command");
+        assertThat(HonoTopic.Type.COMMAND.prefix).isEqualTo("hono.command.");
+        assertThat(HonoTopic.Type.COMMAND.toString()).isEqualTo("command");
+
+        assertThat(HonoTopic.Type.COMMAND_RESPONSE.endpoint).isEqualTo("command_response");
+        assertThat(HonoTopic.Type.COMMAND_RESPONSE.prefix).isEqualTo("hono.command_response.");
+        assertThat(HonoTopic.Type.COMMAND_RESPONSE.toString()).isEqualTo("command_response");
+
+    }
+
 }
