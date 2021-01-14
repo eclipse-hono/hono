@@ -136,8 +136,8 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
         verify(commandHandler).handle(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         // assert that command is directed at the gateway
-        assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(gatewayId);
-        assertThat(commandContextCaptor.getValue().getCommand().getOriginalDeviceId()).isEqualTo(deviceId);
+        assertThat(commandContextCaptor.getValue().getCommand().getGatewayId()).isEqualTo(gatewayId);
+        assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
 
     @Test
@@ -160,8 +160,8 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
         verify(commandHandler).handle(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         // assert that command is directed at the gateway
-        assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(gatewayId);
-        assertThat(commandContextCaptor.getValue().getCommand().getOriginalDeviceId()).isEqualTo(deviceId);
+        assertThat(commandContextCaptor.getValue().getCommand().getGatewayId()).isEqualTo(gatewayId);
+        assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
 
 }

@@ -278,7 +278,7 @@ public final class SigfoxProtocolAdapter
     private Buffer convertToResponsePayload(final Command command) {
         final JsonObject payload = new JsonObject();
 
-        payload.put(command.getDeviceId(),
+        payload.put(command.getGatewayOrDeviceId(),
                 new JsonObject()
                         .put(DOWNLINK_DATA_FIELD,
                                 BaseEncoding

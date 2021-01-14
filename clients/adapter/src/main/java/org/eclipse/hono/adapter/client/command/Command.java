@@ -61,16 +61,18 @@ public interface Command {
     String getTenant();
 
     /**
-     * Gets the device's identifier.
+     * Gets the identifier of the gateway or edge device that this command
+     * needs to be forwarded to for delivery.
      * <p>
-     * In the case that the command got redirected to a gateway,
-     * the id returned here is a gateway id. See {@link #getOriginalDeviceId()}
-     * for the original device id in that case.
+     * If the command is to be sent to the target device directly, without
+     * using a gateway, the id returned here is the same as the one
+     * returned by {@link #getDeviceId()}. Otherwise, {@link #getGatewayId()}
+     * is returned.
      *
      * @return The identifier.
      * @throws IllegalStateException if this command is invalid.
      */
-    String getDeviceId();
+    String getGatewayOrDeviceId();
 
     /**
      * Checks whether the command is targeted at a gateway.
@@ -85,16 +87,21 @@ public interface Command {
     boolean isTargetedAtGateway();
 
     /**
-     * Gets the device identifier used in the original command. It is extracted from the
-     * <em>to</em> property of the command AMQP message.
-     * <p>
-     * This id differs from {@link #getDeviceId()} if the command got redirected to a gateway
-     * ({@link #getDeviceId()} returns the gateway id in that case).
+     * Gets the identifier of the device that is supposed to execute the command.
      *
      * @return The identifier.
      * @throws IllegalStateException if this command is invalid.
      */
-    String getOriginalDeviceId();
+    String getDeviceId();
+
+    /**
+     * Gets the gateway identifier if this command is to be sent via a gateway.
+     * Otherwise {@code null} is returned.
+     *
+     * @return The identifier or {@code null}.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    String getGatewayId();
 
     /**
      * Gets the request identifier of this command. Can be used to correlate this command

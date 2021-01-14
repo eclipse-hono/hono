@@ -267,8 +267,8 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
         final Command command = mock(Command.class);
         when(command.getTenant()).thenReturn(tenantId);
+        when(command.getGatewayOrDeviceId()).thenReturn(deviceId);
         when(command.getDeviceId()).thenReturn(deviceId);
-        when(command.getOriginalDeviceId()).thenReturn(deviceId);
         when(command.getName()).thenReturn(name);
         when(command.getContentType()).thenReturn(contentType);
         when(command.getPayload()).thenReturn(payload);

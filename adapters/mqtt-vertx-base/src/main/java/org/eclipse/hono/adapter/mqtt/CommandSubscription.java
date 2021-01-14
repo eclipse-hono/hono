@@ -267,7 +267,7 @@ public final class CommandSubscription {
         Objects.requireNonNull(command);
 
         final String topicTenantId = containsTenantId ? getTenant() : "";
-        final String topicDeviceId = command.isTargetedAtGateway() ? command.getOriginalDeviceId()
+        final String topicDeviceId = command.isTargetedAtGateway() ? command.getDeviceId()
                 : containsDeviceId ? getDeviceId() : "";
         final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
 
