@@ -54,7 +54,6 @@ public class KafkaBasedCommandTest {
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo(subject);
         assertThat(cmd.getDeviceId()).isEqualTo(deviceId);
-        assertThat(cmd.getOriginalDeviceId()).isEqualTo(deviceId);
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
     }
@@ -76,8 +75,7 @@ public class KafkaBasedCommandTest {
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord, gatewayId);
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo(subject);
-        assertThat(cmd.getDeviceId()).isEqualTo(gatewayId);
-        assertThat(cmd.getOriginalDeviceId()).isEqualTo(targetDeviceId);
+        assertThat(cmd.getDeviceId()).isEqualTo(targetDeviceId);
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
     }

@@ -205,7 +205,7 @@ public class CommandSubscriptionTest {
         final Command command = mock(Command.class);
         when(command.isTargetedAtGateway()).thenReturn(false);
         when(command.getTenant()).thenReturn(device.getTenantId());
-        when(command.getDeviceId()).thenReturn(device.getDeviceId());
+        when(command.getGatewayOrDeviceId()).thenReturn(device.getDeviceId());
         when(command.getRequestId()).thenReturn("requestId");
         when(command.getName()).thenReturn("doSomething");
 
@@ -321,8 +321,9 @@ public class CommandSubscriptionTest {
         final Command command = mock(Command.class);
         when(command.isTargetedAtGateway()).thenReturn(true);
         when(command.getTenant()).thenReturn(gw.getTenantId());
-        when(command.getDeviceId()).thenReturn(gw.getDeviceId());
-        when(command.getOriginalDeviceId()).thenReturn(gatewayManagedDeviceId);
+        when(command.getGatewayId()).thenReturn(gw.getDeviceId());
+        when(command.getGatewayOrDeviceId()).thenReturn(gw.getDeviceId());
+        when(command.getDeviceId()).thenReturn(gatewayManagedDeviceId);
         when(command.getRequestId()).thenReturn("requestId");
         when(command.getName()).thenReturn("doSomething");
 

@@ -924,15 +924,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         response.putHeader(Constants.HEADER_COMMAND, command.getName());
         currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
         log.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
-                command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
+                command.getName(), command.getRequestId(), command.getTenant(), command.getGatewayOrDeviceId());
 
         if (!command.isOneWay()) {
             response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
             currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
         }
         if (command.isTargetedAtGateway()) {
-            response.putHeader(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getOriginalDeviceId());
-            currentSpan.setTag(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getOriginalDeviceId());
+            response.putHeader(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getDeviceId());
+            currentSpan.setTag(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getDeviceId());
         }
 
         response.setStatusCode(HttpURLConnection.HTTP_OK);

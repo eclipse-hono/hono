@@ -1450,7 +1450,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final Integer msgId = sentHandler.result();
                 if (command.isTargetedAtGateway()) {
                     log.debug("published command [packet-id: {}] to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                            msgId, subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
+                            msgId, subscription.getTenant(), subscription.getDeviceId(), command.getDeviceId(),
                             subscription.getClientId(), subscription.getQos(), publishTopic);
                 } else {
                     log.debug("published command [packet-id: {}] to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
@@ -1465,7 +1465,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
                 if (command.isTargetedAtGateway()) {
                     log.debug("error publishing command to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                            subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
+                            subscription.getTenant(), subscription.getDeviceId(), command.getDeviceId(),
                             subscription.getClientId(), subscription.getQos(), publishTopic, sentHandler.cause());
                 } else {
                     log.debug("error publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",

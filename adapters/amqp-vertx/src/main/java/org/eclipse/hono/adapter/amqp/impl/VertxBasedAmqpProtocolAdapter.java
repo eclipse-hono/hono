@@ -965,19 +965,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             msg.setAddress(String.format("%s/%s/%s",
                     CommandConstants.COMMAND_ENDPOINT,
                     command.getTenant(),
-                    command.getOriginalDeviceId()));
+                    command.getDeviceId()));
             msg.setCorrelationId(command.getCorrelationId());
             msg.setSubject(command.getName());
             MessageHelper.setPayload(msg, command.getContentType(), command.getPayload());
 
             if (command.isTargetedAtGateway()) {
-                MessageHelper.addDeviceId(msg, command.getOriginalDeviceId());
+                MessageHelper.addDeviceId(msg, command.getDeviceId());
             }
             if (!command.isOneWay()) {
                 msg.setReplyTo(String.format("%s/%s/%s",
                         CommandConstants.COMMAND_RESPONSE_ENDPOINT,
                         command.getTenant(),
-                        Commands.getDeviceFacingReplyToId(command.getReplyToId(), command.getOriginalDeviceId())));
+                        Commands.getDeviceFacingReplyToId(command.getReplyToId(), command.getDeviceId())));
             }
 
             final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null

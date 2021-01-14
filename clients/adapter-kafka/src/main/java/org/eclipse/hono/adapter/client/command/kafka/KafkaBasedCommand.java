@@ -169,7 +169,7 @@ public final class KafkaBasedCommand implements Command {
     }
 
     @Override
-    public String getDeviceId() {
+    public String getGatewayOrDeviceId() {
         requireValid();
         return deviceId;
     }
@@ -181,9 +181,15 @@ public final class KafkaBasedCommand implements Command {
     }
 
     @Override
-    public String getOriginalDeviceId() {
+    public String getDeviceId() {
         requireValid();
         return originalDeviceId;
+    }
+
+    @Override
+    public String getGatewayId() {
+        requireValid();
+        return isTargetedAtGateway() ? getGatewayOrDeviceId() : null;
     }
 
     @Override
@@ -232,8 +238,8 @@ public final class KafkaBasedCommand implements Command {
     public String toString() {
         if (isValid()) {
             if (isTargetedAtGateway()) {
-                return String.format("Command [name: %s, tenant-id: %s, device-id %s, original device-id %s, request-id: %s]",
-                        getName(), getTenant(), getDeviceId(), getOriginalDeviceId(), getRequestId());
+                return String.format("Command [name: %s, tenant-id: %s, gateway-id %s, device-id %s, request-id: %s]",
+                        getName(), getTenant(), getGatewayId(), getDeviceId(), getRequestId());
             } else {
                 return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
                         getName(), getTenant(), getDeviceId(), getRequestId());

@@ -117,7 +117,7 @@ public final class ProtonBasedCommand implements Command {
      * {@inheritDoc}
      */
     @Override
-    public String getDeviceId() {
+    public String getGatewayOrDeviceId() {
         return command.getDeviceId();
     }
 
@@ -133,8 +133,19 @@ public final class ProtonBasedCommand implements Command {
      * {@inheritDoc}
      */
     @Override
-    public String getOriginalDeviceId() {
+    public String getDeviceId() {
         return command.getOriginalDeviceId();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getGatewayId() {
+        if (!isValid()) {
+            throw new IllegalStateException("command is invalid");
+        }
+        return isTargetedAtGateway() ? getGatewayOrDeviceId() : null;
     }
 
     /**
