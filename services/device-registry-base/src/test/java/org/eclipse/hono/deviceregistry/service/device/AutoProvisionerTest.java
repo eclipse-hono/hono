@@ -144,7 +144,7 @@ class AutoProvisionerTest {
         autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        verify(deviceManagementService).createDevice(any(), any(), any(), any());
+                        verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), any(Device.class), any(Span.class));
 
                         verify(sender, never()).sendAndWaitForOutcome(any(), any());
                         verify(deviceManagementService, never()).updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(), any(), any());
@@ -167,7 +167,7 @@ class AutoProvisionerTest {
         autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, "another-" + GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
                 .onComplete(ctx.failing(throwable -> {
                     ctx.verify(() -> {
-                        verify(deviceManagementService).createDevice(any(), any(), any(), any());
+                        verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), any(Device.class), any(Span.class));
 
                         verify(sender, never()).sendAndWaitForOutcome(any(), any());
                         verify(deviceManagementService, never()).updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(), any(), any());
@@ -214,7 +214,7 @@ class AutoProvisionerTest {
         autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, new Device(), span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        verify(deviceManagementService).createDevice(any(), any(), any(), any());
+                        verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), any(Device.class), any(Span.class));
 
                         final ArgumentCaptor<Message> messageArgumentCaptor = ArgumentCaptor.forClass(Message.class);
                         verify(sender).sendAndWaitForOutcome(messageArgumentCaptor.capture(), any());
@@ -264,7 +264,7 @@ class AutoProvisionerTest {
 
     private void verifySuccessfulAutoProvisioning() {
         final ArgumentCaptor<Device> registeredDeviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
-        verify(deviceManagementService).createDevice(any(), any(), registeredDeviceArgumentCaptor.capture(), any());
+        verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), registeredDeviceArgumentCaptor.capture(), any());
 
         final Device registeredDevice = registeredDeviceArgumentCaptor.getValue();
         assertThat(registeredDevice).isEqualTo(NEW_EDGE_DEVICE);
