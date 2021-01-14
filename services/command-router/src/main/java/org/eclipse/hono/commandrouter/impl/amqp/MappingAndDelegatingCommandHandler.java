@@ -133,12 +133,16 @@ public class MappingAndDelegatingCommandHandler {
                 connection.getTracer(), spanContext);
         CommandConsumer.logReceivedCommandToSpan(command, currentSpan);
         final CommandContext commandContext = CommandContext.from(command, originalMessageDelivery, currentSpan);
-        mapAndDelegateIncomingCommand(tenantId, deviceId, commandContext);
+        if (command.isValid()) {
+            mapAndDelegateIncomingCommand(tenantId, deviceId, commandContext);
+        } else {
+            // command message is invalid
+            commandContext.reject(getMalformedMessageError());
+        }
     }
 
     private void mapAndDelegateIncomingCommand(final String tenantId, final String originalDeviceId,
             final CommandContext originalCommandContext) {
-        // note that the command might be invalid here - a matching local handler to reject it (and report metrics) shall be found in that case
         final Command originalCommand = originalCommandContext.getCommand();
 
         // determine last used gateway device id
@@ -151,7 +155,9 @@ public class MappingAndDelegatingCommandHandler {
                 final String targetDeviceId = commandTargetResult.result().getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
                 final String targetAdapterInstance = commandTargetResult.result().getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
 
-                delegateIncomingCommand(originalDeviceId, originalCommandContext, targetDeviceId, targetAdapterInstance);
+                final String targetGatewayId = targetDeviceId.equals(originalDeviceId) ? null : targetDeviceId;
+                final CommandContext commandContext = adaptCommandContextToGatewayIfNeeded(originalCommandContext, targetGatewayId);
+                delegateCommandMessageToAdapterInstance(targetAdapterInstance, commandContext);
 
             } else {
                 if (commandTargetResult.cause() instanceof ServiceInvocationException
@@ -169,26 +175,6 @@ public class MappingAndDelegatingCommandHandler {
                 originalCommandContext.release();
             }
         });
-    }
-
-    private void delegateIncomingCommand(
-            final String originalDeviceId,
-            final CommandContext originalCommandContext,
-            final String targetDeviceId,
-            final String targetAdapterInstance) {
-
-        // note that the command might be invalid here - a matching local handler to reject it (and report metrics) shall be found in that case
-        final Command originalCommand = originalCommandContext.getCommand();
-        final String targetGatewayId = targetDeviceId.equals(originalDeviceId) ? null : targetDeviceId;
-
-        if (originalCommand.isValid()) {
-            // delegate to matching consumer via downstream peer
-            final CommandContext commandContext = adaptCommandContextToGatewayIfNeeded(originalCommandContext, targetGatewayId);
-            delegateCommandMessageToAdapterInstance(targetAdapterInstance, commandContext);
-        } else {
-            // command message is invalid
-            originalCommandContext.reject(getMalformedMessageError());
-        }
     }
 
     private ErrorCondition getMalformedMessageError() {
