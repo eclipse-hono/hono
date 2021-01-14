@@ -303,8 +303,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                             .compose(newDevice -> {
                                                 final JsonObject deviceData = JsonObject.mapFrom(newDevice);
                                                 return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
-                                            });
-
+                                            })
+                                            .recover(throwable -> Future.succeededFuture(
+                                                RegistrationResult.from(ServiceInvocationException.extractStatusCode(throwable)))
+                                            );
                                 } else if (!isDeviceEnabled(deviceResult)) {
                                     if (deviceResult.isNotFound()) {
                                         LOG.debug("no such device");
