@@ -42,6 +42,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
@@ -51,6 +52,8 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +67,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 
 /**
@@ -1209,5 +1213,43 @@ public final class IntegrationTestSupport {
     public static PskCredential createPskCredentials(final String authId, final String key) {
 
         return Credentials.createPSKCredential(authId, key);
+    }
+
+    /**
+     * Create an event and a telemetry consumer which verify that at least one empty notification and at
+     * least one further message, be it an event or telemetry, was received according to the specification
+     * of gateway-based auto-provisioning.
+     *
+     * @param ctx The test context to be used.
+     * @param tenantId The tenant for which the consumer should be created.
+     * @param deviceId The id of the device which sent the messages.
+     *
+     * @return A future for the message consumer to be created.
+     */
+    public Future<MessageConsumer> createAutoProvisioningMessageConsumers(final VertxTestContext ctx, final String tenantId, final String deviceId) {
+        final Checkpoint messagesReceived = ctx.checkpoint(2);
+        return applicationClientFactory.createEventConsumer(tenantId,
+                    msg -> ctx.verify(() -> {
+                        assertThat(MessageHelper.getDeviceId(msg)).isEqualTo(deviceId);
+
+                        if (msg.getContentType().equals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)) {
+                            assertThat(MessageHelper.getRegistrationStatus(msg))
+                                    .isEqualTo(EventConstants.RegistrationStatus.NEW.name());
+                            messagesReceived.flag();
+                        } else {
+                            messagesReceived.flag();
+                        }
+                    }),
+                    close -> {
+                })
+                .compose(ok -> applicationClientFactory.createTelemetryConsumer(tenantId,
+                    msg -> ctx.verify(() -> {
+                        if (!msg.getContentType().equals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)) {
+                            messagesReceived.flag();
+                        }
+                    }),
+                    close -> {
+                    }
+                ));
     }
 }

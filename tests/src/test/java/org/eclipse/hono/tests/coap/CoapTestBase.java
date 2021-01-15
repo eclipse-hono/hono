@@ -61,7 +61,6 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -420,44 +419,24 @@ public abstract class CoapTestBase {
     @Test
     public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
 
-        // GIVEN a device that is connected via two gateways
         final Tenant tenant = new Tenant();
         final String gatewayId = helper.getRandomDeviceId(tenantId);
         final Device gateway = new Device()
                 .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
 
-        final VertxTestContext setup = new VertxTestContext();
-        helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayId, gateway, SECRET)
-                .onComplete(setup.completing());
-        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
-
-        final CoapClient gatewayClient = getCoapsClient(gatewayId, tenantId, SECRET);
-
-        final VertxTestContext emptyEventReceived = new VertxTestContext();
-        helper.applicationClientFactory.createEventConsumer(tenantId,
-                msg -> emptyEventReceived.verify( () -> {
-                    // ignore potential events of warmup
-                    if (MessageHelper.getDeviceId(msg).equals(deviceId)) {
-                        assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-                        assertThat(MessageHelper.getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
-                        emptyEventReceived.completeNow();
-                    }
-                }),
-                close -> {});
-
-        testUploadMessages(ctx, tenantId,
-                () -> warmUp(gatewayClient, createCoapsRequest(Code.PUT, getPutResource(tenantId, helper.getRandomDeviceId(tenantId)), 0)),
-                null,
-                count -> {
+        final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+                .compose(ok -> helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayId, gateway, SECRET))
+                .compose(ok -> {
                     final Promise<OptionSet> result = Promise.promise();
-                    final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
-                    gatewayClient.advanced(getHandler(result), request);
-                    return result.future();
-                },
-                1,
-                null);
+                    final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, edgeDeviceId), 0);
 
-        assertThat(emptyEventReceived.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+                    final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
+                    client.advanced(getHandler(result), request);
+
+                    return result.future();
+                })
+                .onComplete(ctx.succeeding());
     }
 
     /**

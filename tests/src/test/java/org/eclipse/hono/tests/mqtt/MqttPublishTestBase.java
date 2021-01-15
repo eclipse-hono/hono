@@ -34,7 +34,6 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
@@ -203,36 +202,21 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
         final Tenant tenant = new Tenant();
 
         final String gatewayId = helper.getRandomDeviceId(tenantId);
         final Device gateway = new Device()
                 .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
 
-        final VertxTestContext setup = new VertxTestContext();
-
-        helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, password).onComplete(setup.completing());
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-            return;
-        }
-
-        helper.applicationClientFactory.createEventConsumer(tenantId, msg -> {
-            ctx.verify(() -> {
-                assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-                assertThat(MessageHelper.getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
-            });
-        }, remoteClose -> {});
-
-        doTestUploadMessages(
-                ctx,
-                tenantId,
-                deviceId,
-                connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password),
-                false,
-                1);
+        final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+            .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, password))
+            .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password))
+            .compose(ok -> {
+                customizeConnectedClient();
+                return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false);
+            })
+            .onComplete(ctx.succeeding());
     }
 
     /**
@@ -309,19 +293,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             final boolean useShortTopicName)
             throws InterruptedException {
 
-        doTestUploadMessages(ctx, tenantId, deviceId, connection, useShortTopicName, MESSAGES_TO_SEND);
-    }
-
-    private void doTestUploadMessages(
-            final VertxTestContext ctx,
-            final String tenantId,
-            final String deviceId,
-            final Future<MqttConnAckMessage> connection,
-            final boolean useShortTopicName,
-            final int numberOfMessages)
-            throws InterruptedException {
-
-        final CountDownLatch received = new CountDownLatch(numberOfMessages);
+        final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
         final AtomicInteger messageCount = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong(0);
 
@@ -332,7 +304,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             received.countDown();
             lastReceivedTimestamp.set(System.currentTimeMillis());
             if (received.getCount() % 50 == 0) {
-                LOGGER.info("messages received: {}", numberOfMessages - received.getCount());
+                LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
             }
         })).onComplete(setup.completing());
 
@@ -345,7 +317,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         customizeConnectedClient();
 
         final long start = System.currentTimeMillis();
-        while (messageCount.get() < numberOfMessages) {
+        while (messageCount.get() < MESSAGES_TO_SEND) {
             final CountDownLatch messageSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
@@ -370,7 +342,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             // no message has been received at all
             lastReceivedTimestamp.set(System.currentTimeMillis());
         }
-        final long messagesReceived = numberOfMessages - received.getCount();
+        final long messagesReceived = MESSAGES_TO_SEND - received.getCount();
         LOGGER.info("sent {} and received {} messages in {} milliseconds",
                 messageCount.get(), messagesReceived, lastReceivedTimestamp.get() - start);
         assertMessageReceivedRatio(messagesReceived, messageCount.get(), ctx);

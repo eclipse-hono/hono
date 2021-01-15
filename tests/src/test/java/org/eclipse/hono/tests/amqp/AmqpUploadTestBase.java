@@ -248,12 +248,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * Verifies that an edge device is auto-provisioned if it connects via a gateway equipped with the corresponding
      * authority.
      *
-     * @param senderQos The delivery semantics to use for the device.
-     * @throws InterruptedException if test is interrupted while running.
+     * @param ctx The Vert.x test context.
      */
-    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
-    @MethodSource("senderQoSTypes")
-    public void testAutoProvisioningViaGateway(final ProtonQoS senderQos) throws InterruptedException {
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    public void testAutoProvisioningViaGateway(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
         final String gatewayId = helper.getRandomDeviceId(tenantId);
@@ -261,57 +260,26 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
 
         final String username = IntegrationTestSupport.getUsername(gatewayId, tenantId);
-        final VertxTestContext emptyEventReceived = new VertxTestContext();
-        helper.applicationClientFactory.createEventConsumer(tenantId,
-                msg -> emptyEventReceived.verify( () -> {
-                    assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-                    assertThat(MessageHelper.getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
-                    emptyEventReceived.completeNow();
-                }),
-                close -> {});
 
-        final VertxTestContext telemetryReceived = new VertxTestContext();
-        createConsumer(tenantId, msg -> {
-            telemetryReceived.verify( () -> {
-                assertThat(msg.getContentType()).isEqualTo("text/plain");
-                assertMessageProperties(telemetryReceived, msg);
-            });
-            telemetryReceived.completeNow();
-        });
-
-        final VertxTestContext setup = new VertxTestContext();
-        helper.registry
-                .addDeviceForTenant(tenantId, new Tenant(), gatewayId, gateway, DEVICE_PASSWORD)
+        final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+                .compose(ok -> helper.registry.addDeviceForTenant(tenantId, new Tenant(), gatewayId, gateway, DEVICE_PASSWORD))
                 .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
-                .compose(con -> createProducer(null, senderQos))
-                .recover(t -> {
-                    log.error("error setting up AMQP protocol adapter", t);
-                    return Future.failedFuture(t);
+                .compose(con -> createProducer(null, ProtonQoS.AT_LEAST_ONCE))
+                .compose(sender -> {
+                    final Message msg = ProtonHelper.message("apFoobar");
+                    msg.setContentType("text/plain");
+                    msg.setAddress(String.format("%s/%s/%s", getEndpointName(), tenantId, edgeDeviceId));
+
+                    final Promise<Void> result = Promise.promise();
+                    sender.send(msg, delivery -> {
+                        ctx.verify(() -> assertThat(delivery.getRemoteState()).isInstanceOf(Accepted.class));
+                        result.complete();
+                    });
+
+                    return result.future();
                 })
-                .onComplete(setup.succeeding(s -> {
-                    sender = s;
-                    setup.completeNow();
-                }));
-
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        assertThat(setup.failed())
-                .as("successfully connect to adapter")
-                .isFalse();
-
-        final VertxTestContext messageSent = new VertxTestContext();
-        final Message msg = ProtonHelper.message("apFoobar");
-        msg.setContentType("text/plain");
-
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        msg.setAddress(String.format("%s/%s/%s", getEndpointName(), tenantId, deviceId));
-        sender.send(msg, delivery -> {
-            messageSent.verify(() -> assertThat(delivery.getRemoteState()).isInstanceOf(Accepted.class));
-            messageSent.completeNow();
-        });
-
-        assertThat(messageSent.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        assertThat(emptyEventReceived.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        assertThat(telemetryReceived.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+                .onComplete(ctx.succeeding());
     }
 
     /**
