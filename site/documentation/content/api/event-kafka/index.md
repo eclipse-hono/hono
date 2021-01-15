@@ -13,8 +13,8 @@ The *Event* API is used by *Protocol Adapters* to send event messages downstream
 The Event API for Kafka is an alternative to the [Event API for AMQP]({{< relref "/api/event" >}}).
 With this API clients publish event messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
-The definitions in [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#kafka-based-messaging" >}}) 
-also apply to the *Event* API for Kafka.   
+See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
+The statements there apply to this specification.
 
 {{% note title="Tech preview" %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs may change with the next version. 
@@ -38,7 +38,7 @@ The protocol adapter writes messages to the tenant-specific topic `hono.event.${
 
 **Message Flow**
 
-Hono supports *AT LEAST ONCE* delivery of *Event* messages only, as defined in [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#at-least-once-producers" >}}).
+Hono supports *AT LEAST ONCE* delivery of *Event* messages only, as defined in [Telemetry API for Kafka]({{< relref "/api/kafka-api#at-least-once-producers" >}}).
 
 The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* producing an event to the Kafka cluster.
 
