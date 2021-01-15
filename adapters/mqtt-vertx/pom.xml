@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapter-base-spring</artifactId>
     <relativePath>../base-spring</relativePath>
-    <version>1.5.1-SNAPSHOT</version>
+    <version>1.5.1</version>
   </parent>
   <artifactId>hono-adapter-mqtt-vertx</artifactId>
   <name>Hono MQTT Adapter</name>
