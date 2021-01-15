@@ -17,7 +17,7 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-adapter-base-spring</artifactId>
       <relativePath>../base-spring</relativePath>
-      <version>1.4.5</version>
+      <version>1.4.6-SNAPSHOT</version>
     </parent>
     <artifactId>hono-adapter-lora-vertx</artifactId>
     <name>Hono LoRa Adapter</name>
