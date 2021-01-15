@@ -17,8 +17,10 @@ import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A message representing a Hono Command to be sent to a device.
- *
+ * A Hono command to be sent to a device.
+ * <p>
+ * The command may be invalid, in which case only tenant/device/gateway identifier and payload size information
+ * can be retrieved.
  */
 public interface Command {
 
@@ -45,18 +47,9 @@ public interface Command {
     String getInvalidCommandReason();
 
     /**
-     * Gets the name of this command.
-     *
-     * @return The name.
-     * @throws IllegalStateException if this command is invalid.
-     */
-    String getName();
-
-    /**
      * Gets the tenant that the device belongs to.
      *
      * @return The tenant identifier.
-     * @throws IllegalStateException if this command is invalid.
      */
     String getTenant();
 
@@ -70,7 +63,6 @@ public interface Command {
      * is returned.
      *
      * @return The identifier.
-     * @throws IllegalStateException if this command is invalid.
      */
     String getGatewayOrDeviceId();
 
@@ -82,7 +74,6 @@ public interface Command {
      * from the original device id.
      *
      * @return {@code true} if the device id is a gateway id.
-     * @throws IllegalStateException if this command is invalid.
      */
     boolean isTargetedAtGateway();
 
@@ -90,7 +81,6 @@ public interface Command {
      * Gets the identifier of the device that is supposed to execute the command.
      *
      * @return The identifier.
-     * @throws IllegalStateException if this command is invalid.
      */
     String getDeviceId();
 
@@ -99,9 +89,16 @@ public interface Command {
      * Otherwise {@code null} is returned.
      *
      * @return The identifier or {@code null}.
-     * @throws IllegalStateException if this command is invalid.
      */
     String getGatewayId();
+
+    /**
+     * Gets the name of this command.
+     *
+     * @return The name.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    String getName();
 
     /**
      * Gets the request identifier of this command. Can be used to correlate this command

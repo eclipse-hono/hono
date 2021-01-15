@@ -16,10 +16,19 @@ package org.eclipse.hono.adapter.client.command.amqp;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.StringJoiner;
 
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
@@ -31,190 +40,312 @@ import io.vertx.core.buffer.Buffer;
  */
 public final class ProtonBasedCommand implements Command {
 
-    private final org.eclipse.hono.client.Command command;
-
     /**
-     * Creates a new command as a wrapper around a legacy command.
-     *
-     * @param command The command to wrap.
-     * @throws NullPointerException if the command is {@code null}.
+     * If present, the command is invalid.
      */
-    public ProtonBasedCommand(final org.eclipse.hono.client.Command command) {
-        this.command = Objects.requireNonNull(command);
+    private final Optional<String> validationError;
+    private final Message message;
+    private final String tenantId;
+    private final String deviceId;
+    private final String correlationId;
+    private final String replyToId;
+    private final String requestId;
+
+    private String gatewayId;
+
+    private ProtonBasedCommand(
+            final Optional<String> validationError,
+            final Message message,
+            final String tenantId,
+            final String deviceId,
+            final String correlationId,
+            final String replyToId) {
+
+        this.validationError = validationError;
+        this.message = message;
+        this.tenantId = Objects.requireNonNull(tenantId);
+        this.deviceId = Objects.requireNonNull(deviceId);
+        this.correlationId = correlationId;
+        this.replyToId = replyToId;
+        requestId = Commands.getRequestId(correlationId, replyToId, deviceId);
     }
 
     /**
-     * Creates a command for an AMQP 1.0 message that should be sent to a device.
+     * Creates a command from an AMQP 1.0 message.
      * <p>
-     * The message is expected to contain
+     * The message is required to contain a non-null <em>address</em>, containing non-empty tenant-id and device-id parts
+     * that identify the command target device. If that is not the case, an {@link IllegalArgumentException} is thrown.
+     * <p>
+     * In addition, the message is expected to contain.
      * <ul>
-     * <li>a non-null <em>address</em>, containing a matching tenant part and a non-empty device-id part</li>
      * <li>a non-null <em>subject</em></li>
      * <li>either a null <em>reply-to</em> address (for a one-way command)
      * or a non-null <em>reply-to</em> address that matches the tenant and device IDs and consists
      * of four segments</li>
-     * <li>a String valued <em>correlation-id</em> and/or <em>message-id</em></li>
+     * <li>a String valued <em>correlation-id</em> and/or <em>message-id</em> if the <em>reply-to</em>
+     * address is not empty</li>
      * </ul>
-     * <p>
-     * If any of the requirements above are not met, then the returned command's {@link #isValid()}
-     * method will return {@code false}.
-     * <p>
-     * Note that, if set, the <em>reply-to</em> address of the given message will be adapted, making sure it contains
-     * the device id.
+     * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
      *
      * @param message The message containing the command.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device that the command will be sent to. If the command has been mapped
-     *                 to a gateway, this id is the gateway id and the original command target device is given in
-     *                 the message address.
+     * @return The command.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the address of the message is invalid.
      */
-    public ProtonBasedCommand(final Message message, final String tenantId, final String deviceId) {
-        this.command = org.eclipse.hono.client.Command.from(message, tenantId, deviceId);
+    public static ProtonBasedCommand from(final Message message) {
+        Objects.requireNonNull(message);
+
+        if (Strings.isNullOrEmpty(message.getAddress())) {
+            throw new IllegalArgumentException("address is not set");
+        }
+        final ResourceIdentifier addressIdentifier = ResourceIdentifier.fromString(message.getAddress());
+        if (Strings.isNullOrEmpty(addressIdentifier.getTenantId())) {
+            throw new IllegalArgumentException("address is missing tenant-id part");
+        } else if (Strings.isNullOrEmpty(addressIdentifier.getResourceId())) {
+            throw new IllegalArgumentException("address is missing device-id part");
+        }
+
+        final String tenantId = addressIdentifier.getTenantId();;
+        final String deviceId = addressIdentifier.getResourceId();
+        final StringJoiner validationErrorJoiner = new StringJoiner(", ");
+
+        if (message.getSubject() == null) {
+            validationErrorJoiner.add("subject not set");
+        }
+        getUnsupportedPayloadReason(message).ifPresent(validationErrorJoiner::add);
+
+        String correlationId = null;
+        final Object correlationIdObj = MessageHelper.getCorrelationId(message);
+        if (correlationIdObj != null) {
+            if (correlationIdObj instanceof String) {
+                correlationId = (String) correlationIdObj;
+            } else {
+                validationErrorJoiner.add("message/correlation-id is not of type string, actual type: " + correlationIdObj.getClass().getName());
+            }
+        } else if (message.getReplyTo() != null) {
+            // correlation id is required if a command response is expected
+            validationErrorJoiner.add("neither message-id nor correlation-id is set");
+        }
+
+        String replyToId = null;
+        if (message.getReplyTo() != null) {
+            try {
+                final ResourceIdentifier replyTo = ResourceIdentifier.fromString(message.getReplyTo());
+                if (!CommandConstants.isNorthboundCommandResponseEndpoint(replyTo.getEndpoint())) {
+                    validationErrorJoiner.add("reply-to not a command address: " + message.getReplyTo());
+                } else if (tenantId != null && !tenantId.equals(replyTo.getTenantId())) {
+                    validationErrorJoiner.add("reply-to not targeted at tenant " + tenantId + ": " + message.getReplyTo());
+                } else {
+                    replyToId = replyTo.getPathWithoutBase();
+                    if (replyToId.isEmpty()) {
+                        validationErrorJoiner.add("reply-to part after tenant not set: " + message.getReplyTo());
+                    }
+                }
+            } catch (final IllegalArgumentException e) {
+                validationErrorJoiner.add("reply-to cannot be parsed: " + message.getReplyTo());
+            }
+        }
+        return new ProtonBasedCommand(
+                validationErrorJoiner.length() > 0 ? Optional.of(validationErrorJoiner.toString()) : Optional.empty(),
+                message,
+                tenantId,
+                deviceId,
+                correlationId,
+                replyToId);
     }
 
     /**
-     * {@inheritDoc}
+     * Creates a command from an AMQP 1.0 message.
+     * <p>
+     * The command is created as described in {@link #from(Message)}.
+     * Additionally, gateway information is extracted from the <em>via</em> property of the message.
+     *
+     * @param message The message containing the command.
+     * @return The command.
+     * @throws NullPointerException if message is {@code null}.
      */
+    public static ProtonBasedCommand fromRoutedCommandMessage(final Message message) {
+        final ProtonBasedCommand command = from(message);
+        final String gatewayId = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_CMD_VIA, String.class);
+        if (!Strings.isNullOrEmpty(gatewayId)) {
+            command.setGatewayId(gatewayId);
+        }
+        return command;
+    }
+
+    /**
+     * Sets the identifier of the gateway this command is to be sent to.
+     * <p>
+     * A scenario where the gateway information isn't taken from the command message
+     * (see {@link #fromRoutedCommandMessage(Message)}) but instead needs to be set
+     * manually here would be the case of a gateway subscribing for commands targeted
+     * at a specific device. In that scenario, the Command Router does the routing
+     * based on the edge device identifier and only the target protocol adapter knows
+     * about the gateway association.
+     *
+     * @param gatewayId The gateway identifier.
+     */
+    public void setGatewayId(final String gatewayId) {
+        this.gatewayId = gatewayId;
+    }
+
     @Override
     public boolean isOneWay() {
-        return command.isOneWay();
+        return replyToId == null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isValid() {
-        return command.isValid();
+        return !validationError.isPresent();
     }
 
-    /**
-     * {@inheritDoc}}
-     */
     @Override
     public String getInvalidCommandReason() {
-        return command.getInvalidCommandReason();
+        if (!validationError.isPresent()) {
+            throw new IllegalStateException("command is valid");
+        }
+        return validationError.get();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getName() {
-        return command.getName();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getTenant() {
-        return command.getTenant();
+        return tenantId;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getGatewayOrDeviceId() {
-        return command.getDeviceId();
+        return Optional.ofNullable(gatewayId).orElse(deviceId);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isTargetedAtGateway() {
-        return command.isTargetedAtGateway();
+        return gatewayId != null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getDeviceId() {
-        return command.getOriginalDeviceId();
+        return deviceId;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getGatewayId() {
+        return gatewayId;
+    }
+
+    @Override
+    public String getName() {
+        requireValid();
+        return message.getSubject();
+    }
+
+    @Override
+    public String getRequestId() {
+        requireValid();
+        return requestId;
+    }
+
+    @Override
+    public Buffer getPayload() {
+        requireValid();
+        return MessageHelper.getPayload(message);
+    }
+
+    @Override
+    public int getPayloadSize() {
+        return MessageHelper.getPayloadSize(message);
+    }
+
+    @Override
+    public String getContentType() {
+        requireValid();
+        return message.getContentType();
+    }
+
+    @Override
+    public String getReplyToId() {
+        requireValid();
+        return replyToId;
+    }
+
+    @Override
+    public String getCorrelationId() {
+        requireValid();
+        return correlationId;
+    }
+
+    private void requireValid() {
         if (!isValid()) {
             throw new IllegalStateException("command is invalid");
         }
-        return isTargetedAtGateway() ? getGatewayOrDeviceId() : null;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getRequestId() {
-        return command.getRequestId();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Buffer getPayload() {
-        return command.getPayload();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int getPayloadSize() {
-        return command.getPayloadSize();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getContentType() {
-        return command.getContentType();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getReplyToId() {
-        return command.getReplyToId();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getCorrelationId() {
-        return command.getCorrelationId();
     }
 
     @Override
     public String toString() {
-        return command.toString();
+        if (isValid()) {
+            if (isTargetedAtGateway()) {
+                return String.format("Command [name: %s, tenant-id: %s, device-id %s, original device-id %s, request-id: %s]",
+                        getName(), tenantId, gatewayId, deviceId, requestId);
+            } else {
+                return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
+                        getName(), tenantId, deviceId, requestId);
+            }
+        } else {
+            return String.format("Invalid Command [tenant-id: %s, device-id: %s. error: %s]", tenantId,
+                    deviceId, validationError.get());
+        }
     }
 
     @Override
     public void logToSpan(final Span span) {
         Objects.requireNonNull(span);
-        if (command.isValid()) {
-            final Map<String, String> items = new HashMap<>(4);
+        if (isValid()) {
+            TracingHelper.TAG_CORRELATION_ID.set(span, getCorrelationId());
+            final Map<String, String> items = new HashMap<>(5);
             items.put(Fields.EVENT, "received command message");
-            TracingHelper.TAG_CORRELATION_ID.set(span, command.getCorrelationId());
-            items.put("to", command.getCommandMessage().getAddress());
-            items.put("reply-to", command.getCommandMessage().getReplyTo());
-            items.put("name", command.getName());
-            items.put("content-type", command.getContentType());
+            items.put("to", message.getAddress());
+            items.put("reply-to", message.getReplyTo());
+            items.put("name", getName());
+            items.put("content-type", getContentType());
             span.log(items);
         } else {
-            TracingHelper.logError(span, "received invalid command message [" + command + "]");
+            TracingHelper.logError(span, "received invalid command message [" + this + "]");
         }
+    }
+
+    /**
+     * Validates the type of the message body containing the payload data and returns an error string if it is
+     * unsupported.
+     * <p>
+     * The message body is considered unsupported if there is a body section and it is neither
+     * <ul>
+     * <li>a Data section,</li>
+     * <li>nor an AmqpValue section containing a byte array or a String.</li>
+     * </ul>
+     *
+     * @param msg The AMQP 1.0 message to parse.
+     * @return An Optional with the error string or an empty Optional if the payload is supported or the
+     *         message has no body section.
+     * @throws NullPointerException if the message is {@code null}.
+     * @see MessageHelper#getPayload(Message)
+     */
+    private static Optional<String> getUnsupportedPayloadReason(final Message msg) {
+        Objects.requireNonNull(msg);
+
+        String reason = null;
+        if (msg.getBody() instanceof AmqpValue) {
+            final Object value = ((AmqpValue) msg.getBody()).getValue();
+            if (value == null) {
+                reason = "message has body with empty amqp-value section";
+            } else if (!(value instanceof byte[] || value instanceof String)) {
+                reason = String.format("message has amqp-value section body with unsupported value type [%s], supported is byte[] or String",
+                        value.getClass().getName());
+            }
+
+        } else if (msg.getBody() != null && !(msg.getBody() instanceof Data)) {
+            reason = String.format("message has unsupported body section [%s], supported section types are 'data' and 'amqp-value'",
+                    msg.getBody().getClass().getName());
+        }
+        return Optional.ofNullable(reason);
     }
 }

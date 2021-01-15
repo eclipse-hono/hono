@@ -15,12 +15,12 @@ package org.eclipse.hono.adapter.client.command.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.hono.kafka.client.HonoTopic;
@@ -50,32 +50,37 @@ public class KafkaBasedCommandTest {
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId,
                 getHeaders(deviceId, subject, correlationId));
-        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord, deviceId);
+        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo(subject);
         assertThat(cmd.getDeviceId()).isEqualTo(deviceId);
+        assertThat(cmd.getGatewayOrDeviceId()).isEqualTo(deviceId);
+        assertThat(cmd.getGatewayId()).isNull();
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
     }
 
     /**
-     * Verifies that a command can be created from a valid record, containing a <em>device_id</em> header
-     * with a value differing from the device id given in the KafkaBasedCommand factory method.
+     * Verifies that a command can be created from a valid record representing a routed command
+     * message with a <em>via</em> header containing a gateway identifier.
      */
     @Test
-    public void testFromRecordSucceedsWithDifferingDeviceId() {
+    public void testFromRoutedCommandRecordSucceeds() {
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String correlationId = "the-correlation-id";
         final String gatewayId = "gw-1";
         final String targetDeviceId = "4711";
         final String subject = "doThis";
 
-        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, targetDeviceId,
-                getHeaders(targetDeviceId, subject, correlationId));
-        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord, gatewayId);
+        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(targetDeviceId, subject, correlationId));
+        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, targetDeviceId, headers);
+        final KafkaBasedCommand cmd = KafkaBasedCommand.fromRoutedCommandRecord(commandRecord);
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo(subject);
         assertThat(cmd.getDeviceId()).isEqualTo(targetDeviceId);
+        assertThat(cmd.getGatewayOrDeviceId()).isEqualTo(gatewayId);
+        assertThat(cmd.getGatewayId()).isEqualTo(gatewayId);
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
     }
@@ -91,9 +96,12 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, getHeaders(deviceId, subject));
-        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord, deviceId);
+        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo("doThis");
+        assertThat(cmd.getDeviceId()).isEqualTo(deviceId);
+        assertThat(cmd.getGatewayOrDeviceId()).isEqualTo(deviceId);
+        assertThat(cmd.getGatewayId()).isNull();
         assertThat(cmd.getCorrelationId()).isNull();
         assertTrue(cmd.isOneWay());
     }
@@ -109,9 +117,9 @@ public class KafkaBasedCommandTest {
 
         final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
-        final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord, deviceId);
-        assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason()).contains("device");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KafkaBasedCommand.from(commandRecord);
+        });
     }
 
     /**
@@ -124,7 +132,7 @@ public class KafkaBasedCommandTest {
 
         final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
-        final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord, deviceId);
+        final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord);
         assertFalse(command.isValid());
         assertThat(command.getInvalidCommandReason()).contains("subject");
     }
@@ -140,9 +148,9 @@ public class KafkaBasedCommandTest {
 
         final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, "other_key", headers);
-        final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord, deviceId);
-        assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason()).contains("key");
+        assertThrows(IllegalArgumentException.class, () -> {
+            KafkaBasedCommand.from(commandRecord);
+        });
     }
 
 
@@ -151,16 +159,15 @@ public class KafkaBasedCommandTest {
      */
     @Test
     public void testGetInvalidCommandReason() {
-        final String topic = "unsupported_topic";
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String deviceId = "4711";
 
-        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, Collections.emptyList());
-        final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord, deviceId);
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId,
+                List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)));
+        final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord);
         assertFalse(command.isValid());
         // verify the returned validation error contains all missing/invalid fields
-        assertThat(command.getInvalidCommandReason()).contains("device");
         assertThat(command.getInvalidCommandReason()).contains("subject");
-        assertThat(command.getInvalidCommandReason()).contains("topic");
     }
 
     private List<KafkaHeader> getHeaders(final String deviceId, final String subject) {

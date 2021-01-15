@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,7 @@ import io.vertx.proton.ProtonHelper;
 public class ProtonBasedLegacyCommandContextWrapper implements CommandContext {
 
     private final org.eclipse.hono.client.CommandContext ctx;
-    private final ProtonBasedCommand command;
+    private final Command command;
 
     /**
      * Creates a new command context.
@@ -40,7 +40,7 @@ public class ProtonBasedLegacyCommandContextWrapper implements CommandContext {
      */
     public ProtonBasedLegacyCommandContextWrapper(final org.eclipse.hono.client.CommandContext context) {
         this.ctx = Objects.requireNonNull(context);
-        this.command = new ProtonBasedCommand(context.getCommand());
+        this.command = new ProtonBasedLegacyCommandWrapper(context.getCommand());
     }
 
     @Override
