@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.StringJoiner;
 
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.Commands;
@@ -45,97 +44,125 @@ public final class KafkaBasedCommand implements Command {
     private final KafkaConsumerRecord<String, Buffer> record;
     private final String tenantId;
     private final String deviceId;
-    private final String originalDeviceId;
     private final String correlationId;
     private final String subject;
     private final String contentType;
     private final String requestId;
+
+    private String gatewayId;
 
     private KafkaBasedCommand(
             final Optional<String> validationError,
             final KafkaConsumerRecord<String, Buffer> commandRecord,
             final String tenantId,
             final String deviceId,
-            final String originalDeviceId,
             final String correlationId,
             final String subject,
             final String contentType) {
 
         this.validationError = validationError;
         this.record = commandRecord;
-        this.tenantId = tenantId;
-        this.deviceId = deviceId;
-        this.originalDeviceId = originalDeviceId;
+        this.tenantId = Objects.requireNonNull(tenantId);
+        this.deviceId = Objects.requireNonNull(deviceId);
         this.correlationId = correlationId;
         this.subject = subject;
         this.contentType = contentType;
-        this.requestId = Commands.getRequestId(correlationId);
+        requestId = Commands.getRequestId(correlationId);
     }
 
     /**
      * Creates a command from a Kafka consumer record.
      * <p>
-     * The record is expected to contain
+     * The message is required to contain a <em>topic</em> of the format <em>hono.command.${tenant_id}</em>
+     * and a <em>key</em> with the command target device id, matching the value of the <em>device_id</em> header.
+     * If that is not the case, an {@link IllegalArgumentException} is thrown.
+     * <p>
+     * In addition, the record is expected to contain
      * <ul>
-     * <li>a <em>topic</em> of the format <em>hono.command.${tenant_id}</em></li>
-     * <li>a <em>key</em> with the command target device id, matching the value of the <em>device_id</em> header</li>
      * <li>a <em>subject</em> header</li>
      * <li>a non-empty <em>correlation-id</em> header if a response is expected for the command.</li>
      * </ul>
+     * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
      * <p>
-     * If any of the requirements above are not met, then the returned command's {@link #isValid()}
-     * method will return {@code false}.
      *
      * @param record The record containing the command.
-     * @param deviceId The identifier of the device that the command will be sent to. If the command has been mapped
-     *                 to a gateway, this id is the gateway id and the original command target device is given in
-     *                 the <em>device_id</em> header and the key of the record.
      * @return The command.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if record is {@code null}.
+     * @throws IllegalArgumentException if the record doesn't correctly reference a target device.
      */
-    public static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record, final String deviceId) {
-
+    public static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);
-        Objects.requireNonNull(deviceId);
 
-        String tenantId = null;
-        final StringJoiner validationErrorJoiner = new StringJoiner(", ");
         if (Strings.isNullOrEmpty(record.topic())) {
-            validationErrorJoiner.add("topic is not set");
-        } else {
-            final HonoTopic honoTopic = HonoTopic.fromString(record.topic());
-            if (honoTopic == null || !honoTopic.getType().equals(HonoTopic.Type.COMMAND)) {
-                validationErrorJoiner.add("unsupported topic");
-            } else {
-                tenantId = honoTopic.getTenantId();
-            }
+            throw new IllegalArgumentException("topic is not set");
         }
-        final String originalDeviceId = getHeader(record, MessageHelper.APP_PROPERTY_DEVICE_ID);
-        if (Strings.isNullOrEmpty(originalDeviceId)) {
-            validationErrorJoiner.add("device identifier is not set");
-        } else if (!originalDeviceId.equals(record.key())) {
-            validationErrorJoiner.add("device identifier not set as record key");
+        final HonoTopic honoTopic = HonoTopic.fromString(record.topic());
+        if (honoTopic == null || !honoTopic.getType().equals(HonoTopic.Type.COMMAND)) {
+            throw new IllegalArgumentException("unsupported topic");
         }
+        final String tenantId = honoTopic.getTenantId();
+        final String deviceId = getHeader(record, MessageHelper.APP_PROPERTY_DEVICE_ID);
+        if (Strings.isNullOrEmpty(deviceId)) {
+            throw new IllegalArgumentException("device identifier is not set");
+        } else if (!deviceId.equals(record.key())) {
+            throw new IllegalArgumentException("device identifier not set as record key");
+        }
+
+        String validationError = null;
         final String subject = getHeader(record, MessageHelper.SYS_PROPERTY_SUBJECT);
         if (subject == null) {
-            validationErrorJoiner.add("subject not set");
+            validationError = "subject not set";
         }
         final String contentType = getHeader(record, MessageHelper.SYS_PROPERTY_CONTENT_TYPE);
         final String correlationId = getHeader(record, MessageHelper.SYS_PROPERTY_CORRELATION_ID);
 
         return new KafkaBasedCommand(
-                validationErrorJoiner.length() > 0 ? Optional.of(validationErrorJoiner.toString()) : Optional.empty(),
+                Optional.ofNullable(validationError),
                 record,
                 tenantId,
                 deviceId,
-                originalDeviceId,
                 Strings.isNullOrEmpty(correlationId) ? null : correlationId,
                 subject,
                 contentType);
     }
 
+    /**
+     * Creates a command from a Kafka consumer record.
+     * <p>
+     * The command is created as described in {@link #from(KafkaConsumerRecord)}.
+     * Additionally, gateway information is extracted from the <em>via</em> header of the record.
+     *
+     * @param record The record containing the command.
+     * @return The command.
+     * @throws NullPointerException if record is {@code null}.
+     */
+    public static KafkaBasedCommand fromRoutedCommandRecord(final KafkaConsumerRecord<String, Buffer> record) {
+        final KafkaBasedCommand command = from(record);
+        final String gatewayId = getHeader(record, MessageHelper.APP_PROPERTY_CMD_VIA);
+        if (!Strings.isNullOrEmpty(gatewayId)) {
+            command.setGatewayId(gatewayId);
+        }
+        return command;
+    }
+
     private static String getHeader(final KafkaConsumerRecord<String, Buffer> record, final String header) {
         return RecordUtil.getStringHeaderValue(record.headers(), header);
+    }
+
+    /**
+     * Sets the identifier of the gateway this command is to be sent to.
+     * <p>
+     * A scenario where the gateway information isn't taken from the command record
+     * (see {@link #fromRoutedCommandRecord(KafkaConsumerRecord)}) but instead needs
+     * to be set manually here would be the case of a gateway subscribing for commands
+     * targeted at a specific device. In that scenario, the Command Router does the
+     * routing based on the edge device identifier and only the target protocol adapter
+     * knows about the gateway association.
+     *
+     * @param gatewayId The gateway identifier.
+     */
+    public void setGatewayId(final String gatewayId) {
+        this.gatewayId = gatewayId;
     }
 
     @Override
@@ -157,39 +184,34 @@ public final class KafkaBasedCommand implements Command {
     }
 
     @Override
-    public String getName() {
-        requireValid();
-        return subject;
-    }
-
-    @Override
     public String getTenant() {
-        requireValid();
         return tenantId;
     }
 
     @Override
     public String getGatewayOrDeviceId() {
-        requireValid();
-        return deviceId;
+        return Optional.ofNullable(gatewayId).orElse(deviceId);
     }
 
     @Override
     public boolean isTargetedAtGateway() {
-        requireValid();
-        return originalDeviceId != null && !originalDeviceId.equals(deviceId);
+        return gatewayId != null;
     }
 
     @Override
     public String getDeviceId() {
-        requireValid();
-        return originalDeviceId;
+        return deviceId;
     }
 
     @Override
     public String getGatewayId() {
+        return gatewayId;
+    }
+
+    @Override
+    public String getName() {
         requireValid();
-        return isTargetedAtGateway() ? getGatewayOrDeviceId() : null;
+        return subject;
     }
 
     @Override
@@ -206,7 +228,7 @@ public final class KafkaBasedCommand implements Command {
 
     @Override
     public int getPayloadSize() {
-        return Optional.ofNullable(getPayload()).map(Buffer::length).orElse(0);
+        return Optional.ofNullable(record.value()).map(Buffer::length).orElse(0);
     }
 
     @Override
@@ -239,13 +261,14 @@ public final class KafkaBasedCommand implements Command {
         if (isValid()) {
             if (isTargetedAtGateway()) {
                 return String.format("Command [name: %s, tenant-id: %s, gateway-id %s, device-id %s, request-id: %s]",
-                        getName(), getTenant(), getGatewayId(), getDeviceId(), getRequestId());
+                        getName(), tenantId, gatewayId, deviceId, requestId);
             } else {
                 return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
-                        getName(), getTenant(), getDeviceId(), getRequestId());
+                        getName(), tenantId, deviceId, requestId);
             }
         } else {
-            return String.format("Invalid Command [tenant-id: %s, device-id: %s. error: %s]", tenantId, deviceId, validationError.get());
+            return String.format("Invalid Command [tenant-id: %s, device-id: %s. error: %s]", tenantId,
+                    deviceId, validationError.get());
         }
     }
 

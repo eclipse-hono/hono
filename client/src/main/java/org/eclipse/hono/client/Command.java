@@ -221,31 +221,12 @@ public final class Command {
     }
 
     /**
-     * Gets the name of this command.
-     *
-     * @return The name.
-     * @throws IllegalStateException if this command is invalid.
-     */
-    public String getName() {
-        if (isValid()) {
-            return message.getSubject();
-        } else {
-            throw new IllegalStateException("command is invalid");
-        }
-    }
-
-    /**
      * Gets the tenant that the device belongs to.
      *
-     * @return The tenant identifier.
-     * @throws IllegalStateException if this command is invalid.
+     * @return The tenant identifier or {@code null} if the command is invalid and no tenant id is set.
      */
     public String getTenant() {
-        if (isValid()) {
-            return tenantId;
-        } else {
-            throw new IllegalStateException("command is invalid");
-        }
+        return tenantId;
     }
 
     /**
@@ -255,15 +236,10 @@ public final class Command {
      * the id returned here is a gateway id. See {@link #getOriginalDeviceId()}
      * for the original device id in that case.
      *
-     * @return The identifier.
-     * @throws IllegalStateException if this command is invalid.
+     * @return The identifier or {@code null} if the command is invalid and no device id is set.
      */
     public String getDeviceId() {
-        if (isValid()) {
-            return deviceId;
-        } else {
-            throw new IllegalStateException("command is invalid");
-        }
+        return deviceId;
     }
 
     /**
@@ -274,15 +250,10 @@ public final class Command {
      * from the original device id.
      *
      * @return {@code true} if the device id is a gateway id.
-     * @throws IllegalStateException if this command is invalid.
      */
     public boolean isTargetedAtGateway() {
-        if (isValid()) {
-            final String originalDeviceId = getOriginalDeviceId();
-            return originalDeviceId != null && !originalDeviceId.equals(getDeviceId());
-        } else {
-            throw new IllegalStateException("command is invalid");
-        }
+        final String originalDeviceId = getOriginalDeviceId();
+        return originalDeviceId != null && !originalDeviceId.equals(getDeviceId());
     }
 
     /**
@@ -292,12 +263,24 @@ public final class Command {
      * This id differs from {@link #getDeviceId()} if the command got redirected to a gateway
      * ({@link #getDeviceId()} returns the gateway id in that case).
      *
-     * @return The identifier.
-     * @throws IllegalStateException if this command is invalid.
+     * @return The identifier or {@code null} if the command is invalid and no device id is set.
      */
     public String getOriginalDeviceId() {
+        if (Strings.isNullOrEmpty(message.getAddress())) {
+            return null;
+        }
+        return ResourceIdentifier.fromString(message.getAddress()).getResourceId();
+    }
+
+    /**
+     * Gets the name of this command.
+     *
+     * @return The name.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    public String getName() {
         if (isValid()) {
-            return ResourceIdentifier.fromString(message.getAddress()).getResourceId();
+            return message.getSubject();
         } else {
             throw new IllegalStateException("command is invalid");
         }

@@ -24,8 +24,6 @@ import org.eclipse.hono.adapter.client.command.CommandHandlers;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,38 +68,28 @@ public class ProtonBasedAdapterInstanceCommandHandler {
         Objects.requireNonNull(msg);
         Objects.requireNonNull(delivery);
         Objects.requireNonNull(commandHandlers);
-        // command could have been mapped to a gateway, but the original address stays the same in the message address in that case
-        final ResourceIdentifier resourceIdentifier = Strings.isNullOrEmpty(msg.getAddress()) ? null
-                : ResourceIdentifier.fromString(msg.getAddress());
-        if (resourceIdentifier == null || resourceIdentifier.getResourceId() == null) {
+
+        final ProtonBasedCommand command;
+        try {
+            command = ProtonBasedCommand.fromRoutedCommandMessage(msg);
+        } catch (final IllegalArgumentException e) {
             LOG.debug("address of command message is invalid: {}", msg.getAddress());
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
             delivery.disposition(rejected, true);
             return;
         }
-        final String tenantId = resourceIdentifier.getTenantId();
-        final String originalDeviceId = resourceIdentifier.getResourceId();
-        // fetch "via" property (if set)
-        final String gatewayIdFromMessage = MessageHelper.getApplicationProperty(msg.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_CMD_VIA, String.class);
-        final String targetDeviceId = gatewayIdFromMessage != null ? gatewayIdFromMessage : originalDeviceId;
-        final CommandHandlerWrapper commandHandler = commandHandlers.getCommandHandler(tenantId, targetDeviceId);
-
-        // Adopt gateway id from command handler if set;
-        // for that kind of command handler (gateway subscribing for specific device commands), the
-        // gateway information is not stored in the device connection service ("deviceConnectionService.setCommandHandlingAdapterInstance()" doesn't have an extra gateway id parameter);
-        // and therefore not set in the delegated command message
-        final String gatewayId = commandHandler != null && commandHandler.getGatewayId() != null
-                ? commandHandler.getGatewayId()
-                : gatewayIdFromMessage;
-
-        final ProtonBasedCommand command = new ProtonBasedCommand(msg, tenantId,
-                gatewayId != null ? gatewayId : originalDeviceId);
+        final CommandHandlerWrapper commandHandler = commandHandlers.getCommandHandler(command.getTenant(),
+                command.getGatewayOrDeviceId());
+        if (commandHandler != null && commandHandler.getGatewayId() != null) {
+            // Gateway information set in command handler means a gateway has subscribed for commands for a specific device.
+            // This information isn't getting set in the message (by the Command Router) and therefore has to be adopted manually here.
+            command.setGatewayId(commandHandler.getGatewayId());
+        }
 
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-        final Span currentSpan = org.eclipse.hono.client.impl.CommandConsumer.createSpan("handle command", tenantId,
-                originalDeviceId, gatewayId, tracer, spanContext);
+        final Span currentSpan = org.eclipse.hono.client.impl.CommandConsumer.createSpan("handle command",
+                command.getTenant(), command.getDeviceId(), command.getGatewayId(), tracer, spanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
         command.logToSpan(currentSpan);
 
@@ -113,7 +101,7 @@ public class ProtonBasedAdapterInstanceCommandHandler {
             commandHandler.handleCommand(commandContext);
         } else {
             LOG.info("no command handler found for command with device id {}, gateway id {} [tenant-id: {}]",
-                    originalDeviceId, gatewayId, tenantId);
+                    command.getDeviceId(), command.getGatewayId(), command.getTenant());
             TracingHelper.logError(currentSpan, "no command handler found for command");
             commandContext.release();
         }
