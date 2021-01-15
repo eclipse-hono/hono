@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.5.1 (not yet released)
+## 1.5.1
 
 ### Fixes & Enhancements
 
@@ -14,6 +14,8 @@ title = "Release Notes"
   given.
 * The Mongo DB based registry container would have failed to start if the connection to the Mongo DB could not
   be established quickly enough. This has been fixed by decoupling the creation of indices from the start up process.
+* The AMQP and MQTT adapters would erroneously forward commands to unauthorized gateway devices under certain
+  conditions. This has been fixed.
 
 ## 1.5.0
 
