@@ -61,6 +61,21 @@ title = "Release Notes"
   have no impact because the Hono chart comes with a default permissions file which the Authentication
   server is pre-configured to load from the file system.
 
+## 1.5.1
+
+### Fixes & Enhancements
+
+* The Mongo DB based Credentials service implementation failed to return the credentials matching the given
+  *type* and *auth-id* if multiple credentials of the same *type* but with different *auth-id* values were
+  registered for a device. This has been fixed.
+* When using the Command Router or Device Connection service component with an embedded cache, a cache
+  configuration file was required. Now, a default configuration will be used if no configuration file is
+  given.
+* The Mongo DB based registry container would have failed to start if the connection to the Mongo DB could not
+  be established quickly enough. This has been fixed by decoupling the creation of indices from the start up process.
+* The AMQP and MQTT adapters would erroneously forward commands to unauthorized gateway devices under certain
+  conditions. This has been fixed.
+
 ## 1.5.0
 
 ### New Features
@@ -134,6 +149,20 @@ title = "Release Notes"
   JMeter has turned out not to be the best choice for conducting load tests of Hono because it is difficult to
   generate the needed AMQP message load with its (blocking) thread based execution model.
   The JMeter plugin therefore has been removed.
+
+## 1.4.5
+
+### Fixes & Enhancements
+
+* The tenant timeout mechanism doesn't close command consumer resources anymore if there are still active
+  command subscriptions from AMQP or MQTT devices of the corresponding tenant.
+* The Mongo DB based Credentials service implementation failed to return the credentials matching the given
+  *type* and *auth-id* if multiple credentials of the same *type* but with different *auth-id* values were
+  registered for a device. This has been fixed.
+* The Mongo DB based registry container would have failed to start if the connection to the Mongo DB could not
+  be established quickly enough. This has been fixed by decoupling the creation of indices from the start up process.
+* The AMQP and MQTT adapters would erroneously forward commands to unauthorized gateway devices under certain
+  conditions. This has been fixed.
 
 ## 1.4.4
 
