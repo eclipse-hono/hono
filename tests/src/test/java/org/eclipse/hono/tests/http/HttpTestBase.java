@@ -46,6 +46,7 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -855,6 +856,41 @@ public abstract class HttpTestBase {
         })
         // THEN the message gets rejected by the HTTP adapter with a 403
         .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that an edge device is auto-provisioned if it connects via a gateway equipped with the corresponding
+     * authority.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final Device gateway = new Device()
+                .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+
+        final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+                .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, PWD))
+                .compose(ok -> {
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD))
+                            .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+                    final String uri = String.format("%s/%s/%s", getEndpointUri(), tenantId, edgeDeviceId);
+
+                    return httpClient.update(
+                            uri,
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                })
+                .onComplete(ctx.succeeding());
     }
 
     /**

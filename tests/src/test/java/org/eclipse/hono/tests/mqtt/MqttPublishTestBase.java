@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.mqtt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -29,10 +30,12 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -186,6 +189,34 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 deviceId,
                 connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
                 false);
+    }
+
+    /**
+     * Verifies that an edge device is auto-provisioned if it connects via a gateway equipped with the corresponding
+     * authority.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final Tenant tenant = new Tenant();
+
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final Device gateway = new Device()
+                .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+
+        final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+            .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, password))
+            .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password))
+            .compose(ok -> {
+                customizeConnectedClient();
+                return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false);
+            })
+            .onComplete(ctx.succeeding());
     }
 
     /**

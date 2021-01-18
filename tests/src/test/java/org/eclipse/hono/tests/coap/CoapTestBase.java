@@ -63,6 +63,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -406,6 +407,36 @@ public abstract class CoapTestBase {
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
+    }
+
+    /**
+     * Verifies that an edge device is auto-provisioned if it connects via a gateway equipped with the corresponding
+     * authority.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final Device gateway = new Device()
+                .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+
+        final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
+        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+                .compose(ok -> helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayId, gateway, SECRET))
+                .compose(ok -> {
+                    final Promise<OptionSet> result = Promise.promise();
+                    final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, edgeDeviceId), 0);
+
+                    final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
+                    client.advanced(getHandler(result), request);
+
+                    return result.future();
+                })
+                .onComplete(ctx.succeeding());
     }
 
     /**
