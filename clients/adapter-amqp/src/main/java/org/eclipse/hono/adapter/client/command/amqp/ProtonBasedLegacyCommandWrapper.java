@@ -92,6 +92,11 @@ public final class ProtonBasedLegacyCommandWrapper implements Command {
     }
 
     @Override
+    public void setGatewayId(final String gatewayId) {
+        command.setGatewayId(gatewayId);
+    }
+
+    @Override
     public String getName() {
         return command.getName();
     }

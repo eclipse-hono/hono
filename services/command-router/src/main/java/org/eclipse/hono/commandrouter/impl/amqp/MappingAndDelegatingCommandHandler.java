@@ -20,6 +20,8 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandSender;
@@ -133,8 +135,8 @@ public class MappingAndDelegatingCommandHandler {
     }
 
     private void mapAndDelegateIncomingCommand(final String tenantId, final String deviceId,
-            final ProtonBasedCommandContext commandContext) {
-        final ProtonBasedCommand command = commandContext.getCommand();
+            final CommandContext commandContext) {
+        final Command command = commandContext.getCommand();
 
         // determine last used gateway device id
         LOG.trace("determine command target gateway/adapter for [{}]", command);
