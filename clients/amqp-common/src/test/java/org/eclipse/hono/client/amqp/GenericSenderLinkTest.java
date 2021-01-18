@@ -182,6 +182,39 @@ public class GenericSenderLinkTest {
         assertThat(result.failed()).isTrue();
     }
 
+    /**
+     * Verifies that the sender succeeds if the peer rejects a message and no mapping of the
+     * delivery output should be done.
+     */
+    @Test
+    public void testSendAndWaitForRawOutcomeSucceedsForRejectedOutcome() {
+
+        // GIVEN a sender that has credit
+        when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
+
+        // WHEN trying to send a message
+        final Span span = mock(Span.class);
+        final Message message = ProtonHelper.message("some payload");
+        message.setContentType("text/plain");
+        MessageHelper.addDeviceId(message, "device");
+        final Future<ProtonDelivery> result = messageSender.sendAndWaitForRawOutcome(message, span);
+
+        // THEN the message has been sent
+        final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = VertxMockSupport.argumentCaptorHandler();
+        verify(sender).send(any(Message.class), deliveryUpdateHandler.capture());
+        // but the request is not completed
+        assertThat(result.isComplete()).isFalse();
+
+        // and when the peer rejects the message
+        final ProtonDelivery rejected = mock(ProtonDelivery.class);
+        when(rejected.remotelySettled()).thenReturn(Boolean.TRUE);
+        when(rejected.getRemoteState()).thenReturn(new Rejected());
+        deliveryUpdateHandler.getValue().handle(rejected);
+
+        // the request is succeeded
+        assertThat(result.succeeded()).isTrue();
+    }
+
 
     /**
      * Verifies that the sender fails if no credit is available.

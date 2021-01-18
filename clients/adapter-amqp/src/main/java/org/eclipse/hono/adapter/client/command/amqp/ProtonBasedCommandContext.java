@@ -17,7 +17,6 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
@@ -60,7 +59,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     }
 
     @Override
-    public Command getCommand() {
+    public ProtonBasedCommand getCommand() {
         return command;
     }
 

@@ -190,6 +190,15 @@ public final class ProtonBasedCommand implements Command {
         this.gatewayId = gatewayId;
     }
 
+    /**
+     * Gets the AMQP 1.0 message representing this command.
+     *
+     * @return The command message.
+     */
+    Message getMessage() {
+        return message;
+    }
+
     @Override
     public boolean isOneWay() {
         return replyToId == null;
@@ -284,10 +293,10 @@ public final class ProtonBasedCommand implements Command {
     public String toString() {
         if (isValid()) {
             if (isTargetedAtGateway()) {
-                return String.format("Command [name: %s, tenant-id: %s, device-id %s, original device-id %s, request-id: %s]",
+                return String.format("Command [name: %s, tenant-id: %s, device-id: %s, original device-id %s, request-id: %s]",
                         getName(), tenantId, gatewayId, deviceId, requestId);
             } else {
-                return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
+                return String.format("Command [name: %s, tenant-id: %s, device-id: %s, request-id: %s]",
                         getName(), tenantId, deviceId, requestId);
             }
         } else {

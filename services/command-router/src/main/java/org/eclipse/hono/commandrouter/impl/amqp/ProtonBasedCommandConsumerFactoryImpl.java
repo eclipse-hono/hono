@@ -22,12 +22,11 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -37,6 +36,7 @@ import org.eclipse.hono.util.CommandConstants;
 import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.proton.ProtonQoS;
 
 /**
@@ -57,7 +57,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     /**
      * Cache key used here is the tenant id.
      */
-    private CachingClientFactory<MessageConsumer> mappingAndDelegatingCommandConsumerFactory;
+    private CachingClientFactory<CommandConsumer> mappingAndDelegatingCommandConsumerFactory;
 
     private final AtomicBoolean recreatingConsumers = new AtomicBoolean(false);
     private final AtomicBoolean tryAgainRecreatingConsumers = new AtomicBoolean(false);
@@ -88,8 +88,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     public void initialize(final CommandTargetMapper commandTargetMapper) {
         Objects.requireNonNull(commandTargetMapper);
 
-        mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(connection,
-                commandTargetMapper, samplerFactory.create(CommandConstants.COMMAND_ENDPOINT));
+        mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(connection, commandTargetMapper);
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
 
 // TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in order to close unused tenant-scoped receiver links
@@ -126,8 +125,8 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
         });
     }
 
-    private Future<MessageConsumer> getOrCreateMappingAndDelegatingCommandConsumer(final String tenantId) {
-        final Future<MessageConsumer> messageConsumerFuture = connection.isConnected(getDefaultConnectionCheckTimeout())
+    private Future<CommandConsumer> getOrCreateMappingAndDelegatingCommandConsumer(final String tenantId) {
+        final Future<CommandConsumer> messageConsumerFuture = connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     mappingAndDelegatingCommandConsumerFactory.getOrCreateClient(tenantId,
                             () -> newMappingAndDelegatingCommandConsumer(tenantId),
@@ -139,7 +138,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
         });
     }
 
-    private Future<MessageConsumer> newMappingAndDelegatingCommandConsumer(final String tenantId) {
+    private Future<CommandConsumer> newMappingAndDelegatingCommandConsumer(final String tenantId) {
         log.trace("creating new MappingAndDelegatingCommandConsumer [tenant-id: {}]", tenantId);
         final String address = AddressHelper.getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null, connection.getConfig());
         return connection.createReceiver(
@@ -157,13 +156,17 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
                 }).map(receiver -> {
                     log.debug("successfully created MappingAndDelegatingCommandConsumer [{}]", address);
                     consumerLinkTenants.add(tenantId);
-                    final CommandConsumer consumer = new CommandConsumer(connection, receiver);
-                    consumer.setLocalCloseHandler(sourceAddress -> {
-                        log.debug("MappingAndDelegatingCommandConsumer receiver link [tenant-id: {}] closed locally", tenantId);
-                        mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId);
-                        consumerLinkTenants.remove(tenantId);
-                    });
-                    return (MessageConsumer) consumer;
+                    return (CommandConsumer) new CommandConsumer() {
+                        @Override
+                        public Future<Void> close(final SpanContext spanContext) {
+                            log.debug("MappingAndDelegatingCommandConsumer receiver link [tenant-id: {}] closed locally", tenantId);
+                            mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId);
+                            consumerLinkTenants.remove(tenantId);
+                            final Promise<Void> result = Promise.promise();
+                            connection.closeAndFree(receiver, receiverClosed -> result.complete());
+                            return result.future();
+                        }
+                    };
                 }).recover(t -> {
                     log.debug("failed to create MappingAndDelegatingCommandConsumer [tenant-id: {}]", tenantId, t);
                     return Future.failedFuture(t);
@@ -209,13 +212,10 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
 // TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in order to close unused tenant-scoped receiver links
 //    private void handleTenantTimeout(final Message<String> msg) {
 //        final String tenantId = msg.body();
-//        final MessageConsumer consumer = mappingAndDelegatingCommandConsumerFactory.getClient(tenantId);
+//        final CommandConsumer consumer = mappingAndDelegatingCommandConsumerFactory.getClient(tenantId);
 //        if (consumer != null) {
 //            log.info("timeout of tenant {}: closing and removing command consumer", tenantId);
-//            consumer.close(v -> {
-//                mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId);
-//                consumerLinkTenants.remove(tenantId);
-//            });
+//            consumer.close(null);
 //        }
 //    }
 
