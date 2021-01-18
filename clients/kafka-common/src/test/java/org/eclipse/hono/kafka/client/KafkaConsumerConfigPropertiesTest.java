@@ -44,6 +44,14 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
+     * Verifies that trying to set a negative poll timeout throws a IllegalArgumentException.
+     */
+    @Test
+    public void testThatPollTimeoutCanNotBeSetToNull() {
+        assertThrows(IllegalArgumentException.class, () -> new KafkaConsumerConfigProperties().setPollTimeout(-1L));
+    }
+
+    /**
      * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} are returned
      * in {@link KafkaConsumerConfigProperties#getConsumerConfig()}.
      */
@@ -53,6 +61,20 @@ public class KafkaConsumerConfigPropertiesTest {
         config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
 
         assertThat(config.getConsumerConfig().get("foo")).isEqualTo("bar");
+    }
+
+    /**
+     * Verifies that {@link KafkaConsumerConfigProperties#isConfigured()} returns false if no configuration has been
+     * set, and true otherwise.
+     */
+    @Test
+    public void testIsConfiguredMethod() {
+
+        assertThat(new KafkaConsumerConfigProperties().isConfigured()).isFalse();
+
+        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
+        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
+        assertThat(config.isConfigured()).isTrue();
     }
 
     /**
