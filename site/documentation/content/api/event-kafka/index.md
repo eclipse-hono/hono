@@ -17,7 +17,7 @@ See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental informat
 The statements there apply to this specification.
 
 {{% note title="Tech preview" %}}
-The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs may change with the next version. 
+The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are subject to change without prior notice. 
 {{% /note %}}
 
 

@@ -3,13 +3,13 @@ title: "Kafka-based APIs"
 weight: 416
 ---
 
-The Kafka-based APIs of Eclipse Hono&trade; provide an alternative to the older APIs based on AMQP 1.0.
+The Kafka-based APIs of Eclipse Hono&trade; provide an alternative to the existing APIs based on AMQP 1.0.
 With these APIs, clients publish data to as well as consume data from an Apache Kafka&reg; cluster instead of using an AMQP messaging network.
 
 <!--more-->
 
 {{% note title="Tech preview" %}}
-The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs may change with the next version. 
+The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are subject to change without prior notice. 
 {{% /note %}}
 
 
@@ -24,18 +24,18 @@ A Kafka message (also called record) consists of a key, a value, a timestamp, an
 
 Multiple *consumers* can read the messages at the same time and they can read them repeatedly (if an error occurred).
 This decoupling of producer and consumers has the consequence that a producer does not get feedback about the consumption of messages, 
-it does not "know" *when* a message will be read by a consumer (or if there are many or no consumer at all).
+it does not know *if* and *when* a message will be read by any consumer(s).
 For example, a protocol adapter can only confirm to the device that the Kafka cluster successfully persisted a telemetry message, 
 not if a *Business Application* received it.
 
 Messages are usually deleted from a topic at some point &ndash; regardless of whether they have been processed by a consumer. 
-The duration of this *log retention time* should be configured in Kafka to reasonable values for each topic.  
+Care should therefore be taken to set each topic's *log retention time* to a reasonable value in the Kafka configuration.
 
 See the [Kafka documentation](https://kafka.apache.org/documentation/#configuration) for details about Kafka's configuration properties. 
 
 ### Quality of Service
 
-The configuration property [*acks*](https://kafka.apache.org/documentation/#acks) of the Kafka client is used to 
+The Kafka client's [*acks*](https://kafka.apache.org/documentation/#acks) configuration property is used to
 configure what acknowledgements a producer expects from the cluster for each message.
 The value of this property determines the maximum *Quality of Service* level the producer can achieve.
 Kafka supports the following settings:
@@ -50,8 +50,10 @@ Kafka supports the following settings:
 
 ### Message Ordering
 
-Hono requires that producers send messages in the right order. Each producer MUST always send messages with the same key
-to the same partition. 
+For each *partition* of a topic, Kafka guarantees that consumers receive messages in the same order that the producer 
+has written them to the partition. Hono's protocol adapters, therefore, use the device identifier as the key when 
+writing messages to downstream topics, thus making sure that messages originating from the same device always end up 
+in the same partition.
 For example, each protocol adapter must always send telemetry data reported by a particular device to the same partition 
 (e.g. by using the same [partitioner](https://kafka.apache.org/documentation/#partitioner.class) implementation) 
 in the same order that they have been received in.
