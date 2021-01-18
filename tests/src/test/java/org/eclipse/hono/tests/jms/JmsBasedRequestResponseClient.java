@@ -85,7 +85,7 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
      * property of all request messages sent by this client.
      * <p>
      * The client will be ready to use after invoking {@link #createLinks()} or
-     * {@link #createLinks(Handler, Handler)} only.
+     * {@link #createLinks()} only.
      *
      * @param connection The connection to the service.
      * @param endpointName The name of the endpoint to send request messages to.
@@ -112,7 +112,7 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
      * property of all request messages sent by this client.
      * <p>
      * The client will be ready to use after invoking {@link #createLinks()} or
-     * {@link #createLinks(Handler, Handler)} only.
+     * {@link #createLinks()} only.
      *
      * @param connection The connection to the service.
      * @param endpointName The name of the endpoint to send request messages to.

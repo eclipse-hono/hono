@@ -73,9 +73,9 @@ public abstract class JmsBasedRequestResponseServiceClient<T, R extends RequestR
      * Gets the payload from a JMS message.
      *
      * @param message The message to get the payload from.
-     * @return The payload or {@code null} if the message has no payload.
-     * @throws JMSException if the payload cannot be extracted from the message.
-     * @throws ServiceInvocationException if the message is neither a TextMessage nor a BytesMessage.
+     * @return A succeeded future containing the payload or {@code null} if the message has no payload.
+     *         A failed future with a {@link ServerErrorException} if the payload cannot be extracted
+     *         from the message or if the message is neither a TextMessage nor a BytesMessage.
      */
     protected static Future<Buffer> getPayload(final Message message) {
 
