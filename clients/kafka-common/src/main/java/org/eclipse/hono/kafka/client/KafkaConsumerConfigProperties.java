@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,10 +35,16 @@ import org.slf4j.LoggerFactory;
  */
 public class KafkaConsumerConfigProperties {
 
+    /**
+     * The default amount of time (milliseconds) to wait for records when polling records.
+     */
+    public static final long DEFAULT_POLL_TIMEOUT = 100L; // ms
+
     private final Logger log = LoggerFactory.getLogger(KafkaConsumerConfigProperties.class);
 
     private Map<String, String> consumerConfig;
     private String clientId;
+    private long pollTimeout = DEFAULT_POLL_TIMEOUT;
 
     /**
      * Sets the Kafka consumer config properties to be used.
@@ -61,6 +67,15 @@ public class KafkaConsumerConfigProperties {
      */
     public final void setClientId(final String clientId) {
         this.clientId = Objects.requireNonNull(clientId);
+    }
+
+    /**
+     * Checks if a configuration has been set.
+     *
+     * @return true if configuration is present.
+     */
+    public boolean isConfigured() {
+        return consumerConfig != null;
     }
 
     /**
@@ -97,6 +112,33 @@ public class KafkaConsumerConfigProperties {
         }
 
         return newConfig;
+    }
+
+    /**
+     * Sets the timeout for polling records.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_POLL_TIMEOUT}.
+     *
+     * @param pollTimeoutMillis The maximum number of milliseconds to wait.
+     * @throws IllegalArgumentException if poll timeout is negative.
+     */
+    public void setPollTimeout(final long pollTimeoutMillis) {
+        if (pollTimeoutMillis < 0) {
+            throw new IllegalArgumentException("poll timeout must not be negative");
+        } else {
+            this.pollTimeout = pollTimeoutMillis;
+        }
+    }
+
+    /**
+     * Gets the timeout for polling records.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_POLL_TIMEOUT}.
+     *
+     * @return The maximum number of milliseconds to wait.
+     */
+    public long getPollTimeout() {
+        return pollTimeout;
     }
 
     private void overrideConsumerConfigProperty(final Map<String, String> config, final String key,
