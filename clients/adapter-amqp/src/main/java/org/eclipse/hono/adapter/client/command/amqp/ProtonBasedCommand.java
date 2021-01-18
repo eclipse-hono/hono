@@ -175,22 +175,6 @@ public final class ProtonBasedCommand implements Command {
     }
 
     /**
-     * Sets the identifier of the gateway this command is to be sent to.
-     * <p>
-     * A scenario where the gateway information isn't taken from the command message
-     * (see {@link #fromRoutedCommandMessage(Message)}) but instead needs to be set
-     * manually here would be the case of a gateway subscribing for commands targeted
-     * at a specific device. In that scenario, the Command Router does the routing
-     * based on the edge device identifier and only the target protocol adapter knows
-     * about the gateway association.
-     *
-     * @param gatewayId The gateway identifier.
-     */
-    public void setGatewayId(final String gatewayId) {
-        this.gatewayId = gatewayId;
-    }
-
-    /**
      * Gets the AMQP 1.0 message representing this command.
      *
      * @return The command message.
@@ -240,6 +224,23 @@ public final class ProtonBasedCommand implements Command {
     @Override
     public String getGatewayId() {
         return gatewayId;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * A scenario where the gateway information isn't taken from the command message
+     * (see {@link #fromRoutedCommandMessage(Message)}) but instead needs to be set
+     * manually here would be the case of a gateway subscribing for commands targeted
+     * at a specific device. In that scenario, the Command Router does the routing
+     * based on the edge device identifier and only the target protocol adapter knows
+     * about the gateway association.
+     *
+     * @param gatewayId The gateway identifier.
+     */
+    @Override
+    public void setGatewayId(final String gatewayId) {
+        this.gatewayId = gatewayId;
     }
 
     @Override
@@ -293,7 +294,7 @@ public final class ProtonBasedCommand implements Command {
     public String toString() {
         if (isValid()) {
             if (isTargetedAtGateway()) {
-                return String.format("Command [name: %s, tenant-id: %s, device-id: %s, original device-id %s, request-id: %s]",
+                return String.format("Command [name: %s, tenant-id: %s, gateway-id: %s, device-id: %s, request-id: %s]",
                         getName(), tenantId, gatewayId, deviceId, requestId);
             } else {
                 return String.format("Command [name: %s, tenant-id: %s, device-id: %s, request-id: %s]",

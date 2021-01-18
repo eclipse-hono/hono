@@ -93,6 +93,16 @@ public interface Command {
     String getGatewayId();
 
     /**
+     * Sets the identifier of the gateway this command is to be sent to.
+     * <p>
+     * Using {@code null} as parameter means that the command is to be forwarded directly
+     * to the device given in the original command message, without using a gateway.
+     *
+     * @param gatewayId The gateway identifier.
+     */
+    void setGatewayId(String gatewayId);
+
+    /**
      * Gets the name of this command.
      *
      * @return The name.

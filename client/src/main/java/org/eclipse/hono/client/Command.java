@@ -48,10 +48,10 @@ public final class Command {
     private final Optional<String> validationError;
     private final Message message;
     private final String tenantId;
-    private final String deviceId;
     private final String correlationId;
     private final String replyToId;
     private final String requestId;
+    private String deviceId;
 
     private Command(
             final Optional<String> validationError,
@@ -230,7 +230,8 @@ public final class Command {
     }
 
     /**
-     * Gets the device's identifier.
+     * Gets the identifier of the gateway or edge device that this command
+     * needs to be forwarded to for delivery.
      * <p>
      * In the case that the command got redirected to a gateway,
      * the id returned here is a gateway id. See {@link #getOriginalDeviceId()}
@@ -240,6 +241,18 @@ public final class Command {
      */
     public String getDeviceId() {
         return deviceId;
+    }
+
+    /**
+     * Sets the identifier of the gateway this command is to be sent to.
+     * <p>
+     * Using {@code null} as parameter means that the command is to be forwarded directly
+     * to the device given in the original command message, without using a gateway.
+     *
+     * @param gatewayId The gateway identifier.
+     */
+    public void setGatewayId(final String gatewayId) {
+        this.deviceId = Optional.ofNullable(gatewayId).orElseGet(this::getOriginalDeviceId);
     }
 
     /**
@@ -468,10 +481,10 @@ public final class Command {
         if (isValid()) {
             final String originalDeviceId = getOriginalDeviceId();
             if (!getDeviceId().equals(originalDeviceId)) {
-                return String.format("Command [name: %s, tenant-id: %s, device-id %s, original device-id %s, request-id: %s]",
+                return String.format("Command [name: %s, tenant-id: %s, gateway-id: %s, device-id: %s, request-id: %s]",
                         getName(), getTenant(), getDeviceId(), originalDeviceId, getRequestId());
             } else {
-                return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
+                return String.format("Command [name: %s, tenant-id: %s, device-id: %s, request-id: %s]",
                         getName(), getTenant(), getDeviceId(), getRequestId());
             }
         } else {
