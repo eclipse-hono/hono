@@ -16,7 +16,7 @@ package org.eclipse.hono.cli;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.kafka.client.KafkaConsumerConfigProperties;
+import org.eclipse.hono.kafka.client.consumer.KafkaConsumerConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
