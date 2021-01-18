@@ -36,7 +36,6 @@ import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -99,7 +98,7 @@ public class MappingAndDelegatingCommandHandlerTest {
         commandTargetMapper = mock(CommandTargetMapper.class);
 
         mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(
-                connection, commandTargetMapper, SendMessageSampler.noop());
+                connection, commandTargetMapper);
     }
 
     /**

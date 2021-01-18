@@ -14,16 +14,16 @@
 package org.eclipse.hono.client.amqp;
 
 import java.net.HttpURLConnection;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
@@ -69,6 +69,9 @@ public class GenericSenderLink extends AbstractHonoClient {
     private static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
     private static final Logger log = LoggerFactory.getLogger(GenericSenderLink.class);
 
+    /**
+     * Associated tenant identifier. May be {@code null} if the link is independent of a particular tenant.
+     */
     private final String tenantId;
     private final String targetAddress;
     private final SendMessageSampler sampler;
@@ -83,7 +86,7 @@ public class GenericSenderLink extends AbstractHonoClient {
      *           that this sender is used to send downstream.
      * @param sampler The sampler for sending messages.
      * @param targetAddress The target address to send the messages to.
-     * @throws NullPointerException if any of the parameters except targetAddress is {@code null}.
+     * @throws NullPointerException if connection, sender or sampler is {@code null}.
      */
     protected GenericSenderLink(
             final HonoConnection connection,
@@ -94,14 +97,39 @@ public class GenericSenderLink extends AbstractHonoClient {
 
         super(connection);
         this.sender = Objects.requireNonNull(sender);
-        this.tenantId = Objects.requireNonNull(tenantId);
+        this.tenantId = tenantId;
         this.targetAddress = targetAddress;
         this.sampler = Objects.requireNonNull(sampler);
         if (sender.isOpen()) {
             this.offeredCapabilities = Optional.ofNullable(sender.getRemoteOfferedCapabilities())
-                    .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
+                    .map(List::of)
                     .orElse(Collections.emptyList());
         }
+    }
+
+    /**
+     * Creates a new AMQP sender link for publishing messages to Hono's south bound API endpoints.
+     * <p>
+     * This method is to be used for creating links that are independent of a particular tenant.
+     *
+     * @param con The connection to the Hono server.
+     * @param address The target address of the link.
+     * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
+     *            sender's target address is provided as an argument to the handler.
+     * @return A future indicating the outcome.
+     * @throws NullPointerException if any of the parameters except remoteCloseHook is {@code null}.
+     */
+    public static Future<GenericSenderLink> create(
+            final HonoConnection con,
+            final String address,
+            final Handler<String> remoteCloseHook) {
+
+        Objects.requireNonNull(con);
+        Objects.requireNonNull(address);
+
+        final String targetAddress = AddressHelper.rewrite(address, con.getConfig());
+        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
+                .map(sender -> new GenericSenderLink(con, sender, null, targetAddress, SendMessageSampler.noop()));
     }
 
     /**
@@ -198,19 +226,21 @@ public class GenericSenderLink extends AbstractHonoClient {
      *         <p>
      *         The future will be failed with a {@link ServerErrorException} if the message
      *         could not be sent due to a lack of credit.
-     *         If an event is sent which cannot be processed by the peer the future will
-     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         If a message is sent which cannot be processed by the peer, the future will
+     *         be failed with either a {@link ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public final Future<ProtonDelivery> send(final Message message, final Span currentSpan) {
 
-        return checkForCreditAndSend(message, currentSpan, this::sendMessage);
+        return checkForCreditAndSend(message, currentSpan, () -> sendMessage(message, currentSpan));
     }
 
     /**
      * Sends an AMQP 1.0 message to the endpoint configured for this link and waits for the
      * disposition indicating the outcome of the transfer.
+     * <p>
+     * A not-accepted outcome will cause the returned future to be failed.
      *
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
@@ -223,20 +253,50 @@ public class GenericSenderLink extends AbstractHonoClient {
      *         <p>
      *         The future will be failed with a {@link ServerErrorException} if the message
      *         could not be sent due to a lack of credit.
-     *         If an event is sent which cannot be processed by the peer the future will
-     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         If a message is sent which cannot be processed by the peer, the future will
+     *         be failed with either a {@link ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
+     *         If no delivery update was received from the peer within the configured timeout period
+     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}), the future will
+     *         be failed with a {@link ServerErrorException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final Span currentSpan) {
 
-        return checkForCreditAndSend(message, currentSpan, this::sendMessageAndWaitForOutcome);
+        return checkForCreditAndSend(message, currentSpan,
+                () -> sendMessageAndWaitForOutcome(message, currentSpan, true));
+    }
+
+    /**
+     * Sends an AMQP 1.0 message to the endpoint configured for this link and waits for the
+     * disposition indicating the outcome of the transfer.
+     * <p>
+     * A not-accepted outcome will be returned in a succeeded future result.
+     *
+     * @param message The message to send.
+     * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
+     *              The span will be finished by this method and will contain an error log if
+     *              the message has not been accepted by the peer.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been settled by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit or if no delivery update was received
+     *         from the peer within the configured timeout period
+     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public Future<ProtonDelivery> sendAndWaitForRawOutcome(final Message message, final Span currentSpan) {
+
+        return checkForCreditAndSend(message, currentSpan,
+                () -> sendMessageAndWaitForOutcome(message, currentSpan, false));
     }
 
     private Future<ProtonDelivery> checkForCreditAndSend(
             final Message message,
             final Span currentSpan,
-            final BiFunction<Message, Span, Future<ProtonDelivery>> sendOperation) {
+            final Supplier<Future<ProtonDelivery>> sendOperation) {
 
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
@@ -257,9 +317,9 @@ public class GenericSenderLink extends AbstractHonoClient {
                 logError(currentSpan, e);
                 currentSpan.finish();
                 result.fail(e);
-                this.sampler.queueFull(this.tenantId);
+                sampler.queueFull(tenantId);
             } else {
-                sendOperation.apply(message, currentSpan).onComplete(result);
+                sendOperation.get().onComplete(result);
             }
         });
     }
@@ -291,7 +351,7 @@ public class GenericSenderLink extends AbstractHonoClient {
         message.setMessageId(messageId);
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
-        final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
+        final SendMessageSampler.Sample sample = sampler.start(tenantId);
 
         final AtomicReference<ProtonDelivery> deliveryRef = new AtomicReference<>();
         final ClientConfigProperties config = connection.getConfig();
@@ -344,26 +404,8 @@ public class GenericSenderLink extends AbstractHonoClient {
         return Future.succeededFuture(delivery);
     }
 
-    /**
-     * Sends an AMQP 1.0 message to the peer this client is configured for
-     * and waits for the outcome of the transfer.
-     *
-     * @param message The message to send.
-     * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
-     *              The span will be finished by this method and will contain an error log if
-     *              the message has not been accepted by the peer.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed if the message has been accepted (and settled)
-     *         by the peer.
-     *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent or has not been accepted by the peer or if no delivery update
-     *         was received from the peer within the configured timeout period
-     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
-     * @throws NullPointerException if either of the parameters is {@code null}.
-     */
-    private Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message, final Span currentSpan) {
+    private Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message, final Span currentSpan,
+            final boolean mapUnacceptedOutcomeToErrorResult) {
 
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
@@ -374,7 +416,7 @@ public class GenericSenderLink extends AbstractHonoClient {
         message.setMessageId(messageId);
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
-        final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
+        final SendMessageSampler.Sample sample = sampler.start(tenantId);
 
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
@@ -409,23 +451,11 @@ public class GenericSenderLink extends AbstractHonoClient {
                 if (Accepted.class.isInstance(remoteState)) {
                     result.complete(deliveryUpdated);
                 } else {
-                    ServiceInvocationException e = null;
-                    if (Rejected.class.isInstance(remoteState)) {
-                        final Rejected rejected = (Rejected) remoteState;
-                        e = Optional.ofNullable(rejected.getError())
-                                .map(error -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error.getDescription()))
-                                .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-                    } else if (Released.class.isInstance(remoteState)) {
-                        e = new MessageNotProcessedException();
-                    } else if (Modified.class.isInstance(remoteState)) {
-                        final Modified modified = (Modified) deliveryUpdated.getRemoteState();
-                        if (modified.getUndeliverableHere()) {
-                            e = new MessageUndeliverableException();
-                        } else {
-                            e = new MessageNotProcessedException();
-                        }
+                    if (mapUnacceptedOutcomeToErrorResult) {
+                        result.handle(mapUnacceptedOutcomeToErrorResult(deliveryUpdated));
+                    } else {
+                        result.complete(deliveryUpdated);
                     }
-                    result.fail(e);
                 }
             } else {
                 logMessageSendingError("peer did not settle message [ID: {}, address: {}, remote state: {}], failing delivery",
@@ -446,6 +476,30 @@ public class GenericSenderLink extends AbstractHonoClient {
                     Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
                 })
                 .onComplete(r -> currentSpan.finish());
+    }
+
+    private Future<ProtonDelivery> mapUnacceptedOutcomeToErrorResult(final ProtonDelivery delivery) {
+        final DeliveryState remoteState = delivery.getRemoteState();
+        if (Accepted.class.isInstance(remoteState)) {
+            throw new IllegalStateException("delivery is expected to be rejected, released or modified here, not accepted");
+        }
+        ServiceInvocationException e = null;
+        if (Rejected.class.isInstance(remoteState)) {
+            final Rejected rejected = (Rejected) remoteState;
+            e = Optional.ofNullable(rejected.getError())
+                    .map(error -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error.getDescription()))
+                    .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else if (Released.class.isInstance(remoteState)) {
+            e = new MessageNotProcessedException();
+        } else if (Modified.class.isInstance(remoteState)) {
+            final Modified modified = (Modified) remoteState;
+            if (modified.getUndeliverableHere()) {
+                e = new MessageUndeliverableException();
+            } else {
+                e = new MessageNotProcessedException();
+            }
+        }
+        return Future.failedFuture(e);
     }
 
     /**
