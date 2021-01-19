@@ -62,7 +62,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <skipTests>${no.docker}</skipTests>
+          <skipTests>${skipDockerTests}</skipTests>
           <systemProperties>
             <mongoDbImageName>${mongodb-image.name}</mongoDbImageName>
           </systemProperties>
