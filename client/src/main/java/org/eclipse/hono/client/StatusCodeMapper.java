@@ -162,7 +162,7 @@ public abstract class StatusCodeMapper {
         Objects.requireNonNull(condition);
 
         if (AmqpError.RESOURCE_LIMIT_EXCEEDED.equals(condition)) {
-            return new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, description);
+            return new ResourceLimitExceededException(description);
         } else if (AmqpError.UNAUTHORIZED_ACCESS.equals(condition)) {
             return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, description);
         } else if (AmqpError.INTERNAL_ERROR.equals(condition)) {
