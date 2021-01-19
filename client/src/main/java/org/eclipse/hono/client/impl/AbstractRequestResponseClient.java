@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -884,7 +884,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     requestTargetAddress, request.getSubject(), correlationId, rejected.getError());
-                            failedResult.fail(StatusCodeMapper.from(rejected.getError()));
+                            failedResult.fail(StatusCodeMapper.fromTransferError(rejected.getError()));
                             cancelRequest(correlationId, failedResult.future());
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",

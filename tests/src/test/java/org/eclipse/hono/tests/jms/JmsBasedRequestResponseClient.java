@@ -202,7 +202,7 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
             if (matcher.matches()) {
                 final Symbol condition = Symbol.getSymbol(matcher.group(2));
                 final String description = matcher.group(1);
-                return StatusCodeMapper.from(condition, description);
+                return StatusCodeMapper.fromTransferError(condition, description);
             }
         }
         return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, cause);

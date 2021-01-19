@@ -557,7 +557,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     requestTargetAddress, request.getSubject(), correlationId, rejected.getError());
-                            failedResult.fail(StatusCodeMapper.from(rejected.getError()));
+                            failedResult.fail(StatusCodeMapper.fromTransferError(rejected.getError()));
                             cancelRequest(correlationId, failedResult.future());
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",
