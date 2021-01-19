@@ -32,6 +32,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-adapter-amqp</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
     </dependency>
