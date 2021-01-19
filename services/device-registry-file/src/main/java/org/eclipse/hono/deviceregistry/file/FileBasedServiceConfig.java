@@ -14,10 +14,11 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
@@ -137,33 +138,36 @@ public class FileBasedServiceConfig {
 
 
     /**
-     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
-     * <p>
-     * The factory is initialized with the connection provided by {@link #downstreamConnection(Vertx)}.
+     * Creates a new downstream sender for telemetry and event messages.
      *
      * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
      *
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public DownstreamSenderFactory downstreamSenderFactory(final Vertx vertx) {
-        return DownstreamSenderFactory.create(downstreamConnection(vertx));
+    public ProtonBasedDownstreamSender protonBasedDownstreamSender(final Vertx vertx, final Tracer tracer) {
+        return new ProtonBasedDownstreamSender(
+                downstreamConnection(vertx, tracer),
+                SendMessageSampler.Factory.noop(),
+                autoProvisionerConfigProperties());
     }
 
     /**
      * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
-     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     * The connection is configured with the properties provided by {@link #downstreamSenderConfig()}.
      *
      * @param vertx The vert.x instance to run on.
+     * @param tracer The tracer to be used.
      *
      * @return The connection.
      */
     @Bean
     @Scope("prototype")
-    public HonoConnection downstreamConnection(final Vertx vertx) {
-        return HonoConnection.newConnection(vertx, downstreamSenderFactoryConfig());
+    public HonoConnection downstreamConnection(final Vertx vertx, final Tracer tracer) {
+        return HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer);
     }
 
     /**
@@ -173,8 +177,16 @@ public class FileBasedServiceConfig {
      */
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
-    public ClientConfigProperties downstreamSenderFactoryConfig() {
+    public ClientConfigProperties downstreamSenderConfig() {
+        final ClientConfigProperties config = new ClientConfigProperties();
+        setDefaultConfigNameIfNotSet(config);
         return new ClientConfigProperties();
+    }
+
+    private void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
+        if (config.getName() == null) {
+            config.setName("Device Registry");
+        }
     }
 
     /**
@@ -218,7 +230,7 @@ public class FileBasedServiceConfig {
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
         autoProvisioner.setTenantInformationService(tenantInformationService());
-        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactory(vertx));
+        autoProvisioner.setProtonBasedDownstreamSender(protonBasedDownstreamSender(vertx, tracer));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);

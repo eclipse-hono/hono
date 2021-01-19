@@ -19,8 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -37,7 +36,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -50,11 +49,9 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Implements gateway based auto-provisioning.
@@ -69,7 +66,7 @@ public class AutoProvisioner implements Lifecycle {
 
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
-    private DownstreamSenderFactory downstreamSenderFactory;
+    private ProtonBasedDownstreamSender protonBasedDownstreamSender;
 
     private Future<HonoConnection> connectionAttempt;
 
@@ -83,7 +80,7 @@ public class AutoProvisioner implements Lifecycle {
         // to start(). This results in an exception in the factory's connect() method.
         synchronized (this) {
             if (connectionAttempt == null) {
-                connectionAttempt = downstreamSenderFactory.connect().map(connection -> {
+                connectionAttempt = protonBasedDownstreamSender.connect().map(connection -> {
                     LOG.info("connected to AMQP network");
                     if (vertx == null && connection != null) {
                         vertx = connection.getVertx();
@@ -102,7 +99,7 @@ public class AutoProvisioner implements Lifecycle {
     @Override
     public final Future<Void> stop() {
         final Promise<Void> result = Promise.promise();
-        downstreamSenderFactory.disconnect(result);
+        protonBasedDownstreamSender.disconnect(result);
         return result.future();
     }
 
@@ -124,8 +121,8 @@ public class AutoProvisioner implements Lifecycle {
      * @throws NullPointerException if the factory is {@code null}.
      */
     @Autowired
-    public final void setDownstreamSenderFactory(final DownstreamSenderFactory factory) {
-        this.downstreamSenderFactory = Objects.requireNonNull(factory);
+    public final void setProtonBasedDownstreamSender(final ProtonBasedDownstreamSender factory) {
+        this.protonBasedDownstreamSender = Objects.requireNonNull(factory);
     }
 
     /**
@@ -181,7 +178,7 @@ public class AutoProvisioner implements Lifecycle {
         this.config = Objects.requireNonNull(config);
     }
 
-    private Future<ProtonDelivery> sendAutoProvisioningEvent(
+    private Future<Void> sendAutoProvisioningEvent(
             final String tenantId,
             final String deviceId,
             final String gatewayId,
@@ -195,16 +192,13 @@ public class AutoProvisioner implements Lifecycle {
         LOG.debug("sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]", deviceId, gatewayId, tenantId);
 
         final Future<TenantResult<TenantObject>> tenantTracker = tenantInformationService.getTenant(tenantId, span);
-        final Future<DownstreamSender> senderTracker = downstreamSenderFactory.getOrCreateEventSender(tenantId);
 
-        return CompositeFuture.all(tenantTracker, senderTracker).compose(ok -> {
+        return tenantTracker.compose(ok -> {
             if (tenantTracker.result().isError()) {
                 return Future.failedFuture(StatusCodeMapper.from(tenantTracker.result()));
             }
 
             final Map<String, Object> props = new HashMap<>();
-            props.put(MessageHelper.APP_PROPERTY_QOS, QoS.AT_LEAST_ONCE.ordinal());
-            props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
             props.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
             props.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
             props.put(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS, EventConstants.RegistrationStatus.NEW.name());
@@ -221,8 +215,12 @@ public class AutoProvisioner implements Lifecycle {
                     false,
                     false);
 
-            final DownstreamSender sender = senderTracker.result();
-            return sender.sendAndWaitForOutcome(msg, span.context())
+            return protonBasedDownstreamSender.sendEvent(tenantTracker.result().getPayload(),
+                        new RegistrationAssertion(deviceId),
+                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
+                        null,
+                        props,
+                        span.context())
                     .onFailure(t -> LOG.info("error sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]",
                             deviceId, gatewayId, tenantId));
         });

@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
@@ -73,8 +73,8 @@ public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceT
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-devices-test");
 
-        final DownstreamSenderFactory downstreamSenderFactoryMock = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactoryMock.connect()).thenReturn(Future.succeededFuture());
+        final ProtonBasedDownstreamSender downstreamSender = mock(ProtonBasedDownstreamSender.class);
+        when(downstreamSender.connect()).thenReturn(Future.succeededFuture());
 
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
@@ -85,12 +85,12 @@ public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceT
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
         autoProvisioner.setDeviceManagementService(registrationService);
-        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactoryMock);
+        autoProvisioner.setProtonBasedDownstreamSender(downstreamSender);
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> handler = invocation.getArgument(0);
             handler.handle(Future.succeededFuture());
             return null;
-        }).when(downstreamSenderFactoryMock).disconnect(VertxMockSupport.anyHandler());
+        }).when(downstreamSender).disconnect(VertxMockSupport.anyHandler());
 
         registrationService.setAutoProvisioner(autoProvisioner);
 

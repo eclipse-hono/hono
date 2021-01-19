@@ -12,12 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.device;
 
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.RegistrationConstants;
 
 /**
  * Configuration properties for Hono's gateway-based auto-provisioning.
  */
-public class AutoProvisionerConfigProperties {
+public class AutoProvisionerConfigProperties extends ProtocolAdapterProperties {
 
     /**
      * Delay in milliseconds before trying to send the auto-provisioning notification if the initial attempt

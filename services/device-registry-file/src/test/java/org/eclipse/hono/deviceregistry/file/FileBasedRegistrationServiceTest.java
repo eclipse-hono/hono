@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
@@ -96,15 +96,15 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
         autoProvisioner.setDeviceManagementService(registrationService);
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
 
-        final DownstreamSenderFactory downstreamSenderFactoryMock = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactoryMock.connect()).thenReturn(Future.succeededFuture());
+        final ProtonBasedDownstreamSender downstreamSender = mock(ProtonBasedDownstreamSender.class);
+        when(downstreamSender.connect()).thenReturn(Future.succeededFuture());
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> handler = invocation.getArgument(0);
             handler.handle(Future.succeededFuture());
             return null;
-        }).when(downstreamSenderFactoryMock).disconnect(VertxMockSupport.anyHandler());
+        }).when(downstreamSender).disconnect(VertxMockSupport.anyHandler());
 
-        autoProvisioner.setDownstreamSenderFactory(downstreamSenderFactoryMock);
+        autoProvisioner.setProtonBasedDownstreamSender(downstreamSender);
 
         registrationService.setAutoProvisioner(autoProvisioner);
     }
