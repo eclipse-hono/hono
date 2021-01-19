@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,6 +39,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
@@ -314,9 +315,9 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                     ServiceInvocationException e = null;
                     if (Rejected.class.isInstance(remoteState)) {
                         final Rejected rejected = (Rejected) remoteState;
-                        e = rejected.getError() == null
-                                ? new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)
-                                : new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription());
+                        e = Optional.ofNullable(rejected.getError())
+                                .map(StatusCodeMapper::fromTransferError)
+                                .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
                     } else if (Released.class.isInstance(remoteState)) {
                         e = new MessageNotProcessedException();
                     } else if (Modified.class.isInstance(remoteState)) {
