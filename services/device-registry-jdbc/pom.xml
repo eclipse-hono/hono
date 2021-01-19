@@ -99,7 +99,7 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <skipTests>${no.docker}</skipTests>
+              <skipTests>${skipDockerTests}</skipTests>
               <systemPropertyVariables>
                 <AbstractJdbcRegistryTest.databaseType>postgresql</AbstractJdbcRegistryTest.databaseType>
                 <AbstractJdbcRegistryTest.postgresqlImageName>${postgresql-image.name}</AbstractJdbcRegistryTest.postgresqlImageName>

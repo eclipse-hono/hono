@@ -188,7 +188,7 @@
     <!--
       Needs to be set to true on platforms where no Docker daemon is available.
     -->
-    <no.docker>false</no.docker>
+    <skipDockerTests>${skipTests}</skipDockerTests>
 
     <!--
       Build images defined in modules with packaging type "pom".
@@ -516,7 +516,7 @@
       </activation>
       <properties>
         <!-- this will prevent (unit) tests from being run that require test containers -->
-        <no.docker>true</no.docker>
+        <skipDockerTests>true</skipDockerTests>
       </properties>
     </profile>
     <profile>
