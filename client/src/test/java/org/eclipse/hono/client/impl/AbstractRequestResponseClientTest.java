@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,11 +30,14 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -44,7 +47,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,10 +129,12 @@ public class AbstractRequestResponseClientTest  {
                 "get",
                 Buffer.buffer("hello"),
                 ctx.failing(t -> {
-                    // THEN the message is not sent
-                    verify(sender, never()).send(any(Message.class));
-                    // and the request result handler is failed with a 503
-                    assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                    ctx.verify(() -> {
+                        // THEN the message is not sent
+                        verify(sender, never()).send(any(Message.class));
+                        // and the request result handler is failed with a 503
+                        assertFailureCause(span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                    });
                     ctx.completeNow();
                 }),
                 span);
@@ -166,13 +170,39 @@ public class AbstractRequestResponseClientTest  {
     }
 
     /**
-     * Verifies that the client fails the result handler if the peer rejects
-     * the request message.
+     * Verifies that the sender fails with an 503 error code if the peer rejects
+     * a message with an "amqp:resource-limit-exceeded" error.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsOnRejectedMessage(final VertxTestContext ctx) {
+    public void testCreateAndSendRequestFailsForResourceLimitExceeded(final VertxTestContext ctx) {
+        testCreateAndSendRequestFailsOnRejectedMessage(
+                ctx,
+                AmqpError.RESOURCE_LIMIT_EXCEEDED,
+                t -> assertThat(t).isInstanceOf(ServerErrorException.class)
+                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+    }
+
+    /**
+     * Verifies that the sender fails with an 400 error code if the peer rejects
+     * a message with an arbitrary error condition.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateAndSendRequestFailsForArbitraryError(final VertxTestContext ctx) {
+        testCreateAndSendRequestFailsOnRejectedMessage(
+                ctx,
+                Symbol.getSymbol("arbitrary-error"),
+                t -> assertThat(t).isInstanceOf(ServiceInvocationException.class)
+                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+    }
+
+    private void testCreateAndSendRequestFailsOnRejectedMessage(
+            final VertxTestContext ctx,
+            final Symbol errorCondition,
+            final Consumer<Throwable> failureAssertions) {
 
         // GIVEN a request-response client that times out requests after 200 ms
         client.setRequestTimeout(200);
@@ -183,14 +213,16 @@ public class AbstractRequestResponseClientTest  {
                 "get",
                 payload.toBuffer(),
                 ctx.failing(t -> {
-                    // THEN the result handler is failed with a 400 status code
-                    assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_BAD_REQUEST);
+                    ctx.verify(() -> {
+                        // THEN the result handler is failed with the expected error
+                        failureAssertions.accept(t);
+                    });
                     ctx.completeNow();
                 }),
                 span);
         // and the peer rejects the message
         final Rejected rejected = new Rejected();
-        rejected.setError(ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, "request message is malformed"));
+        rejected.setError(ProtonHelper.condition(errorCondition, "request message cannot be processed"));
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.getRemoteState()).thenReturn(rejected);
         @SuppressWarnings("unchecked")
@@ -284,8 +316,10 @@ public class AbstractRequestResponseClientTest  {
                 Buffer.buffer("hello"),
                 ctx.failing(t -> {
                     // THEN the request fails immediately with a 503
-                    verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
-                    assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                    ctx.verify(() -> {
+                        verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
+                        assertFailureCause(span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                    });
                     ctx.completeNow();
                 }),
                 span);
@@ -508,7 +542,6 @@ public class AbstractRequestResponseClientTest  {
     }
 
     private void assertFailureCause(
-            final VertxTestContext ctx,
             final Span span,
             final Throwable cause,
             final int expectedErrorCode) {

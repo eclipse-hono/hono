@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,14 +23,21 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,10 +106,32 @@ public class EventSenderImplTest {
     }
 
     /**
-     * Verifies that the sender fails if the peer does not accept a message.
+     * Verifies that the sender fails with an 503 error code if the peer rejects
+     * a message with an "amqp:resource-limit-exceeded" error.
      */
     @Test
-    public void testSendMessageFailsForRejectedOutcome() {
+    public void testSendMessageFailsForResourceLimitExceeded() {
+        testSendMessageFailsForRejectedOutcome(
+                AmqpError.RESOURCE_LIMIT_EXCEEDED,
+                t -> assertThat(t).isInstanceOf(ServerErrorException.class)
+                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+    }
+
+    /**
+     * Verifies that the sender fails with an 400 error code if the peer rejects
+     * a message with an arbitrary error condition.
+     */
+    @Test
+    public void testSendMessageFailsForArbitraryError() {
+        testSendMessageFailsForRejectedOutcome(
+                Symbol.getSymbol("arbitrary-error"),
+                t -> assertThat(t).isInstanceOf(ServiceInvocationException.class)
+                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+    }
+
+    private void testSendMessageFailsForRejectedOutcome(
+            final Symbol errorCondition,
+            final Consumer<Throwable> failureAssertions) {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
@@ -121,12 +151,19 @@ public class EventSenderImplTest {
         assertFalse(result.isComplete());
 
         // and the result fails once the peer rejects the message
+        final ErrorCondition condition = new ErrorCondition();
+        condition.setCondition(errorCondition);
+        final Rejected error = new Rejected();
+        error.setError(condition);
         final ProtonDelivery rejected = mock(ProtonDelivery.class);
         when(rejected.remotelySettled()).thenReturn(Boolean.TRUE);
-        when(rejected.getRemoteState()).thenReturn(new Rejected());
+        when(rejected.getRemoteState()).thenReturn(error);
         handlerRef.get().handle(rejected);
 
-        assertFalse(result.succeeded());
+        // the request is failed
+        assertThat(result.failed()).isTrue();
+        // with the expected error
+        failureAssertions.accept(result.cause());
     }
 
     /**
