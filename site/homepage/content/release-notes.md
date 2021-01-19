@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.5.2 (not yet released)
+
+### Fixes & Enhancements
+
+* The protocol adapters erroneously indicated a client related error to devices if the downstream AMQP container
+  rejected a message with an `amqp:resource-limit-exceeded` error condition. This has been fixed so that the adapters
+  now correctly indicate a server related problem instead.
+
 ## 1.5.1
 
 ### Fixes & Enhancements
