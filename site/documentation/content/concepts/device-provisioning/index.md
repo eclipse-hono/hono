@@ -103,11 +103,11 @@ registration service finds that the device isn't registered yet and the gateway 
 authority set, it creates the edge device (3). 
 
 Subsequently, after it made sure that it hasn't already done so, it sends an 
-[Empty Notification]({{< ref "/api/event##empty-notification" >}}) with the  `hono_registration_status` application 
+[Device Provisioning Notification]({{< ref "/api/event#device-provisioning-notification" >}}) with the  `hono_registration_status` application 
 property being set to `NEW` to the AMQP network (4). Once the event has been accepted by the peer (5), the registration 
-service marks the event as delivered (6). The persistent flag guarantees that the Empty Notification is sent 
+service marks the event as delivered (6). The persistent flag guarantees that the Device Provisioning Notification is sent 
 AT_LEAST_ONCE. 
-(*NB*: applications may receive duplicates of the empty notification!).
+(*NB*: applications may receive duplicates of the Device Provisioning Notification!).
 
 Finally, the device registration service returns the registration information to the protocol adapter (7) which then 
 forwards the telemetry data to the AMQP network (8).

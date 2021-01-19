@@ -905,7 +905,8 @@ public final class MessageHelper {
             message.setBody(new Data(new Binary(payload)));
         }
         if ((payload != null && contentType != null)
-                || EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType)) {
+                || EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType)
+                || EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION.equals(contentType)) {
             message.setContentType(contentType);
         } else if (payload != null && useDefaultContentTypeAsFallback) {
             message.setContentType(CONTENT_TYPE_OCTET_STREAM);

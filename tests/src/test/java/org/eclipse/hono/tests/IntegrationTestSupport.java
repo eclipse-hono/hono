@@ -1232,7 +1232,7 @@ public final class IntegrationTestSupport {
                     msg -> ctx.verify(() -> {
                         assertThat(MessageHelper.getDeviceId(msg)).isEqualTo(deviceId);
 
-                        if (msg.getContentType().equals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)) {
+                        if (msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
                             assertThat(MessageHelper.getRegistrationStatus(msg))
                                     .isEqualTo(EventConstants.RegistrationStatus.NEW.name());
                             messagesReceived.flag();
@@ -1244,7 +1244,7 @@ public final class IntegrationTestSupport {
                 })
                 .compose(ok -> applicationClientFactory.createTelemetryConsumer(tenantId,
                     msg -> ctx.verify(() -> {
-                        if (!msg.getContentType().equals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)) {
+                        if (!msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
                             messagesReceived.flag();
                         }
                     }),

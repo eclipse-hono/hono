@@ -82,20 +82,16 @@ Hono defines several *well-known* event types which have specific semantics. Eve
 
 ### Empty Notification
 
-An AMQP message containing this type of event does not have any payload so the body of the message MUST be empty.
+An AMQP message containing this type of event does not have any payload, so the body of the message MUST be empty.
 
 The AMQP 1.0 properties an event sender needs to set for an *empty notification* event are defined in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). 
 
 The relevant properties are listed again in the following table:
 
-| Name                       | Mandatory        | Location                 | Type      | Description |
-| :------------------------- | :--------------: | :----------------------- | :-------- | :---------- |
-| *content-type*             | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
-| *ttd*                      | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
-| *hono_registration_status* | no               | *application-properties* | *string*  | If set to `NEW` this indicates that a device was auto-provisioned in the course of sending telemetry data via gateway. |
-| *tenant_id*                | no               | *application-properties* | *string*  | The tenant id denoting the tenant for which the device was auto-provisioned. |
-| *device_id*                | no               | *application-properties* | *string*  | The device id denoting of the auto-provisioned device. |
-| *gateway_id*               | no               | *application-properties* | *string*  | The gateway id denoting the gateway for which the device was auto-provisioned. |
+| Name           | Mandatory        | Location                 | Type      | Description |
+| :------------- | :--------------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
+| *ttd*          | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
 
 **NB** An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
 
@@ -134,3 +130,20 @@ The example below might be used by the MQTT adapter to indicate that a connectio
   }
 }
 ~~~
+
+### Device Provisioning Notification
+
+Device registries may send this event to convey provisioning related changes regarding a device. This may be used as a hook for 
+northbound applications if further application specific logic should be implemented upon provisioning changes.
+
+An AMQP message containing this type of event does not have any payload, so the body of the message MUST be empty.
+
+The relevant properties are listed again in the following table:
+
+| Name                       | Mandatory        | Location                 | Type      | Description |
+| :------------------------- | :--------------: | :----------------------- | :-------- | :---------- |
+| *content-type*             | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-device-provisioning-notification* |
+| *hono_registration_status* | yes              | *application-properties* | *string*  | Contains NEW if the device has been newly provisioned. |
+| *tenant_id*                | yes              | *application-properties* | *string*  | The tenant id denoting the tenant of the device. |
+| *device_id*                | yes              | *application-properties* | *string*  | The id of the device. |
+| *gateway_id*               | no               | *application-properties* | *string*  | This property contains a value only if the device's registration status has been changed by a gateway acting on behalf of the device. In such a case, the property contains the identifier of the gateway, otherwise the property will not be included. |
