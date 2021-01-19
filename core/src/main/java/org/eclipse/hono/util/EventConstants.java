@@ -38,6 +38,12 @@ public final class EventConstants {
     public static final String CONTENT_TYPE_EMPTY_NOTIFICATION = "application/vnd.eclipse-hono-empty-notification";
 
     /**
+     * The content type of the <em>device provisioning notification</em> event.
+     */
+    public static final String CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION = "application/vnd.eclipse-device-provisioning-notification";
+
+
+    /**
      * The registration status of a device.
      */
     public enum RegistrationStatus {

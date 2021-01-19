@@ -213,7 +213,7 @@ public class AutoProvisioner implements Lifecycle {
 
             final Message msg = MessageHelper.newMessage(
                     ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenantId, deviceId),
-                    EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
+                    EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION,
                     null,
                     tenantTracker.result().getPayload(),
                     props,
