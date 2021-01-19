@@ -29,6 +29,7 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -40,6 +41,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AddressHelper;
@@ -487,7 +489,7 @@ public class GenericSenderLink extends AbstractHonoClient {
         if (Rejected.class.isInstance(remoteState)) {
             final Rejected rejected = (Rejected) remoteState;
             e = Optional.ofNullable(rejected.getError())
-                    .map(error -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error.getDescription()))
+                    .map(StatusCodeMapper::fromTransferError)
                     .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (Released.class.isInstance(remoteState)) {
             e = new MessageNotProcessedException();

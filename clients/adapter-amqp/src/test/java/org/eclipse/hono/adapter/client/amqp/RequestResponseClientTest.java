@@ -27,19 +27,22 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -206,15 +209,41 @@ public class RequestResponseClientTest  {
     }
 
     /**
-     * Verifies that the client fails the result handler if the peer rejects
-     * the request message.
+     * Verifies that the sender fails with an 503 error code if the peer rejects
+     * a message with an "amqp:resource-limit-exceeded" error.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsOnRejectedMessage(final VertxTestContext ctx) {
+    public void testCreateAndSendRequestFailsForResourceLimitExceeded(final VertxTestContext ctx) {
+        testCreateAndSendRequestFailsOnRejectedMessage(
+                ctx,
+                AmqpError.RESOURCE_LIMIT_EXCEEDED,
+                t -> assertThat(t).isInstanceOf(ResourceLimitExceededException.class)
+                    .extracting("clientFacingMessage").isNotNull());
+    }
 
-        // WHEN sending a request message with some payload
+    /**
+     * Verifies that the sender fails with an 400 error code if the peer rejects
+     * a message with an arbitrary error condition.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateAndSendRequestFailsForArbitraryError(final VertxTestContext ctx) {
+        testCreateAndSendRequestFailsOnRejectedMessage(
+                ctx,
+                Symbol.getSymbol("arbitrary-error"),
+                t -> assertThat(t).isInstanceOf(ServiceInvocationException.class)
+                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+    }
+
+    private void testCreateAndSendRequestFailsOnRejectedMessage(
+            final VertxTestContext ctx,
+            final Symbol errorCondition,
+            final Consumer<Throwable> failureAssertions) {
+
+        // WHEN sending a request message with some headers and payload
         final JsonObject payload = new JsonObject().put("key", "value");
         client
             .compose(c -> c.createAndSendRequest(
@@ -226,8 +255,8 @@ public class RequestResponseClientTest  {
                     span))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    // THEN the result handler is failed with a 400 status code
-                    assertFailureCause(span, t, HttpURLConnection.HTTP_BAD_REQUEST);
+                    // THEN the result handler is failed with the expected error
+                    failureAssertions.accept(t);
                     // and a timer has been set to time out the request
                     verify(vertx).setTimer(eq(clientConfig.getRequestTimeout()), VertxMockSupport.anyHandler());
                 });
@@ -236,10 +265,11 @@ public class RequestResponseClientTest  {
 
         // and the peer rejects the message
         final Rejected rejected = new Rejected();
-        rejected.setError(ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, "request message is malformed"));
+        rejected.setError(ProtonHelper.condition(errorCondition, "request message cannot be processed"));
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.getRemoteState()).thenReturn(rejected);
-        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(delivery);
     }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -31,6 +31,7 @@
   <springProfile name="trace">
     <logger name="org.eclipse.hono.adapter" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
+    <logger name="org.eclipse.hono.client.amqp" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
   </springProfile>
@@ -38,6 +39,7 @@
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.amqp" level="DEBUG"/>
     <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
