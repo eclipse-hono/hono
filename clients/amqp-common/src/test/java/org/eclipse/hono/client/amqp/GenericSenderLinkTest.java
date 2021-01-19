@@ -19,15 +19,25 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
+import java.util.function.Consumer;
+
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -151,10 +161,32 @@ public class GenericSenderLinkTest {
     }
 
     /**
-     * Verifies that the sender fails if the peer does not accept a message.
+     * Verifies that the sender fails with an 503 error code if the peer rejects
+     * a message with an "amqp:resource-limit-exceeded" error.
      */
     @Test
-    public void testSendAndWaitForOutcomeFailsForRejectedOutcome() {
+    public void testSendAndWaitForOutcomeFailsForResourceLimitExceeded() {
+        testSendAndWaitForOutcomeFailsForRejectedOutcome(
+                AmqpError.RESOURCE_LIMIT_EXCEEDED,
+                t -> assertThat(t).isInstanceOf(ResourceLimitExceededException.class)
+                    .extracting("clientFacingMessage").isNotNull());
+    }
+
+    /**
+     * Verifies that the sender fails with an 400 error code if the peer rejects
+     * a message with an arbitrary error condition.
+     */
+    @Test
+    public void testSendAndWaitForOutcomeFailsForArbitraryError() {
+        testSendAndWaitForOutcomeFailsForRejectedOutcome(
+                Symbol.getSymbol("arbitrary-error"),
+                t -> assertThat(t).isInstanceOf(ServiceInvocationException.class)
+                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+    }
+
+    private void testSendAndWaitForOutcomeFailsForRejectedOutcome(
+            final Symbol errorCondition,
+            final Consumer<Throwable> failureAssertions) {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
@@ -173,13 +205,19 @@ public class GenericSenderLinkTest {
         assertThat(result.isComplete()).isFalse();
 
         // and when the peer rejects the message
+        final var condition = new ErrorCondition();
+        condition.setCondition(errorCondition);
+        final var error = new Rejected();
+        error.setError(condition);
         final ProtonDelivery rejected = mock(ProtonDelivery.class);
         when(rejected.remotelySettled()).thenReturn(Boolean.TRUE);
-        when(rejected.getRemoteState()).thenReturn(new Rejected());
+        when(rejected.getRemoteState()).thenReturn(error);
         deliveryUpdateHandler.getValue().handle(rejected);
 
         // the request is failed
         assertThat(result.failed()).isTrue();
+     // with the expected error
+        failureAssertions.accept(result.cause());
     }
 
     /**

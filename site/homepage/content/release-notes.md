@@ -42,6 +42,9 @@ title = "Release Notes"
   registered for a device. This has been fixed.
 * The Mongo DB based registry container would have failed to start if the connection to the Mongo DB could not
   be established quickly enough. This has been fixed by decoupling the creation of indices from the start up process.
+* The protocol adapters erroneously indicated a client related error to devices if the downstream AMQP container
+  rejected a message with an `amqp:resource-limit-exceeded` error condition. This has been fixed so that the adapters
+  now correctly indicate a server related problem instead.
 
 ### Deprecations
 
