@@ -12,13 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
@@ -26,7 +25,6 @@ import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationServi
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
-import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,9 +35,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -73,8 +69,9 @@ public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceT
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-devices-test");
 
-        final ProtonBasedDownstreamSender downstreamSender = mock(ProtonBasedDownstreamSender.class);
-        when(downstreamSender.connect()).thenReturn(Future.succeededFuture());
+        final EventSender downstreamSender = mock(EventSender.class);
+        when(downstreamSender.start()).thenReturn(Future.succeededFuture());
+        when(downstreamSender.stop()).thenReturn(Future.succeededFuture());
 
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
@@ -85,12 +82,7 @@ public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceT
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
         autoProvisioner.setDeviceManagementService(registrationService);
-        autoProvisioner.setProtonBasedDownstreamSender(downstreamSender);
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> handler = invocation.getArgument(0);
-            handler.handle(Future.succeededFuture());
-            return null;
-        }).when(downstreamSender).disconnect(VertxMockSupport.anyHandler());
+        autoProvisioner.setEventSender(downstreamSender);
 
         registrationService.setAutoProvisioner(autoProvisioner);
 

@@ -378,7 +378,7 @@ public class ApplicationConfig {
         autoProvisioner.setTracer(tracer);
         autoProvisioner.setDeviceManagementService(service);
         autoProvisioner.setTenantInformationService(tenantInformationService);
-        autoProvisioner.setProtonBasedDownstreamSender(protonBasedDownstreamSender(vertx, tracer));
+        autoProvisioner.setEventSender(protonBasedDownstreamSender(vertx, tracer));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         service.setAutoProvisioner(autoProvisioner);

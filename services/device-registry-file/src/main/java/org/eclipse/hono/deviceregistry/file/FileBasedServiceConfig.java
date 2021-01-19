@@ -230,7 +230,7 @@ public class FileBasedServiceConfig {
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
         autoProvisioner.setTenantInformationService(tenantInformationService());
-        autoProvisioner.setProtonBasedDownstreamSender(protonBasedDownstreamSender(vertx, tracer));
+        autoProvisioner.setEventSender(protonBasedDownstreamSender(vertx, tracer));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);

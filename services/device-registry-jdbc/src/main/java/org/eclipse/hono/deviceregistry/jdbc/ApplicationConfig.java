@@ -436,7 +436,7 @@ public class ApplicationConfig {
         autoProvisioner.setDeviceManagementService(registrationManagementService());
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
-        autoProvisioner.setProtonBasedDownstreamSender(protonBasedDownstreamSender(vertx, tracer));
+        autoProvisioner.setEventSender(protonBasedDownstreamSender(vertx, tracer));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);

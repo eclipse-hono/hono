@@ -19,8 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
@@ -66,9 +65,9 @@ public class AutoProvisioner implements Lifecycle {
 
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
-    private ProtonBasedDownstreamSender protonBasedDownstreamSender;
+    private EventSender eventSender;
 
-    private Future<HonoConnection> connectionAttempt;
+    private Future<Void> connectionAttempt;
 
     private Vertx vertx;
 
@@ -80,27 +79,19 @@ public class AutoProvisioner implements Lifecycle {
         // to start(). This results in an exception in the factory's connect() method.
         synchronized (this) {
             if (connectionAttempt == null) {
-                connectionAttempt = protonBasedDownstreamSender.connect().map(connection -> {
-                    LOG.info("connected to AMQP network");
-                    if (vertx == null && connection != null) {
-                        vertx = connection.getVertx();
-                    }
-                    return connection;
-                }).recover(t -> {
+                connectionAttempt = eventSender.start().recover(t -> {
                     LOG.warn("failed to connect to AMQP network", t);
                     return Future.failedFuture(t);
                 });
             }
         }
 
-        return connectionAttempt.mapEmpty();
+        return connectionAttempt;
     }
 
     @Override
     public final Future<Void> stop() {
-        final Promise<Void> result = Promise.promise();
-        protonBasedDownstreamSender.disconnect(result);
-        return result.future();
+        return  eventSender.stop();
     }
 
     /**
@@ -117,12 +108,12 @@ public class AutoProvisioner implements Lifecycle {
     /**
      * Sets the factory to use for creating a client for the AMQP Messaging Network.
      *
-     * @param factory The factory.
+     * @param eventSender The factory.
      * @throws NullPointerException if the factory is {@code null}.
      */
     @Autowired
-    public final void setProtonBasedDownstreamSender(final ProtonBasedDownstreamSender factory) {
-        this.protonBasedDownstreamSender = Objects.requireNonNull(factory);
+    public final void setEventSender(final EventSender eventSender) {
+        this.eventSender = Objects.requireNonNull(eventSender);
     }
 
     /**
@@ -215,7 +206,7 @@ public class AutoProvisioner implements Lifecycle {
                     false,
                     false);
 
-            return protonBasedDownstreamSender.sendEvent(tenantTracker.result().getPayload(),
+            return eventSender.sendEvent(tenantTracker.result().getPayload(),
                         new RegistrationAssertion(deviceId),
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
                         null,

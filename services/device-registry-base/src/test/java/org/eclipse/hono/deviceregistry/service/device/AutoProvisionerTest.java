@@ -107,7 +107,7 @@ class AutoProvisionerTest {
                 any(SpanContext.class)))
             .thenReturn(Future.succeededFuture());
 
-        autoProvisioner.setProtonBasedDownstreamSender(sender);
+        autoProvisioner.setEventSender(sender);
 
         when(deviceManagementService
                 .updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(Device.class), any(), any()))
