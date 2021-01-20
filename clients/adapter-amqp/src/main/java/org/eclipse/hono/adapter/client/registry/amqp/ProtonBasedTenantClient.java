@@ -81,8 +81,12 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig,
             final Cache<Object, TenantResult<TenantObject>> responseCache) {
-        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), responseCache);
+        super(connection,
+                samplerFactory,
+                adapterConfig.isDefaultsEnabled(),
+                adapterConfig.isJmsVendorPropsEnabled(),
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
     }
 
     /**

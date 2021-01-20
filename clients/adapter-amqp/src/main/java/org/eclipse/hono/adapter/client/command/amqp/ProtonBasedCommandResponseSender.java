@@ -52,7 +52,7 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
-        super(connection, samplerFactory, adapterConfig);
+        super(connection, samplerFactory, adapterConfig.isDefaultsEnabled(), adapterConfig.isJmsVendorPropsEnabled());
     }
 
     private Future<GenericSenderLink> createSender(final String tenantId, final String replyId) {

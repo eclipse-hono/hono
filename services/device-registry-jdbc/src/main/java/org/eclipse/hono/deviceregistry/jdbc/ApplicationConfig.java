@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.jdbc;
 import java.io.IOException;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
@@ -366,11 +367,12 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public ProtonBasedDownstreamSender protonBasedDownstreamSender(final Vertx vertx, final Tracer tracer) {
+    public EventSender eventSender(final Vertx vertx, final Tracer tracer) {
         return new ProtonBasedDownstreamSender(
                 downstreamConnection(vertx, tracer),
                 SendMessageSampler.Factory.noop(),
-                autoProvisionerConfigProperties());
+                true,
+                true);
     }
 
     /**
@@ -436,7 +438,7 @@ public class ApplicationConfig {
         autoProvisioner.setDeviceManagementService(registrationManagementService());
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
-        autoProvisioner.setEventSender(protonBasedDownstreamSender(vertx, tracer));
+        autoProvisioner.setEventSender(eventSender(vertx, tracer));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);

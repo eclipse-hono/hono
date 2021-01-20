@@ -26,7 +26,6 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -49,14 +48,20 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
+     * @param deviceDefaultsEnabled {@code true} if the default properties registered for devices
+     *                              should be included in messages being sent.
+     * @param jmsVendorPropsEnabled {@code true} if <em>Vendor Properties</em> as defined by <a
+     *                              href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
+     *                              Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a> should be included
+     *                              in messages being sent.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public ProtonBasedDownstreamSender(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
-        super(connection, samplerFactory, adapterConfig);
+            final boolean deviceDefaultsEnabled,
+            final boolean jmsVendorPropsEnabled) {
+        super(connection, samplerFactory, deviceDefaultsEnabled, jmsVendorPropsEnabled);
     }
 
     /**
@@ -138,8 +143,8 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
                 tenant,
                 props,
                 device.getDefaults(),
-                adapterConfig.isDefaultsEnabled(),
-                adapterConfig.isJmsVendorPropsEnabled());
+                isDeviceDefaultsEnabled(),
+                isJmsVendorPropsEnabled());
     }
 
     /**

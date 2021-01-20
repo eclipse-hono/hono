@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.SendMessageSampler.Factory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.RegistrationAssertion;
 
 import io.opentracing.SpanContext;
@@ -59,7 +58,6 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
      *
      * @param connection The connection to the AMQP 1.0 Messaging Network.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @param deviceConnectionClient The client to use for accessing the Device Connection service.
      * @param deviceRegistrationClient The client to use for accessing the Device Registration service.
      * @param tracer The OpenTracing tracer to use for tracking the processing of messages.
@@ -68,12 +66,11 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
     public ProtonBasedDelegatingCommandConsumerFactory(
             final HonoConnection connection,
             final Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig,
             final DeviceConnectionClient deviceConnectionClient,
             final DeviceRegistrationClient deviceRegistrationClient,
             final Tracer tracer) {
 
-        super(connection, samplerFactory, adapterConfig);
+        super(connection, samplerFactory, false, false);
 
         Objects.requireNonNull(deviceConnectionClient);
         Objects.requireNonNull(deviceRegistrationClient);

@@ -367,7 +367,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedDownstreamSender(
                 HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
                 messageSamplerFactory,
-                protocolAdapterProperties);
+                protocolAdapterProperties.isDefaultsEnabled(),
+                protocolAdapterProperties.isJmsVendorPropsEnabled());
     }
 
     private ClientConfigProperties commandConsumerFactoryConfig() {
@@ -404,7 +405,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedDelegatingCommandConsumerFactory(
                 commandConsumerConnection(),
                 messageSamplerFactory,
-                protocolAdapterProperties,
                 deviceConnectionClient,
                 deviceRegistrationClient,
                 tracer);
@@ -424,7 +424,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedCommandRouterCommandConsumerFactoryImpl(
                 commandConsumerConnection(),
                 messageSamplerFactory,
-                protocolAdapterProperties,
                 commandRouterClient);
     }
 

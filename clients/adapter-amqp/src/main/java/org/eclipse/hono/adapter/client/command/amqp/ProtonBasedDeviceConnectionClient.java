@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,9 +72,14 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseSe
             final Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
-        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), null);
-        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+        super(connection,
+                samplerFactory,
+                adapterConfig.isDefaultsEnabled(),
+                adapterConfig.isJmsVendorPropsEnabled(),
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                null);
+        connection.getVertx().eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
 

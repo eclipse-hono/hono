@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,21 +12,18 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.device;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.RegistrationConstants;
-
 /**
  * Configuration properties for Hono's gateway-based auto-provisioning.
  */
-public class AutoProvisionerConfigProperties extends ProtocolAdapterProperties {
+public class AutoProvisionerConfigProperties {
 
     /**
      * Delay in milliseconds before trying to send the auto-provisioning notification if the initial attempt
      * to send the event hasn't completed yet.
      * <p>
      * This will only be invoked for requests that have <i>not</i> triggered the auto-provisioning,
-     * but instead have found the {@link RegistrationConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT} flag
-     * in the device data to be {@code false}. Assuming that such a request has occurred very shortly after
+     * but instead have found the {@link org.eclipse.hono.util.RegistrationConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT}
+     * flag in the device data to be {@code false}. Assuming that such a request has occurred very shortly after
      * the auto-provisioning, with the notification event still in the process of getting sent, the intention
      * here is to wait some time til the event was most probably sent. After the delay, the flag is checked
      * again and only if the flag is still {@code false}, meaning there was possibly an error sending the event

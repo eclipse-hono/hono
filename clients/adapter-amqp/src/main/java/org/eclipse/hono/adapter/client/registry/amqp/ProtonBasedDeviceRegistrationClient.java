@@ -76,8 +76,12 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
             final ProtocolAdapterProperties adapterConfig,
             final Cache<Object, RegistrationResult> responseCache) {
 
-        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), responseCache);
+        super(connection,
+                samplerFactory,
+                adapterConfig.isDefaultsEnabled(),
+                adapterConfig.isJmsVendorPropsEnabled(),
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
         connection.getVertx().eventBus().consumer(
                 Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);

@@ -132,7 +132,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             final DeviceConnectionClient deviceConnectionClient = context.getBean(DeviceConnectionClient.class);
             adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
             adapter.setCommandConsumerFactory(commandConsumerFactory(
-                    adapterProperties,
                     samplerFactory,
                     deviceConnectionClient,
                     registrationClient));
@@ -142,7 +141,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             // Device Connection nor Command Router client have been configured anyway
             final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
             adapter.setCommandRouterClient(commandRouterClient);
-            adapter.setCommandConsumerFactory(commandConsumerFactory(adapterProperties, samplerFactory, commandRouterClient));
+            adapter.setCommandConsumerFactory(commandConsumerFactory(samplerFactory, commandRouterClient));
         }
 
         final KafkaProducerConfigProperties kafkaProducerConfig = kafkaProducerConfig();
@@ -308,7 +307,11 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public TelemetrySender downstreamTelemetrySender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
-        return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+        return new ProtonBasedDownstreamSender(
+                downstreamConnection(),
+                samplerFactory,
+                adapterConfig.isDefaultsEnabled(),
+                adapterConfig.isJmsVendorPropsEnabled());
     }
 
     /**
@@ -328,7 +331,11 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public EventSender downstreamEventSender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
-        return new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory, adapterConfig);
+        return new ProtonBasedDownstreamSender(
+                downstreamConnection(),
+                samplerFactory,
+                adapterConfig.isDefaultsEnabled(),
+                adapterConfig.isJmsVendorPropsEnabled());
     }
 
     /**
@@ -764,7 +771,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     CommandConsumerFactory commandConsumerFactory(
-            final ProtocolAdapterProperties adapterProperties,
             final SendMessageSampler.Factory samplerFactory,
             final DeviceConnectionClient deviceConnectionClient,
             final DeviceRegistrationClient registrationClient) {
@@ -774,14 +780,12 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         return new ProtonBasedDelegatingCommandConsumerFactory(
                 commandConsumerConnection(),
                 samplerFactory,
-                adapterProperties,
                 deviceConnectionClient,
                 registrationClient,
                 getTracer());
     }
 
     CommandConsumerFactory commandConsumerFactory(
-            final ProtocolAdapterProperties adapterProperties,
             final SendMessageSampler.Factory samplerFactory,
             final CommandRouterClient commandRouterClient) {
 
@@ -790,7 +794,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         return new ProtonBasedCommandRouterCommandConsumerFactoryImpl(
                 commandConsumerConnection(),
                 samplerFactory,
-                adapterProperties,
                 commandRouterClient);
     }
 

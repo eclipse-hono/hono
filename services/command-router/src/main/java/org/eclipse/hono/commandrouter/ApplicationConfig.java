@@ -272,16 +272,14 @@ public class ApplicationConfig {
      * Exposes a factory for creating clients for receiving upstream commands
      * via the AMQP Messaging Network.
      *
-     * @param config The component's configuration properties.
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory(final CommandRouterServiceConfigProperties config) {
+    public CommandConsumerFactory commandConsumerFactory() {
         return new ProtonBasedCommandConsumerFactoryImpl(
                 commandConsumerConnection(),
-                SendMessageSampler.Factory.noop(),
-                config);
+                SendMessageSampler.Factory.noop());
     }
 
     /**

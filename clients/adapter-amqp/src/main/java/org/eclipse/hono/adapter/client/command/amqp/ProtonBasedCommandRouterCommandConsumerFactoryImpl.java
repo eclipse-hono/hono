@@ -31,7 +31,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Strings;
 
@@ -72,16 +71,14 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
      *
      * @param connection The connection to the AMQP network.
      * @param samplerFactory The sampler factory to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @param commandRouterClient The client to use for accessing the command router service.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedCommandRouterCommandConsumerFactoryImpl(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig,
             final CommandRouterClient commandRouterClient) {
-        super(connection, samplerFactory, adapterConfig);
+        super(connection, samplerFactory, false, false);
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
 
         adapterInstanceId = getAdapterInstanceId(connection.getConfig().getName());
