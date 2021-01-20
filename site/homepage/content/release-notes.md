@@ -34,6 +34,12 @@ title = "Release Notes"
   *cert* property. This can be used instead of specifying the client certificate's subject DN and public key's
   validity period explicitly in the *auth-id* and *secrets* properties. This should make setting the correct *auth-id*
   value much less error prone.
+* Hono now supports *auto-provisioning* of devices that connect via gateway. 
+  For more information please refer to the 
+  [Device Provisioning]({{% doclink "/concepts/provisioning/#gateway-based-auto-provisioning" %}}) concept and to the 
+  [Device registry management API]({{% doclink "/api/management#/devices/createDeviceRegistration" %}}) on how to 
+  create a device registration for a gateway which is enabled for auto-provisioning.
+  
 
 ### Fixes & Enhancements
 
