@@ -22,6 +22,15 @@
   </parent>
   <artifactId>hono-adapter-amqp-vertx</artifactId>
   <name>Hono AMQP Adapter</name>
+  <url>https://www.eclipse.org/hono</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-amqp-vertx-base</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
 
   <profiles>
     <profile>
