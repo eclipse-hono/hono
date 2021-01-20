@@ -57,6 +57,29 @@ public class KafkaBasedCommandTest {
         assertThat(cmd.getGatewayOrDeviceId()).isEqualTo(deviceId);
         assertThat(cmd.getGatewayId()).isNull();
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
+        assertTrue(cmd.isOneWay());
+    }
+
+    /**
+     * Verifies that a command can be created from a valid record that represent a request/response command.
+     */
+    @Test
+    public void testFromRecordSucceedsForRequestResponseCommand() {
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
+        final String correlationId = "the-correlation-id";
+        final String deviceId = "4711";
+        final String subject = "doThis";
+
+        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject, correlationId));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_EXPECTED, "true"));
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
+        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getName()).isEqualTo(subject);
+        assertThat(cmd.getDeviceId()).isEqualTo(deviceId);
+        assertThat(cmd.getGatewayOrDeviceId()).isEqualTo(deviceId);
+        assertThat(cmd.getGatewayId()).isNull();
+        assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
     }
 
@@ -82,15 +105,16 @@ public class KafkaBasedCommandTest {
         assertThat(cmd.getGatewayOrDeviceId()).isEqualTo(gatewayId);
         assertThat(cmd.getGatewayId()).isEqualTo(gatewayId);
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
-        assertFalse(cmd.isOneWay());
+        assertTrue(cmd.isOneWay());
     }
 
     /**
-     * Verifies that a command can be created from a valid record that has no <em>correlation-id</em> header.
+     * Verifies that a command can be created from a valid record that has no <em>response-expected</em>
+     * and no <em>correlation-id</em> header.
      * Verifies that the command reports that it is a one-way command.
      */
     @Test
-    public void testFromRecordSucceedsWithoutCorrelationId() {
+    public void testFromRecordSucceedsWithoutResponseExpectedAndCorrelationId() {
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String deviceId = "4711";
         final String subject = "doThis";
@@ -104,6 +128,24 @@ public class KafkaBasedCommandTest {
         assertThat(cmd.getGatewayId()).isNull();
         assertThat(cmd.getCorrelationId()).isNull();
         assertTrue(cmd.isOneWay());
+    }
+
+    /**
+     * Verifies that a valid command cannot be created from a record that has the <em>response-expected</em>
+     * header set to "true" but has no <em>correlation-id</em> header.
+     */
+    @Test
+    public void testFromRecordFailsForMissingCorrelationIdWithResponseExpected() {
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
+        final String deviceId = "4711";
+        final String subject = "doThis";
+
+        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_EXPECTED, "true"));
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
+        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
+        assertFalse(cmd.isValid());
+        assertThat(cmd.getInvalidCommandReason()).contains("correlation-id");
     }
 
     /**
