@@ -39,6 +39,7 @@ import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterSaslAuthenticatorFactory;
+import org.eclipse.hono.adapter.amqp.AmqpContext;
 import org.eclipse.hono.adapter.amqp.SaslExternalAuthHandler;
 import org.eclipse.hono.adapter.amqp.SaslPlainAuthHandler;
 import org.eclipse.hono.adapter.amqp.SaslResponseContext;

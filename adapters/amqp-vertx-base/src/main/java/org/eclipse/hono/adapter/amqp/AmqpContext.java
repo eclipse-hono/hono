@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.amqp.impl;
+package org.eclipse.hono.adapter.amqp;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -60,7 +60,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      * @return The context.
      * @throws NullPointerException if any of the parameters except authenticatedDevice is null {@code null}.
      */
-    static AmqpContext fromMessage(
+    public static AmqpContext fromMessage(
             final ProtonDelivery delivery,
             final Message message,
             final Span span,
@@ -86,7 +86,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The body of the AMQP 1.0 message as a buffer object.
      */
-    final Buffer getMessagePayload() {
+    public final Buffer getMessagePayload() {
         return payload;
     }
 
@@ -95,7 +95,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The size in bytes.
      */
-    final int getPayloadSize() {
+    public final int getPayloadSize() {
         return payload == null ? 0 : payload.length();
     }
 
@@ -104,7 +104,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The content type or {@code null} if not set.
      */
-    final String getMessageContentType() {
+    public final String getMessageContentType() {
         return message.getContentType();
     }
 
@@ -125,7 +125,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The delivery state of this context.
      */
-    final ProtonDelivery delivery() {
+    public final ProtonDelivery delivery() {
         return delivery;
     }
 
@@ -134,7 +134,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The AMQP 1.0 message.
      */
-    final Message getMessage() {
+    public final Message getMessage() {
         return message;
     }
 
@@ -143,7 +143,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The endpoint name.
      */
-    final EndpointType getEndpoint() {
+    public final EndpointType getEndpoint() {
         return endpoint;
     }
 
@@ -152,7 +152,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The resource.
      */
-    final ResourceIdentifier getAddress() {
+    public final ResourceIdentifier getAddress() {
         return address;
     }
 
@@ -161,7 +161,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return True if the device sends the message settled, false otherwise.
      */
-    final boolean isRemotelySettled() {
+    public final boolean isRemotelySettled() {
         return delivery.remotelySettled();
     }
 
@@ -171,7 +171,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @param timer The timer.
      */
-    final void setTimer(final Sample timer) {
+    public final void setTimer(final Sample timer) {
         this.timer = timer;
     }
 
@@ -181,7 +181,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The timer or {@code null} if not set.
      */
-    final Sample getTimer() {
+    public final Sample getTimer() {
         return timer;
     }
 
