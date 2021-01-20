@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -106,12 +107,10 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
 
         final ProtonReceiver adapterInstanceCommandReceiver = HonoClientUnitTestHelper.mockProtonReceiver();
         when(adapterInstanceCommandReceiver.getSource()).thenReturn(mock(Source.class));
-        final String adapterInstanceCommandConsumerAddress =
-                CommandConstants.INTERNAL_COMMAND_ENDPOINT + "/" + adapterInstanceId;
 
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(
-                eq(adapterInstanceCommandConsumerAddress),
+                startsWith(CommandConstants.INTERNAL_COMMAND_ENDPOINT),
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
                 anyInt(),

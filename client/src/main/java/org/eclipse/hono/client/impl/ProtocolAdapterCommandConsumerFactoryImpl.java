@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -37,6 +38,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.Strings;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
@@ -98,10 +100,16 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
     public ProtocolAdapterCommandConsumerFactoryImpl(final HonoConnection connection, final SendMessageSampler.Factory samplerFactory) {
         super(connection, samplerFactory);
 
-        // the container id contains a UUID therefore it can be used as a unique adapter instance id
-        adapterInstanceId = connection.getContainerId();
+        adapterInstanceId = getAdapterInstanceId(connection.getConfig().getName());
 
         adapterInstanceCommandHandler = new AdapterInstanceCommandHandler(connection.getTracer(), adapterInstanceId);
+    }
+
+    private static String getAdapterInstanceId(final String adapterName) {
+        // replace special characters so that the id can be used in a Kafka topic name
+        final String prefix = Strings.isNullOrEmpty(adapterName) ? ""
+                : adapterName.replaceAll("[^a-zA-Z0-9._-]", "") + "-";
+        return prefix + UUID.randomUUID();
     }
 
     @Override
