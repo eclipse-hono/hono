@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -99,27 +99,27 @@ public abstract class StatusCodeMapper {
     }
 
     /**
-     * Creates an exception for an AMQP error condition.
+     * Creates an exception for an AMQP error condition that occurred when attaching a link.
      *
      * @param error The error condition.
      * @return The exception.
      * @throws NullPointerException if error is {@code null}.
      */
-    public static final ServiceInvocationException from(final ErrorCondition error) {
+    public static final ServiceInvocationException fromAttachError(final ErrorCondition error) {
 
         Objects.requireNonNull(error);
-        return from(error.getCondition(), error.getDescription());
+        return fromAttachError(error.getCondition(), error.getDescription());
     }
 
     /**
-     * Creates an exception for an AMQP error condition.
+     * Creates an exception for an AMQP error condition that occurred when attaching a link.
      *
      * @param condition The error condition.
      * @param description The error description or {@code null} if not available.
      * @return The exception.
      * @throws NullPointerException if error is {@code null}.
      */
-    public static final ServiceInvocationException from(final Symbol condition, final String description) {
+    public static final ServiceInvocationException fromAttachError(final Symbol condition, final String description) {
 
         Objects.requireNonNull(condition);
 
@@ -134,5 +134,66 @@ public abstract class StatusCodeMapper {
         } else {
             return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, description);
         }
+    }
+
+    /**
+     * Creates an exception for an AMQP error condition that occurred during a message transfer.
+     *
+     * @param error The error condition.
+     * @return The exception.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static final ServiceInvocationException fromTransferError(final ErrorCondition error) {
+
+        Objects.requireNonNull(error);
+        return fromTransferError(error.getCondition(), error.getDescription());
+    }
+
+    /**
+     * Creates an exception for an AMQP error condition that occurred during a message transfer.
+     *
+     * @param condition The error condition.
+     * @param description The error description or {@code null} if not available.
+     * @return The exception.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static final ServiceInvocationException fromTransferError(final Symbol condition, final String description) {
+
+        Objects.requireNonNull(condition);
+
+        if (AmqpError.RESOURCE_LIMIT_EXCEEDED.equals(condition)) {
+            return new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, description);
+        } else if (AmqpError.UNAUTHORIZED_ACCESS.equals(condition)) {
+            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, description);
+        } else if (AmqpError.INTERNAL_ERROR.equals(condition)) {
+            return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, description);
+        } else {
+            return new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, description);
+        }
+    }
+
+    /**
+     * Maps the given exception to a {@link ServiceInvocationException} with a server error code.
+     * <p>
+     * A client error is mapped to a <em>503: Service unavailable</em> error. If the exception
+     * already represents a server error, the exception itself is returned.
+     * <p>
+     * All other kinds of errors are mapped to a <em>500: Internal server error</em>.
+     *
+     * @param throwable The exception to map.
+     * @return The mapped exception.
+     * @throws NullPointerException if throwable is {@code null}.
+     */
+    public static final ServiceInvocationException toServerError(final Throwable throwable) {
+        Objects.requireNonNull(throwable);
+        if (throwable instanceof ServiceInvocationException) {
+            final int errorCode = ((ServiceInvocationException) throwable).getErrorCode();
+            if (errorCode >= 400 && errorCode < 500) {
+                // a client error gets mapped to "service unavailable"
+                return new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, throwable);
+            }
+            return (ServiceInvocationException) throwable;
+        }
+        return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, throwable);
     }
 }

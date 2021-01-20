@@ -219,8 +219,8 @@ public abstract class AmqpAdapterTestBase {
                 })
                 .recover(t -> {
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
-                            .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.from(condition)))
-                            .orElse(Future.failedFuture(t));
+                            .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.fromAttachError(condition)))
+                            .orElseGet(() -> Future.failedFuture(t));
                 });
     }
 }

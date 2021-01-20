@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -764,7 +764,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     "cannot open sender", senderOpen.cause()));
                         } else {
                             log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                            senderPromise.tryFail(StatusCodeMapper.from(error));
+                            senderPromise.tryFail(StatusCodeMapper.fromAttachError(error));
                         }
 
                     } else if (HonoProtonHelper.isLinkEstablished(sender)) {
@@ -895,7 +895,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     "cannot open receiver", recvOpen.cause()));
                         } else {
                             log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
-                            receiverPromise.tryFail(StatusCodeMapper.from(error));
+                            receiverPromise.tryFail(StatusCodeMapper.fromAttachError(error));
                         }
                     } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
                         log.debug("receiver open [source: {}]", sourceAddress);
