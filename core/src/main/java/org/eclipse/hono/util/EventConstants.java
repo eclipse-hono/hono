@@ -40,7 +40,7 @@ public final class EventConstants {
     /**
      * The content type of the <em>device provisioning notification</em> event.
      */
-    public static final String CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION = "application/vnd.eclipse-device-provisioning-notification";
+    public static final String CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION = "application/vnd.eclipse-hono-device-provisioning-notification";
 
 
     /**

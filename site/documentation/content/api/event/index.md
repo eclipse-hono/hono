@@ -142,7 +142,7 @@ The relevant properties are listed again in the following table:
 
 | Name                       | Mandatory        | Location                 | Type      | Description |
 | :------------------------- | :--------------: | :----------------------- | :-------- | :---------- |
-| *content-type*             | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-device-provisioning-notification* |
+| *content-type*             | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-device-provisioning-notification* |
 | *hono_registration_status* | yes              | *application-properties* | *string*  | Contains NEW if the device has been newly provisioned. |
 | *tenant_id*                | yes              | *application-properties* | *string*  | The tenant id denoting the tenant of the device. |
 | *device_id*                | yes              | *application-properties* | *string*  | The id of the device. |
