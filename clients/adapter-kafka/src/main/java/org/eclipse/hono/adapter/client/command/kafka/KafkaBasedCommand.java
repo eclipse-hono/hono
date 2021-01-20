@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.Commands;
@@ -38,6 +39,11 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 public final class KafkaBasedCommand implements Command {
 
     /**
+     * The name of the boolean Kafka record header that defines whether a response is expected for the command.
+     */
+    public static final String HEADER_RESPONSE_EXPECTED = "response-expected";
+
+    /**
      * If present, the command is invalid.
      */
     private final Optional<String> validationError;
@@ -48,6 +54,7 @@ public final class KafkaBasedCommand implements Command {
     private final String subject;
     private final String contentType;
     private final String requestId;
+    private final boolean responseExpected;
 
     private String gatewayId;
 
@@ -58,7 +65,8 @@ public final class KafkaBasedCommand implements Command {
             final String deviceId,
             final String correlationId,
             final String subject,
-            final String contentType) {
+            final String contentType,
+            final boolean responseExpected) {
 
         this.validationError = validationError;
         this.record = commandRecord;
@@ -67,6 +75,7 @@ public final class KafkaBasedCommand implements Command {
         this.correlationId = correlationId;
         this.subject = subject;
         this.contentType = contentType;
+        this.responseExpected = responseExpected;
         requestId = Commands.getRequestId(correlationId);
     }
 
@@ -80,7 +89,7 @@ public final class KafkaBasedCommand implements Command {
      * In addition, the record is expected to contain
      * <ul>
      * <li>a <em>subject</em> header</li>
-     * <li>a non-empty <em>correlation-id</em> header if a response is expected for the command.</li>
+     * <li>a non-empty <em>correlation-id</em> header if the <em>response-expected</em> header is set to {@code true}.</li>
      * </ul>
      * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
      * <p>
@@ -108,22 +117,29 @@ public final class KafkaBasedCommand implements Command {
             throw new IllegalArgumentException("device identifier not set as record key");
         }
 
-        String validationError = null;
+        final StringJoiner validationErrorJoiner = new StringJoiner(", ");
         final String subject = getHeader(record, MessageHelper.SYS_PROPERTY_SUBJECT);
         if (subject == null) {
-            validationError = "subject not set";
+            validationErrorJoiner.add("subject not set");
         }
         final String contentType = getHeader(record, MessageHelper.SYS_PROPERTY_CONTENT_TYPE);
         final String correlationId = getHeader(record, MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+        final boolean responseExpected = Optional
+                .ofNullable(RecordUtil.getHeaderValue(record.headers(), HEADER_RESPONSE_EXPECTED, Boolean.class))
+                .orElse(false);
+        if (responseExpected && Strings.isNullOrEmpty(correlationId)) {
+            validationErrorJoiner.add("correlation-id is not set");
+        }
 
         return new KafkaBasedCommand(
-                Optional.ofNullable(validationError),
+                validationErrorJoiner.length() > 0 ? Optional.of(validationErrorJoiner.toString()) : Optional.empty(),
                 record,
                 tenantId,
                 deviceId,
                 Strings.isNullOrEmpty(correlationId) ? null : correlationId,
                 subject,
-                contentType);
+                contentType,
+                responseExpected);
     }
 
     /**
@@ -151,7 +167,7 @@ public final class KafkaBasedCommand implements Command {
 
     @Override
     public boolean isOneWay() {
-        return correlationId == null;
+        return !responseExpected;
     }
 
     @Override
