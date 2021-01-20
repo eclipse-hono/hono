@@ -224,7 +224,7 @@ public abstract class AmqpAdapterTestBase {
                             IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT);
 
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
-                            .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.from(condition)))
+                            .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.fromAttachError(condition)))
                             .orElseGet(() -> Future.failedFuture(t));
                 });
     }
