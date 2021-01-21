@@ -51,21 +51,13 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param deviceDefaultsEnabled {@code true} if the default properties registered for devices
-     *                              should be included in messages being sent.
-     * @param jmsVendorPropsEnabled {@code true} if <em>Vendor Properties</em> as defined by <a
-     *                              href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
-     *                              Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a> should be included
-     *                              in messages being sent.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected SenderCachingServiceClient(
             final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final boolean deviceDefaultsEnabled,
-            final boolean jmsVendorPropsEnabled) {
+            final SendMessageSampler.Factory samplerFactory) {
 
-        this(connection, samplerFactory, deviceDefaultsEnabled, jmsVendorPropsEnabled, true);
+        this(connection, samplerFactory, true);
     }
 
     /**
@@ -73,12 +65,6 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param deviceDefaultsEnabled {@code true} if the default properties registered for devices
-     *                              should be included in messages being sent.
-     * @param jmsVendorPropsEnabled {@code true} if <em>Vendor Properties</em> as defined by <a
-     *                              href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
-     *                              Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a> should be included
-     *                              in messages being sent.
      * @param isTenantSpecificLink If the links created for this client are tenant-specific, leading
      *            them to get closed when a tenant timeout occurs.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -86,11 +72,9 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     protected SenderCachingServiceClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final boolean deviceDefaultsEnabled,
-            final boolean jmsVendorPropsEnabled,
             final boolean isTenantSpecificLink) {
 
-        super(connection, samplerFactory, deviceDefaultsEnabled, jmsVendorPropsEnabled);
+        super(connection, samplerFactory);
         this.clientFactory = new CachingClientFactory<>(connection.getVertx(), GenericSenderLink::isOpen);
         if (isTenantSpecificLink) {
             connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,

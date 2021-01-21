@@ -67,8 +67,6 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
             final ProtocolAdapterProperties adapterConfig) {
         super(connection,
                 samplerFactory,
-                adapterConfig.isDefaultsEnabled(),
-                adapterConfig.isJmsVendorPropsEnabled(),
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
                 null);
         connection.getVertx().eventBus().consumer(

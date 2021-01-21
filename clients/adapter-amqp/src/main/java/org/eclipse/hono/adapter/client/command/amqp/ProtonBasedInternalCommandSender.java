@@ -55,7 +55,7 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public ProtonBasedInternalCommandSender(final HonoConnection connection) {
-        super(connection, SendMessageSampler.Factory.noop(), false, false, false);
+        super(connection, SendMessageSampler.Factory.noop(), false);
     }
 
     @Override

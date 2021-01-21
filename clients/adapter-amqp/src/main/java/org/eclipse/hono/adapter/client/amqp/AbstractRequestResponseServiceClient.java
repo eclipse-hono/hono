@@ -77,12 +77,6 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
      *
      * @param connection The connection to the service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param deviceDefaultsEnabled {@code true} if the default properties registered for devices
-     *                              should be included in messages being sent.
-     * @param jmsVendorPropsEnabled {@code true} if <em>Vendor Properties</em> as defined by <a
-     *                              href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
-     *                              Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a> should be included
-     *                              in messages being sent.
      * @param clientFactory The factory to use for creating links to the service.
      * @param responseCache The cache to use for service responses.
      * @throws NullPointerException if any of the parameters other than responseCache are {@code null}.
@@ -90,12 +84,10 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     protected AbstractRequestResponseServiceClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final boolean deviceDefaultsEnabled,
-            final boolean jmsVendorPropsEnabled,
             final CachingClientFactory<RequestResponseClient<R>> clientFactory,
             final Cache<Object, R> responseCache) {
 
-        super(connection, samplerFactory, deviceDefaultsEnabled, jmsVendorPropsEnabled);
+        super(connection, samplerFactory);
         this.clientFactory = Objects.requireNonNull(clientFactory);
         this.responseCache = Optional.ofNullable(responseCache).orElse(null);
     }

@@ -78,7 +78,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     public ProtonBasedCommandConsumerFactoryImpl(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory) {
-        super(connection, samplerFactory, false, false);
+        super(connection, samplerFactory);
     }
 
     @Override

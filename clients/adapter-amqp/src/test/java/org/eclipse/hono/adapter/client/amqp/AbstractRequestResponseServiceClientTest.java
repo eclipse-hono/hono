@@ -64,8 +64,6 @@ class AbstractRequestResponseServiceClientTest {
         client = new AbstractRequestResponseServiceClient<>(
                 AmqpClientUnitTestHelper.mockHonoConnection(vertx, props),
                 SendMessageSampler.Factory.noop(),
-                true,
-                false,
                 new CachingClientFactory<>(vertx, v -> true),
                 cache) {
 

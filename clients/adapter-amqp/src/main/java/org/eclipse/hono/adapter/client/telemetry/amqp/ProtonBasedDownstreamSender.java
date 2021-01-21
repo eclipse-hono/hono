@@ -43,6 +43,9 @@ import io.vertx.core.buffer.Buffer;
  */
 public class ProtonBasedDownstreamSender extends SenderCachingServiceClient implements TelemetrySender, EventSender {
 
+    private final boolean deviceDefaultsEnabled;
+    private final boolean jmsVendorPropsEnabled;
+
     /**
      * Creates a new sender for a connection.
      *
@@ -61,7 +64,9 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
             final SendMessageSampler.Factory samplerFactory,
             final boolean deviceDefaultsEnabled,
             final boolean jmsVendorPropsEnabled) {
-        super(connection, samplerFactory, deviceDefaultsEnabled, jmsVendorPropsEnabled);
+        super(connection, samplerFactory);
+        this.deviceDefaultsEnabled = deviceDefaultsEnabled;
+        this.jmsVendorPropsEnabled = jmsVendorPropsEnabled;
     }
 
     /**
@@ -143,8 +148,8 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
                 tenant,
                 props,
                 device.getDefaults(),
-                isDeviceDefaultsEnabled(),
-                isJmsVendorPropsEnabled());
+                deviceDefaultsEnabled,
+                jmsVendorPropsEnabled);
     }
 
     /**

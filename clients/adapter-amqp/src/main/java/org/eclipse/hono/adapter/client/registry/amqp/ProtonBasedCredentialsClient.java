@@ -76,8 +76,6 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
 
         super(connection,
                 samplerFactory,
-                adapterConfig.isDefaultsEnabled(),
-                adapterConfig.isJmsVendorPropsEnabled(),
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
                 responseCache);
         connection.getVertx().eventBus().consumer(

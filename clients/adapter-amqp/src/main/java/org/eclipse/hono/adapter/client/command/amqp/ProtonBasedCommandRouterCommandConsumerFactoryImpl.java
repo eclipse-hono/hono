@@ -78,7 +78,7 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final CommandRouterClient commandRouterClient) {
-        super(connection, samplerFactory, false, false);
+        super(connection, samplerFactory);
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
 
         adapterInstanceId = getAdapterInstanceId(connection.getConfig().getName());

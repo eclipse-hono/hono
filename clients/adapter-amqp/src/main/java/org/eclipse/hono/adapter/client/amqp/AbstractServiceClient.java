@@ -56,63 +56,20 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      */
     protected final SendMessageSampler.Factory samplerFactory;
 
-    private final boolean deviceDefaultsEnabled;
-    private final boolean jmsVendorPropsEnabled;
-
     /**
      * Creates a new client.
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param deviceDefaultsEnabled {@code true} if the default properties registered for devices
-     *                              should be included in messages being sent.
-     * @param jmsVendorPropsEnabled {@code true} if <em>Vendor Properties</em> as defined by <a
-     *                              href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
-     *                              Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a> should be included
-     *                              in messages being sent.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected AbstractServiceClient(
             final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final boolean deviceDefaultsEnabled,
-            final boolean jmsVendorPropsEnabled) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         this.connection = Objects.requireNonNull(connection);
         this.connection.addDisconnectListener(con -> onDisconnect());
         this.samplerFactory = Objects.requireNonNull(samplerFactory);
-        this.deviceDefaultsEnabled = deviceDefaultsEnabled;
-        this.jmsVendorPropsEnabled = jmsVendorPropsEnabled;
-    }
-
-    /**
-     * Checks if <em>default</em> values registered for a device should be used
-     * to augment messages published by the device.
-     * <p>
-     * Default values that can be registered for devices include:
-     * <ul>
-     * <li><em>content-type</em> - the default content type to set on a downstream message
-     * if the device did not specify a content type when it published the message. This
-     * is particularly useful for defining a content type for devices connected via MQTT
-     * which does not provide a standard way of setting a content type.</li>
-     * </ul>
-     *
-     * @return {@code true} if default values should be used.
-     */
-    protected final boolean isDeviceDefaultsEnabled() {
-        return deviceDefaultsEnabled;
-    }
-
-    /**
-     * Checks if <em>Vendor Properties</em> as defined by <a
-     * href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
-     * Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a> should be included
-     * in messages being sent.
-     *
-     * @return {@code true} if the properties should be included.
-     */
-    protected final boolean isJmsVendorPropsEnabled() {
-        return jmsVendorPropsEnabled;
     }
 
     /**

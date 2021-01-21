@@ -74,8 +74,6 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseSe
 
         super(connection,
                 samplerFactory,
-                adapterConfig.isDefaultsEnabled(),
-                adapterConfig.isJmsVendorPropsEnabled(),
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
                 null);
         connection.getVertx().eventBus().consumer(

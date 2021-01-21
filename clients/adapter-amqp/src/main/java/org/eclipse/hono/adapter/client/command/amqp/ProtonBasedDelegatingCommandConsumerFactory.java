@@ -70,7 +70,7 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
             final DeviceRegistrationClient deviceRegistrationClient,
             final Tracer tracer) {
 
-        super(connection, samplerFactory, false, false);
+        super(connection, samplerFactory);
 
         Objects.requireNonNull(deviceConnectionClient);
         Objects.requireNonNull(deviceRegistrationClient);
