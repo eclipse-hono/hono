@@ -16,7 +16,6 @@ import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,8 +49,7 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
                         IntegrationTestSupport.getDeviceConnectionServiceProperties(
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
-                SendMessageSampler.Factory.noop(),
-                new ProtocolAdapterProperties());
+                SendMessageSampler.Factory.noop());
 
         client.start().onComplete(ctx.completing());
     }

@@ -28,7 +28,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -78,7 +77,6 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
      *
      * @param connection The connection to the service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @param clientFactory The factory to use for creating links to the service.
      * @param responseCache The cache to use for service responses.
      * @throws NullPointerException if any of the parameters other than responseCache are {@code null}.
@@ -86,11 +84,10 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     protected AbstractRequestResponseServiceClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig,
             final CachingClientFactory<RequestResponseClient<R>> clientFactory,
             final Cache<Object, R> responseCache) {
 
-        super(connection, samplerFactory, adapterConfig);
+        super(connection, samplerFactory);
         this.clientFactory = Objects.requireNonNull(clientFactory);
         this.responseCache = Optional.ofNullable(responseCache).orElse(null);
     }

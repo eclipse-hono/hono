@@ -26,7 +26,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -64,19 +63,20 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
      *
      * @param connection The connection to the Credentials service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
      * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedCredentialsClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig,
             final Cache<Object, CredentialsResult<CredentialsObject>> responseCache) {
 
-        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), responseCache);
-        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+        super(connection,
+                samplerFactory,
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
+        connection.getVertx().eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
 

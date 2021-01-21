@@ -272,16 +272,14 @@ public class ApplicationConfig {
      * Exposes a factory for creating clients for receiving upstream commands
      * via the AMQP Messaging Network.
      *
-     * @param config The component's configuration properties.
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory(final CommandRouterServiceConfigProperties config) {
+    public CommandConsumerFactory commandConsumerFactory() {
         return new ProtonBasedCommandConsumerFactoryImpl(
                 commandConsumerConnection(),
-                SendMessageSampler.Factory.noop(),
-                config);
+                SendMessageSampler.Factory.noop());
     }
 
     /**
@@ -314,18 +312,16 @@ public class ApplicationConfig {
     /**
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
-     * @param config The component's configuration properties.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public DeviceRegistrationClient registrationClient(final CommandRouterServiceConfigProperties config) {
+    public DeviceRegistrationClient registrationClient() {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 SendMessageSampler.Factory.noop(),
-                config,
                 Caches.newCaffeineCache(registrationClientConfig()));
     }
 

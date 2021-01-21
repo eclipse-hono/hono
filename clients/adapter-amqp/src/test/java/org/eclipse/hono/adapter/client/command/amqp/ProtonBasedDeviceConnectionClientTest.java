@@ -33,7 +33,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -101,8 +100,7 @@ public class ProtonBasedDeviceConnectionClientTest {
 
         client = new ProtonBasedDeviceConnectionClient(
                 connection,
-                SendMessageSampler.Factory.noop(),
-                new ProtocolAdapterProperties());
+                SendMessageSampler.Factory.noop());
     }
 
     /**

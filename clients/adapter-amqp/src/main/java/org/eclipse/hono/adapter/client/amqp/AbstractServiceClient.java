@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
@@ -56,28 +55,21 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      * The factory for creating <em>send message</em> samplers.
      */
     protected final SendMessageSampler.Factory samplerFactory;
-    /**
-     * The protocol adapter configuration.
-     */
-    protected final ProtocolAdapterProperties adapterConfig;
 
     /**
      * Creates a new client.
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected AbstractServiceClient(
             final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         this.connection = Objects.requireNonNull(connection);
         this.connection.addDisconnectListener(con -> onDisconnect());
         this.samplerFactory = Objects.requireNonNull(samplerFactory);
-        this.adapterConfig = Objects.requireNonNull(adapterConfig);
     }
 
     /**

@@ -30,7 +30,6 @@ import org.eclipse.hono.adapter.client.command.InternalCommandSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -56,7 +55,7 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public ProtonBasedInternalCommandSender(final HonoConnection connection) {
-        super(connection, SendMessageSampler.Factory.noop(), new ProtocolAdapterProperties(), false);
+        super(connection, SendMessageSampler.Factory.noop(), false);
     }
 
     @Override

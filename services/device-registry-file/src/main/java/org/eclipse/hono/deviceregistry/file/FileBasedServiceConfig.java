@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
@@ -147,11 +148,12 @@ public class FileBasedServiceConfig {
      */
     @Bean
     @Scope("prototype")
-    public ProtonBasedDownstreamSender protonBasedDownstreamSender(final Vertx vertx, final Tracer tracer) {
+    public EventSender eventSender(final Vertx vertx, final Tracer tracer) {
         return new ProtonBasedDownstreamSender(
                 downstreamConnection(vertx, tracer),
                 SendMessageSampler.Factory.noop(),
-                autoProvisionerConfigProperties());
+                true,
+                true);
     }
 
     /**
@@ -230,7 +232,7 @@ public class FileBasedServiceConfig {
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
         autoProvisioner.setTenantInformationService(tenantInformationService());
-        autoProvisioner.setEventSender(protonBasedDownstreamSender(vertx, tracer));
+        autoProvisioner.setEventSender(eventSender(vertx, tracer));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);

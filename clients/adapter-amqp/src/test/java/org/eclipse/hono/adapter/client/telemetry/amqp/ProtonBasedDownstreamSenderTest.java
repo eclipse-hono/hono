@@ -31,7 +31,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
@@ -77,14 +76,13 @@ public class ProtonBasedDownstreamSenderTest {
         when(vertx.eventBus()).thenReturn(mock(EventBus.class));
 
         final ClientConfigProperties clientConfigProperties = new ClientConfigProperties();
-        final ProtocolAdapterProperties adapterConfig = new ProtocolAdapterProperties();
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, clientConfigProperties, tracer);
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         protonSender = AmqpClientUnitTestHelper.mockProtonSender();
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(protonSender));
 
-        sender = new ProtonBasedDownstreamSender(connection, SendMessageSampler.Factory.noop(), adapterConfig);
+        sender = new ProtonBasedDownstreamSender(connection, SendMessageSampler.Factory.noop(), true, false);
     }
 
     /**

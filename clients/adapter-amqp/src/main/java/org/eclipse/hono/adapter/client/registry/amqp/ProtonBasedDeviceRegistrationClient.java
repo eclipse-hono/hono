@@ -29,7 +29,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -66,18 +65,18 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
      *
      * @param connection The connection to the Device Registration service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
      * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedDeviceRegistrationClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig,
             final Cache<Object, RegistrationResult> responseCache) {
 
-        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), responseCache);
+        super(connection,
+                samplerFactory,
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
         connection.getVertx().eventBus().consumer(
                 Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);

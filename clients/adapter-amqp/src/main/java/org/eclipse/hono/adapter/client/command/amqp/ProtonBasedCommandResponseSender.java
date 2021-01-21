@@ -40,6 +40,8 @@ import io.vertx.proton.ProtonHelper;
  */
 public class ProtonBasedCommandResponseSender extends AbstractServiceClient implements CommandResponseSender {
 
+    private final boolean jmsVendorPropsEnabled;
+
     /**
      * Creates a new sender for a connection.
      *
@@ -52,7 +54,8 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
-        super(connection, samplerFactory, adapterConfig);
+        super(connection, samplerFactory);
+        this.jmsVendorPropsEnabled = adapterConfig.isJmsVendorPropsEnabled();
     }
 
     private Future<GenericSenderLink> createSender(final String tenantId, final String replyId) {
@@ -81,6 +84,9 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
                 null));
         MessageHelper.addTenantId(msg, response.getTenantId());
         MessageHelper.addDeviceId(msg, response.getDeviceId());
+        if (jmsVendorPropsEnabled) {
+            MessageHelper.addJmsVendorProperties(msg);
+        }
         return msg;
     }
 

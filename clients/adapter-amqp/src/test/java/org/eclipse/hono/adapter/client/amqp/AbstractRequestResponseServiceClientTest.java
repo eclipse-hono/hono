@@ -28,7 +28,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,7 +64,6 @@ class AbstractRequestResponseServiceClientTest {
         client = new AbstractRequestResponseServiceClient<>(
                 AmqpClientUnitTestHelper.mockHonoConnection(vertx, props),
                 SendMessageSampler.Factory.noop(),
-                new ProtocolAdapterProperties(),
                 new CachingClientFactory<>(vertx, v -> true),
                 cache) {
 

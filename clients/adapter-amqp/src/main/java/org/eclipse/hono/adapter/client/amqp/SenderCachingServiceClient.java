@@ -22,7 +22,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -52,15 +51,13 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected SenderCachingServiceClient(
             final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
-        this(connection, samplerFactory, adapterConfig, true);
+        this(connection, samplerFactory, true);
     }
 
     /**
@@ -68,7 +65,6 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
      *
      * @param connection The connection to the Hono service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @param isTenantSpecificLink If the links created for this client are tenant-specific, leading
      *            them to get closed when a tenant timeout occurs.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -76,10 +72,9 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     protected SenderCachingServiceClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig,
             final boolean isTenantSpecificLink) {
 
-        super(connection, samplerFactory, adapterConfig);
+        super(connection, samplerFactory);
         this.clientFactory = new CachingClientFactory<>(connection.getVertx(), GenericSenderLink::isOpen);
         if (isTenantSpecificLink) {
             connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,

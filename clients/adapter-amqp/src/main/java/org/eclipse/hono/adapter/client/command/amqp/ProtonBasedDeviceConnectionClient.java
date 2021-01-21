@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.eclipse.hono.client.SendMessageSampler.Factory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -64,17 +63,18 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseSe
      *
      * @param connection The connection to the Device Connection service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedDeviceConnectionClient(
             final HonoConnection connection,
-            final Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final Factory samplerFactory) {
 
-        super(connection, samplerFactory, adapterConfig, new CachingClientFactory<>(
-                connection.getVertx(), RequestResponseClient::isOpen), null);
-        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+        super(connection,
+                samplerFactory,
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                null);
+        connection.getVertx().eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
     }
 

@@ -28,7 +28,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
-import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -74,14 +73,12 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
      *
      * @param connection The connection to the AMQP network.
      * @param samplerFactory The sampler factory to use.
-     * @param config The component's configuration properties.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedCommandConsumerFactoryImpl(
             final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final CommandRouterServiceConfigProperties config) {
-        super(connection, samplerFactory, config);
+            final SendMessageSampler.Factory samplerFactory) {
+        super(connection, samplerFactory);
     }
 
     @Override
