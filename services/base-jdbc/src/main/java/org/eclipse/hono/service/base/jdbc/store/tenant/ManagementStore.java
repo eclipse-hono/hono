@@ -297,8 +297,7 @@ public class ManagementStore extends AbstractTenantStore {
 
         final var result = expanded
                 .trace(this.tracer, span.context())
-                .update(this.client)
-                .onComplete(x -> span.finish());
+                .update(this.client);
 
         return checkOptimisticLock(
                 result, span,
