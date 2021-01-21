@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,18 @@
 
 package org.eclipse.hono.deviceregistry.jdbc;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Objects;
 
-import org.eclipse.hono.service.AbstractBaseApplication;
+import org.eclipse.hono.service.AbstractApplication;
+import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.auth.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
@@ -40,61 +40,9 @@ import io.vertx.core.Verticle;
 @ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @Import(ApplicationConfig.class)
 @EnableAutoConfiguration
-public class Application extends AbstractBaseApplication {
+public class Application extends AbstractApplication {
 
-    /**
-     * All the verticles.
-     */
-    private List<Verticle> verticles;
-
-    /**
-     * All the health check providers.
-     */
-    private List<HealthCheckProvider> healthCheckProviders;
-
-    @Autowired
-    public void setVerticles(final List<Verticle> verticles) {
-        this.verticles = verticles;
-    }
-
-    @Autowired
-    public void setHealthCheckProviders(final List<HealthCheckProvider> healthCheckProviders) {
-        this.healthCheckProviders = healthCheckProviders;
-    }
-
-    @Override
-    protected final Future<?> deployVerticles() {
-
-        return super.deployVerticles().compose(ok -> {
-
-            @SuppressWarnings("rawtypes")
-            final List<Future> futures = new LinkedList<>();
-
-            for (final Verticle verticle : this.verticles) {
-                log.info("deploying verticle: {}", verticle);
-                final Promise<String> result = Promise.promise();
-                getVertx().deployVerticle(verticle, result);
-                futures.add(result.future());
-            }
-
-            return CompositeFuture.all(futures);
-
-        });
-
-    }
-
-    /**
-     * Registers any additional health checks that the service implementation components provide.
-     *
-     * @return A succeeded future.
-     */
-    @Override
-    protected Future<Void> postRegisterServiceVerticles() {
-        return super.postRegisterServiceVerticles().compose(ok -> {
-            this.healthCheckProviders.forEach(this::registerHealthchecks);
-            return Future.succeededFuture();
-        });
-    }
+    private AuthenticationService authService;
 
     /**
      * Starts the Device Registry Server.
@@ -103,5 +51,63 @@ public class Application extends AbstractBaseApplication {
      */
     public static void main(final String[] args) {
         SpringApplication.run(Application.class, args);
+    }
+
+    /**
+     * Sets the service to use for authenticating clients.
+     *
+     * @param service The service.
+     * @throws NullPointerException if service is {@code null}.
+     * @throws IllegalArgumentException if the given service is not a {@code Verticle}.
+     */
+    @Autowired
+    public void setAuthenticationService(final AuthenticationService service) {
+        Objects.requireNonNull(service);
+        if (!(service instanceof Verticle)) {
+            throw new IllegalArgumentException("authentication service must be a vert.x Verticle");
+        }
+        this.authService = service;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Deploys a single instance of the authentication service.
+     */
+    @Override
+    protected Future<?> deployRequiredVerticles(final int maxInstances) {
+
+        return deployVerticle(authService)
+                .onSuccess(id -> registerHealthCheckProvider(authService));
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Registers the service instances' health checks (if any).
+     */
+    @Override
+    protected void postDeploy(final AbstractServiceBase<?> serviceInstance) {
+        registerHealthCheckProvider(serviceInstance);
+    }
+
+    private void registerHealthCheckProvider(final Object obj) {
+        if (obj instanceof HealthCheckProvider) {
+            registerHealthchecks((HealthCheckProvider) obj);
+        }
+    }
+
+    private Future<String> deployVerticle(final Object component) {
+
+        final Promise<String> result = Promise.promise();
+        if (component instanceof Verticle) {
+            log.info("deploying component [{}]", component.getClass().getName());
+            getVertx().deployVerticle((Verticle) component, result);
+        } else {
+            result.fail(String.format(
+                    "cannot deploy component [%s]: not a Verticle",
+                    component.getClass().getName()));
+        }
+        return result.future();
     }
 }
