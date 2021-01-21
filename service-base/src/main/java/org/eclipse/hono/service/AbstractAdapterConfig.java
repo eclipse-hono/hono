@@ -125,7 +125,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         Objects.requireNonNull(adapterProperties);
         Objects.requireNonNull(samplerFactory);
 
-        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, adapterProperties);
+        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
             // on config properties
@@ -161,10 +161,10 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         adapter.setCommandResponseSender(commandResponseSender(samplerFactory, adapterProperties));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
-        adapter.setCredentialsClient(credentialsClient(samplerFactory, adapterProperties));
+        adapter.setCredentialsClient(credentialsClient(samplerFactory));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
-        adapter.setTenantClient(tenantClient(samplerFactory, adapterProperties));
+        adapter.setTenantClient(tenantClient(samplerFactory));
         adapter.setTracer(getTracer());
         resourceLimitChecks.ifPresent(adapter::setResourceLimitChecks);
     }
@@ -416,20 +416,17 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public DeviceRegistrationClient registrationClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 samplerFactory,
-                adapterConfig,
                 registrationCache());
     }
 
@@ -489,20 +486,17 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * Exposes a client for accessing the <em>Credentials</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClient credentialsClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedCredentialsClient(
                 credentialsServiceConnection(),
                 samplerFactory,
-                adapterConfig,
                 credentialsCache());
     }
 
@@ -562,20 +556,17 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClient tenantClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedTenantClient(
                 tenantServiceConnection(),
                 samplerFactory,
-                adapterConfig,
                 tenantCache());
     }
 
@@ -649,7 +640,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * Exposes a client for accessing the <em>Device Connection</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
     @Bean
@@ -657,13 +647,11 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     @Scope("prototype")
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
     public DeviceConnectionClient deviceConnectionClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedDeviceConnectionClient(
                 deviceConnectionServiceConnection(),
-                samplerFactory,
-                adapterConfig);
+                samplerFactory);
     }
 
     /**
@@ -713,7 +701,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * Exposes a client for accessing the <em>Command Router</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
      */
     @Bean
@@ -721,13 +708,11 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     @Scope("prototype")
     @ConditionalOnProperty(prefix = "hono.command-router", name = "host")
     public CommandRouterClient commandRouterClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedCommandRouterClient(
                 commandRouterServiceConnection(),
-                samplerFactory,
-                adapterConfig);
+                samplerFactory);
     }
 
     /**

@@ -312,18 +312,16 @@ public class ApplicationConfig {
     /**
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
-     * @param config The component's configuration properties.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public DeviceRegistrationClient registrationClient(final CommandRouterServiceConfigProperties config) {
+    public DeviceRegistrationClient registrationClient() {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 SendMessageSampler.Factory.noop(),
-                config,
                 Caches.newCaffeineCache(registrationClientConfig()));
     }
 

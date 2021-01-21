@@ -243,7 +243,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedTenantClient(
                 HonoConnection.newConnection(vertx, tenantServiceClientConfig(), tracer),
                 messageSamplerFactory,
-                protocolAdapterProperties,
                 tenantResponseCache());
     }
 
@@ -269,7 +268,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(vertx, registrationServiceClientConfig(), tracer),
                 messageSamplerFactory,
-                protocolAdapterProperties,
                 registrationResponseCache());
     }
 
@@ -295,7 +293,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedCredentialsClient(
                 HonoConnection.newConnection(vertx, credentialsServiceClientConfig(), tracer),
                 messageSamplerFactory,
-                protocolAdapterProperties,
                 credentialsResponseCache());
     }
 
@@ -313,8 +310,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected CommandRouterClient commandRouterClient() {
         return new ProtonBasedCommandRouterClient(
                 HonoConnection.newConnection(vertx, commandRouterServiceClientConfig(), tracer),
-                messageSamplerFactory,
-                protocolAdapterProperties);
+                messageSamplerFactory);
     }
 
     private RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
@@ -333,8 +329,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (config.deviceConnection.isHostConfigured()) {
             return new ProtonBasedDeviceConnectionClient(
                     HonoConnection.newConnection(vertx, deviceConnectionServiceClientConfig(), tracer),
-                    messageSamplerFactory,
-                    protocolAdapterProperties);
+                    messageSamplerFactory);
         } else {
             final RemoteCacheManager cacheManager = new RemoteCacheManager(
                     deviceConnectionCacheConfig.getConfigurationBuilder().build(),

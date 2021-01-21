@@ -29,7 +29,6 @@ import org.eclipse.hono.client.SendMessageSampler.Factory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -64,13 +63,11 @@ public class ProtonBasedDeviceConnectionClient extends AbstractRequestResponseSe
      *
      * @param connection The connection to the Device Connection service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedDeviceConnectionClient(
             final HonoConnection connection,
-            final Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final Factory samplerFactory) {
 
         super(connection,
                 samplerFactory,

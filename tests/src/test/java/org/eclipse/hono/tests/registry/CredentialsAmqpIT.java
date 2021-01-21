@@ -16,7 +16,6 @@ import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,7 +48,6 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop(),
-                new ProtocolAdapterProperties(),
                 null);
 
         client.start().onComplete(ctx.completing());

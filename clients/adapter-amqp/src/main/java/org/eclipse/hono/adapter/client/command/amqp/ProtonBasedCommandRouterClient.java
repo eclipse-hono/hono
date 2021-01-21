@@ -27,7 +27,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandRouterConstants;
@@ -58,13 +57,11 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
      *
      * @param connection The connection to the Command Router service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedCommandRouterClient(
             final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final SendMessageSampler.Factory samplerFactory) {
         super(connection,
                 samplerFactory,
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),

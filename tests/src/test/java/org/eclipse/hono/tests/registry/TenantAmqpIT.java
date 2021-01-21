@@ -17,7 +17,6 @@ import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,7 +55,6 @@ public class TenantAmqpIT extends TenantApiTests {
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop(),
-                new ProtocolAdapterProperties(),
                 null);
 
         allTenantClient.start()
@@ -71,7 +69,6 @@ public class TenantAmqpIT extends TenantApiTests {
                                 IntegrationTestSupport.HONO_USER,
                                 IntegrationTestSupport.HONO_PWD)),
                 SendMessageSampler.Factory.noop(),
-                new ProtocolAdapterProperties(),
                 null);
 
         defaultTenantClient.start()

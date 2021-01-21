@@ -33,7 +33,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -97,7 +96,7 @@ public class ProtonBasedCommandRouterClientTest {
                 .thenReturn(Future.succeededFuture(receiver));
         when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
             .thenReturn(Future.succeededFuture(sender));
-        client = new ProtonBasedCommandRouterClient(connection, SendMessageSampler.Factory.noop(), new ProtocolAdapterProperties());
+        client = new ProtonBasedCommandRouterClient(connection, SendMessageSampler.Factory.noop());
     }
 
     /**
