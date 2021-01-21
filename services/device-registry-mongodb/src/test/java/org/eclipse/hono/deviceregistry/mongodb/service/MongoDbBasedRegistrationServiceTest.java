@@ -21,7 +21,6 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
@@ -76,8 +75,7 @@ public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceT
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                config,
-                new NoopTenantInformationService());
+                config);
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());

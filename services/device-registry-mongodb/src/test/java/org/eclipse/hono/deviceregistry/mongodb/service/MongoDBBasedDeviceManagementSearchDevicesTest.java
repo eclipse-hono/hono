@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,11 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.management.device.AbstractDeviceManagementSearchDevicesTest;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.junit.jupiter.api.AfterAll;
@@ -29,7 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -64,8 +61,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                config,
-                new NoopTenantInformationService());
+                config);
         registrationService.createIndices().onComplete(testContext.completing());
     }
 

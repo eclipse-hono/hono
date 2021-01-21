@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.service.device;
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -294,9 +295,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                     final JsonArray memberOf = gatewayResult.getPayload()
                                             .getJsonObject(RegistrationConstants.FIELD_DATA)
                                             .getJsonArray(RegistryManagementConstants.FIELD_MEMBER_OF);
-                                    if (memberOf != null && !memberOf.isEmpty()) {
-                                        device.setViaGroups(memberOf.getList());
-                                    }
+                                    Optional.ofNullable(memberOf).ifPresent(array -> device.setViaGroups(array.stream()
+                                        .filter(String.class::isInstance)
+                                        .map(String.class::cast)
+                                        .collect(Collectors.toList())));
 
                                     LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
                                     return autoProvisioner.performAutoProvisioning(tenantId, deviceId, gatewayId, device, span.context())

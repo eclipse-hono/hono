@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -78,8 +77,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                registrationServiceConfig,
-                new NoopTenantInformationService());
+                registrationServiceConfig);
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
         // start services sequentially as concurrent startup seems to cause
         // concurrency issues sometimes

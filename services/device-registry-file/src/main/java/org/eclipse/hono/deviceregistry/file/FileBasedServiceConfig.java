@@ -27,7 +27,6 @@ import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -36,6 +35,7 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.util.Constants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -61,6 +61,12 @@ import io.vertx.core.Vertx;
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public class FileBasedServiceConfig {
 
+    @Autowired
+    private Vertx vertx;
+
+    @Autowired
+    private Tracer tracer;
+
     //
     //
     // Service implementations
@@ -81,11 +87,10 @@ public class FileBasedServiceConfig {
     /**
      * Creates an instance of the file based service for managing tenant information.
      *
-     * @param vertx The vert.x instance to run on.
      * @return The service.
      */
     @Bean
-    public FileBasedTenantService tenantService(final Vertx vertx) {
+    public FileBasedTenantService tenantService() {
         return new FileBasedTenantService(vertx);
     }
 
@@ -139,18 +144,17 @@ public class FileBasedServiceConfig {
 
 
     /**
-     * Creates a new downstream sender for telemetry and event messages.
-     *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
+     * Creates a sender for publishing events via the <em>AMQP Messaging Network</em>.
+     * <p>
+     * The sender is initialized with the connection provided by {@link #downstreamConnection()}.
      *
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public EventSender eventSender(final Vertx vertx, final Tracer tracer) {
+    public EventSender eventSender() {
         return new ProtonBasedDownstreamSender(
-                downstreamConnection(vertx, tracer),
+                downstreamConnection(),
                 SendMessageSampler.Factory.noop(),
                 true,
                 true);
@@ -161,14 +165,11 @@ public class FileBasedServiceConfig {
      * <p>
      * The connection is configured with the properties provided by {@link #downstreamSenderConfig()}.
      *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
-     *
      * @return The connection.
      */
     @Bean
     @Scope("prototype")
-    public HonoConnection downstreamConnection(final Vertx vertx, final Tracer tracer) {
+    public HonoConnection downstreamConnection() {
         return HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer);
     }
 
@@ -192,16 +193,6 @@ public class FileBasedServiceConfig {
     }
 
     /**
-     * Exposes a {@link TenantInformationService} as a Spring Bean.
-     *
-     * @return The bean instance.
-     */
-    @Bean
-    public TenantInformationService tenantInformationService() {
-        return new AutowiredTenantInformationService();
-    }
-
-    /**
      * Gets properties for configuring gateway based auto-provisioning.
      *
      * @return The properties.
@@ -216,23 +207,23 @@ public class FileBasedServiceConfig {
      * Creates an instance of the file based service for managing device registration information
      * and credentials.
      *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
-     *
      * @return The service.
      */
     @Bean
-    public FileBasedDeviceBackend deviceBackend(final Vertx vertx, final Tracer tracer) {
+    public FileBasedDeviceBackend deviceBackend() {
 
         final FileBasedRegistrationService registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationProperties());
+
+        final var tenantInformationService = new AutowiredTenantInformationService();
+        tenantInformationService.setService(tenantService());
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setDeviceManagementService(registrationService);
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
-        autoProvisioner.setTenantInformationService(tenantInformationService());
-        autoProvisioner.setEventSender(eventSender(vertx, tracer));
+        autoProvisioner.setTenantInformationService(tenantInformationService);
+        autoProvisioner.setEventSender(eventSender());
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);
@@ -320,12 +311,11 @@ public class FileBasedServiceConfig {
      * Creates a new instance of an HTTP protocol handler for the <em>tenants</em> resources
      * of Hono's Device Registry Management API's.
      *
-     * @param vertx The vert.x instance to run on.
      * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public HttpEndpoint tenantHttpEndpoint(final Vertx vertx, final TenantManagementService service) {
+    public HttpEndpoint tenantHttpEndpoint(final TenantManagementService service) {
         return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx, service);
     }
 
@@ -333,12 +323,11 @@ public class FileBasedServiceConfig {
      * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
      * of Hono's Device Registry Management API's.
      *
-     * @param vertx The vert.x instance to run on.
      * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public HttpEndpoint deviceHttpEndpoint(final Vertx vertx, final DeviceManagementService service) {
+    public HttpEndpoint deviceHttpEndpoint(final DeviceManagementService service) {
         return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx, service);
     }
 
@@ -346,12 +335,11 @@ public class FileBasedServiceConfig {
      * Creates a new instance of an HTTP protocol handler for the <em>credentials</em> resources
      * of Hono's Device Registry Management API's.
      *
-     * @param vertx The vert.x instance to run on.
      * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public HttpEndpoint credentialsHttpEndpoint(final Vertx vertx, final CredentialsManagementService service) {
+    public HttpEndpoint credentialsHttpEndpoint(final CredentialsManagementService service) {
         return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx, service);
     }
 }

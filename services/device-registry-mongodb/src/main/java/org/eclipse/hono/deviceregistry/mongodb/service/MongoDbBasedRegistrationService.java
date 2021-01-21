@@ -32,7 +32,6 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.HealthCheckProvider;
@@ -95,19 +94,16 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      * @param vertx The vert.x instance to run on.
      * @param mongoClient The client for accessing the Mongo DB instance.
      * @param config The properties for configuring this service.
-     * @param tenantInformationService An implementation of the tenant information service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedRegistrationService(
             final Vertx vertx,
             final MongoClient mongoClient,
-            final MongoDbBasedRegistrationConfigProperties config,
-            final TenantInformationService tenantInformationService) {
+            final MongoDbBasedRegistrationConfigProperties config) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(mongoClient);
         Objects.requireNonNull(config);
-        Objects.requireNonNull(tenantInformationService);
 
         this.mongoClient = mongoClient;
         this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);

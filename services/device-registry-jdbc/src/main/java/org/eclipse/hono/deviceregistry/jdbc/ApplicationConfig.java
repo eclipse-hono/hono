@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,6 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -77,7 +76,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 
@@ -344,32 +342,17 @@ public class ApplicationConfig {
     }
 
     /**
-     * Provide a tenant information service, backed by the JDBC tenant service instance.
-     *
-     * @return The bean instance.
-     */
-    @Bean
-    @Scope("prototype")
-    @Lazy
-    public TenantInformationService tenantInformationService() {
-        return new AutowiredTenantInformationService();
-    }
-
-    /**
-     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
+     * Creates a sender for publishing events via the <em>AMQP Messaging Network</em>.
      * <p>
-     * The factory is initialized with the connection provided by {@link #downstreamConnection(Vertx, Tracer)}.
-     *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
+     * The sender is initialized with the connection provided by {@link #downstreamConnection()}.
      *
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public EventSender eventSender(final Vertx vertx, final Tracer tracer) {
+    public EventSender eventSender() {
         return new ProtonBasedDownstreamSender(
-                downstreamConnection(vertx, tracer),
+                downstreamConnection(),
                 SendMessageSampler.Factory.noop(),
                 true,
                 true);
@@ -378,15 +361,12 @@ public class ApplicationConfig {
     /**
      * Creates a new downstream sender for telemetry and event messages.
      *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
-     *
      * @return The connection.
      */
     @Bean
     @Scope("prototype")
-    public HonoConnection downstreamConnection(final Vertx vertx, final Tracer tracer) {
-        return HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer);
+    public HonoConnection downstreamConnection() {
+        return HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer());
     }
 
     /**
@@ -422,25 +402,26 @@ public class ApplicationConfig {
     /**
      * Provide a registration service.
      *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
-     *
      * @return The bean instance.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public RegistrationService registrationService(final Vertx vertx, final Tracer tracer) throws IOException {
+    public RegistrationService registrationService() throws IOException {
+
         final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore());
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
 
-        autoProvisioner.setDeviceManagementService(registrationManagementService());
-        autoProvisioner.setVertx(vertx);
-        autoProvisioner.setTracer(tracer);
-        autoProvisioner.setEventSender(eventSender(vertx, tracer));
-        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+        final var tenantInformationService = new AutowiredTenantInformationService();
+        tenantInformationService.setService(tenantService());
 
+        autoProvisioner.setDeviceManagementService(registrationManagementService());
+        autoProvisioner.setVertx(vertx());
+        autoProvisioner.setTracer(tracer());
+        autoProvisioner.setEventSender(eventSender());
+        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+        autoProvisioner.setTenantInformationService(tenantInformationService);
         registrationService.setAutoProvisioner(autoProvisioner);
 
         return registrationService;
@@ -514,17 +495,14 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
-     * @param vertx The vert.x instance to run on.
-     * @param tracer The tracer to be used.
-     *
      * @return The handler.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(RegistrationService.class)
-    public AmqpEndpoint registrationAmqpEndpoint(final Vertx vertx, final Tracer tracer) throws IOException {
-        return new DelegatingRegistrationAmqpEndpoint<>(vertx, registrationService(vertx, tracer));
+    public AmqpEndpoint registrationAmqpEndpoint() throws IOException {
+        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService());
     }
 
     /**
