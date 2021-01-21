@@ -153,7 +153,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                     if (indicesCreated.get()) {
                         status.complete(Status.OK());
                     } else {
-                        LOG.info("credentials-indices not (yet) created");
+                        LOG.debug("credentials-indices not (yet) created");
                         status.complete(Status.KO());
                         createIndices();
                     }

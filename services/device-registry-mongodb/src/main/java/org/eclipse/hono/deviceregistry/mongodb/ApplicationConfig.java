@@ -40,6 +40,7 @@ import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.ServiceClientAdapter;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -303,11 +304,14 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public EventSender eventSender() {
-        return new ProtonBasedDownstreamSender(
+        final var sender = new ProtonBasedDownstreamSender(
                 downstreamConnection(),
                 SendMessageSampler.Factory.noop(),
                 true,
                 true);
+
+        healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(sender));
+        return sender;
     }
 
     /**
@@ -332,14 +336,9 @@ public class ApplicationConfig {
     @Bean
     public ClientConfigProperties downstreamSenderConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
-        setDefaultConfigNameIfNotSet(config);
-        return new ClientConfigProperties();
-    }
-
-    private void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
-        if (config.getName() == null) {
-            config.setName("Device Registry");
-        }
+        config.setName("Device Registry");
+        config.setServerRole("AMQP Messaging Network");
+        return config;
     }
 
     /**

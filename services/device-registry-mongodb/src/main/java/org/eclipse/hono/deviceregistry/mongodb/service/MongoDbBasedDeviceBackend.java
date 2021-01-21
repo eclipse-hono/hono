@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,10 @@ import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -39,6 +42,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -46,7 +50,9 @@ import io.vertx.core.json.JsonObject;
  * A device backend that leverages and unifies {@link MongoDbBasedRegistrationService} and
  * {@link MongoDbBasedCredentialsService}.
  */
-public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend {
+public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend, Lifecycle {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedDeviceBackend.class);
 
     private final MongoDbBasedRegistrationService registrationService;
     private final MongoDbBasedCredentialsService credentialsService;
@@ -62,6 +68,24 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
             final MongoDbBasedCredentialsService credentialsService) {
         this.registrationService = registrationService;
         this.credentialsService = credentialsService;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> start() {
+        LOG.debug("starting up services");
+        return CompositeFuture.all(registrationService.start(), credentialsService.start()).mapEmpty();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> stop() {
+        LOG.debug("stopping services");
+        return CompositeFuture.join(registrationService.stop(), credentialsService.stop()).mapEmpty();
     }
 
     // DEVICES

@@ -15,6 +15,7 @@
 package org.eclipse.hono.adapter.client.amqp;
 
 import java.util.Objects;
+import java.util.UUID;
 
 import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.client.ConnectionLifecycle;
@@ -243,7 +244,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         // verify that client is connected
         readinessHandler.register(
-                String.format("connection to %s", connection.getConfig().getServerRole()),
+                String.format("connection-to-%s-%s", connection.getConfig().getServerRole(), UUID.randomUUID()),
                 status -> {
                     connection.isConnected()
                         .onSuccess(ok -> status.complete(Status.OK()))

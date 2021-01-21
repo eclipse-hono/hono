@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
@@ -54,7 +54,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
@@ -72,13 +71,14 @@ class AutoProvisionerTest {
     private Vertx vertx;
     private DeviceManagementService deviceManagementService;
     private TenantInformationService tenantInformationService;
-    private ProtonBasedDownstreamSender sender;
+    private EventSender sender;
 
     private AutoProvisioner autoProvisioner;
 
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
         tenantInformationService = mock(TenantInformationService.class);
@@ -98,13 +98,14 @@ class AutoProvisionerTest {
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
 
-        sender = mock(ProtonBasedDownstreamSender.class);
-        when(sender.sendEvent(any(TenantObject.class),
+        sender = mock(EventSender.class);
+        when(sender.sendEvent(
+                any(TenantObject.class),
                 any(RegistrationAssertion.class),
-                eq(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION),
-                eq(null),
+                anyString(),
+                any(),
                 any(Map.class),
-                any(SpanContext.class)))
+                any()))
             .thenReturn(Future.succeededFuture());
 
         autoProvisioner.setEventSender(sender);
@@ -213,6 +214,7 @@ class AutoProvisionerTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testAutoProvisioningResendsDeviceNotificationForAlreadyPresentEdgeDevice(final VertxTestContext ctx) {
         mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.singletonList(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
@@ -222,18 +224,29 @@ class AutoProvisionerTest {
         autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, new Device(), span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), any(Device.class), any(Span.class));
+                        verify(deviceManagementService).createDevice(
+                                eq(Constants.DEFAULT_TENANT),
+                                eq(Optional.of(DEVICE_ID)),
+                                any(Device.class),
+                                any(Span.class));
 
                         final ArgumentCaptor<Map<String, Object>> messageArgumentCaptor = ArgumentCaptor.forClass(Map.class);
-                        verify(sender).sendEvent(any(), any(), any(), any(), messageArgumentCaptor.capture(), any());
+                        verify(sender).sendEvent(
+                                argThat(tenant -> tenant.getTenantId().equals(Constants.DEFAULT_TENANT)),
+                                argThat(assertion -> assertion.getDeviceId().equals(DEVICE_ID)),
+                                eq(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION),
+                                any(),
+                                messageArgumentCaptor.capture(),
+                                any());
                         // verify sending the event was done as part of running the timer task
-                        verify(vertx).setTimer(anyLong(), notNull());
+                        verify(vertx).setTimer(anyLong(), VertxMockSupport.anyHandler());
 
-                        final ArgumentCaptor<Device> updatedDeviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
-                        verify(deviceManagementService).updateDevice(eq(Constants.DEFAULT_TENANT), eq(AutoProvisionerTest.DEVICE_ID), updatedDeviceArgumentCaptor.capture(), any(), any());
-
-                        final Device updatedDevice = updatedDeviceArgumentCaptor.getValue();
-                        assertThat(updatedDevice.getStatus().isAutoProvisioningNotificationSent()).isTrue();
+                        verify(deviceManagementService).updateDevice(
+                                eq(Constants.DEFAULT_TENANT),
+                                eq(AutoProvisionerTest.DEVICE_ID),
+                                argThat(device -> device.getStatus().isAutoProvisioningNotificationSent()),
+                                any(Optional.class),
+                                any(Span.class));
 
                         final Map<String, Object> applicationProperties = messageArgumentCaptor.getValue();
                         verifyApplicationProperties(AutoProvisionerTest.GATEWAY_ID, AutoProvisionerTest.DEVICE_ID, applicationProperties);
@@ -270,21 +283,34 @@ class AutoProvisionerTest {
         return OperationResult.ok(HttpURLConnection.HTTP_OK, edgeDevice, Optional.empty(), Optional.empty());
     }
 
+    @SuppressWarnings("unchecked")
     private void verifySuccessfulAutoProvisioning() {
+
         final ArgumentCaptor<Device> registeredDeviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
-        verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), registeredDeviceArgumentCaptor.capture(), any());
+        verify(deviceManagementService).createDevice(
+                eq(Constants.DEFAULT_TENANT),
+                eq(Optional.of(DEVICE_ID)),
+                registeredDeviceArgumentCaptor.capture(),
+                any());
 
         final Device registeredDevice = registeredDeviceArgumentCaptor.getValue();
         assertThat(registeredDevice).isEqualTo(NEW_EDGE_DEVICE);
 
         final ArgumentCaptor<Map<String, Object>> messageArgumentCaptor = ArgumentCaptor.forClass(Map.class);
-        verify(sender).sendEvent(any(), any(), any(), any(), messageArgumentCaptor.capture(), any());
+        verify(sender).sendEvent(
+                argThat(tenant -> tenant.getTenantId().equals(Constants.DEFAULT_TENANT)),
+                argThat(assertion -> assertion.getDeviceId().equals(DEVICE_ID)),
+                eq(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION),
+                any(),
+                messageArgumentCaptor.capture(),
+                any());
 
-        final ArgumentCaptor<Device> updatedDeviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
-        verify(deviceManagementService).updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), updatedDeviceArgumentCaptor.capture(), any(), any());
-
-        final Device updatedDevice = updatedDeviceArgumentCaptor.getValue();
-        assertThat(updatedDevice.getStatus().isAutoProvisioningNotificationSent()).isTrue();
+        verify(deviceManagementService).updateDevice(
+                eq(Constants.DEFAULT_TENANT),
+                eq(DEVICE_ID),
+                argThat(device -> device.getStatus().isAutoProvisioningNotificationSent()),
+                any(Optional.class),
+                any(Span.class));
 
         final Map<String, Object> applicationProperties = messageArgumentCaptor.getValue();
         verifyApplicationProperties(GATEWAY_ID, DEVICE_ID, applicationProperties);

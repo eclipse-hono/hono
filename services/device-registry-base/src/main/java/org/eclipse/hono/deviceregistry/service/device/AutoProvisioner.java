@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,14 +17,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
@@ -36,12 +35,10 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -59,40 +56,15 @@ public class AutoProvisioner implements Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(AutoProvisioner.class);
 
+    private final AtomicBoolean started = new AtomicBoolean(false);
+
     private Tracer tracer = NoopTracerFactory.create();
-
-    private DeviceManagementService deviceManagementService;
-
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
-
+    private DeviceManagementService deviceManagementService;
     private EventSender eventSender;
-
-    private Future<Void> connectionAttempt;
-
     private Vertx vertx;
 
     private AutoProvisionerConfigProperties config;
-
-    @Override
-    public final Future<Void> start() {
-        // Required since every endpoint may call the start() method of its referenced service leading to multiple calls
-        // to start(). This results in an exception in the factory's connect() method.
-        synchronized (this) {
-            if (connectionAttempt == null) {
-                connectionAttempt = eventSender.start().recover(t -> {
-                    LOG.warn("failed to connect to AMQP network", t);
-                    return Future.failedFuture(t);
-                });
-            }
-        }
-
-        return connectionAttempt;
-    }
-
-    @Override
-    public final Future<Void> stop() {
-        return  eventSender.stop();
-    }
 
     /**
      * Sets the vert.x instance.
@@ -100,7 +72,6 @@ public class AutoProvisioner implements Lifecycle {
      * @param vertx The vert.x instance.
      * @throws NullPointerException if vert.x is {@code null}.
      */
-    @Autowired
     public final void setVertx(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
     }
@@ -111,7 +82,6 @@ public class AutoProvisioner implements Lifecycle {
      * @param eventSender The factory.
      * @throws NullPointerException if the factory is {@code null}.
      */
-    @Autowired
     public final void setEventSender(final EventSender eventSender) {
         this.eventSender = Objects.requireNonNull(eventSender);
     }
@@ -123,8 +93,7 @@ public class AutoProvisioner implements Lifecycle {
      *
      * @throws NullPointerException if the service is {@code null}.
      */
-    @Autowired
-    public void setDeviceManagementService(final DeviceManagementService deviceManagementService) {
+    public final void setDeviceManagementService(final DeviceManagementService deviceManagementService) {
         this.deviceManagementService = Objects.requireNonNull(deviceManagementService);
     }
 
@@ -136,7 +105,6 @@ public class AutoProvisioner implements Lifecycle {
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */
-    @Autowired(required = false)
     public final void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
         LOG.info("using {}", tenantInformationService);
@@ -152,7 +120,6 @@ public class AutoProvisioner implements Lifecycle {
      * @param opentracingTracer The tracer.
      * @throws NullPointerException if the opentracingTracer is {@code null}.
      */
-    @Autowired(required = false)
     public final void setTracer(final Tracer opentracingTracer) {
         this.tracer = Objects.requireNonNull(opentracingTracer);
         LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
@@ -164,9 +131,51 @@ public class AutoProvisioner implements Lifecycle {
      * @param config The configuration to set.
      * @throws NullPointerException if the config is {@code null}.
      */
-    @Autowired
-    public void setConfig(final AutoProvisionerConfigProperties config) {
+    public final void setConfig(final AutoProvisionerConfigProperties config) {
         this.config = Objects.requireNonNull(config);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The future returned by the configured {@linkplain EventSender#start() event sender's start() method}.
+     * @throws IllegalStateException if any of the vertx, eventSender or deviceManagementService properties are not set.
+     */
+    @Override
+    public final Future<Void> start() {
+        if (started.compareAndSet(false, true)) {
+            LOG.info("starting up");
+            if (vertx == null) {
+                throw new IllegalStateException("vert.x instance must be set");
+            }
+            if (eventSender == null) {
+                 throw new IllegalStateException("event sender must be set");
+            }
+            if (deviceManagementService == null) {
+                throw new IllegalStateException("device management service is not set");
+            }
+            // decouple establishment of the sender's downstream connection from this component's
+            // start-up process and instead rely on the event sender's readiness check to succeed
+            // once the connection has been established
+            eventSender.start()
+                .onSuccess(ok -> LOG.info("Event sender [{}] successfully connected", eventSender))
+                .onFailure((t -> LOG.warn("Event sender [{}] failed to connect", eventSender, t)));
+        }
+        return Future.succeededFuture();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The future returned by the configured {@linkplain EventSender#stop() event sender's stop() method}.
+     */
+    @Override
+    public final Future<Void> stop() {
+        if (started.compareAndSet(true, false)) {
+            return  eventSender.stop();
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
     private Future<Void> sendAutoProvisioningEvent(
@@ -196,24 +205,15 @@ public class AutoProvisioner implements Lifecycle {
             props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY);
             props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, EventConstants.EVENT_ENDPOINT);
 
-            final Message msg = MessageHelper.newMessage(
-                    ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenantId, deviceId),
+            return eventSender.sendEvent(
+                    tenantTracker.result().getPayload(),
+                    new RegistrationAssertion(deviceId),
                     EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION,
                     null,
-                    tenantTracker.result().getPayload(),
                     props,
-                    null,
-                    false,
-                    false);
-
-            return eventSender.sendEvent(tenantTracker.result().getPayload(),
-                        new RegistrationAssertion(deviceId),
-                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
-                        null,
-                        props,
-                        span.context())
-                    .onFailure(t -> LOG.info("error sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]",
-                            deviceId, gatewayId, tenantId));
+                    span.context())
+                .onFailure(t -> LOG.info("error sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]",
+                        deviceId, gatewayId, tenantId));
         });
     }
 
@@ -347,7 +347,6 @@ public class AutoProvisioner implements Lifecycle {
         LOG.info("device was auto-provisioned but notificationSent flag isn't set, wait {}ms, re-check flag and send event if needed [tenant-id: {}, device-id: {}]",
                 config.getRetryEventSendingDelay(), tenantId, deviceId);
         span.log(String.format("notification event not sent yet, wait %dms and check again", config.getRetryEventSendingDelay()));
-        final DeviceKey deviceKey = DeviceKey.from(TenantKey.from(tenantId), deviceId);
         final Promise<Void> resultPromise = Promise.promise();
         vertx.setTimer(config.getRetryEventSendingDelay(), tid -> {
             deviceManagementService.readDevice(tenantId, deviceId, span)

@@ -27,6 +27,8 @@ import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.ServiceClientAdapter;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -66,6 +68,9 @@ public class FileBasedServiceConfig {
 
     @Autowired
     private Tracer tracer;
+
+    @Autowired
+    private HealthCheckServer healthCheckServer;
 
     //
     //
@@ -153,11 +158,14 @@ public class FileBasedServiceConfig {
     @Bean
     @Scope("prototype")
     public EventSender eventSender() {
-        return new ProtonBasedDownstreamSender(
+        final var sender = new ProtonBasedDownstreamSender(
                 downstreamConnection(),
                 SendMessageSampler.Factory.noop(),
                 true,
                 true);
+
+        healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(sender));
+        return sender;
     }
 
     /**
@@ -182,14 +190,9 @@ public class FileBasedServiceConfig {
     @Bean
     public ClientConfigProperties downstreamSenderConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
-        setDefaultConfigNameIfNotSet(config);
-        return new ClientConfigProperties();
-    }
-
-    private void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
-        if (config.getName() == null) {
-            config.setName("Device Registry");
-        }
+        config.setName("Device Registry");
+        config.setServerRole("AMQP Messaging Network");
+        return config;
     }
 
     /**

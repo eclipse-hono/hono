@@ -38,6 +38,7 @@ import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -92,6 +93,8 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
         registrationService.setConfig(registrationConfig);
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
+        autoProvisioner.setVertx(vertx);
+        autoProvisioner.setTenantInformationService(mock(TenantInformationService.class));
         autoProvisioner.setDeviceManagementService(registrationService);
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
 
@@ -268,7 +271,7 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
-                            final Status status = r.getPayload().getStatus();
+                            final Status<?> status = r.getPayload().getStatus();
                             assertEquals(status.getCreationTime(), Instant.parse("2020-09-16T12:33:43.000000Z"));
                             assertEquals(status.getLastUpdate(), Instant.parse("2020-09-16T12:33:53.000000Z"));
                         },
@@ -280,7 +283,7 @@ public class FileBasedRegistrationServiceTest implements RegistrationServiceTest
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
-                            final Status status = r.getPayload().getStatus();
+                            final Status<?> status = r.getPayload().getStatus();
                             assertNull(status.getCreationTime());
                             assertNull(status.getLastUpdate());
                             assertNull(status.getLastUser());

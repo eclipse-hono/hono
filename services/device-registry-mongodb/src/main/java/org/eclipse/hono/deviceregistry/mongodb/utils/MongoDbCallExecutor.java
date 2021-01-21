@@ -67,15 +67,15 @@ public final class MongoDbCallExecutor {
         final Promise<Void> result = Promise.promise();
 
         vertx.runOnContext(s -> {
-            LOG.info("creating index [collection: {}]", collectionName);
+            LOG.debug("creating index [collection: {}]", collectionName);
             mongoClient.createIndexWithOptions(collectionName, keys, options, result);
         });
         return result.future()
                 .onSuccess(ok -> {
-                    LOG.info("successfully created index [collection: {}]", collectionName);
+                    LOG.debug("successfully created index [collection: {}]", collectionName);
                 })
                 .onFailure(t -> {
-                    LOG.error("failed to create index [collection: {}]", collectionName, t);
+                    LOG.info("failed to create index [collection: {}]", collectionName, t);
                 });
     }
 }

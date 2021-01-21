@@ -140,7 +140,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                     if (indicesCreated.get()) {
                         status.complete(Status.OK());
                     } else {
-                        LOG.info("devices-indices not (yet) created");
+                        LOG.debug("devices-indices not (yet) created");
                         status.complete(Status.KO());
                         createIndices();
                     }

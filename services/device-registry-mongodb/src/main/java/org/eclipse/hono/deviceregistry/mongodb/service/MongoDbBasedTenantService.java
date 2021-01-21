@@ -146,7 +146,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                     if (indicesCreated.get()) {
                         status.complete(Status.OK());
                     } else {
-                        LOG.info("tenants-indices not (yet) created");
+                        LOG.debug("tenants-indices not (yet) created");
                         status.complete(Status.KO());
                         createIndices();
                     }
