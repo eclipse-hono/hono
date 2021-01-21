@@ -17,6 +17,7 @@ import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -146,14 +147,17 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register("indices created", status -> {
-            if (indicesCreated.get()) {
-                status.complete(Status.OK());
-            } else {
-                status.complete(Status.KO());
-                createIndices();
-            }
-        });
+        readinessHandler.register(
+                "credentials-indices-created-" + UUID.randomUUID(),
+                status -> {
+                    if (indicesCreated.get()) {
+                        status.complete(Status.OK());
+                    } else {
+                        LOG.info("credentials-indices not (yet) created");
+                        status.complete(Status.KO());
+                        createIndices();
+                    }
+                });
     }
 
     /**

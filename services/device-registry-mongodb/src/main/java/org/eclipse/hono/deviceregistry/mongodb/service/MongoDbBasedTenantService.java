@@ -19,6 +19,7 @@ import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -112,20 +113,20 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                     config.getCollectionName(),
                     new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                     new IndexOptions().unique(true))
-            // create unique index on tenant.trusted-ca.subject-dn
-            // to ensure that two tenants never share a trusted-ca
-            .compose(ok -> mongoDbCallExecutor.createIndex(
-                    config.getCollectionName(),
-                    new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
-                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
-                            RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                    new IndexOptions().unique(true)
-                            .partialFilterExpression(new JsonObject().put(
-                                    RegistryManagementConstants.FIELD_TENANT + "." +
-                                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                    new JsonObject().put("$exists", true)))))
-            .onSuccess(ok -> indicesCreated.set(true))
-            .onComplete(r -> creatingIndices.set(false));
+                // create unique index on tenant.trusted-ca.subject-dn
+                // to ensure that two tenants never share a trusted-ca
+                .compose(ok -> mongoDbCallExecutor.createIndex(
+                        config.getCollectionName(),
+                        new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
+                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
+                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                        new IndexOptions().unique(true)
+                                .partialFilterExpression(new JsonObject().put(
+                                        RegistryManagementConstants.FIELD_TENANT + "." +
+                                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                                        new JsonObject().put("$exists", true)))))
+                .onSuccess(ok -> indicesCreated.set(true))
+                .onComplete(r -> creatingIndices.set(false));
         } else {
             return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
         }
@@ -139,14 +140,17 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register("indices created", status -> {
-            if (indicesCreated.get()) {
-                status.complete(Status.OK());
-            } else {
-                status.complete(Status.KO());
-                createIndices();
-            }
-        });
+        readinessHandler.register(
+                "tenants-indices-created-" + UUID.randomUUID(),
+                status -> {
+                    if (indicesCreated.get()) {
+                        status.complete(Status.OK());
+                    } else {
+                        LOG.info("tenants-indices not (yet) created");
+                        status.complete(Status.KO());
+                        createIndices();
+                    }
+                });
     }
 
     /**

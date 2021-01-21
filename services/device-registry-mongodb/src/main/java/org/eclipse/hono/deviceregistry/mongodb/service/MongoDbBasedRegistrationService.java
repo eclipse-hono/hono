@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -133,14 +134,17 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register("indices created", status -> {
-            if (indicesCreated.get()) {
-                status.complete(Status.OK());
-            } else {
-                status.complete(Status.KO());
-                createIndices();
-            }
-        });
+        readinessHandler.register(
+                "devices-indices-created-" + UUID.randomUUID(),
+                status -> {
+                    if (indicesCreated.get()) {
+                        status.complete(Status.OK());
+                    } else {
+                        LOG.info("devices-indices not (yet) created");
+                        status.complete(Status.KO());
+                        createIndices();
+                    }
+                });
     }
 
     /**
