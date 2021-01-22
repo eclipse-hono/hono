@@ -11,100 +11,111 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.client.command.amqp;
+package org.eclipse.hono.adapter.client.command;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
-import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
-import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
-import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.CommandHandlerWrapper;
-import org.eclipse.hono.adapter.client.command.CommandHandlers;
-import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonQoS;
-import io.vertx.proton.ProtonReceiver;
 
 /**
- * A vertx-proton based factory for creating consumers of command messages received via the
- * AMQP 1.0 Messaging Network.
+ * A factory for creating consumers of command messages.
  * <p>
  * This implementation uses the Command Router service and receives commands forwarded by the Command Router
- * component on a link with an address containing the protocol adapter instance id.
- *
+ * on the internal command endpoint.
  */
-public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends AbstractServiceClient implements CommandConsumerFactory {
+public class CommandRouterCommandConsumerFactory implements CommandConsumerFactory {
 
-    private static final int RECREATE_CONSUMER_DELAY = 20;
-
+    private final Logger log = LoggerFactory.getLogger(getClass());
     /**
      * Identifier that has to be unique to this factory instance.
-     * Will be used to represent the protocol adapter instance that this factory instance is used in,
+     * Will be used to represent the protocol adapter (verticle) instance that this factory instance is used in,
      * when registering command handlers with the command router service client.
      */
     private final String adapterInstanceId;
     private final CommandHandlers commandHandlers = new CommandHandlers();
-    private final ProtonBasedAdapterInstanceCommandHandler adapterInstanceCommandHandler;
-    private final AtomicBoolean recreatingConsumer = new AtomicBoolean(false);
-    private final AtomicBoolean tryAgainRecreatingConsumer = new AtomicBoolean(false);
-
     private final CommandRouterClient commandRouterClient;
-    private ProtonReceiver adapterSpecificConsumer;
+    private final List<Lifecycle> internalCommandConsumers = new ArrayList<>();
 
     /**
-     * Creates a new factory for an existing connection.
+     * Creates a new factory.
      *
-     * @param connection The connection to the AMQP network.
-     * @param samplerFactory The sampler factory to use.
      * @param commandRouterClient The client to use for accessing the command router service.
+     * @param adapterName The name of the protocol adapter.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public ProtonBasedCommandRouterCommandConsumerFactoryImpl(
-            final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final CommandRouterClient commandRouterClient) {
-        super(connection, samplerFactory);
+    public CommandRouterCommandConsumerFactory(final CommandRouterClient commandRouterClient, final String adapterName) {
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
-
-        adapterInstanceId = getAdapterInstanceId(connection.getConfig().getName());
-        adapterInstanceCommandHandler = new ProtonBasedAdapterInstanceCommandHandler(connection.getTracer(), adapterInstanceId);
+        this.adapterInstanceId = getNewAdapterInstanceId(Objects.requireNonNull(adapterName));
     }
 
-    private static String getAdapterInstanceId(final String adapterName) {
+    private static String getNewAdapterInstanceId(final String adapterName) {
         // replace special characters so that the id can be used in a Kafka topic name
         final String prefix = Strings.isNullOrEmpty(adapterName) ? ""
                 : adapterName.replaceAll("[^a-zA-Z0-9._-]", "") + "-";
         return prefix + UUID.randomUUID();
     }
 
+    /**
+     * Registers the command consumer receiving commands on the internal command endpoint of the protocol adapter.
+     * That is the endpoint that the Command Router forwards received commands to.
+     * <p>
+     * Note that this method needs to be called before invoking {@link #start()}. The {@link #start()} and
+     * {@link #stop()} methods of this factory will invoke the corresponding methods on the internal command consumer.
+     *
+     * @param internalCommandConsumerSupplier Function that returns the consumer. Parameters are the adapter instance
+     *            id that identifies the internal command endpoint and the command handlers to choose from when handling
+     *            a received command.
+     */
+    public void registerInternalCommandConsumer(
+            final BiFunction<String, CommandHandlers, Lifecycle> internalCommandConsumerSupplier) {
+        internalCommandConsumers.add(internalCommandConsumerSupplier.apply(adapterInstanceId, commandHandlers));
+    }
+
+    /**
+     * Starts the registered internal command consumer(s) so that commands forwarded by the Command Router
+     * are received.
+     * <p>
+     * A failed future is returned if no internal command consumer has been registered yet.
+     *
+     * @return A future indicating the outcome of the startup process.
+     */
     @Override
     public Future<Void> start() {
-        return super.start()
-                .onComplete(v -> {
-                    connection.addReconnectListener(c -> recreateConsumer());
-                    // trigger creation of adapter specific consumer link (with retry if failed)
-                    recreateConsumer();
-                });
+        @SuppressWarnings("rawtypes")
+        final List<Future> futures = internalCommandConsumers.stream()
+                .map(Lifecycle::start)
+                .collect(Collectors.toList());
+        if (futures.isEmpty()) {
+            return Future.failedFuture("no command consumer registered");
+        }
+        return CompositeFuture.all(futures).mapEmpty();
     }
 
     @Override
-    protected void onDisconnect() {
-        adapterSpecificConsumer = null;
+    public Future<Void> stop() {
+        @SuppressWarnings("rawtypes")
+        final List<Future> futures = internalCommandConsumers.stream()
+                .map(Lifecycle::stop)
+                .collect(Collectors.toList());
+        return CompositeFuture.all(futures).mapEmpty();
     }
 
     /**
@@ -156,46 +167,29 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
         final Duration sanitizedLifespan = lifespan == null || lifespan.isNegative()
                 || lifespan.getSeconds() > (Long.MAX_VALUE / 1000_000_000L) ? Duration.ofSeconds(-1) : lifespan;
         log.trace("create command consumer [tenant-id: {}, device-id: {}, gateway-id: {}]", tenantId, deviceId, gatewayId);
-        return connection.executeOnContext(result -> {
-            // register the command handler
-            final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(
-                    tenantId,
-                    deviceId,
-                    gatewayId,
-                    commandHandler);
-            final CommandHandlerWrapper replacedHandler = commandHandlers.putCommandHandler(commandHandlerWrapper);
-            if (replacedHandler != null) {
-                // TODO find a way to provide a notification here so that potential resources associated with the replaced consumer can be freed (maybe add a commandHandlerOverwritten Handler param to createCommandConsumer())
-            }
-            // associate handler with this adapter instance
-            final Instant lifespanStart = Instant.now();
-            registerCommandConsumer(tenantId, deviceId, sanitizedLifespan, context)
-                    .map(v -> {
-                        return (CommandConsumer) new CommandConsumer() {
-                            @Override
-                            public Future<Void> close(final SpanContext spanContext) {
-                                return removeCommandConsumer(commandHandlerWrapper, sanitizedLifespan,
-                                        lifespanStart, spanContext);
-                            }
-                        };
-                    })
-                    .onComplete(result);
-        });
-    }
 
-    private Future<Void> registerCommandConsumer(
-            final String tenantId,
-            final String deviceId,
-            final Duration lifespan,
-            final SpanContext context) {
+        // register the command handler
+        final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(tenantId, deviceId, gatewayId,
+                commandHandler);
+        commandHandlers.putCommandHandler(commandHandlerWrapper);
+        final Instant lifespanStart = Instant.now();
 
-        return commandRouterClient.registerCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, context)
-                .recover(thr -> {
-                    log.info("error registering consumer with the command router service [tenant: {}, device: {}]", tenantId,
-                            deviceId, thr);
+        return commandRouterClient
+                .registerCommandConsumer(tenantId, deviceId, adapterInstanceId, sanitizedLifespan, context)
+                .onFailure(thr -> {
+                    log.info("error registering consumer with the command router service [tenant: {}, device: {}]",
+                            tenantId, deviceId, thr);
                     // handler association failed - unregister the handler
                     commandHandlers.removeCommandHandler(tenantId, deviceId);
-                    return Future.failedFuture(thr);
+                })
+                .map(v -> {
+                    return (CommandConsumer) new CommandConsumer() {
+                        @Override
+                        public Future<Void> close(final SpanContext spanContext) {
+                            return removeCommandConsumer(commandHandlerWrapper, sanitizedLifespan,
+                                    lifespanStart, spanContext);
+                        }
+                    };
                 });
     }
 
@@ -256,61 +250,4 @@ public class ProtonBasedCommandRouterCommandConsumerFactoryImpl extends Abstract
                     }
                 });
     }
-
-    private Future<ProtonReceiver> createAdapterSpecificConsumer() {
-        log.trace("creating new adapter instance command consumer");
-        final String adapterInstanceConsumerAddress = CommandConstants.INTERNAL_COMMAND_ENDPOINT + "/"
-                + adapterInstanceId;
-        return connection.createReceiver(
-                adapterInstanceConsumerAddress,
-                ProtonQoS.AT_LEAST_ONCE,
-                (delivery, msg) -> adapterInstanceCommandHandler.handleCommandMessage(msg, delivery, commandHandlers),
-                connection.getConfig().getInitialCredits(),
-                false, // no auto-accept
-                sourceAddress -> { // remote close hook
-                    log.debug("command receiver link closed remotely");
-                    invokeRecreateConsumerWithDelay();
-                }).map(receiver -> {
-                    log.debug("successfully created adapter specific command consumer");
-                    adapterSpecificConsumer = receiver;
-                    return receiver;
-                }).recover(t -> {
-                    log.error("failed to create adapter specific command consumer", t);
-                    return Future.failedFuture(t);
-                });
-    }
-
-    private void recreateConsumer() {
-        if (recreatingConsumer.compareAndSet(false, true)) {
-            connection.isConnected(getDefaultConnectionCheckTimeout())
-                    .compose(res -> {
-                        // recreate adapter specific consumer
-                        if (adapterSpecificConsumer == null || !adapterSpecificConsumer.isOpen()) {
-                            log.debug("recreate adapter specific command consumer link");
-                            return createAdapterSpecificConsumer();
-                        }
-                        return Future.succeededFuture();
-                    }).onComplete(ar -> {
-                        recreatingConsumer.set(false);
-                        if (tryAgainRecreatingConsumer.compareAndSet(true, false) || ar.failed()) {
-                            if (ar.succeeded()) {
-                                // tryAgainRecreatingConsumers was set - try again immediately
-                                recreateConsumer();
-                            } else {
-                                invokeRecreateConsumerWithDelay();
-                            }
-                        }
-                    });
-        } else {
-            // if recreateConsumer() was triggered by a remote link closing, that might have occurred after that link was dealt with above;
-            // therefore be sure recreateConsumer() gets called again once the current invocation has finished.
-            log.debug("already recreating consumer");
-            tryAgainRecreatingConsumer.set(true);
-        }
-    }
-
-    private void invokeRecreateConsumerWithDelay() {
-        connection.getVertx().setTimer(RECREATE_CONSUMER_DELAY, tid -> recreateConsumer());
-    }
-
 }

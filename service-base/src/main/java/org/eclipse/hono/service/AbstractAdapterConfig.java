@@ -20,13 +20,14 @@ import java.util.Optional;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
+import org.eclipse.hono.adapter.client.command.CommandRouterCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterCommandConsumerFactoryImpl;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -141,7 +142,10 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             // Device Connection nor Command Router client have been configured anyway
             final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
             adapter.setCommandRouterClient(commandRouterClient);
-            adapter.setCommandConsumerFactory(commandConsumerFactory(samplerFactory, commandRouterClient));
+            final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
+            commandConsumerFactory.registerInternalCommandConsumer(
+                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+            adapter.setCommandConsumerFactory(commandConsumerFactory);
         }
 
         final KafkaProducerConfigProperties kafkaProducerConfig = kafkaProducerConfig();
@@ -770,16 +774,11 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 getTracer());
     }
 
-    CommandConsumerFactory commandConsumerFactory(
-            final SendMessageSampler.Factory samplerFactory,
-            final CommandRouterClient commandRouterClient) {
+    CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
-                ProtonBasedCommandRouterCommandConsumerFactoryImpl.class.getName());
-        return new ProtonBasedCommandRouterCommandConsumerFactoryImpl(
-                commandConsumerConnection(),
-                samplerFactory,
-                commandRouterClient);
+                CommandRouterCommandConsumerFactory.class.getName());
+        return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
     }
 
     /**
