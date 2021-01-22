@@ -42,6 +42,25 @@
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.amqp" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.config" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.model" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.service" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.utils" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.credentials" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.device" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.deviceconnection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.tenant" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.credentials" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.management" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.management.credentials" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.management.device" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.management.tenant" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.registration" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.tenant" level="DEBUG"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
 
