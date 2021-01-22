@@ -9,6 +9,8 @@ title = "Release Notes"
 * The protocol adapters erroneously indicated a client related error to devices if the downstream AMQP container
   rejected a message with an `amqp:resource-limit-exceeded` error condition. This has been fixed so that the adapters
   now correctly indicate a server related problem instead.
+* The containers for the Device Registry implementations, the Authentication server, the Device Connection and
+  Command Router services did not shut down gracefully upon receiving a SIGTERM signal. This has been fixed.
 
 ## 1.5.1
 

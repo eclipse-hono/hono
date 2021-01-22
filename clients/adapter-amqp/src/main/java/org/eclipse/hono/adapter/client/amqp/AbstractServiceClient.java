@@ -211,6 +211,8 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
 
     /**
      * {@inheritDoc}
+     *
+     * @return The outcome of the connection's {@link HonoConnection#connect()} method.
      */
     @Override
     public Future<Void> start() {
@@ -219,11 +221,13 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
 
     /**
      * {@inheritDoc}
+     * <p>
+     * Invokes the connection's {@link HonoConnection#shutdown(Handler)} method.
      */
     @Override
     public Future<Void> stop() {
         final Promise<Void> result = Promise.promise();
-        connection.disconnect(result);
+        connection.shutdown(result);
         return result.future();
     }
 }
