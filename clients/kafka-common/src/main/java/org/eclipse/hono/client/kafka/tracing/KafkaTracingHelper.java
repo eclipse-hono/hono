@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,6 @@ package org.eclipse.hono.client.kafka.tracing;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
@@ -68,23 +67,23 @@ public final class KafkaTracingHelper {
      * </ul>
      *
      * @param tracer The Tracer to use.
-     * @param topic The topic from which the operation name is derived.
+     * @param topic The topic to which the message is sent.
      * @param referenceType The type of reference towards the span context.
      * @param parent The span context to set as parent and to derive the sampling priority from (may be null).
      * @return The new span.
      * @throws NullPointerException if tracer or topic is {@code null}.
      */
-    public static Span newProducerSpan(final Tracer tracer, final HonoTopic topic, final String referenceType,
+    public static Span newProducerSpan(final Tracer tracer, final String topic, final String referenceType,
             final SpanContext parent) {
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(topic);
         Objects.requireNonNull(referenceType);
 
-        return TracingHelper.buildSpan(tracer, parent, "To_" + topic.getType().endpoint, referenceType)
+        return TracingHelper.buildSpan(tracer, parent, "send message", referenceType)
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), "hono-client-kafka")
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_PRODUCER)
-                .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), topic.toString())
+                .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), topic)
                 .withTag(Tags.PEER_SERVICE.getKey(), "kafka")
                 .start();
     }
