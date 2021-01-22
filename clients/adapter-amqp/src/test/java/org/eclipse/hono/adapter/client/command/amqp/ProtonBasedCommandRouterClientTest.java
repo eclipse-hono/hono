@@ -61,7 +61,7 @@ import io.vertx.proton.ProtonSender;
 
 
 /**
- * Tests verifying behavior of {@link ProtonBasedTenantCommandRouterClient}.
+ * Tests verifying behavior of {@link ProtonBasedCommandRouterClient}.
  *
  */
 @ExtendWith(VertxExtension.class)

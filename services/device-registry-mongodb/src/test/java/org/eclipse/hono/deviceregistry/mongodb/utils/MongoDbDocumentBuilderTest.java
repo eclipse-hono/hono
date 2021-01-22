@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
 class MongoDbDocumentBuilderTest {
 
     /**
-     * Verifies that the update document contains the property "data" as set in {@link BaseDto} if the concrete sublass
+     * Verifies that the update document contains the property "data" as set in {@link BaseDto} if the concrete subclass
      * does not override the property name.
      */
     @Test

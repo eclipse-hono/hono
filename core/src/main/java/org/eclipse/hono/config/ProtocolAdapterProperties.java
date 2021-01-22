@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -69,7 +69,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     }
 
     /**
-     * Checks if adapter should include <em>Vendor Properties</em> as defined by <a
+     * Checks if the adapter should include <em>Vendor Properties</em> as defined by <a
      * href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
      * Advanced Message Queuing Protocol (AMQP) JMS Mapping Version 1.0, Chapter 4</a>
      * in downstream messages.
@@ -93,7 +93,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * properties but provides access to all application properties of received
      * messages.
      * <p>
-     * If set to {@code} the adapter will add the following vendor properties to a message's
+     * If set to {@code true} the adapter will add the following vendor properties to a message's
      * application properties:
      * <ul>
      * <li>{@code JMS_AMQP_CONTENT_TYPE} - with the value of the standard AMQP 1.0

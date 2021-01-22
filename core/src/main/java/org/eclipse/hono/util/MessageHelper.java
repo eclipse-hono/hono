@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -325,7 +325,7 @@ public final class MessageHelper {
     /**
      * Gets the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
-     * The assertion is expected to be contained in the messages's <em>application-properties</em> under key
+     * The assertion is expected to be contained in the message's <em>application-properties</em> under key
      * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      *
      * @param msg The message.
@@ -338,7 +338,7 @@ public final class MessageHelper {
     /**
      * Gets and removes the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
-     * The assertion is expected to be contained in the messages's <em>application-properties</em> under key
+     * The assertion is expected to be contained in the message's <em>application-properties</em> under key
      * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      *
      * @param msg The message.

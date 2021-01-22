@@ -385,7 +385,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
-     * @throws NullPointerException if con is {@code null}.
      */
     protected final Future<Void> createLinks() {
         return createLinks(null, null);
