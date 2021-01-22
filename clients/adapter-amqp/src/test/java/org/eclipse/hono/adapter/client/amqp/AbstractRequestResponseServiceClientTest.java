@@ -20,20 +20,24 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.impl.CachingClientFactory;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
@@ -48,6 +52,7 @@ class AbstractRequestResponseServiceClientTest {
     private AbstractRequestResponseServiceClient<Buffer, SimpleRequestResponseResult> client;
     private Vertx vertx;
     private Cache<Object, SimpleRequestResponseResult> cache;
+    private HonoConnection connection;
 
     /**
      * Sets up the fixture.
@@ -60,9 +65,11 @@ class AbstractRequestResponseServiceClientTest {
         cache = mock(Cache.class);
         final var props = new RequestResponseClientConfigProperties();
         props.setResponseCacheDefaultTimeout(DEFAULT_CACHE_TIMEOUT_SECONDS);
+        connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, props);
+        when(connection.connect()).thenReturn(Future.succeededFuture(connection));
 
         client = new AbstractRequestResponseServiceClient<>(
-                AmqpClientUnitTestHelper.mockHonoConnection(vertx, props),
+                connection,
                 SendMessageSampler.Factory.noop(),
                 new CachingClientFactory<>(vertx, v -> true),
                 cache) {
@@ -82,6 +89,24 @@ class AbstractRequestResponseServiceClientTest {
                 return "test-" + tenantId;
             }
         };
+    }
+
+    /**
+     * Verifies that the client triggers the underlying connection to be established as part of starting up.
+     */
+    @Test
+    public void testStartEstablishesConnection() {
+        client.start();
+        verify(connection).connect();
+    }
+
+    /**
+     * Verifies that the underlying connection is being shut down when the client is stopped.
+     */
+    @Test
+    public void testStopShutsDownConnection() {
+        client.stop();
+        verify(connection).shutdown(VertxMockSupport.anyHandler());
     }
 
     /**

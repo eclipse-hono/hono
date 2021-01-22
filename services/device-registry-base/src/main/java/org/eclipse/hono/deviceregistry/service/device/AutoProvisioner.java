@@ -143,17 +143,17 @@ public class AutoProvisioner implements Lifecycle {
      */
     @Override
     public final Future<Void> start() {
+        if (vertx == null) {
+            throw new IllegalStateException("vert.x instance must be set");
+        }
+        if (eventSender == null) {
+             throw new IllegalStateException("event sender must be set");
+        }
+        if (deviceManagementService == null) {
+            throw new IllegalStateException("device management service is not set");
+        }
         if (started.compareAndSet(false, true)) {
             LOG.info("starting up");
-            if (vertx == null) {
-                throw new IllegalStateException("vert.x instance must be set");
-            }
-            if (eventSender == null) {
-                 throw new IllegalStateException("event sender must be set");
-            }
-            if (deviceManagementService == null) {
-                throw new IllegalStateException("device management service is not set");
-            }
             // decouple establishment of the sender's downstream connection from this component's
             // start-up process and instead rely on the event sender's readiness check to succeed
             // once the connection has been established
@@ -172,7 +172,8 @@ public class AutoProvisioner implements Lifecycle {
     @Override
     public final Future<Void> stop() {
         if (started.compareAndSet(true, false)) {
-            return  eventSender.stop();
+            LOG.info("shutting down");
+            return eventSender.stop();
         } else {
             return Future.succeededFuture();
         }
