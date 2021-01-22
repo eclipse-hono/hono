@@ -267,7 +267,6 @@
                     <project>Eclipse Hono</project>
                   </labels>
                   <tags>
-                    <tag>latest</tag>
                     <tag>${docker.image.additional.tag}</tag>
                   </tags>
                   <imagePullPolicy>Always</imagePullPolicy>
