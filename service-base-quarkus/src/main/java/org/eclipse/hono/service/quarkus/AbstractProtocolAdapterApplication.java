@@ -22,13 +22,14 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
+import org.eclipse.hono.adapter.client.command.CommandRouterCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterCommandConsumerFactoryImpl;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
+import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -184,7 +185,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (config.commandRouter.isHostConfigured()) {
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
-            adapter.setCommandConsumerFactory(commandConsumerFactory(commandRouterClient));
+            final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
+            commandConsumerFactory.registerInternalCommandConsumer(
+                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+            adapter.setCommandConsumerFactory(commandConsumerFactory);
         } else {
             final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient();
             adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
@@ -408,18 +412,17 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new factory for creating command consumers.
      * <p>
-     * The returned factory does not support routing commands to target adapter instances.
+     * The returned factory creates consumers that receive commands forwarded by the Command Router.
+     * The factory does not support routing commands to target adapter instances.
      *
      * @param commandRouterClient The client for accessing the Command Router service.
      * @return The factory.
      */
-    protected CommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
+    protected CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
+
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
-                ProtonBasedCommandRouterCommandConsumerFactoryImpl.class.getName());
-        return new ProtonBasedCommandRouterCommandConsumerFactoryImpl(
-                commandConsumerConnection(),
-                messageSamplerFactory,
-                commandRouterClient);
+                CommandRouterCommandConsumerFactory.class.getName());
+        return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {

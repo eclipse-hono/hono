@@ -28,7 +28,8 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.CommandHandlers;
-import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -37,20 +38,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import io.opentracing.Span;
-import io.opentracing.Tracer;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Tests verifying behavior of {@link ProtonBasedAdapterInstanceCommandHandler}.
+ * Tests verifying behavior of {@link ProtonBasedInternalCommandConsumer}.
  *
  */
-public class ProtonBasedAdapterInstanceCommandHandlerTest {
+public class ProtonBasedInternalCommandConsumerTest {
 
 
-    private ProtonBasedAdapterInstanceCommandHandler adapterInstanceCommandHandler;
+    private ProtonBasedInternalCommandConsumer internalCommandConsumer;
     private CommandHandlers commandHandlers;
 
     /**
@@ -58,19 +58,19 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
      */
     @BeforeEach
     public void setUp() {
-        final Span span = TracingMockSupport.mockSpan();
-        final Tracer tracer = TracingMockSupport.mockTracer(span);
+        final HonoConnection honoConnection = AmqpClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
 
         final String adapterInstanceId = "adapterInstanceId";
-        adapterInstanceCommandHandler = new ProtonBasedAdapterInstanceCommandHandler(tracer, adapterInstanceId);
         commandHandlers = new CommandHandlers();
+        internalCommandConsumer = new ProtonBasedInternalCommandConsumer(honoConnection, adapterInstanceId,
+                commandHandlers);
     }
 
     @Test
     void testHandleCommandMessageWithInvalidMessage() {
         final Message msg = mock(Message.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        adapterInstanceCommandHandler.handleCommandMessage(msg, delivery, commandHandlers);
+        internalCommandConsumer.handleCommandMessage(delivery, msg);
 
         final ArgumentCaptor<DeliveryState> deliveryStateCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(delivery).disposition(deliveryStateCaptor.capture(), anyBoolean());
@@ -85,7 +85,7 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
         when(msg.getAddress()).thenReturn(String.format("%s/%s/%s",
                 CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, deviceId));
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        adapterInstanceCommandHandler.handleCommandMessage(msg, delivery, commandHandlers);
+        internalCommandConsumer.handleCommandMessage(delivery, msg);
 
         final ArgumentCaptor<DeliveryState> deliveryStateCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(delivery).disposition(deliveryStateCaptor.capture(), anyBoolean());
@@ -106,7 +106,7 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, null, commandHandler);
 
-        adapterInstanceCommandHandler.handleCommandMessage(message, mock(ProtonDelivery.class), commandHandlers);
+        internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(commandHandler).handle(commandContextCaptor.capture());
@@ -130,7 +130,7 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, gatewayId, null, commandHandler);
 
-        adapterInstanceCommandHandler.handleCommandMessage(message, mock(ProtonDelivery.class), commandHandlers);
+        internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(commandHandler).handle(commandContextCaptor.capture());
@@ -154,7 +154,7 @@ public class ProtonBasedAdapterInstanceCommandHandlerTest {
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, gatewayId, commandHandler);
 
-        adapterInstanceCommandHandler.handleCommandMessage(message, mock(ProtonDelivery.class), commandHandlers);
+        internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(commandHandler).handle(commandContextCaptor.capture());
