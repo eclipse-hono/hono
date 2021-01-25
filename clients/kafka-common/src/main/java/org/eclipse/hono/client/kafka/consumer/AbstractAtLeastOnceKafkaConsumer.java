@@ -15,9 +15,9 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -31,9 +31,11 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
+import io.vertx.kafka.client.consumer.OffsetAndMetadata;
 
 /**
  * A client to consume data from a Kafka cluster.
@@ -82,7 +84,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final KafkaConsumer<String, Buffer> kafkaConsumer;
     private final Set<String> topics;
     private final Pattern topicPattern;
-    private final Consumer<T> messageHandler;
+    private final Handler<T> messageHandler;
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
 
@@ -91,7 +93,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topic The Kafka topic to consume records from.
-     * @param messageHandler The function to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -99,7 +101,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      * @see #stop()
      */
     public AbstractAtLeastOnceKafkaConsumer(final KafkaConsumer<String, Buffer> kafkaConsumer, final String topic,
-            final Consumer<T> messageHandler, final Handler<Throwable> closeHandler, final long pollTimeout) {
+            final Handler<T> messageHandler, final Handler<Throwable> closeHandler, final long pollTimeout) {
 
         this(kafkaConsumer, Set.of(Objects.requireNonNull(topic)), messageHandler, closeHandler, pollTimeout);
     }
@@ -112,7 +114,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topics The Kafka topics to consume records from.
-     * @param messageHandler The function to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -120,7 +122,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      * @see #stop()
      */
     public AbstractAtLeastOnceKafkaConsumer(final KafkaConsumer<String, Buffer> kafkaConsumer, final Set<String> topics,
-            final Consumer<T> messageHandler, final Handler<Throwable> closeHandler, final long pollTimeout) {
+            final Handler<T> messageHandler, final Handler<Throwable> closeHandler, final long pollTimeout) {
 
         this(kafkaConsumer, Objects.requireNonNull(topics), null, messageHandler, closeHandler, pollTimeout);
     }
@@ -133,7 +135,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topicPattern The pattern of Kafka topic names to consume records from.
-     * @param messageHandler The function to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -141,14 +143,14 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      * @see #stop()
      */
     public AbstractAtLeastOnceKafkaConsumer(final KafkaConsumer<String, Buffer> kafkaConsumer,
-            final Pattern topicPattern, final Consumer<T> messageHandler, final Handler<Throwable> closeHandler,
+            final Pattern topicPattern, final Handler<T> messageHandler, final Handler<Throwable> closeHandler,
             final long pollTimeout) {
 
         this(kafkaConsumer, null, Objects.requireNonNull(topicPattern), messageHandler, closeHandler, pollTimeout);
     }
 
     private AbstractAtLeastOnceKafkaConsumer(final KafkaConsumer<String, Buffer> kafkaConsumer,
-            final Set<String> topics, final Pattern topicPattern, final Consumer<T> messageHandler,
+            final Set<String> topics, final Pattern topicPattern, final Handler<T> messageHandler,
             final Handler<Throwable> closeHandler, final long pollTimeout) {
 
         Objects.requireNonNull(kafkaConsumer);
@@ -224,7 +226,6 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
         LOG.debug("Polled {} records", records.size());
         CompositeFuture.all(processBatch(records))
-                .onFailure(this::closeWithError)
                 .compose(ok -> commit(true))
                 .compose(ok -> poll())
                 .onSuccess(this::handleBatch);
@@ -254,10 +255,12 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private Future<Void> processRecord(final KafkaConsumerRecord<String, Buffer> record) {
         try {
             final T message = createMessage(record);
-            messageHandler.accept(message);
+            messageHandler.handle(message);
             return Future.succeededFuture();
         } catch (final Exception ex) {
-            LOG.error("Error handling record: ", ex);
+            LOG.error("Error handling record, closing the consumer: ", ex);
+            commitCurrentOffset(record); // prevents that already processed records from the batch are consumed again
+            stop();
             return Future.failedFuture(ex);
         }
     }
@@ -278,6 +281,12 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                         return Future.failedFuture(exception);
                     }
                 });
+    }
+
+    private void commitCurrentOffset(final KafkaConsumerRecord<String, Buffer> record) {
+        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        final OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1, "");
+        kafkaConsumer.commit(Map.of(topicPartition, offsetAndMetadata));
     }
 
     private void closeWithError(final Throwable exception) {

@@ -13,8 +13,14 @@
 
 package org.eclipse.hono.client.kafka.consumer;
 
+import java.time.Duration;
+
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+
 /**
  * An exception indicating that a Kafka consumer failed to poll records.
+ * <p>
+ * Possible root causes for failing to poll are documented in {@link KafkaConsumer#poll(Duration)}.
  */
 public class KafkaConsumerPollException extends KafkaConsumerException {
 
