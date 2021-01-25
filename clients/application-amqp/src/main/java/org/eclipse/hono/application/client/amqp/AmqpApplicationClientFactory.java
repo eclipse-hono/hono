@@ -11,13 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.application.amqp;
+package org.eclipse.hono.application.client.amqp;
 
 import java.util.function.Consumer;
 
-import org.eclipse.hono.client.application.ApplicationClientFactory;
-import org.eclipse.hono.client.application.DownstreamMessage;
-import org.eclipse.hono.client.application.MessageConsumer;
+import org.eclipse.hono.application.client.ApplicationClientFactory;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;

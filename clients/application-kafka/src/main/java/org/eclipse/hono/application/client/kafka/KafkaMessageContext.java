@@ -11,12 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.application.kafka;
+package org.eclipse.hono.application.client.kafka;
 
 import java.util.Objects;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.eclipse.hono.client.application.MessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 
 import io.vertx.core.buffer.Buffer;
 

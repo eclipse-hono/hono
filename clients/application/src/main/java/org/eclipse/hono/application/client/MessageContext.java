@@ -11,22 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.application;
-
-import io.vertx.core.Future;
+package org.eclipse.hono.application.client;
 
 /**
- * A client that consumes messages from Hono's northbound APIs.
- *
- * @param <T> The type of messages consumed by this client.
+ * The message context wraps objects that are specific for the messaging system that is used to exchange a
+ * {@link Message} of Hono's northbound APIs.
  */
-public interface MessageConsumer<T extends Message> {
-
-    /**
-     * Closes the client.
-     *
-     * @return A future indicating the outcome of the operation.
-     */
-    Future<Void> close();
+public interface MessageContext {
 
 }

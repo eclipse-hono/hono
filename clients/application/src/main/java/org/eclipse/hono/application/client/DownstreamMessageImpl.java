@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.application;
+package org.eclipse.hono.application.client;
 
 import java.util.Objects;
 
