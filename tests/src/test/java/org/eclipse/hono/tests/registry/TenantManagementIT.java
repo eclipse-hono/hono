@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -32,15 +37,21 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.jackson.JacksonCodec;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -334,6 +345,345 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
 
         getHelper().registry.getTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(context.completing());
+    }
+
+    /**
+     * Tests verifying the search tenants operation.
+     *
+     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/searchTenants"> 
+     *      Device Registry Management API - Search Tenants</a>
+     */
+    @Nested
+    @EnabledIfSystemProperty(named = "deviceregistry.supportsSearchTenants", matches = "true")
+    class SearchTenantsIT {
+
+        /**
+         * Verifies that a request to search tenants fails with a {@value HttpURLConnection#HTTP_NOT_FOUND} when no
+         * matching tenants are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsFailsWhenNoTenantsAreFound(final VertxTestContext ctx) {
+            final Tenant tenant = new Tenant().setEnabled(false);
+            final String filterJson = getFilterJson("/enabled", true, "eq");
+
+            getHelper().registry.addTenant(tenantId, tenant)
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants fails when the page size is invalid.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithInvalidPageSizeFails(final VertxTestContext ctx) {
+            final int invalidPageSize = -100;
+
+            getHelper().registry.addTenant(tenantId, new Tenant())
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.of(invalidPageSize), Optional.empty(),
+                            List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants with a valid pageSize succeeds and the result is in accordance
+         * with the specified page size.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithValidPageSizeSucceeds(final VertxTestContext ctx) {
+
+            final int pageSize = 1;
+
+            CompositeFuture.all(
+                    getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant()),
+                    getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant()))
+                    .compose(response -> getHelper().registry.searchTenants(
+                            Optional.of(pageSize),
+                            Optional.empty(),
+                            List.of(),
+                            List.of(),
+                            HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() {
+                                    });
+                            assertThat(searchResult.getTotal()).isEqualTo(2);
+                            assertThat(searchResult.getResult()).hasSize(1);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search tenants fails when page offset is invalid.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithInvalidPageOffsetFails(final VertxTestContext ctx) {
+            final int invalidPageOffset = -100;
+
+            getHelper().registry.addTenant(tenantId, new Tenant())
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.of(invalidPageOffset),
+                            List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants with a valid page offset succeeds and the result is in accordance
+         * with the specified page offset.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithValidPageOffsetSucceeds(final VertxTestContext ctx) {
+            final String tenantId1 = getHelper().getRandomTenantId();
+            final String tenantId2 = getHelper().getRandomTenantId();
+            final Tenant tenant1 = new Tenant().setExtensions(Map.of("id", "aaa"));
+            final Tenant tenant2 = new Tenant().setExtensions(Map.of("id", "bbb"));
+            final int pageSize = 1;
+            final int pageOffset = 1;
+            final String sortJson = getSortJson("/ext/id", "desc");
+
+            CompositeFuture.all(
+                    getHelper().registry.addTenant(tenantId1, tenant1),
+                    getHelper().registry.addTenant(tenantId2, tenant2))
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.of(pageSize), Optional.of(pageOffset),
+                            List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                            assertThat(searchResult.getTotal()).isEqualTo(2);
+                            assertThat(searchResult.getResult()).hasSize(1);
+                            assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search tenant fails when the filterJson is invalid.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithInvalidFilterJsonFails(final VertxTestContext ctx) {
+
+            getHelper().registry.addTenant(tenantId, new Tenant())
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of("Invalid filterJson"), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants with multiple filters succeeds and matching tenants are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithValidMultipleFiltersSucceeds(final VertxTestContext ctx) {
+            final String tenantId1 = getHelper().getRandomTenantId();
+            final String tenantId2 = getHelper().getRandomTenantId();
+            final Tenant tenant1 = new Tenant().setEnabled(false).setExtensions(Map.of("id", "1"));
+            final Tenant tenant2 = new Tenant().setEnabled(true).setExtensions(Map.of("id", "2"));
+            final String filterJson1 = getFilterJson("/ext/id", "1", "eq");
+            final String filterJson2 = getFilterJson("/enabled", true, "eq");
+            final String filterJson3 = getFilterJson("/enabled", false, "eq");
+
+            CompositeFuture.all(
+                    getHelper().registry.addTenant(tenantId1, tenant1),
+                    getHelper().registry.addTenant(tenantId2, tenant2))
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() {
+                                    });
+                            assertThat(searchResult.getTotal()).isEqualTo(1);
+                            assertThat(searchResult.getResult()).hasSize(1);
+                            assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search tenants with filters containing the wildcard character '*' 
+         * succeeds and matching tenants are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithWildCardToMatchMultipleCharactersSucceeds(final VertxTestContext ctx) {
+            final String tenantId1 = getHelper().getRandomTenantId();
+            final String tenantId2 = getHelper().getRandomTenantId();
+            final Tenant tenant1 = new Tenant().setEnabled(false).setExtensions(Map.of("id", "$id:1"));
+            final Tenant tenant2 = new Tenant().setEnabled(true).setExtensions(Map.of("id", "$id:2"));
+            final String filterJson1 = getFilterJson("/enabled", true, "eq");
+            final String filterJson2 = getFilterJson("/ext/id", "$id*", "eq");
+
+            CompositeFuture.all(
+                    getHelper().registry.addTenant(tenantId1, tenant1),
+                    getHelper().registry.addTenant(tenantId2, tenant2))
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() {
+                                    });
+                            assertThat(searchResult.getTotal()).isEqualTo(1);
+                            assertThat(searchResult.getResult()).hasSize(1);
+                            assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search tenants with a filter containing the wildcard character '*' fails with a
+         * {@value HttpURLConnection#HTTP_NOT_FOUND} as no matching tenants are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithWildCardToMatchMultipleCharactersFails(final VertxTestContext ctx) {
+            final Tenant tenant = new Tenant().setExtensions(Map.of("id", "$id:1"));
+            final String filterJson = getFilterJson("/ext/id", "*id*2", "eq");
+
+            getHelper().registry.addTenant(tenantId, tenant)
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants with filters containing the wildcard character '?' 
+         * succeeds and matching tenants are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithWildCardToMatchExactlyOneCharacterSucceeds(final VertxTestContext ctx) {
+            final String tenantId1 = getHelper().getRandomTenantId();
+            final String tenantId2 = getHelper().getRandomTenantId();
+            final Tenant tenant1 = new Tenant().setEnabled(false).setExtensions(Map.of("id", "$id:1"));
+            final Tenant tenant2 = new Tenant().setEnabled(true).setExtensions(Map.of("id", "$id:2"));
+            final String filterJson1 = getFilterJson("/enabled", true, "eq");
+            final String filterJson2 = getFilterJson("/ext/id", "$id?2", "eq");
+
+            CompositeFuture.all(
+                    getHelper().registry.addTenant(tenantId1, tenant1),
+                    getHelper().registry.addTenant(tenantId2, tenant2))
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() {
+                                    });
+                            assertThat(searchResult.getTotal()).isEqualTo(1);
+                            assertThat(searchResult.getResult()).hasSize(1);
+                            assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        /**
+         * Verifies that a request to search tenants with a filter containing the wildcard character '?' fails with a
+         * {@value HttpURLConnection#HTTP_NOT_FOUND} as no matching tenants are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithWildCardToMatchExactlyOneCharacterFails(final VertxTestContext ctx) {
+            final Tenant tenant = new Tenant().setExtensions(Map.of("id", "$id:2"));
+            final String filterJson = getFilterJson("/ext/id", "$id:?2", "eq");
+
+            getHelper().registry.addTenant(tenantId, tenant)
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
+                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants fails when sortJson is invalid.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithInvalidSortJsonFails(final VertxTestContext ctx) {
+
+            getHelper().registry.addTenant(tenantId, new Tenant())
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(), List.of(),
+                            List.of("Invalid sortJson"), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .onComplete(ctx.completing());
+        }
+
+        /**
+         * Verifies that a request to search tenants with a valid sort option succeeds and the result is sorted
+         * accordingly.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchTenantsWithValidSortOptionSucceeds(final VertxTestContext ctx) {
+            final String tenantId1 = getHelper().getRandomTenantId();
+            final String tenantId2 = getHelper().getRandomTenantId();
+            final Tenant tenant1 = new Tenant().setExtensions(Map.of("id", "aaa"));
+            final Tenant tenant2 = new Tenant().setExtensions(Map.of("id", "bbb"));
+            final String sortJson = getSortJson("/ext/id", "desc");
+
+            CompositeFuture.all(
+                    getHelper().registry.addTenant(tenantId1, tenant1),
+                    getHelper().registry.addTenant(tenantId2, tenant2))
+                    .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(), List.of(),
+                            List.of(sortJson), HttpURLConnection.HTTP_OK))
+                    .onComplete(ctx.succeeding(httpResponse -> {
+                        ctx.verify(() -> {
+                            final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                    .decodeValue(httpResponse.body(), new TypeReference<>() {
+                                    });
+                            assertThat(searchResult.getTotal()).isEqualTo(2);
+                            assertThat(searchResult.getResult()).hasSize(2);
+                            assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
+                            assertThat(searchResult.getResult().get(1).getId()).isEqualTo(tenantId1);
+                        });
+                        ctx.completeNow();
+                    }));
+        }
+
+        private <T> String getFilterJson(final String field, final T value, final String operator) {
+            final JsonObject filterJson = new JsonObject()
+                    .put(RegistryManagementConstants.FIELD_FILTER_FIELD, field)
+                    .put(RegistryManagementConstants.FIELD_FILTER_VALUE, value);
+
+            Optional.ofNullable(operator)
+                    .ifPresent(op -> filterJson.put(RegistryManagementConstants.FIELD_FILTER_OPERATOR, op));
+
+            return filterJson.toString();
+        }
+
+        private String getSortJson(final String field, final String direction) {
+            final JsonObject sortJson = new JsonObject().put(RegistryManagementConstants.FIELD_FILTER_FIELD, field);
+
+            Optional.ofNullable(direction)
+                    .ifPresent(dir -> sortJson.put(RegistryManagementConstants.FIELD_SORT_DIRECTION, dir));
+
+            return sortJson.toString();
+        }
     }
 
     private static String assertLocationHeader(final MultiMap responseHeaders) {

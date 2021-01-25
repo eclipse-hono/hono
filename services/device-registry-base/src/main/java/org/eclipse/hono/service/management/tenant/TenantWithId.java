@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public final class TenantWithId extends Tenant {
 
     @JsonProperty(RegistryManagementConstants.FIELD_ID)
-    private final String id;
+    private String id;
+
+    /**
+     * Empty default constructor.
+     * <p>
+     * Mainly useful for mapping from JSON.
+     */
+    private TenantWithId() {
+    }
 
     private TenantWithId(final String id, final Tenant tenant) {
         super(tenant);
