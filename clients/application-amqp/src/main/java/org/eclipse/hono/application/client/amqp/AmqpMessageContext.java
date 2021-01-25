@@ -11,11 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.application.amqp;
+package org.eclipse.hono.application.client.amqp;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.application.MessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 
 import io.vertx.proton.ProtonDelivery;
 

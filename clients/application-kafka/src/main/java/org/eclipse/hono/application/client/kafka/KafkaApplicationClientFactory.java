@@ -11,12 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.application;
+package org.eclipse.hono.application.client.kafka;
+
+import org.eclipse.hono.application.client.ApplicationClientFactory;
 
 /**
- * The message context wraps objects that are specific for the messaging system that is used to exchange a
- * {@link Message} of Hono's northbound APIs.
+ * A factory for creating clients for Hono's Kafka-based northbound APIs.
  */
-public interface MessageContext {
+public interface KafkaApplicationClientFactory extends ApplicationClientFactory {
 
 }
