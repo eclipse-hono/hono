@@ -91,6 +91,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.supportsGatewayMode>true</hono.deviceregistry.supportsGatewayMode>
     <!-- should be set to false if testing against a registry that doesn't support the "search Devices" operation -->
     <hono.deviceregistry.supportsSearchDevices>true</hono.deviceregistry.supportsSearchDevices>
+    <!-- should be set to true if testing against a registry that supports the "search Tenants" operation -->
+    <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
     <hono.deviceregistry.image>hono-service-device-registry-file</hono.deviceregistry.image>
     <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
     <!-- Spring application profiles to activate for the registry -->
@@ -319,6 +321,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <properties>
         <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
         <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.supportsSearchTenants>true</hono.deviceregistry.supportsSearchTenants>
         <hono.mongodb.disabled>false</hono.mongodb.disabled>
         <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
         <hono.mongodb.port>27017</hono.mongodb.port>
@@ -1359,6 +1362,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.supportsGatewayMode>${hono.deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
                 <deviceregistry.credentials.supportsClientContext>${hono.deviceregistry.credentials.supportsClientContext}</deviceregistry.credentials.supportsClientContext>
                 <deviceregistry.supportsSearchDevices>${hono.deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
+                <deviceregistry.supportsSearchTenants>${hono.deviceregistry.supportsSearchTenants}</deviceregistry.supportsSearchTenants>
                 <adapter.coap.host>${coap.ip}</adapter.coap.host>
                 <adapter.coap.port>${coap.port}</adapter.coap.port>
                 <adapter.coaps.port>${coaps.port}</adapter.coaps.port>
