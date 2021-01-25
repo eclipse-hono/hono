@@ -13,8 +13,12 @@
 
 package org.eclipse.hono.client.kafka.consumer;
 
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+
 /**
  * An exception indicating that a Kafka consumer failed to commit offsets.
+ * <p>
+ * Possible root causes for a commit to fail are documented in {@link KafkaConsumer#commitSync()}.
  */
 public class KafkaConsumerCommitException extends KafkaConsumerException {
 

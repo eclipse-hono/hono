@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.application.client.kafka;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -47,11 +48,11 @@ public class KafkaMessageProperties implements MessageProperties {
      * <p>
      * The values in the map are of type {@link Buffer}.
      *
-     * @return The headers of the {@link KafkaConsumerRecord}.
+     * @return An unmodifiable map containing the headers of the {@link KafkaConsumerRecord}.
      */
     @Override
     public final Map<String, Object> getPropertiesMap() {
-        return properties;
+        return Collections.unmodifiableMap(properties);
     }
 
 }
