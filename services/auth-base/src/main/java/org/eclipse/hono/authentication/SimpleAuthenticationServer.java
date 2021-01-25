@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.impl;
+package org.eclipse.hono.authentication;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -25,7 +25,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
@@ -43,7 +42,6 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
 
     private static final Logger LOG = LoggerFactory.getLogger(SimpleAuthenticationServer.class);
 
-    @Autowired
     @Override
     public void setConfig(final ServiceConfigProperties configuration) {
         setSpecificConfig(configuration);
