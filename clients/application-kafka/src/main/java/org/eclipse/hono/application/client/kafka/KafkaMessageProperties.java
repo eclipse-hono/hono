@@ -17,14 +17,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.eclipse.hono.application.client.Message;
 import org.eclipse.hono.application.client.MessageProperties;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
- * The metadata of a {@link Message} created from a {@link ConsumerRecord}.
+ * The metadata of a {@link Message} created from a {@link KafkaConsumerRecord}.
  */
 public class KafkaMessageProperties implements MessageProperties {
 
@@ -36,7 +36,7 @@ public class KafkaMessageProperties implements MessageProperties {
      * @param record The consumer record to extract the metadata from.
      * @throws NullPointerException if record is {@code null}.
      */
-    public KafkaMessageProperties(final ConsumerRecord<String, Buffer> record) {
+    public KafkaMessageProperties(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);
 
         record.headers().forEach(header -> properties.put(header.key(), header.value()));
@@ -44,8 +44,10 @@ public class KafkaMessageProperties implements MessageProperties {
 
     /**
      * {@inheritDoc}
+     * <p>
+     * The values in the map are of type {@link Buffer}.
      *
-     * @return The headers of the {@link ConsumerRecord}.
+     * @return The headers of the {@link KafkaConsumerRecord}.
      */
     @Override
     public final Map<String, Object> getPropertiesMap() {
