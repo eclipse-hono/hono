@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.impl;
+package org.eclipse.hono.authentication;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -28,6 +28,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;

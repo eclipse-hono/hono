@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.auth.impl;
+package org.eclipse.hono.authentication.file;
 
 import java.io.FileNotFoundException;
 import java.net.HttpURLConnection;
@@ -30,10 +30,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -46,8 +42,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * An authentication service based on authorities read from a JSON file.
  */
-@Service
-@Profile("authentication-impl")
 public final class FileBasedAuthenticationService extends AbstractHonoAuthenticationService<FileBasedAuthenticationServiceConfigProperties> {
 
     private static final String FIELD_USERS = "users";
@@ -65,7 +59,6 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     private AuthTokenHelper tokenFactory;
 
-    @Autowired
     @Override
     public void setConfig(final FileBasedAuthenticationServiceConfigProperties configuration) {
         setSpecificConfig(configuration);
@@ -90,8 +83,6 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
      * @param tokenFactory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
-    @Autowired
-    @Qualifier("signing")
     public void setTokenFactory(final AuthTokenHelper tokenFactory) {
         this.tokenFactory = Objects.requireNonNull(tokenFactory);
     }

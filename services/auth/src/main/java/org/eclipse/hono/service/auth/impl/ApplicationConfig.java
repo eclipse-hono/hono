@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,14 +13,20 @@
 
 package org.eclipse.hono.service.auth.impl;
 
+import org.eclipse.hono.authentication.AuthenticationEndpoint;
+import org.eclipse.hono.authentication.SimpleAuthenticationServer;
+import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
+import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
+import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
@@ -35,6 +41,7 @@ import org.springframework.context.annotation.Scope;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
  * Spring Boot configuration for the simple authentication server application.
@@ -78,7 +85,10 @@ public class ApplicationConfig {
     @Bean(name = BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER)
     @Scope("prototype")
     public SimpleAuthenticationServer simpleAuthenticationServer() {
-        return new SimpleAuthenticationServer();
+        final var server = new SimpleAuthenticationServer();
+        server.setConfig(amqpProperties());
+        server.setSaslAuthenticatorFactory(authenticatorFactory());
+        return server;
     }
 
     /**
@@ -102,17 +112,6 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.app")
     public ApplicationConfigProperties applicationConfigProperties() {
         return new ApplicationConfigProperties();
-    }
-
-    /**
-     * Exposes properties for configuring the health check as a Spring bean.
-     *
-     * @return The health check configuration properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.health-check")
-    public ServerConfig healthCheckConfigProperties() {
-        return new ServerConfig();
     }
 
     /**
@@ -154,6 +153,25 @@ public class ApplicationConfig {
         return AuthTokenHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
 
+    @Bean
+    FileBasedAuthenticationService authenticationService() {
+        final var service = new FileBasedAuthenticationService();
+        service.setConfig(serviceProperties());
+        service.setTokenFactory(authTokenFactory());
+        return service;
+    }
+
+    /**
+     * Creates an AMQP 1.0 based endpoint for retrieving a token.
+     *
+     * @return The endpoint.
+     */
+    @Bean
+    @Scope("prototype")
+    public AmqpEndpoint authenticationEndpoint() {
+        return new AuthenticationEndpoint(vertx());
+    }
+
     /**
      * Creates a helper for validating JWTs asserting a client's identity and authorities.
      * <p>
@@ -174,6 +192,20 @@ public class ApplicationConfig {
     }
 
     /**
+     * Creates a factory for SASL authenticators that issue requests to verify credentials
+     * via the vert.x event bus.
+     *
+     * @return The factory.
+     */
+    @Bean
+    public ProtonSaslAuthenticatorFactory authenticatorFactory() {
+        return new HonoSaslAuthenticatorFactory(
+                vertx(),
+                tokenValidator(),
+                authenticationService());
+    }
+
+    /**
      * Customizer for meter registry.
      *
      * @return The new meter registry customizer.
@@ -182,6 +214,17 @@ public class ApplicationConfig {
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
         return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
+    }
+
+    /**
+     * Exposes properties for configuring the health check as a Spring bean.
+     *
+     * @return The health check configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.health-check")
+    public ServerConfig healthCheckConfigProperties() {
+        return new ServerConfig();
     }
 
     /**

@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.impl;
+package org.eclipse.hono.authentication;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
@@ -21,9 +21,6 @@ import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonConnection;
@@ -37,8 +34,6 @@ import io.vertx.proton.ProtonSender;
  * An endpoint supporting the retrieval of a token containing security claims.
  *
  */
-@Component
-@Scope("prototype")
 public class AuthenticationEndpoint extends AbstractAmqpEndpoint<Object> {
 
     /**
@@ -46,7 +41,6 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<Object> {
      *
      * @param vertx The Vertx instance.
      */
-    @Autowired
     public AuthenticationEndpoint(final Vertx vertx) {
         super(vertx);
     }

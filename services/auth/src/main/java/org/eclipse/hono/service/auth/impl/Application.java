@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,12 +15,13 @@ package org.eclipse.hono.service.auth.impl;
 
 import java.util.Objects;
 
+import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -30,8 +31,8 @@ import io.vertx.core.Promise;
  * a connection that has been authenticated using SASL.
  *
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.service.auth", "org.eclipse.hono.service.metric" })
-@Configuration
+@ComponentScan("org.eclipse.hono.service.metric")
+@Import(ApplicationConfig.class)
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 
