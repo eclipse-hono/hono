@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,9 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,14 +25,18 @@ import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
@@ -48,6 +51,7 @@ class TenantServiceBasedX509AuthenticationTest {
     private static X509Certificate cert;
     private static Certificate[] certPath;
 
+    @SuppressWarnings("unchecked")
     @BeforeAll
     static void setUp() throws GeneralSecurityException, IOException {
 
@@ -57,8 +61,13 @@ class TenantServiceBasedX509AuthenticationTest {
         certPath = new Certificate[] { cert };
 
         tenantClient = mock(TenantClient.class);
+        final var validator = mock(X509CertificateChainValidator.class);
+        when(validator.validate(any(List.class), any(Set.class))).thenReturn(Future.succeededFuture());
 
-        underTest = new TenantServiceBasedX509Authentication(tenantClient);
+        underTest = new TenantServiceBasedX509Authentication(
+                tenantClient,
+                NoopTracerFactory.create(),
+                validator);
     }
 
     /**
@@ -71,16 +80,17 @@ class TenantServiceBasedX509AuthenticationTest {
     void testValidateClientCertificateContainsReadableCertificate() throws GeneralSecurityException {
 
         // GIVEN a trust anchor that is enabled for auto-provisioning
-        final TenantObject tenant = new TenantObject("tenant", true).addTrustAnchor(cert.getPublicKey(),
-                cert.getSubjectX500Principal(), true);
-        when(tenantClient.get(any(X500Principal.class), any())).thenReturn(Future.succeededFuture(tenant));
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), true);
+        when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
 
         // WHEN validating the client certificate
         final Future<JsonObject> jsonObjectFuture = underTest.validateClientCertificate(certPath, null);
-        assertTrue(jsonObjectFuture.succeeded());
+        assertThat(jsonObjectFuture.succeeded()).isTrue();
 
         // THEN the returned JSON object contains the client certificate
-        assertArrayEquals(jsonObjectFuture.result().getBinary("client-certificate"), cert.getEncoded());
+        assertResponseContainsStandardProperties(jsonObjectFuture.result());
+        assertThat(jsonObjectFuture.result().getBinary("client-certificate")).isEqualTo(cert.getEncoded());
     }
 
     /**
@@ -91,16 +101,21 @@ class TenantServiceBasedX509AuthenticationTest {
     void testValidateClientCertificateContainsNoCertificate() {
 
         // GIVEN a trust anchor that is disabled for auto-provisioning
-        final TenantObject tenant = new TenantObject("tenant", true).addTrustAnchor(cert.getPublicKey(),
-                cert.getSubjectX500Principal(), false);
-        when(tenantClient.get(any(X500Principal.class), any())).thenReturn(Future.succeededFuture(tenant));
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), false);
+        when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
 
         // WHEN validating the client certificate
         final Future<JsonObject> jsonObjectFuture = underTest.validateClientCertificate(certPath, null);
-        assertTrue(jsonObjectFuture.succeeded());
+        assertThat(jsonObjectFuture.succeeded()).isTrue();
 
         // THEN the returned JSON object does not contain the client certificate
-        assertFalse(jsonObjectFuture.result().containsKey("client-certificate"));
+        assertResponseContainsStandardProperties(jsonObjectFuture.result());
+        assertThat(jsonObjectFuture.result().containsKey("client-certificate")).isFalse();
     }
 
+    private void assertResponseContainsStandardProperties(final JsonObject response) {
+        assertThat(response.getString("subject-dn")).isEqualTo(cert.getSubjectX500Principal().getName(X500Principal.RFC2253));
+        assertThat(response.getString("tenant-id")).isEqualTo("tenant");
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +30,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -61,7 +61,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
     private final Tracer tracer;
     private final TenantClient tenantClient;
-    private final DeviceCertificateValidator certPathValidator;
+    private final X509CertificateChainValidator certPathValidator;
 
     /**
      * Creates a new instance for a Tenant service client.
@@ -98,7 +98,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     public TenantServiceBasedX509Authentication(
             final TenantClient tenantClient,
             final Tracer tracer,
-            final DeviceCertificateValidator certPathValidator) {
+            final X509CertificateChainValidator certPathValidator) {
 
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.tracer = Objects.requireNonNull(tracer);
@@ -161,7 +161,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                             return Future.failedFuture(new ClientErrorException(tenant.getTenantId(),
                                     HttpURLConnection.HTTP_UNAUTHORIZED));
                         } else {
-                            final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
+                            final List<X509Certificate> chainToValidate = List.of(deviceCert);
                             return certPathValidator.validate(chainToValidate, trustAnchors)
                                     .recover(t -> Future.failedFuture(new ClientErrorException(tenant.getTenantId(),
                                             HttpURLConnection.HTTP_UNAUTHORIZED)));
