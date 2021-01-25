@@ -15,37 +15,37 @@ package org.eclipse.hono.application.client.kafka;
 
 import java.util.Objects;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.eclipse.hono.application.client.MessageContext;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
  * The context of a Kafka message.
  * <p>
- * It provides access to the raw {@link ConsumerRecord}.
+ * It provides access to the {@link KafkaConsumerRecord}.
  */
 public class KafkaMessageContext implements MessageContext {
 
-    private final ConsumerRecord<String, Buffer> record;
+    private final KafkaConsumerRecord<String, Buffer> record;
 
     /**
      * Creates a context.
      *
-     * @param record The Kafka consumer record from which the message is created.
+     * @param record The consumer record from which the message is created.
      * @throws NullPointerException if record is {@code null}.
      */
-    public KafkaMessageContext(final ConsumerRecord<String, Buffer> record) {
+    public KafkaMessageContext(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);
         this.record = record;
     }
 
     /**
-     * Gets the raw Kafka consumer record from which the message is created.
+     * Gets the consumer record from which the message is created.
      *
      * @return The consumer record.
      */
-    public final ConsumerRecord<String, Buffer> getRecord() {
+    public final KafkaConsumerRecord<String, Buffer> getRecord() {
         return record;
     }
 }
