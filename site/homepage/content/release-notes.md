@@ -39,6 +39,10 @@ title = "Release Notes"
   [Device Provisioning]({{% doclink "/concepts/provisioning/#gateway-based-auto-provisioning" %}}) concept and to the 
   [Device registry management API]({{% doclink "/api/management#/devices/createDeviceRegistration" %}}) on how to 
   create a device registration for a gateway which is enabled for auto-provisioning.
+* The Device Registry Management API has been extended now to support searching tenants with optional filters,
+  paging and sorting options. Please refer to the 
+  [Device registry management API]({{% doclink "/api/management#/tenants/searchTenants" %}}) for details.
+* The MongoDB based device registry now supports searching tenants with optional filters, paging and sorting options.
 
 ### Fixes & Enhancements
 
