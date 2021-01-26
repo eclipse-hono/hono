@@ -52,7 +52,9 @@ import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -241,7 +243,8 @@ public abstract class CoapTestBase {
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
+    protected abstract Future<MessageConsumer> createConsumer(
+            String tenantId, Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer);
 
     /**
      * Gets the name of the resource that unauthenticated devices
@@ -312,6 +315,19 @@ public abstract class CoapTestBase {
             assertThat(t).isInstanceOf(CoapResultException.class);
             assertThat(((CoapResultException) t).getErrorCode()).isEqualTo(expectedStatus);
         });
+    }
+
+    /**
+     * Perform additional checks on a received message.
+     * <p>
+     * This default implementation does nothing. Subclasses should override this method to implement
+     * reasonable checks.
+     *
+     * @param msg The message to perform checks on.
+     * @throws RuntimeException if any of the checks fail.
+     */
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+        // empty
     }
 
     /**
@@ -507,12 +523,16 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         createConsumer(tenantId, msg -> {
-            logger.trace("received {}", msg);
-            assertMessageProperties(ctx, msg);
-            assertQosLevel(ctx, msg, getExpectedQoS(expectedQos));
-            if (messageConsumer != null) {
-                messageConsumer.accept(msg);
-            }
+            ctx.verify(() -> {
+                final var rawMessage = msg.getMessageContext().getRawMessage();
+                logger.trace("received {}", rawMessage);
+                IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                assertThat(msg.getQos()).isEqualTo(getExpectedQoS(expectedQos));
+                assertAdditionalMessageProperties(msg);
+                if (messageConsumer != null) {
+                    messageConsumer.accept(rawMessage);
+                }
+            });
             received.countDown();
             if (received.getCount() % 20 == 0) {
                 logger.info("messages received: {}", numberOfMessages - received.getCount());
@@ -946,18 +966,6 @@ public abstract class CoapTestBase {
         }
     }
 
-    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
-
-        ctx.verify(() -> {
-            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
-            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
-            assertThat(msg.getCreationTime()).isGreaterThan(0);
-        });
-        assertAdditionalMessageProperties(ctx, msg);
-    }
-
     private QoS getExpectedQoS(final QoS qos) {
         if (qos != null) {
             return qos;
@@ -971,23 +979,6 @@ public abstract class CoapTestBase {
             default:
                 throw new IllegalArgumentException("Either QoS must be non-null or message type must be CON or NON!");
         }
-    }
-
-    private void  assertQosLevel(final VertxTestContext ctx, final Message msg, final QoS expectedQos) {
-        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
-    }
-
-    /**
-     * Performs additional checks on messages received by a downstream consumer.
-     * <p>
-     * This default implementation does nothing. Subclasses should override this method to implement
-     * reasonable checks.
-     *
-     * @param ctx The test context.
-     * @param msg The message to perform checks on.
-     */
-    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
-        // empty
     }
 
     /**

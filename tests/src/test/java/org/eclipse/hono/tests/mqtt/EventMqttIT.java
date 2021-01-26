@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,10 +20,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -34,6 +34,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
@@ -87,15 +88,16 @@ public class EventMqttIT extends MqttPublishTestBase {
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(
+            final String tenantId,
+            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
 
-        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.amqpApplicationClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
     @Override
-    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
-        // assert that events are marked as "durable"
-        ctx.verify(() -> assertThat(msg.isDurable()).isTrue());
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+        assertThat(msg.getMessageContext().getRawMessage().isDurable()).isTrue();
     }
 
     /**
@@ -192,7 +194,7 @@ public class EventMqttIT extends MqttPublishTestBase {
                 createConsumer(tenantId, msg -> {
                     // THEN verify that the event message has been received by the consumer
                     LOGGER.debug("event message has been received by the consumer");
-                    ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                    ctx.verify(() -> assertThat(msg.getPayload().toString()).isEqualTo(messagePayload));
                     ctx.completeNow();
                 });
             } else {

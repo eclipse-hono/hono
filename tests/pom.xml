@@ -242,6 +242,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>hono-client-adapter-amqp</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-application-amqp</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

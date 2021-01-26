@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
+import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.tests.IntegrationTestApplicationClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ public class HonoClientImplIT {
 
     private static Vertx vertx;
 
-    private IntegrationTestApplicationClientFactory clientFactory;
+    private AmqpApplicationClientFactory clientFactory;
 
     /**
      * Sets up vert.x.
@@ -64,12 +65,13 @@ public class HonoClientImplIT {
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setReconnectAttempts(2);
 
-        clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
+        clientFactory = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
         clientFactory.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
-                assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
             });
             ctx.completeNow();
         }));
@@ -92,12 +94,13 @@ public class HonoClientImplIT {
         downstreamProps.setTlsEnabled(true);
         downstreamProps.setReconnectAttempts(2);
 
-        clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
+        clientFactory = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
         clientFactory.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
-                assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
             });
             ctx.completeNow();
         }));

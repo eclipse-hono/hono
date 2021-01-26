@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,14 +27,15 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -60,6 +61,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -241,7 +243,22 @@ public abstract class HttpTestBase {
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
+    protected abstract Future<MessageConsumer> createConsumer(
+            String tenantId,
+            Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer);
+
+    /**
+     * Perform additional checks on a received message.
+     * <p>
+     * This default implementation does nothing. Subclasses should override this method to implement
+     * reasonable checks.
+     *
+     * @param msg The message to perform checks on.
+     * @throws RuntimeException if any of the checks fail.
+     */
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+        // empty
+    }
 
     /**
      * Verifies that a number of messages uploaded to Hono's HTTP adapter
@@ -529,19 +546,22 @@ public abstract class HttpTestBase {
 
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
-            assertMessageProperties(ctx, msg);
-            assertQosLevel(ctx, msg, getExpectedQoS(expectedQos));
+            ctx.verify(() -> {
+                IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                assertThat(msg.getQos()).isEqualTo(getExpectedQoS(expectedQos));
+                assertAdditionalMessageProperties(msg);
+            });
             Optional.ofNullable(messageConsumer)
-            .map(consumer -> consumer.apply(msg))
-            .orElseGet(() -> Future.succeededFuture())
-            .onComplete(attempt -> {
-                if (attempt.succeeded()) {
-                    receivedMessageCount.incrementAndGet();
-                    messageReceived.flag();
-                } else {
-                    logger.error("failed to process message from device", attempt.cause());
-                    messageSending.failNow(attempt.cause());
-                }
+                .map(consumer -> consumer.apply(msg.getMessageContext().getRawMessage()))
+                .orElseGet(() -> Future.succeededFuture())
+                .onComplete(attempt -> {
+                    if (attempt.succeeded()) {
+                        receivedMessageCount.incrementAndGet();
+                        messageReceived.flag();
+                    } else {
+                        logger.error("failed to process message from device", attempt.cause());
+                        messageSending.failNow(attempt.cause());
+                    }
             });
             if (receivedMessageCount.get() % 20 == 0) {
                 logger.info("messages received: {}", receivedMessageCount.get());
@@ -914,10 +934,10 @@ public abstract class HttpTestBase {
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
         .compose(ok -> createConsumer(tenantId, msg -> {
-            logger.trace("received message: {}", msg);
-            TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
-                final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                logger.debug("processing piggy backed message [ttd: {}]", ttd);
+            final var rawMessage = msg.getMessageContext().getRawMessage();
+            logger.trace("received message: {}", rawMessage);
+            TimeUntilDisconnectNotification.fromMessage(rawMessage).ifPresent(notification -> {
+                logger.debug("processing piggy backed message [ttd: {}]", notification.getTtd());
                 ctx.verify(() -> {
                     assertThat(notification.getTenantId()).isEqualTo(tenantId);
                     assertThat(notification.getDeviceId()).isEqualTo(deviceId);
@@ -1325,21 +1345,6 @@ public abstract class HttpTestBase {
                 });
     }
 
-    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
-        ctx.verify(() -> {
-            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
-            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
-            assertThat(msg.getCreationTime()).isGreaterThan(0);
-            assertAdditionalMessageProperties(msg);
-        });
-    }
-
-    private void  assertQosLevel(final VertxTestContext ctx, final Message msg, final QoS expectedQos) {
-        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
-    }
-
     private <T> Future<HttpResponse<T>> verifyAccessControlExposedHeaders(final HttpResponse<T> response) {
         final String exposedHeaders = response.getHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS.toString());
         if (exposedHeaders != null
@@ -1350,18 +1355,6 @@ public abstract class HttpTestBase {
             return Future.failedFuture(String.format("response did not contain expected %s header value",
                     HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS));
         }
-    }
-
-    /**
-     * Performs additional checks on a received message.
-     * <p>
-     * This default implementation does nothing. Subclasses should override this method to implement
-     * reasonable checks.
-     *
-     * @param msg The message to perform checks on.
-     */
-    protected void assertAdditionalMessageProperties(final Message msg) {
-        // empty
     }
 
     private Future<?> assertHttpResponse(final HttpResponse<Buffer> response) {

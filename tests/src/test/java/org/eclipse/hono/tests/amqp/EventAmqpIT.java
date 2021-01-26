@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,12 +16,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.MessageHelper;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -49,8 +51,10 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, close -> {});
+    protected Future<MessageConsumer> createConsumer(
+            final String tenantId,
+            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
+        return helper.amqpApplicationClient.createEventConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
@@ -59,11 +63,8 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     }
 
     @Override
-    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
-        // assert that events are marked as "durable"
-        ctx.verify(() -> {
-            assertThat(msg.isDurable()).isTrue();
-        });
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+        assertThat(msg.getMessageContext().getRawMessage().isDurable()).isTrue();
     }
 
     /**
@@ -93,7 +94,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        MessageHelper.setPayload(event, "opaque/binary", Buffer.buffer(messagePayload));
+        MessageHelper.setPayload(event, "text/plain", Buffer.buffer(messagePayload));
         event.setAddress(getEndpointName());
         sender.send(event, delivery -> {
             if (delivery.getRemoteState() instanceof Accepted) {
@@ -103,7 +104,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
                 createConsumer(tenantId, msg -> {
                     // THEN verify that the event message has been received by the consumer
                     log.debug("event message has been received by the consumer");
-                    ctx.verify(() -> assertThat(MessageHelper.getPayloadAsString(msg)).isEqualTo(messagePayload));
+                    ctx.verify(() -> assertThat(msg.getPayload().toString()).isEqualTo(messagePayload));
                     ctx.completeNow();
                 });
             } else {

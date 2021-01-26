@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.apache.qpid.proton.amqp.Binary;
@@ -32,7 +31,9 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.LinkError;
 import org.apache.qpid.proton.message.Message;
 import org.assertj.core.api.Assertions;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -43,6 +44,7 @@ import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -71,19 +73,34 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     private static final long DEFAULT_TEST_TIMEOUT = 15000; // ms
 
-    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
-        ctx.verify(() -> {
-            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
-            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
-            assertThat(msg.getCreationTime()).isGreaterThan(0);
-        });
-        assertAdditionalMessageProperties(ctx, msg);
-    }
+    /**
+     * Creates a test specific message consumer.
+     *
+     * @param tenantId        The tenant to create the consumer for.
+     * @param messageConsumer The handler to invoke for every message received.
+     * @return A future succeeding with the created consumer.
+     */
+    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer);
 
-    private void assertQosLevel(final VertxTestContext ctx, final Message msg, final ProtonQoS expectedQos) {
-        ctx.verify(() -> assertThat(MessageHelper.getQoS(msg)).isEqualTo(expectedQos.ordinal()));
+    /**
+     * Gets the endpoint name.
+     *
+     * @return The name of the endpoint.
+     */
+    protected abstract String getEndpointName();
+
+    /**
+     * Gets the generic quality-of-service level corresponding to
+     * AMQP delivery semantics.
+     *
+     * @param qos The AMQP delivery semantics.
+     * @return The quality-of-service level.
+     */
+    protected static QoS getQoS(final ProtonQoS qos) {
+        switch (qos) {
+        case AT_MOST_ONCE: return QoS.AT_MOST_ONCE;
+        default: return QoS.AT_LEAST_ONCE;
+        }
     }
 
     /**
@@ -92,28 +109,12 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
      *
-     * @param ctx The test context.
      * @param msg The message to perform checks on.
+     * @throws RuntimeException if any of the checks fail.
      */
-    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
         // empty
     }
-
-    /**
-     * Creates a test specific message consumer.
-     *
-     * @param tenantId        The tenant to create the consumer for.
-     * @param messageConsumer The handler to invoke for every message received.
-     * @return A future succeeding with the created consumer.
-     */
-    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
-
-    /**
-     * Gets the endpoint name.
-     *
-     * @return The name of the endpoint.
-     */
-    protected abstract String getEndpointName();
 
     /**
      * Verifies that a message containing a payload which has the <em>empty notification</em>
@@ -374,14 +375,15 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             return createConsumer(tenantId, msg -> {
                 if (log.isTraceEnabled()) {
                     log.trace("received message [{}]: {}",
-                            msg.getContentType(), MessageHelper.getPayloadAsString(msg));
+                            msg.getContentType(), msg.getPayload().toString());
                 }
-                assertMessageProperties(messageSending, msg);
-                assertQosLevel(messageSending, msg, senderQoS);
-                callback.handle(null);
-            }).map(c -> {
-                return null;
-            });
+                messageSending.verify(() -> {
+                    IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                    assertThat(msg.getQos()).isEqualTo(AmqpUploadTestBase.getQoS(senderQoS));
+                    assertAdditionalMessageProperties(msg);
+                    callback.handle(null);
+                });
+            }).mapEmpty();
         };
 
         doUploadMessages(messageSending, receiver, payload -> {

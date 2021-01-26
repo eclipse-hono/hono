@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,16 +25,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
@@ -154,10 +153,12 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * Creates a test specific message consumer.
      *
      * @param tenantId        The tenant to create the consumer for.
-     * @param messageConsumer The handler to invoke for every message received.
+     * @param messageHandler The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
+    protected abstract Future<MessageConsumer> createConsumer(
+            String tenantId,
+            Handler<DownstreamMessage<AmqpMessageContext>> messageHandler);
 
     /**
      * Verifies that a number of messages published to Hono's MQTT adapter
@@ -299,8 +300,12 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         connection.compose(ok -> createConsumer(tenantId, msg -> {
-            LOGGER.trace("received {}", msg);
-            assertMessageProperties(ctx, msg);
+            LOGGER.trace("received {}", msg.getMessageContext().getRawMessage());
+            ctx.verify(() -> {
+                IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                assertThat(msg.getQos().ordinal()).isEqualTo(getQos().ordinal());
+                assertAdditionalMessageProperties(msg);
+            });
             received.countDown();
             lastReceivedTimestamp.set(System.currentTimeMillis());
             if (received.getCount() % 50 == 0) {
@@ -358,29 +363,16 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         });
     }
 
-    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
-        ctx.verify(() -> {
-            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
-            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
-            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
-            assertThat(MessageHelper.getQoS(msg)).isEqualTo(getQos().ordinal());
-            assertThat(msg.getCreationTime()).isGreaterThan(0);
-        });
-        assertAdditionalMessageProperties(ctx, msg);
-    }
-
     /**
      * Perform additional checks on a received message.
      * <p>
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
      *
-     * @param ctx The test context.
      * @param msg The message to perform checks on.
+     * @throws RuntimeException if any of the checks fail.
      */
-    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
         // empty
     }
-
 }

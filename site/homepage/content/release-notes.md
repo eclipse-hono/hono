@@ -64,9 +64,9 @@ title = "Release Notes"
   classes have been deprecated to further reduce the dependency on Spring Boot. Clients should use
   `org.eclipse.hono.service.cache.CaffeineCacheProvider` and `org.eclipse.hono.service.cache.CaffeineBasedExpiringValueCache`
   instead.
-* The public interfaces of the legacy `client` module have been deprecated. Client code should be
-  adapted to use the corresponding interfaces and implementations from the `clients/adapter` and
-  `clients/adapter-amqp` modules instead.
+* Most of the public interfaces of the legacy `client` module have been deprecated. Client code should be
+  adapted to use the corresponding interfaces and implementations from the `clients/adapter`, `clients/adapter-amqp`
+  and `clients/application-amqp` modules instead.
 * The Authentication server's `HONO_AUTH_SVC_PERMISSIONS_PATH` configuration property has been changed to no
   longer accept generic Spring resource URIs. The value is now required to be a file system path. The path
   may still contain a `file://` prefix in order to not break existing configurations. However, users are encouraged
