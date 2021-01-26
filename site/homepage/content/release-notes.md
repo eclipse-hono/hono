@@ -11,6 +11,7 @@ title = "Release Notes"
   now correctly indicate a server related problem instead.
 * The containers for the Device Registry implementations, the Authentication server, the Device Connection and
   Command Router services did not shut down gracefully upon receiving a SIGTERM signal. This has been fixed.
+* The LoRA protocol adapter failed to start due to a missing bean declaration. This has been fixed.
 
 ## 1.5.1
 
