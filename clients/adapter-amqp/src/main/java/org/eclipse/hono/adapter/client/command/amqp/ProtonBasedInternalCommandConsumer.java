@@ -136,10 +136,8 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         }
 
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-        final Span currentSpan = org.eclipse.hono.client.impl.CommandConsumer.createSpan("handle command",
-                command.getTenant(), command.getDeviceId(), command.getGatewayId(), tracer, spanContext);
+        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-        command.logToSpan(currentSpan);
 
         final CommandContext commandContext = new ProtonBasedCommandContext(command, delivery, currentSpan);
 

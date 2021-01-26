@@ -66,8 +66,12 @@ public class ProtonBasedInternalCommandConsumerTest {
                 commandHandlers);
     }
 
+    /**
+     * Verifies that the consumer handles an invalid message with a missing address by updating the delivery
+     * with status <em>rejected</em>.
+     */
     @Test
-    void testHandleCommandMessageWithInvalidMessage() {
+    void testHandleCommandMessageWithInvalidMessageAddress() {
         final Message msg = mock(Message.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         internalCommandConsumer.handleCommandMessage(delivery, msg);
@@ -78,6 +82,10 @@ public class ProtonBasedInternalCommandConsumerTest {
         assertThat(deliveryStateCaptor.getValue()).isInstanceOf(Rejected.class);
     }
 
+    /**
+     * Verifies that the consumer handles a valid message for which no handler is found by updating the delivery
+     * with status <em>released</em>.
+     */
     @Test
     void testHandleCommandMessageWithNoHandlerFound() {
         final Message msg = mock(Message.class);
@@ -93,6 +101,9 @@ public class ProtonBasedInternalCommandConsumerTest {
         assertThat(deliveryStateCaptor.getValue()).isInstanceOf(Released.class);
     }
 
+    /**
+     * Verifies that the consumer handles a valid message by invoking the matching command handler.
+     */
     @Test
     void testHandleCommandMessageWithHandlerForDevice() {
         final String deviceId = "4711";
@@ -114,6 +125,10 @@ public class ProtonBasedInternalCommandConsumerTest {
         assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
 
+    /**
+     * Verifies that the consumer handles a valid message, targeted at a gateway, by invoking the matching command
+     * handler.
+     */
     @Test
     void testHandleCommandMessageWithHandlerForGateway() {
         final String deviceId = "4711";
@@ -140,6 +155,10 @@ public class ProtonBasedInternalCommandConsumerTest {
         assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
 
+    /**
+     * Verifies that the consumer handles a valid message, for which the matching command handler is associated
+     * with a gateway, by invoking the handler and adopting the gateway identifier in the command object.
+     */
     @Test
     void testHandleCommandMessageWithHandlerForGatewayAndSpecificDevice() {
         final String deviceId = "4711";

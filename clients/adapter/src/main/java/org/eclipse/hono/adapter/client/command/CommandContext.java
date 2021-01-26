@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,17 @@
 
 package org.eclipse.hono.adapter.client.command;
 
+import java.util.Objects;
+
+import org.eclipse.hono.client.impl.CommandConsumer;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 
 /**
  * A context for processing a command that is targeted at a device.
@@ -75,4 +83,31 @@ public interface CommandContext extends ExecutionContext {
      * @param cause The error that caused he command to be rejected or {@code null} if the cause is unknown.
      */
     void reject(String cause);
+
+    /**
+     * Creates and starts an <em>OpenTracing</em> span for the command handling operation.
+     *
+     * @param tracer The tracer to use.
+     * @param command The command for which the span should be started.
+     * @param spanContext Existing span context.
+     * @return The created span.
+     * @throws NullPointerException if tracer or command is {@code null}.
+     */
+    static Span createSpan(final Tracer tracer, final Command command, final SpanContext spanContext) {
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(command);
+        // we set the component tag to the class name because we have no access to
+        // the name of the enclosing component we are running in
+        final Tracer.SpanBuilder spanBuilder = TracingHelper
+                .buildChildSpan(tracer, spanContext, "handle command", CommandConsumer.class.getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
+                .withTag(TracingHelper.TAG_TENANT_ID, command.getTenant())
+                .withTag(TracingHelper.TAG_DEVICE_ID, command.getDeviceId());
+        if (command.getGatewayId() != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, command.getGatewayId());
+        }
+        final Span currentSpan = spanBuilder.start();
+        command.logToSpan(currentSpan);
+        return currentSpan;
+    }
 }
