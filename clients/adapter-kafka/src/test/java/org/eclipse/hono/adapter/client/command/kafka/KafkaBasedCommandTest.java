@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.hono.kafka.client.HonoTopic;
+import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;

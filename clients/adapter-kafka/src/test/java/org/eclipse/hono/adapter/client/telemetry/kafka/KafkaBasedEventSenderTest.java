@@ -21,10 +21,10 @@ import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.kafka.client.CachingKafkaProducerFactory;
-import org.eclipse.hono.kafka.client.HonoTopic;
-import org.eclipse.hono.kafka.client.KafkaProducerConfigProperties;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
