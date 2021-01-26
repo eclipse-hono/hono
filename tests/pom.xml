@@ -82,7 +82,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.device-connection.disabled>false</hono.device-connection.disabled>
 
     <!--
-      Device Registry related properties
+      Device Registry related properties - The MongoDB based device registry is used as the default one.
     -->
     <!-- should be set to false if testing against a registry that doesn't support comparing client context
          when retrieving credentials -->
@@ -91,15 +91,20 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.supportsGatewayMode>true</hono.deviceregistry.supportsGatewayMode>
     <!-- should be set to false if testing against a registry that doesn't support the "search Devices" operation -->
     <hono.deviceregistry.supportsSearchDevices>true</hono.deviceregistry.supportsSearchDevices>
-    <!-- should be set to true if testing against a registry that supports the "search Tenants" operation -->
-    <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
-    <hono.deviceregistry.image>hono-service-device-registry-file</hono.deviceregistry.image>
-    <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
+    <!-- should be set to false if testing against a registry that doesn't support the "search Tenants" operation -->
+    <hono.deviceregistry.supportsSearchTenants>true</hono.deviceregistry.supportsSearchTenants>
+    <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
+    <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
+    <hono.mongodb.disabled>false</hono.mongodb.disabled>
+    <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
+    <hono.mongodb.port>27017</hono.mongodb.port>
+    <hono.mongodb.username>device-registry@HONO</hono.mongodb.username>
+    <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
+    <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
 
     <hono.h2.disabled>true</hono.h2.disabled>
-    <hono.mongodb.disabled>true</hono.mongodb.disabled>
 
     <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
     <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
@@ -287,6 +292,22 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
+      <id>device-registry-file</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>file</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.deviceregistry.image>hono-service-device-registry-file</hono.deviceregistry.image>
+        <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
+        <hono.h2.disabled>true</hono.h2.disabled>
+        <hono.mongodb.disabled>true</hono.mongodb.disabled>
+      </properties>
+    </profile>
+    <profile>
       <id>device-registry-jdbc</id>
       <activation>
         <property>
@@ -300,6 +321,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,${logging.profile}</hono.deviceregistry.spring.profiles>
         <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
         <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
+        <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
+        <hono.mongodb.disabled>true</hono.mongodb.disabled>
         <hono.h2.disabled>false</hono.h2.disabled>
         <hono.h2.host>hono-h2.hono</hono.h2.host>
         <hono.h2.port>9092</hono.h2.port>
@@ -308,26 +331,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.jdbc.h2.admin.password>admin1234</hono.jdbc.h2.admin.password>
         <hono.jdbc.h2.registry.username>registry</hono.jdbc.h2.registry.username>
         <hono.jdbc.h2.registry.password>user12</hono.jdbc.h2.registry.password>
-      </properties>
-    </profile>
-    <profile>
-      <id>device-registry-mongodb</id>
-      <activation>
-        <property>
-          <name>hono.deviceregistry.type</name>
-          <value>mongodb</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
-        <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.supportsSearchTenants>true</hono.deviceregistry.supportsSearchTenants>
-        <hono.mongodb.disabled>false</hono.mongodb.disabled>
-        <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
-        <hono.mongodb.port>27017</hono.mongodb.port>
-        <hono.mongodb.username>device-registry@HONO</hono.mongodb.username>
-        <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
-        <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
       </properties>
     </profile>
     <profile>
