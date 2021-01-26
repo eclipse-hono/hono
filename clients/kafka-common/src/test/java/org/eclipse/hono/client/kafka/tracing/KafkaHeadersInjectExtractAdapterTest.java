@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.kafka.client.tracing;
+package org.eclipse.hono.client.kafka.tracing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

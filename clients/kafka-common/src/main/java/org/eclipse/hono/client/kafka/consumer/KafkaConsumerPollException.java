@@ -11,19 +11,19 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client.consumer;
+package org.eclipse.hono.client.kafka.consumer;
 
 /**
- * An exception indicating that a Kafka consumer failed to commit offsets.
+ * An exception indicating that a Kafka consumer failed to poll records.
  */
-public class KafkaConsumerCommitException extends KafkaConsumerException {
+public class KafkaConsumerPollException extends KafkaConsumerException {
 
     /**
      * Creates a new exception for a root cause.
      *
      * @param cause The root cause.
      */
-    public KafkaConsumerCommitException(final Throwable cause) {
+    public KafkaConsumerPollException(final Throwable cause) {
         super(cause);
     }
 

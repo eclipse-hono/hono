@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client;
+package org.eclipse.hono.client.kafka;
 
 import java.util.HashMap;
 import java.util.Map;

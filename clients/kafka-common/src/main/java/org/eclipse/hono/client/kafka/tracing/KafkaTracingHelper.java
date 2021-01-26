@@ -11,11 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client.tracing;
+package org.eclipse.hono.client.kafka.tracing;
 
 import java.util.Objects;
 
-import org.eclipse.hono.kafka.client.HonoTopic;
+import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;

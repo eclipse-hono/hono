@@ -11,19 +11,19 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client.consumer;
+package org.eclipse.hono.client.kafka.consumer;
 
 /**
- * An exception indicating that a Kafka consumer failed to poll records.
+ * An exception indicating that consuming data from Kafka failed.
  */
-public class KafkaConsumerPollException extends KafkaConsumerException {
+public class KafkaConsumerException extends RuntimeException {
 
     /**
      * Creates a new exception for a root cause.
      *
      * @param cause The root cause.
      */
-    public KafkaConsumerPollException(final Throwable cause) {
+    public KafkaConsumerException(final Throwable cause) {
         super(cause);
     }
 

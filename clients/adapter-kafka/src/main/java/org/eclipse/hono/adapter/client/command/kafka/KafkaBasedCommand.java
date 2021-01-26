@@ -21,8 +21,8 @@ import java.util.StringJoiner;
 
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.Commands;
-import org.eclipse.hono.kafka.client.HonoTopic;
-import org.eclipse.hono.kafka.util.RecordUtil;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.RecordUtil;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Strings;

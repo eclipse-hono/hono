@@ -26,10 +26,10 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.kafka.client.HonoTopic;
-import org.eclipse.hono.kafka.client.KafkaProducerFactory;
-import org.eclipse.hono.kafka.client.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;

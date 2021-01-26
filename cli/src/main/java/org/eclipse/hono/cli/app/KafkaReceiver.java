@@ -22,8 +22,8 @@ import java.util.Set;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.cli.AbstractCliClient;
-import org.eclipse.hono.kafka.client.HonoTopic;
-import org.eclipse.hono.kafka.client.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Strings;
