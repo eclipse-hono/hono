@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,14 +12,15 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.proton.ProtonQoS;
 
@@ -36,13 +37,14 @@ public class TelemetryAmqpIT extends AmqpUploadTestBase {
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.applicationClientFactory.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
+    protected Future<MessageConsumer> createConsumer(
+            final String tenantId,
+            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
+        return helper.amqpApplicationClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
     protected String getEndpointName() {
         return TELEMETRY_ENDPOINT;
     }
-
 }

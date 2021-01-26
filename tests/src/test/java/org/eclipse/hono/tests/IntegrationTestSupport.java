@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -42,9 +42,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
+import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -469,9 +471,14 @@ public final class IntegrationTestSupport {
     public DeviceRegistryHttpClient registry;
     /**
      * A client for connecting to Hono's north bound APIs
-     * via the AMQP Messaging Network.
+     * via the AMQP Messaging Network using the legacy client.
      */
     public IntegrationTestApplicationClientFactory applicationClientFactory;
+    /**
+     * A client for connecting to Hono's north bound APIs
+     * via the AMQP Messaging Network using the new client.
+     */
+    public AmqpApplicationClientFactory amqpApplicationClient;
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
@@ -662,10 +669,20 @@ public final class IntegrationTestSupport {
 
         initRegistryClient();
         applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
-        return applicationClientFactory.connect()
-                .onSuccess(con -> {
-                    LOGGER.info("connected to AMQP Messaging Network [{}:{}]", downstreamProps.getHost(), downstreamProps.getPort());
-                });
+        amqpApplicationClient = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));
+
+        return CompositeFuture.all(
+                applicationClientFactory.connect()
+                    .onSuccess(con -> {
+                        LOGGER.info("connected to AMQP Messaging Network using legacy client [{}:{}]",
+                                downstreamProps.getHost(), downstreamProps.getPort());
+                    }),
+                amqpApplicationClient.connect()
+                    .onSuccess(ok -> {
+                        LOGGER.info("connected to AMQP Messaging Network using new client [{}:{}]",
+                                downstreamProps.getHost(), downstreamProps.getPort());
+                    }))
+                .mapEmpty();
     }
 
     /**
@@ -786,12 +803,16 @@ public final class IntegrationTestSupport {
      */
     public Future<?> disconnect() {
 
-        final Promise<Void> result = Promise.promise();
-        applicationClientFactory.disconnect(result);
-        return result.future().map(ok -> {
-            LOGGER.info("connection to AMQP Messaging Network closed");
-            return ok;
-        });
+        final Promise<Void> legacyClientResult = Promise.promise();
+        applicationClientFactory.disconnect(legacyClientResult);
+        final Promise<Void> newClientResult = Promise.promise();
+        amqpApplicationClient.disconnect(newClientResult);
+        return CompositeFuture.all(
+                legacyClientResult.future()
+                    .onSuccess(ok -> LOGGER.info("legacy client's connection to AMQP Messaging Network closed")),
+                newClientResult.future()
+                    .onSuccess(ok -> LOGGER.info("new client's connection to AMQP Messaging Network closed")))
+                .mapEmpty();
     }
 
     /**
@@ -1254,40 +1275,71 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Verifies that a telemetry message that has been received by a downstream consumer contains
+     * all properties that are required by the north bound Telemetry API.
+     *
+     * @param msg The message to check.
+     * @param expectedTenantId The identifier of the tenant that the origin device is expected to belong to.
+     * @throws AssertionError if any of the checks fail.
+     */
+    public static void assertTelemetryMessageProperties(
+            final DownstreamMessage<? extends MessageContext> msg,
+            final String expectedTenantId) {
+
+        assertThat(msg.getTenantId()).as("message includes matching tenant ID").isEqualTo(expectedTenantId);
+        assertThat(msg.getDeviceId()).as("message includes non-null device ID").isNotNull();
+        final var ttdValue = msg.getTimeTillDisconnect();
+        if (ttdValue != null) {
+            assertThat(ttdValue).as("ttd property contains an integer >= -1").isGreaterThanOrEqualTo(-1);
+            assertThat(msg.getCreationTime()).as("message contains a non-null creation time").isNotNull();
+        }
+    }
+
+    /**
      * Create an event and a telemetry consumer which verify that at least one empty notification and at
      * least one further message, be it an event or telemetry, was received according to the specification
      * of gateway-based auto-provisioning.
      *
-     * @param ctx The test context to be used.
+     * @param ctx The test context to fail if the notification event does not contain all required properties.
      * @param tenantId The tenant for which the consumer should be created.
      * @param deviceId The id of the device which sent the messages.
      *
-     * @return A future for the message consumer to be created.
+     * @return A succeeded future if the message consumers have been created successfully.
      */
-    public Future<MessageConsumer> createAutoProvisioningMessageConsumers(final VertxTestContext ctx, final String tenantId, final String deviceId) {
+    public Future<Void> createAutoProvisioningMessageConsumers(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final String deviceId) {
+
         final Checkpoint messagesReceived = ctx.checkpoint(2);
-        return applicationClientFactory.createEventConsumer(tenantId,
-                    msg -> ctx.verify(() -> {
-                        assertThat(MessageHelper.getDeviceId(msg)).isEqualTo(deviceId);
+        return amqpApplicationClient.createEventConsumer(
+                tenantId,
+                msg -> {
+                    ctx.verify(() -> {
+                        assertThat(msg.getDeviceId()).isEqualTo(deviceId);
 
                         if (msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
-                            assertThat(MessageHelper.getRegistrationStatus(msg))
+                            assertThat(msg.getTenantId()).isEqualTo(tenantId);
+                            final var rawMessage = msg.getMessageContext().getRawMessage();
+                            assertThat(MessageHelper.getRegistrationStatus(rawMessage))
                                     .isEqualTo(EventConstants.RegistrationStatus.NEW.name());
                             messagesReceived.flag();
                         } else {
                             messagesReceived.flag();
                         }
-                    }),
-                    close -> {
-                })
-                .compose(ok -> applicationClientFactory.createTelemetryConsumer(tenantId,
-                    msg -> ctx.verify(() -> {
-                        if (!msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
-                            messagesReceived.flag();
-                        }
-                    }),
-                    close -> {
-                    }
-                ));
+                    });
+                },
+                close -> {})
+            .compose(ok -> amqpApplicationClient.createTelemetryConsumer(
+                    tenantId,
+                    msg -> {
+                        ctx.verify(() -> {
+                            if (!msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
+                                messagesReceived.flag();
+                            }
+                        });
+                    },
+                    close -> {}))
+            .mapEmpty();
     }
 }

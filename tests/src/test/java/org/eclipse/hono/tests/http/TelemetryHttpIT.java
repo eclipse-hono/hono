@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,11 +18,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -35,7 +35,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
@@ -62,8 +64,10 @@ public class TelemetryHttpIT extends HttpTestBase {
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.applicationClientFactory.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
+    protected Future<MessageConsumer> createConsumer(
+            final String tenantId,
+            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
+        return helper.amqpApplicationClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
     /**
@@ -186,35 +190,38 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(final Vertx vertx, final VertxTestContext ctx)
+    public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(
+            final Vertx vertx,
+            final VertxTestContext ctx)
             throws InterruptedException {
 
-        // GIVEN a device and a northbound message consumer that doesn't update the message delivery state
+        // GIVEN a device and a north bound message consumer that doesn't update the message delivery state
         final Tenant tenant = new Tenant();
         final Checkpoint messageReceived = ctx.checkpoint();
         final Checkpoint deliveryStateCheckDone = ctx.checkpoint();
         final Checkpoint httpResponseReceived = ctx.checkpoint();
 
         final VertxTestContext setup = new VertxTestContext();
-        final Checkpoint setupDone = setup.checkpoint();
         final AtomicReference<ProtonDelivery> deliveryRef = new AtomicReference<>();
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .compose(ok -> helper.applicationClientFactory.createTelemetryConsumer(
-                        tenantId, 
-                        (delivery, msg) -> {
+                .compose(ok -> helper.amqpApplicationClient.createTelemetryConsumer(
+                        tenantId,
+                        msg -> {
+                            final Promise<Void> result = Promise.promise();
+                            final var delivery = msg.getMessageContext().getDelivery();
                             deliveryRef.set(delivery);
-                            logger.debug("received {}", msg);
+                            logger.debug("received message: {}", msg.getMessageContext().getRawMessage());
                             ctx.verify(() -> {
                                 assertThat(delivery.remotelySettled()).isFalse();
                                 assertThat(delivery.getRemoteState()).isNull();
                             });
                             messageReceived.flag();
                             // don't update the delivery state here
+                            return result.future();
                         },
-                        false, 
                         remoteClose -> {}))
-                .onComplete(setup.succeeding(v -> setupDone.flag()));
+                .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
