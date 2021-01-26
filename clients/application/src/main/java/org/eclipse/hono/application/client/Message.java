@@ -14,15 +14,16 @@
 package org.eclipse.hono.application.client;
 
 /**
- * A message of Hono's northbound APIs, exchanged between the messaging system and the backend application.
+ * A message of Hono's north bound APIs, exchanged between the messaging system and the back end application.
+ *
+ * @param <T> The type of context that the message is being received in.
  */
-public interface Message {
+public interface Message<T extends MessageContext> {
 
     /**
      * Gets the message context which is specific for the messaging system in use.
      *
      * @return The context.
      */
-    MessageContext getMessageContext();
-
+    T getMessageContext();
 }

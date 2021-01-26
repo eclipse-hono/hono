@@ -18,6 +18,6 @@ import org.eclipse.hono.application.client.ApplicationClientFactory;
 /**
  * A factory for creating clients for Hono's Kafka-based northbound APIs.
  */
-public interface KafkaApplicationClientFactory extends ApplicationClientFactory {
+public interface KafkaApplicationClientFactory extends ApplicationClientFactory<KafkaMessageContext> {
 
 }

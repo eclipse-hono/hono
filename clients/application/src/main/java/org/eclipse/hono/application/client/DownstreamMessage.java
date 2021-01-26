@@ -18,9 +18,12 @@ import org.eclipse.hono.util.QoS;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A message of Hono's northbound APIs, flowing from the messaging system to the backend application.
+ * A message being delivered to an application via Hono's north bound APIs.
+ *
+ * @param <T> The type of context that the message is being received in.
  */
-public interface DownstreamMessage extends Message {
+public interface DownstreamMessage<T extends MessageContext> extends Message<T> {
+
     /**
      * Gets the tenant that sent the message.
      *
@@ -50,13 +53,7 @@ public interface DownstreamMessage extends Message {
     String getContentType();
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    MessageContext getMessageContext();
-
-    /**
-     * Gets the quality of service level that the device requested.
+     * Gets the quality-of-service level used by the device that this message originates from.
      *
      * @return The QoS.
      */

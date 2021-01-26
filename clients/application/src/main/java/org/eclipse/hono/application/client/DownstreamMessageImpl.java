@@ -20,15 +20,17 @@ import org.eclipse.hono.util.QoS;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A downstream message of Hono's northbound APIs.
+ * A downstream message of Hono's north bound APIs.
+ *
+ * @param <T> The type of context that the message is being received in.
  */
-public class DownstreamMessageImpl implements DownstreamMessage {
+public class DownstreamMessageImpl<T extends MessageContext> implements DownstreamMessage<T> {
 
     private final String tenantId;
     private final String deviceId;
     private final MessageProperties properties;
     private final String contentType;
-    private final MessageContext messageContext;
+    private final T messageContext;
     private final QoS qos;
     private final Buffer payload;
 
@@ -45,7 +47,7 @@ public class DownstreamMessageImpl implements DownstreamMessage {
      * @throws NullPointerException if any of the parameters, except payload, is {@code null}.
      */
     public DownstreamMessageImpl(final String tenantId, final String deviceId, final MessageProperties properties,
-            final String contentType, final MessageContext messageContext, final QoS qos, final Buffer payload) {
+            final String contentType, final T messageContext, final QoS qos, final Buffer payload) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -84,7 +86,7 @@ public class DownstreamMessageImpl implements DownstreamMessage {
     }
 
     @Override
-    public final MessageContext getMessageContext() {
+    public final T getMessageContext() {
         return messageContext;
     }
 

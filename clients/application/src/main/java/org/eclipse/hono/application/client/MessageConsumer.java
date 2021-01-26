@@ -20,7 +20,7 @@ import io.vertx.core.Future;
  *
  * @param <T> The type of messages consumed by this client.
  */
-public interface MessageConsumer<T extends Message> {
+public interface MessageConsumer<T extends Message<? extends MessageContext>> {
 
     /**
      * Closes the client.

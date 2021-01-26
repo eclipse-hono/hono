@@ -19,12 +19,14 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
- * A factory for creating clients for Hono's northbound APIs.
+ * A factory for creating clients for Hono's north bound APIs.
+ *
+ * @param <T> The type of context that messages are being received in.
  */
-public interface ApplicationClientFactory {
+public interface ApplicationClientFactory<T extends MessageContext> {
 
     /**
-     * Creates a client for consuming data from Hono's northbound <em>Telemetry API</em>.
+     * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
      * <p>
      * The messages passed in to the consumer will be acknowledged automatically if the consumer does not throw an
      * exception.
@@ -38,9 +40,9 @@ public interface ApplicationClientFactory {
      *         cannot be started.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer<DownstreamMessage>> createTelemetryConsumer(
+    Future<MessageConsumer<DownstreamMessage<T>>> createTelemetryConsumer(
             String tenantId,
-            Consumer<DownstreamMessage> telemetryConsumer,
+            Consumer<DownstreamMessage<T>> telemetryConsumer,
             Handler<Throwable> closeHandler);
 
     /**
@@ -58,9 +60,9 @@ public interface ApplicationClientFactory {
      *         cannot be started.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer<DownstreamMessage>> createEventConsumer(
+    Future<MessageConsumer<DownstreamMessage<T>>> createEventConsumer(
             String tenantId,
-            Consumer<DownstreamMessage> eventConsumer,
+            Consumer<DownstreamMessage<T>> eventConsumer,
             Handler<Throwable> closeHandler);
 
     // TODO add methods for command & control
