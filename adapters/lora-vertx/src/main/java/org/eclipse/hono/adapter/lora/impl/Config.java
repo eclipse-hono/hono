@@ -20,6 +20,7 @@ import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -38,6 +39,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Spring Boot configuration for the LoRa adapter.
@@ -56,6 +58,11 @@ public class Config extends AbstractAdapterConfig {
             throw new IllegalStateException(
                     "LoRa Protocol Adapter does not support unauthenticated mode. Please change your configuration accordingly.");
         }
+    }
+
+    @Bean
+    HttpAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedHttpAdapterMetrics(registry, vertx);
     }
 
     /**
