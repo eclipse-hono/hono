@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.application.client.kafka.impl;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,7 +23,7 @@ import org.eclipse.hono.application.client.MessageProperties;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.KafkaMessageProperties;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.kafka.client.KafkaMessageHelper;
+import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.slf4j.Logger;
@@ -46,6 +47,8 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     private final KafkaMessageContext messageContext;
     private final QoS qos;
     private final Buffer payload;
+    private final Instant creationTime;
+    private final Integer timeTillDisconnect;
 
     /**
      * Creates a downstream message from the given Kafka consumer record.
@@ -63,7 +66,8 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
         messageContext = new KafkaMessageContext(record);
         qos = getQoS(record.headers());
         payload = record.value();
-
+        creationTime = getCreationTime(record.headers());
+        timeTillDisconnect = getTimeTillDisconnect(record.headers());
     }
 
     private String getTenantId(final KafkaConsumerRecord<String, Buffer> record) {
@@ -85,6 +89,23 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
                 .orElseGet(() -> {
                     log.debug("QoS not present in Kafka record");
                     return QoS.AT_LEAST_ONCE;
+                });
+    }
+
+    private Instant getCreationTime(final List<KafkaHeader> headers) {
+        return KafkaMessageHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
+                .map(Instant::ofEpochMilli)
+                .orElseGet(() -> {
+                    log.debug("creation time not present in Kafka record");
+                    return null;
+                });
+    }
+
+    private Integer getTimeTillDisconnect(final List<KafkaHeader> headers) {
+        return KafkaMessageHelper.getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.class)
+                .orElseGet(() -> {
+                    log.debug("ttd not present in Kafka record");
+                    return null;
                 });
     }
 
@@ -121,5 +142,21 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     @Override
     public final Buffer getPayload() {
         return payload;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Instant getCreationTime() {
+        return creationTime;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Integer getTimeTillDisconnect() {
+        return timeTillDisconnect;
     }
 }

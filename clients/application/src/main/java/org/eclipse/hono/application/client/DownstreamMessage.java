@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.application.client;
 
+import java.time.Instant;
+import java.util.Optional;
+
 import org.eclipse.hono.util.QoS;
 
 import io.vertx.core.buffer.Buffer;
@@ -65,4 +68,59 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
      * @return the payload - may be {@code null}.
      */
     Buffer getPayload();
+
+    /**
+     * Gets the point in time that the message has been created at.
+     *
+     * @return The instant in time or {@code null} if unknown.
+     */
+    Instant getCreationTime();
+
+    /**
+     * Gets the amount of time that the sender of this message will stay connected
+     * to a protocol adapter after it has sent this message.
+     *
+     * @return The amount of time in seconds or {@code null} if the sender has disconnected
+     *         immediately after this message has been sent.
+     *         A value of {@code -1} indicates that the sender will stay connected until
+     *         further notice. A value of {@code 0} indicates that the sender has already
+     *         disconnected.
+     */
+    Integer getTimeTillDisconnect();
+
+    /**
+     * Checks if the sender of this message is still connected at the current moment.
+     * <p>
+     * This default implementation simply invokes {@link #isSenderConnected(Instant)} with
+     * the current instant of time.
+     *
+     * @return {@code true} if the sender is still connected at the current moment.
+     */
+    default boolean isSenderConnected() {
+        return isSenderConnected(Instant.now());
+    }
+
+    /**
+     * Checks if the sender of this message is still connected at a given point in time.
+     * <p>
+     * This default implementation determines the result based on the values returned by
+     * {@link #getCreationTime()} and {@link #getTimeTillDisconnect()}.
+     *
+     * @param now The point in time to check for.
+     * @return {@code true} if the sender is still connected at the given point in time.
+     */
+    default boolean isSenderConnected(final Instant now) {
+
+        final int ttd = Optional.ofNullable(getTimeTillDisconnect()).orElse(0);
+        switch (getTimeTillDisconnect()) {
+        case -1: return true;
+        case 0: return false;
+        default:
+            return Optional.ofNullable(getCreationTime())
+                .map(ct -> ct.plusSeconds(ttd))
+                .map(now::isBefore)
+                .orElse(false);
+        }
+    }
+
 }

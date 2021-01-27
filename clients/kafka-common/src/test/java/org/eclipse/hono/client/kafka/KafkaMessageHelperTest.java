@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client;
+package org.eclipse.hono.client.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

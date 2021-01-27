@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.kafka.client;
+package org.eclipse.hono.client.kafka;
 
 import java.util.List;
 import java.util.Objects;
@@ -42,7 +42,7 @@ public final class KafkaMessageHelper {
      *
      * @param key The key of the header.
      * @param value The value of the header.
-     * @return an encoded Kafka header.
+     * @return The encoded Kafka header.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws EncodeException if encoding the value to JSON fails.
      */
@@ -63,9 +63,12 @@ public final class KafkaMessageHelper {
     /**
      * Gets the {@link MessageHelper#SYS_PROPERTY_CONTENT_TYPE content type} header from the given list of Kafka
      * headers.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first
+     * occurrence is returned.
      *
      * @param headers The headers to get the content-type from.
-     * @return The content type.
+     * @return The content type (may be empty).
      */
     public static Optional<String> getContentType(final List<KafkaHeader> headers) {
         return getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CONTENT_TYPE, String.class);
@@ -73,9 +76,12 @@ public final class KafkaMessageHelper {
 
     /**
      * Gets the {@link MessageHelper#APP_PROPERTY_QOS quality of service} header from the given list of Kafka headers.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first
+     * occurrence is returned.
      *
      * @param headers The headers to get the QoS from.
-     * @return The content type.
+     * @return The quality-of-service level (may be empty).
      */
     public static Optional<QoS> getQoS(final List<KafkaHeader> headers) {
         return getHeaderValue(headers, MessageHelper.APP_PROPERTY_QOS, Integer.class)
