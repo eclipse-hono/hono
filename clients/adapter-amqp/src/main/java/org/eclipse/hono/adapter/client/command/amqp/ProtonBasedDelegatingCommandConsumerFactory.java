@@ -52,6 +52,8 @@ import io.vertx.core.json.JsonObject;
 public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractServiceClient implements CommandConsumerFactory {
 
     private final ProtocolAdapterCommandConsumerFactory factory;
+    private final CommandTargetMapper commandTargetMapper;
+    private final DeviceConnectionClient deviceConnectionClient;
 
     /**
      * Creates a new client for a connection.
@@ -72,11 +74,11 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
 
         super(connection, samplerFactory);
 
-        Objects.requireNonNull(deviceConnectionClient);
+        this.deviceConnectionClient = Objects.requireNonNull(deviceConnectionClient);
         Objects.requireNonNull(deviceRegistrationClient);
         Objects.requireNonNull(tracer);
 
-        final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(tracer);
+        commandTargetMapper = CommandTargetMapper.create(tracer);
         commandTargetMapper.initialize(new CommandTargetMapperContext() {
 
             @Override
@@ -107,29 +109,7 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
                         tenant, deviceId, viaGateways, context);
             }
         });
-
         factory = ProtocolAdapterCommandConsumerFactory.create(connection, samplerFactory);
-        factory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
-
-            @Override
-            public Future<Void> setCommandHandlingAdapterInstance(
-                    final String tenant,
-                    final String deviceId,
-                    final String adapterInstanceId,
-                    final Duration lifespan,
-                    final SpanContext context) {
-                return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, lifespan, context);
-            }
-
-            @Override
-            public Future<Void> removeCommandHandlingAdapterInstance(
-                    final String tenant,
-                    final String deviceId,
-                    final String adapterInstanceId,
-                    final SpanContext context) {
-                return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId, adapterInstanceId, context);
-            }
-        });
     }
 
     /**
@@ -190,4 +170,35 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
                 });
     }
 
+    @Override
+    public Future<Void> start() {
+        return connection.connect()
+                .onComplete(ar -> {
+                    // initialize factory (also if connection attempt failed - retry logic takes care of that)
+                    factory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {
+
+                        @Override
+                        public Future<Void> setCommandHandlingAdapterInstance(
+                                final String tenant,
+                                final String deviceId,
+                                final String adapterInstanceId,
+                                final Duration lifespan,
+                                final SpanContext context) {
+                            return deviceConnectionClient.setCommandHandlingAdapterInstance(tenant, deviceId,
+                                    adapterInstanceId, lifespan, context);
+                        }
+
+                        @Override
+                        public Future<Void> removeCommandHandlingAdapterInstance(
+                                final String tenant,
+                                final String deviceId,
+                                final String adapterInstanceId,
+                                final SpanContext context) {
+                            return deviceConnectionClient.removeCommandHandlingAdapterInstance(tenant, deviceId,
+                                    adapterInstanceId, context);
+                        }
+                    });
+                })
+                .mapEmpty();
+    }
 }
