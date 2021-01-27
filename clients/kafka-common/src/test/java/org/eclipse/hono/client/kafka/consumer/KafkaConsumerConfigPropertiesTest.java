@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 public class KafkaConsumerConfigPropertiesTest {
 
     /**
-     * Verifies that trying to set a {@code null} config throws a Nullpointer exception.
+     * Verifies that trying to set a {@code null} config throws a {@link NullPointerException}.
      */
     @Test
     public void testThatConfigCanNotBeSetToNull() {
@@ -36,15 +36,15 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that trying to set a {@code null} client ID throws a Nullpointer exception.
+     * Verifies that trying to set a {@code null} client ID throws a {@link NullPointerException}.
      */
     @Test
     public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaConsumerConfigProperties().setClientId(null));
+        assertThrows(NullPointerException.class, () -> new KafkaConsumerConfigProperties().setDefaultClientIdPrefix(null));
     }
 
     /**
-     * Verifies that trying to set a negative poll timeout throws a IllegalArgumentException.
+     * Verifies that trying to set a negative poll timeout throws an {@link IllegalArgumentException}.
      */
     @Test
     public void testThatPollTimeoutCanNotBeSetToNull() {
@@ -64,6 +64,22 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
+     * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} and
+     * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
+     * in {@link KafkaConsumerConfigProperties#getConsumerConfig()}, with the consumer config properties having
+     * precedence.
+     */
+    @Test
+    public void testThatGetConsumerConfigReturnsGivenPropertiesWithCommonProperties() {
+        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
+        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
+
+        assertThat(config.getConsumerConfig().get("foo")).isEqualTo("bar");
+        assertThat(config.getConsumerConfig().get("common")).isEqualTo("commonValue");
+    }
+
+    /**
      * Verifies that {@link KafkaConsumerConfigProperties#isConfigured()} returns false if no configuration has been
      * set, and true otherwise.
      */
@@ -78,8 +94,8 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setClientId(String)} is applied when it
-     * is not present in the configuration.
+     * Verifies that properties returned in {@link KafkaConsumerConfigProperties#getConsumerConfig()} ()} contain
+     * the predefined entries, overriding any corresponding properties given in {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)}.
      */
     @Test
     public void testThatGetConsumerConfigReturnsAdaptedConfig() {
@@ -101,7 +117,7 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setClientId(String)} is applied when it
+     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is applied when it
      * is NOT present in the configuration.
      */
     @Test
@@ -110,13 +126,13 @@ public class KafkaConsumerConfigPropertiesTest {
 
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Collections.emptyMap());
-        config.setClientId(clientId);
+        config.setDefaultClientIdPrefix(clientId);
 
         assertThat(config.getConsumerConfig().get("client.id")).isEqualTo(clientId);
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setClientId(String)} is NOT applied
+     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied
      * when it is present in the configuration.
      */
     @Test
@@ -125,7 +141,7 @@ public class KafkaConsumerConfigPropertiesTest {
 
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Collections.singletonMap("client.id", userProvidedClientId));
-        config.setClientId("other-client");
+        config.setDefaultClientIdPrefix("other-client");
 
         assertThat(config.getConsumerConfig().get("client.id")).isEqualTo(userProvidedClientId);
     }

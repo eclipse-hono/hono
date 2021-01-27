@@ -42,8 +42,10 @@ import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -252,7 +254,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
-     * Exposes configuration properties for accessing the Kafka cluster as a Spring bean.
+     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
      */
@@ -261,7 +263,37 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public KafkaProducerConfigProperties kafkaProducerConfig() {
         final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
         if (getAdapterName() != null) {
-            configProperties.setClientId(getAdapterName());
+            configProperties.setDefaultClientIdPrefix(getAdapterName());
+        }
+        return configProperties;
+    }
+
+    /**
+     * Exposes configuration properties for a consumer accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public KafkaConsumerConfigProperties kafkaConsumerConfig() {
+        final KafkaConsumerConfigProperties configProperties = new KafkaConsumerConfigProperties();
+        if (getAdapterName() != null) {
+            configProperties.setDefaultClientIdPrefix(getAdapterName());
+        }
+        return configProperties;
+    }
+
+    /**
+     * Exposes configuration properties for an admin client accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
+        final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
+        if (getAdapterName() != null) {
+            configProperties.setDefaultClientIdPrefix(getAdapterName());
         }
         return configProperties;
     }
