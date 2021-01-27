@@ -45,20 +45,21 @@ public class KafkaProducerConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} are returned
-     * in {@link KafkaProducerConfigProperties#getProducerConfig()}.
+     * in {@link KafkaProducerConfigProperties#getProducerConfig(String)}.
      */
     @Test
     public void testThatGetProducerConfigReturnsGivenProperties() {
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Collections.singletonMap("foo", "bar"));
 
-        assertThat(config.getProducerConfig().get("foo")).isEqualTo("bar");
+        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
+        assertThat(producerConfig.get("foo")).isEqualTo("bar");
     }
 
     /**
      * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} and
      * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaProducerConfigProperties#getProducerConfig()}, with the producer config properties having
+     * in {@link KafkaProducerConfigProperties#getProducerConfig(String)}, with the producer config properties having
      * precedence.
      */
     @Test
@@ -67,8 +68,9 @@ public class KafkaProducerConfigPropertiesTest {
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
         config.setProducerConfig(Collections.singletonMap("foo", "bar"));
 
-        assertThat(config.getProducerConfig().get("foo")).isEqualTo("bar");
-        assertThat(config.getProducerConfig().get("common")).isEqualTo("commonValue");
+        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
+        assertThat(producerConfig.get("foo")).isEqualTo("bar");
+        assertThat(producerConfig.get("common")).isEqualTo("commonValue");
     }
 
     /**
@@ -86,7 +88,7 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that properties returned in {@link KafkaProducerConfigProperties#getProducerConfig()} contain
+     * Verifies that properties returned in {@link KafkaProducerConfigProperties#getProducerConfig(String)} contain
      * the predefined entries, overriding any corresponding properties given in {@link KafkaProducerConfigProperties#setProducerConfig(Map)}.
      */
     @Test
@@ -100,7 +102,7 @@ public class KafkaProducerConfigPropertiesTest {
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(properties);
 
-        final Map<String, String> producerConfig = config.getProducerConfig();
+        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
 
         assertThat(producerConfig.get("key.serializer"))
                 .isEqualTo("org.apache.kafka.common.serialization.StringSerializer");
@@ -121,7 +123,8 @@ public class KafkaProducerConfigPropertiesTest {
         config.setProducerConfig(Collections.emptyMap());
         config.setDefaultClientIdPrefix(clientId);
 
-        assertThat(config.getProducerConfig().get("client.id")).isEqualTo(clientId);
+        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
+        assertThat(producerConfig.get("client.id")).startsWith(clientId + "-producerName-");
     }
 
     /**
@@ -136,7 +139,8 @@ public class KafkaProducerConfigPropertiesTest {
         config.setProducerConfig(Collections.singletonMap("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 
-        assertThat(config.getProducerConfig().get("client.id")).isEqualTo(userProvidedClientId);
+        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
+        assertThat(producerConfig.get("client.id")).startsWith(userProvidedClientId + "-producerName-");
     }
 
 }

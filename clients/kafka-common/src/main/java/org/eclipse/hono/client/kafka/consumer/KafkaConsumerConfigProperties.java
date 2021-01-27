@@ -69,15 +69,20 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
      * are deserialized</li>
      * <li>{@code value.deserializer=io.vertx.kafka.client.serialization.BufferDeserializer}: defines how message values
      * are deserialized</li>
-     * <li>{@code client.id} if the property is not already present in the configuration and a value has been set with
-     * {@link #setDefaultClientIdPrefix(String)}, this value will be taken</li>
+     * <li>{@code client.id}=${unique client id}: the client id will be set to a unique value containing the already set
+     * client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given consumerName
+     * and a newly created UUID.</li>
      * </ul>
+     * Note: This method should be called for each new consumer, ensuring that a unique client id is used.
      *
+     * @param consumerName A name for the consumer to include in the added {@code client.id} property.
      * @return a copy of the consumer configuration with the applied properties or an empty map if neither a consumer
      *         client configuration was set with {@link #setConsumerConfig(Map)} nor common configuration properties were
      *         set with {@link #setCommonClientConfig(Map)}.
+     * @throws NullPointerException if consumerName is {@code null}.
      */
-    public final Map<String, String> getConsumerConfig() {
+    public final Map<String, String> getConsumerConfig(final String consumerName) {
+        Objects.requireNonNull(consumerName);
 
         if (commonClientConfig == null && consumerConfig == null) {
             return Collections.emptyMap();
@@ -97,10 +102,7 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
         overrideConfigProperty(newConfig, ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                 "io.vertx.kafka.client.serialization.BufferDeserializer");
 
-        if (defaultClientIdPrefix != null) {
-            newConfig.putIfAbsent(ConsumerConfig.CLIENT_ID_CONFIG, defaultClientIdPrefix);
-        }
-
+        setUniqueClientId(newConfig, consumerName, ConsumerConfig.CLIENT_ID_CONFIG);
         return newConfig;
     }
 

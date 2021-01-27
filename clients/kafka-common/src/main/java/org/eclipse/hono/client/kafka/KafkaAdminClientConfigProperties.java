@@ -58,15 +58,20 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
      * Gets the Kafka admin client configuration to which additional properties were applied. The following properties are
      * set here to the given configuration:
      * <ul>
-     * <li>{@code client.id} if the property is not already present in the configuration and a value has been set with
-     * {@link #setDefaultClientIdPrefix(String)}, this value will be taken</li>
+     * <li>{@code client.id}=${unique client id}: the client id will be set to a unique value containing the already set
+     * client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given adminClientName
+     * and a newly created UUID.</li>
      * </ul>
+     * Note: This method should be called for each new admin client, ensuring that a unique client id is used.
      *
+     * @param adminClientName A name for the admin client to include in the added {@code client.id} property.
      * @return a copy of the admin client configuration with the applied properties or an empty map if neither an admin
      *         client configuration was set with {@link #setAdminClientConfig(Map)} nor common configuration properties were
      *         set with {@link #setCommonClientConfig(Map)}.
+     * @throws NullPointerException if adminClientName is {@code null}.
      */
-    public final Map<String, String> getAdminClientConfig() {
+    public final Map<String, String> getAdminClientConfig(final String adminClientName) {
+        Objects.requireNonNull(adminClientName);
 
         if (commonClientConfig == null && adminClientConfig == null) {
             return Collections.emptyMap();
@@ -80,9 +85,7 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
             newConfig.putAll(adminClientConfig);
         }
 
-        if (defaultClientIdPrefix != null) {
-            newConfig.putIfAbsent(AdminClientConfig.CLIENT_ID_CONFIG, defaultClientIdPrefix);
-        }
+        setUniqueClientId(newConfig, adminClientName, AdminClientConfig.CLIENT_ID_CONFIG);
         return newConfig;
     }
 
