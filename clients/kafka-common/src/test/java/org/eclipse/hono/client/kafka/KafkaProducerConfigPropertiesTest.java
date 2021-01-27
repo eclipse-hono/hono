@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 public class KafkaProducerConfigPropertiesTest {
 
     /**
-     * Verifies that trying to set a {@code null} config throws a Nullpointer exception.
+     * Verifies that trying to set a {@code null} config throws a {@link NullPointerException}.
      */
     @Test
     public void testThatConfigCanNotBeSetToNull() {
@@ -36,11 +36,11 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that trying to set a {@code null} client ID throws a Nullpointer exception.
+     * Verifies that trying to set a {@code null} client ID throws a {@link NullPointerException}.
      */
     @Test
     public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaProducerConfigProperties().setClientId(null));
+        assertThrows(NullPointerException.class, () -> new KafkaProducerConfigProperties().setDefaultClientIdPrefix(null));
     }
 
     /**
@@ -53,6 +53,22 @@ public class KafkaProducerConfigPropertiesTest {
         config.setProducerConfig(Collections.singletonMap("foo", "bar"));
 
         assertThat(config.getProducerConfig().get("foo")).isEqualTo("bar");
+    }
+
+    /**
+     * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} and
+     * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
+     * in {@link KafkaProducerConfigProperties#getProducerConfig()}, with the producer config properties having
+     * precedence.
+     */
+    @Test
+    public void testThatGetProducerConfigReturnsGivenPropertiesWithCommonProperties() {
+        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
+        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
+
+        assertThat(config.getProducerConfig().get("foo")).isEqualTo("bar");
+        assertThat(config.getProducerConfig().get("common")).isEqualTo("commonValue");
     }
 
     /**
@@ -70,8 +86,8 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setClientId(String)} is applied when it
-     * is not present in the configuration.
+     * Verifies that properties returned in {@link KafkaProducerConfigProperties#getProducerConfig()} contain
+     * the predefined entries, overriding any corresponding properties given in {@link KafkaProducerConfigProperties#setProducerConfig(Map)}.
      */
     @Test
     public void testThatGetProducerConfigReturnsAdaptedConfig() {
@@ -94,7 +110,7 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setClientId(String)} is applied when it
+     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is applied when it
      * is NOT present in the configuration.
      */
     @Test
@@ -103,13 +119,13 @@ public class KafkaProducerConfigPropertiesTest {
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Collections.emptyMap());
-        config.setClientId(clientId);
+        config.setDefaultClientIdPrefix(clientId);
 
         assertThat(config.getProducerConfig().get("client.id")).isEqualTo(clientId);
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setClientId(String)} is NOT applied
+     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied
      * when it is present in the configuration.
      */
     @Test
@@ -118,7 +134,7 @@ public class KafkaProducerConfigPropertiesTest {
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Collections.singletonMap("client.id", userProvidedClientId));
-        config.setClientId("other-client");
+        config.setDefaultClientIdPrefix("other-client");
 
         assertThat(config.getProducerConfig().get("client.id")).isEqualTo(userProvidedClientId);
     }

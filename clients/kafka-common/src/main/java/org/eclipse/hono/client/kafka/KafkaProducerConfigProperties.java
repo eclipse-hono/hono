@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Configuration properties for Kafka producers.
@@ -32,13 +30,11 @@ import org.slf4j.LoggerFactory;
  * @see <a href="https://kafka.apache.org/documentation/#producerconfigs">Kafka Producer Configs</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
  */
-public class KafkaProducerConfigProperties {
-
-    private final Logger log = LoggerFactory.getLogger(KafkaProducerConfigProperties.class);
+public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties {
 
     private Map<String, String> producerConfig;
-    private String clientId;
 
     /**
      * Sets the Kafka producer config properties to be used.
@@ -46,21 +42,8 @@ public class KafkaProducerConfigProperties {
      * @param producerConfig The config properties.
      * @throws NullPointerException if the config is {@code null}.
      */
-    public void setProducerConfig(final Map<String, String> producerConfig) {
+    public final void setProducerConfig(final Map<String, String> producerConfig) {
         this.producerConfig = Objects.requireNonNull(producerConfig);
-    }
-
-    /**
-     * Sets the client ID that is passed to the Kafka server to allow application specific server-side request logging.
-     * <p>
-     * If the config set in {@link #setProducerConfig(Map)} already contains a value for key {@code client.id}, that one
-     * will be used and the parameter here will be ignored.
-     *
-     * @param clientId The client ID to set.
-     * @throws NullPointerException if the client ID is {@code null}.
-     */
-    public final void setClientId(final String clientId) {
-        this.clientId = Objects.requireNonNull(clientId);
     }
 
     /**
@@ -68,8 +51,8 @@ public class KafkaProducerConfigProperties {
      *
      * @return true if configuration is present.
      */
-    public boolean isConfigured() {
-        return producerConfig != null;
+    public final boolean isConfigured() {
+        return commonClientConfig != null || producerConfig != null;
     }
 
     /**
@@ -83,47 +66,42 @@ public class KafkaProducerConfigProperties {
      * serialized</li>
      *
      * <li>{@code client.id} if the property is not already present in the configuration and a value has been set with
-     * {@link #setClientId(String)}, this value will be taken</li>
+     * {@link #setDefaultClientIdPrefix(String)}, this value will be taken</li>
      * </ul>
      *
-     * @return a copy of the producer configuration with the applied properties or an empty map if no producer
-     *         configuration was set with {@link #setProducerConfig(Map)}.
+     * @return a copy of the producer configuration with the applied properties or an empty map if neither a producer
+     *         client configuration was set with {@link #setProducerConfig(Map)} nor common configuration properties were
+     *         set with {@link #setCommonClientConfig(Map)}.
      * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation -
      *      "Producer Configs" - enable.idempotence</a>
      */
-    public Map<String, String> getProducerConfig() {
+    public final Map<String, String> getProducerConfig() {
 
-        if (producerConfig == null) {
+        if (commonClientConfig == null && producerConfig == null) {
             return Collections.emptyMap();
         }
 
-        final HashMap<String, String> newConfig = new HashMap<>(producerConfig);
+        final Map<String, String> newConfig = new HashMap<>();
+        if (commonClientConfig != null) {
+            newConfig.putAll(commonClientConfig);
+        }
+        if (producerConfig != null) {
+            newConfig.putAll(producerConfig);
+        }
 
-        overrideProducerConfigProperty(newConfig, ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+        overrideConfigProperty(newConfig, ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.StringSerializer");
 
-        overrideProducerConfigProperty(newConfig, ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+        overrideConfigProperty(newConfig, ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.vertx.kafka.client.serialization.BufferSerializer");
 
-        overrideProducerConfigProperty(newConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+        overrideConfigProperty(newConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
 
-        if (clientId != null) {
-            newConfig.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, clientId);
+        if (defaultClientIdPrefix != null) {
+            newConfig.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, defaultClientIdPrefix);
         }
 
         return newConfig;
-    }
-
-    private void overrideProducerConfigProperty(final Map<String, String> config, final String key,
-            final String value) {
-
-        log.trace("Setting Kafka producer config property [{}={}]", key, value);
-        final Object oldValue = config.put(key, value);
-        if (oldValue != null) {
-            log.debug("Provided Kafka producer configuration contains property [{}={}], changing it to [{}]", key,
-                    oldValue, value);
-        }
-
     }
 
 }
