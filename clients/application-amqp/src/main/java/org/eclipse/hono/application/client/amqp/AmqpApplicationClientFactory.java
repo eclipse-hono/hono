@@ -17,7 +17,7 @@ import org.eclipse.hono.application.client.ApplicationClientFactory;
 import org.eclipse.hono.util.Lifecycle;
 
 /**
- * A factory for creating clients for Hono's AMQP-based northbound APIs.
+ * A factory for creating clients for Hono's AMQP-based north bound APIs.
  */
 public interface AmqpApplicationClientFactory extends ApplicationClientFactory<AmqpMessageContext>, Lifecycle {
 }
