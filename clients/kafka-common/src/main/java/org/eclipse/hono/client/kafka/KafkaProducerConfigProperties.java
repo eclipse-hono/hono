@@ -65,17 +65,22 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
      * <li>{@code value.serializer=io.vertx.kafka.client.serialization.BufferSerializer}: defines how message values are
      * serialized</li>
      *
-     * <li>{@code client.id} if the property is not already present in the configuration and a value has been set with
-     * {@link #setDefaultClientIdPrefix(String)}, this value will be taken</li>
+     * <li>{@code client.id}=${unique client id}: the client id will be set to a unique value containing the already set
+     * client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given producerName
+     * and a newly created UUID.</li>
      * </ul>
+     * Note: This method should be called for each new producer, ensuring that a unique client id is used.
      *
+     * @param producerName A name for the producer to include in the added {@code client.id} property.
      * @return a copy of the producer configuration with the applied properties or an empty map if neither a producer
      *         client configuration was set with {@link #setProducerConfig(Map)} nor common configuration properties were
      *         set with {@link #setCommonClientConfig(Map)}.
+     * @throws NullPointerException if producerName is {@code null}.
      * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation -
      *      "Producer Configs" - enable.idempotence</a>
      */
-    public final Map<String, String> getProducerConfig() {
+    public final Map<String, String> getProducerConfig(final String producerName) {
+        Objects.requireNonNull(producerName);
 
         if (commonClientConfig == null && producerConfig == null) {
             return Collections.emptyMap();
@@ -97,10 +102,7 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
 
         overrideConfigProperty(newConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
 
-        if (defaultClientIdPrefix != null) {
-            newConfig.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, defaultClientIdPrefix);
-        }
-
+        setUniqueClientId(newConfig, producerName, ProducerConfig.CLIENT_ID_CONFIG);
         return newConfig;
     }
 

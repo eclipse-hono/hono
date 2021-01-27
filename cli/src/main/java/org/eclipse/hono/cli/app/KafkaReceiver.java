@@ -98,7 +98,7 @@ public class KafkaReceiver extends AbstractCliClient {
                     "Invalid message type [\"%s\"]. Valid types are \"telemetry\", \"event\" or \"all\"", messageType));
         }
 
-        final KafkaConsumer<String, Buffer> consumer = KafkaConsumer.create(vertx, config.getConsumerConfig(),
+        final KafkaConsumer<String, Buffer> consumer = KafkaConsumer.create(vertx, config.getConsumerConfig("cli"),
                 String.class, Buffer.class);
 
         consumer.handler(this::logMessage);

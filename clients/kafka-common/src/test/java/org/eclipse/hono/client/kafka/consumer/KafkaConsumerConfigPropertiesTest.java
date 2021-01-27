@@ -53,20 +53,21 @@ public class KafkaConsumerConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} are returned
-     * in {@link KafkaConsumerConfigProperties#getConsumerConfig()}.
+     * in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)}.
      */
     @Test
     public void testThatGetConsumerConfigReturnsGivenProperties() {
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
 
-        assertThat(config.getConsumerConfig().get("foo")).isEqualTo("bar");
+        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
+        assertThat(consumerConfig.get("foo")).isEqualTo("bar");
     }
 
     /**
      * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} and
      * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaConsumerConfigProperties#getConsumerConfig()}, with the consumer config properties having
+     * in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)}, with the consumer config properties having
      * precedence.
      */
     @Test
@@ -75,8 +76,9 @@ public class KafkaConsumerConfigPropertiesTest {
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
         config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
 
-        assertThat(config.getConsumerConfig().get("foo")).isEqualTo("bar");
-        assertThat(config.getConsumerConfig().get("common")).isEqualTo("commonValue");
+        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
+        assertThat(consumerConfig.get("foo")).isEqualTo("bar");
+        assertThat(consumerConfig.get("common")).isEqualTo("commonValue");
     }
 
     /**
@@ -94,7 +96,7 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that properties returned in {@link KafkaConsumerConfigProperties#getConsumerConfig()} ()} contain
+     * Verifies that properties returned in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)} ()} contain
      * the predefined entries, overriding any corresponding properties given in {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)}.
      */
     @Test
@@ -108,7 +110,7 @@ public class KafkaConsumerConfigPropertiesTest {
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(properties);
 
-        final Map<String, String> consumerConfig = config.getConsumerConfig();
+        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
 
         assertThat(consumerConfig.get("key.deserializer"))
                 .isEqualTo("org.apache.kafka.common.serialization.StringDeserializer");
@@ -128,7 +130,8 @@ public class KafkaConsumerConfigPropertiesTest {
         config.setConsumerConfig(Collections.emptyMap());
         config.setDefaultClientIdPrefix(clientId);
 
-        assertThat(config.getConsumerConfig().get("client.id")).isEqualTo(clientId);
+        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
+        assertThat(consumerConfig.get("client.id")).startsWith(clientId + "-consumerName-");
     }
 
     /**
@@ -143,7 +146,8 @@ public class KafkaConsumerConfigPropertiesTest {
         config.setConsumerConfig(Collections.singletonMap("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 
-        assertThat(config.getConsumerConfig().get("client.id")).isEqualTo(userProvidedClientId);
+        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
+        assertThat(consumerConfig.get("client.id")).startsWith(userProvidedClientId + "-consumerName-");
     }
 
 }

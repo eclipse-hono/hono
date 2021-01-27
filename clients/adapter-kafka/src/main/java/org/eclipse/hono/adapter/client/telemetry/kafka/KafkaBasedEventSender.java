@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,8 +49,8 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
             final KafkaProducerConfigProperties kafkaProducerConfig, final ProtocolAdapterProperties adapterConfig,
             final Tracer tracer) {
 
-        super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig.getProducerConfig(), adapterConfig,
-                tracer);
+        super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig.getProducerConfig(EventConstants.EVENT_ENDPOINT),
+                adapterConfig, tracer);
     }
 
     /**

@@ -20,6 +20,8 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaApplicationClientFactory;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -62,7 +64,8 @@ public class KafkaApplicationClientFactoryImpl implements KafkaApplicationClient
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
 
-        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx, config.getConsumerConfig());
+        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx, config.getConsumerConfig(
+                TelemetryConstants.TELEMETRY_ENDPOINT));
         final Handler<Throwable> effectiveCloseHandler = closeHandler != null ? closeHandler : (t -> {});
 
         return TelemetryConsumer.create(kafkaConsumer, config, tenantId, messageHandler, effectiveCloseHandler);
@@ -75,7 +78,8 @@ public class KafkaApplicationClientFactoryImpl implements KafkaApplicationClient
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
 
-        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx, config.getConsumerConfig());
+        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx, config.getConsumerConfig(
+                EventConstants.EVENT_ENDPOINT));
         final Handler<Throwable> effectiveCloseHandler = closeHandler != null ? closeHandler : (t -> {});
 
         return EventConsumer.create(kafkaConsumer, config, tenantId, messageHandler, effectiveCloseHandler);

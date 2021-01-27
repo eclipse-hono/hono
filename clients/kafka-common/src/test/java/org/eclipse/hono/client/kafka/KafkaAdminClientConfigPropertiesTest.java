@@ -44,20 +44,21 @@ public class KafkaAdminClientConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaAdminClientConfigProperties#setAdminClientConfig(Map)} are returned
-     * in {@link KafkaAdminClientConfigProperties#getAdminClientConfig()}.
+     * in {@link KafkaAdminClientConfigProperties#getAdminClientConfig(String)}.
      */
     @Test
     public void testThatGetAdminClientConfigReturnsGivenProperties() {
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
         config.setAdminClientConfig(Collections.singletonMap("foo", "bar"));
 
-        assertThat(config.getAdminClientConfig().get("foo")).isEqualTo("bar");
+        final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
+        assertThat(adminClientConfig.get("foo")).isEqualTo("bar");
     }
 
     /**
      * Verifies that properties provided with {@link KafkaAdminClientConfigProperties#setAdminClientConfig(Map)} and
      * {@link AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaAdminClientConfigProperties#getAdminClientConfig()}, with the admin client config properties having
+     * in {@link KafkaAdminClientConfigProperties#getAdminClientConfig(String)}, with the admin client config properties having
      * precedence.
      */
     @Test
@@ -66,8 +67,9 @@ public class KafkaAdminClientConfigPropertiesTest {
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
         config.setAdminClientConfig(Collections.singletonMap("foo", "bar"));
 
-        assertThat(config.getAdminClientConfig().get("foo")).isEqualTo("bar");
-        assertThat(config.getAdminClientConfig().get("common")).isEqualTo("commonValue");
+        final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
+        assertThat(adminClientConfig.get("foo")).isEqualTo("bar");
+        assertThat(adminClientConfig.get("common")).isEqualTo("commonValue");
     }
 
     /**
@@ -96,7 +98,8 @@ public class KafkaAdminClientConfigPropertiesTest {
         config.setAdminClientConfig(Collections.emptyMap());
         config.setDefaultClientIdPrefix(clientId);
 
-        assertThat(config.getAdminClientConfig().get("client.id")).isEqualTo(clientId);
+        final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
+        assertThat(adminClientConfig.get("client.id")).startsWith(clientId + "-adminClientName-");
     }
 
     /**
@@ -111,7 +114,8 @@ public class KafkaAdminClientConfigPropertiesTest {
         config.setAdminClientConfig(Collections.singletonMap("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 
-        assertThat(config.getAdminClientConfig().get("client.id")).isEqualTo(userProvidedClientId);
+        final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
+        assertThat(adminClientConfig.get("client.id")).startsWith(userProvidedClientId + "-adminClientName-");
     }
 
 }

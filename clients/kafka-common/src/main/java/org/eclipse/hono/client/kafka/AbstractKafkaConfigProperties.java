@@ -15,6 +15,8 @@ package org.eclipse.hono.client.kafka;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +80,34 @@ public abstract class AbstractKafkaConfigProperties {
         if (oldValue != null) {
             log.debug("provided Kafka configuration contains property [{}={}], changing it to [{}]", key,
                     oldValue, value);
+        }
+    }
+
+    /**
+     * Sets a client id property with a unique value in the given map.
+     * <p>
+     * An already set client id property or alternatively the value set via
+     * {@link #setDefaultClientIdPrefix(String)} will be used as a prefix, to which
+     * the given clientName and a UUID will be added.
+     *
+     * @param config The map to set the client id in.
+     * @param clientName The client name to include in the client id.
+     * @param clientIdPropertyName The name of the client id property.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected final void setUniqueClientId(final Map<String, String> config, final String clientName,
+            final String clientIdPropertyName) {
+        Objects.requireNonNull(config);
+        Objects.requireNonNull(clientName);
+        Objects.requireNonNull(clientIdPropertyName);
+
+        final UUID uuid = UUID.randomUUID();
+        final String clientIdPrefix = Optional.ofNullable(config.get(clientIdPropertyName))
+                .orElse(defaultClientIdPrefix);
+        if (clientIdPrefix == null) {
+            config.put(clientIdPropertyName, String.format("%s-%s", clientName, uuid));
+        } else {
+            config.put(clientIdPropertyName, String.format("%s-%s-%s", clientIdPrefix, clientName, uuid));
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
             final KafkaProducerConfigProperties kafkaProducerConfig, final ProtocolAdapterProperties adapterConfig,
             final Tracer tracer) {
 
-        super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig.getProducerConfig(),
+        super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig.getProducerConfig(TelemetryConstants.TELEMETRY_ENDPOINT),
                 adapterConfig, tracer);
     }
 

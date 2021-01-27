@@ -17,10 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
@@ -90,7 +88,6 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
      */
     @Override
     public Future<Void> start() {
-        configureUniqueClientId();
         getOrCreateProducer();
         return Future.succeededFuture();
     }
@@ -234,17 +231,6 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
                     span.finish();
                     return null;
                 });
-    }
-
-    private void configureUniqueClientId() {
-        final UUID uuid = UUID.randomUUID();
-        final String clientId = config.get(ProducerConfig.CLIENT_ID_CONFIG);
-
-        if (clientId == null) {
-            config.put(ProducerConfig.CLIENT_ID_CONFIG, String.format("%s-%s", producerName, uuid));
-        } else {
-            config.put(ProducerConfig.CLIENT_ID_CONFIG, String.format("%s-%s-%s", clientId, producerName, uuid));
-        }
     }
 
     private KafkaProducer<String, Buffer> getOrCreateProducer() {
