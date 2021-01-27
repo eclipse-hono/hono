@@ -40,7 +40,7 @@ public interface ApplicationClientFactory<T extends MessageContext> {
      *         cannot be started.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer<DownstreamMessage<T>>> createTelemetryConsumer(
+    Future<MessageConsumer> createTelemetryConsumer(
             String tenantId,
             Consumer<DownstreamMessage<T>> telemetryConsumer,
             Handler<Throwable> closeHandler);
@@ -60,7 +60,7 @@ public interface ApplicationClientFactory<T extends MessageContext> {
      *         cannot be started.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<MessageConsumer<DownstreamMessage<T>>> createEventConsumer(
+    Future<MessageConsumer> createEventConsumer(
             String tenantId,
             Consumer<DownstreamMessage<T>> eventConsumer,
             Handler<Throwable> closeHandler);

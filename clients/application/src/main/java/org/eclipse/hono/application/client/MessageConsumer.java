@@ -16,11 +16,9 @@ package org.eclipse.hono.application.client;
 import io.vertx.core.Future;
 
 /**
- * A client that consumes messages from Hono's northbound APIs.
- *
- * @param <T> The type of messages consumed by this client.
+ * A client that consumes messages from Hono's north bound APIs.
  */
-public interface MessageConsumer<T extends Message<? extends MessageContext>> {
+public interface MessageConsumer {
 
     /**
      * Closes the client.
@@ -28,5 +26,4 @@ public interface MessageConsumer<T extends Message<? extends MessageContext>> {
      * @return A future indicating the outcome of the operation.
      */
     Future<Void> close();
-
 }
