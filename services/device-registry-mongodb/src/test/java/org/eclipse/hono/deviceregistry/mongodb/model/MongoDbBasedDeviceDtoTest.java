@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,6 @@ package org.eclipse.hono.deviceregistry.mongodb.model;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
@@ -37,10 +36,11 @@ class MongoDbBasedDeviceDtoTest {
     public void testEncodeForCreate() {
         final String tenantId = "barfoo";
         final String deviceId = "foobar";
+        final var futureInstant = Instant.now().plusSeconds(3600);
         final DeviceStatus deviceStatus = new DeviceStatus()
                 // make sure that these values do not interfere with the corresponding properties of DeviceDto's parent classes
                 .setAutoProvisioned(true)
-                .setCreationTime(Instant.now().plusSeconds(3600));
+                .setCreationTime(futureInstant);
         final Device device = new Device();
         device.setStatus(deviceStatus);
         final String version = "spam";
@@ -55,7 +55,7 @@ class MongoDbBasedDeviceDtoTest {
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
         // make sure that the creation date set on the new device is not the one contained in the DeviceStatus
-        assertThat(json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isBefore(deviceStatus.getCreationTime());
+        assertThat(json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isBefore(futureInstant);
         assertThat(json.getString(BaseDto.FIELD_VERSION)).isEqualTo(version);
         assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
@@ -73,13 +73,13 @@ class MongoDbBasedDeviceDtoTest {
     public void testEncodeForUpdate() {
         final String tenantId = "barfoo";
         final String deviceId = "foobar";
+        final var futureInstant = Instant.now().plusSeconds(3600);
         final DeviceStatus deviceStatus = new DeviceStatus()
                 // make sure that these values do not interfere with the corresponding properties of DeviceDto's parent classes
                 .setAutoProvisioningNotificationSent(false)
-                .setLastUpdate(Instant.now().plusSeconds(3600));
+                .setLastUpdate(futureInstant);
         final Device device = new Device();
         device.setStatus(deviceStatus);
-        final Instant updated = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         final String version = "spam";
 
         final var deviceDto = MongoDbBasedDeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, true, device, version);
@@ -91,7 +91,7 @@ class MongoDbBasedDeviceDtoTest {
 
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-        assertThat(json.getInstant(BaseDto.FIELD_UPDATED_ON)).isEqualTo(updated);
+        assertThat(json.getInstant(BaseDto.FIELD_UPDATED_ON)).isBefore(futureInstant);
         assertThat(json.getString(BaseDto.FIELD_VERSION)).isEqualTo(version);
         assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
