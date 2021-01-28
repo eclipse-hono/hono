@@ -112,7 +112,7 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
     default boolean isSenderConnected(final Instant now) {
 
         final int ttd = Optional.ofNullable(getTimeTillDisconnect()).orElse(0);
-        switch (getTimeTillDisconnect()) {
+        switch (ttd) {
         case -1: return true;
         case 0: return false;
         default:

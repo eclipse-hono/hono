@@ -20,6 +20,7 @@ import static org.mockito.Mockito.mock;
 import java.time.Instant;
 import java.util.Map;
 
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 
 
 /**
@@ -74,4 +76,30 @@ class ProtonBasedDownstreamMessageTest {
         assertThat(downstreamMessage.isSenderConnected()).isTrue();
         assertThat(downstreamMessage.isSenderConnected(Instant.now().plusSeconds(60))).isFalse();
     }
+
+    /**
+     * Verifies that the downstream message provides access to the wrapped
+     * AMQP message's properties.
+     */
+    @Test
+    void testNullValuesAreHandledProperly() {
+
+        final var delivery = mock(ProtonDelivery.class);
+        final var msg = ProtonHelper.message("telemetry/tenant", null);
+        MessageHelper.addDeviceId(msg, "device");
+        msg.setContentType(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+
+        final var downstreamMessage = ProtonBasedDownstreamMessage.from(msg, delivery);
+        assertThat(downstreamMessage.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(downstreamMessage.getCreationTime()).isNull();
+        assertThat(downstreamMessage.getDeviceId()).isEqualTo("device");
+        assertThat(downstreamMessage.getMessageContext().getDelivery()).isEqualTo(delivery);
+        assertThat(downstreamMessage.getPayload()).isNull();
+        assertThat(downstreamMessage.getQos()).isEqualTo(QoS.AT_MOST_ONCE);
+        assertThat(downstreamMessage.getTenantId()).isEqualTo("tenant");
+        assertThat(downstreamMessage.getTimeTillDisconnect()).isNull();
+        assertThat(downstreamMessage.isSenderConnected()).isFalse();
+        assertThat(downstreamMessage.isSenderConnected(Instant.now().plusSeconds(60))).isFalse();
+    }
+
 }

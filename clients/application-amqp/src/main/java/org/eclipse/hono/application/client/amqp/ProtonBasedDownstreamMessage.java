@@ -145,9 +145,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public Instant getCreationTime() {
-        return Optional.ofNullable(message.getCreationTime())
-                .map(Instant::ofEpochMilli)
-                .orElse(null);
+        return message.getCreationTime() == 0L ? null : Instant.ofEpochMilli(message.getCreationTime());
     }
 
     /**

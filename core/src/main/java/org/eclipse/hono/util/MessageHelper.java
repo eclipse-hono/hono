@@ -318,7 +318,7 @@ public final class MessageHelper {
      * @return The property value or {@code null} if not set.
      * @throws NullPointerException if message is {@code null}.
      */
-    public static int getQoS(final Message msg) {
+    public static Integer getQoS(final Message msg) {
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_QOS, Integer.class);
     }
 
