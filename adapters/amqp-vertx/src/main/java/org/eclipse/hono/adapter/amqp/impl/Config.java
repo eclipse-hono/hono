@@ -17,6 +17,7 @@ import java.util.Optional;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
+import org.eclipse.hono.adapter.amqp.VertxBasedAmqpProtocolAdapter;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;

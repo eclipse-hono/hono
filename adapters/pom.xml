@@ -28,6 +28,7 @@
   <modules>
     <module>amqp-vertx</module>
     <module>amqp-vertx-base</module>
+    <module>amqp-vertx-quarkus</module>
     <module>coap-vertx</module>
     <module>coap-vertx-base</module>
     <module>http-vertx</module>

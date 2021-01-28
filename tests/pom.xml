@@ -113,6 +113,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
 
+    <hono.amqp-adapter.image>hono-adapter-amqp-vertx</hono.amqp-adapter.image>
+    <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
+
     <default.java.options>
       -XX:MinRAMPercentage=80
       -XX:MaxRAMPercentage=90
@@ -347,6 +350,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
         <hono.mqtt-adapter.config-dir>opt/hono/config</hono.mqtt-adapter.config-dir>
         <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus</hono.mqtt-adapter.image>
+        <hono.amqp-adapter.config-dir>opt/hono/config</hono.amqp-adapter.config-dir>
+        <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus</hono.amqp-adapter.image>
       </properties>
     </profile>
     <profile>
@@ -364,6 +369,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.mqtt-adapter.config-dir>opt/hono/config</hono.mqtt-adapter.config-dir>
         <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus-native</hono.mqtt-adapter.image>
         <hono.mqtt-adapter.useNativeTransport>false</hono.mqtt-adapter.useNativeTransport>
+        <hono.amqp-adapter.config-dir>opt/hono/config</hono.amqp-adapter.config-dir>
+        <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus-native</hono.amqp-adapter.image>
+        <hono.amqp-adapter.useNativeTransport>false</hono.amqp-adapter.useNativeTransport>
       </properties>
     </profile>
     <profile>
@@ -1161,7 +1169,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.repository}/hono-adapter-amqp-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-adapter-amqp-vertx:${project.version}</from>
+                    <from>${docker.repository}/${hono.amqp-adapter.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1170,7 +1178,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/amqp</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>${hono.amqp-adapter.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
