@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -73,6 +73,10 @@ public abstract class AmqpAdapterTestBase {
      * The connection established between the device and the AMQP adapter.
      */
     protected ProtonConnection connection;
+    /**
+     * The sender for publishing messages to the AMQP adapter.
+     */
+    protected ProtonSender sender;
 
     /**
      * Creates default AMQP client options.
@@ -107,8 +111,48 @@ public abstract class AmqpAdapterTestBase {
      * @param ctx The Vert.x test context.
      */
     @AfterEach
-    public void disconnect(final VertxTestContext ctx) {
+    public void closeConnectionToMessagingNetwork(final VertxTestContext ctx) {
+
         helper.disconnect().onComplete(ctx.completing());
+    }
+
+    /**
+     * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and close senders and consumers.
+     *
+     * @param ctx The Vert.x test context.
+     */
+    @AfterEach
+    public void closeConnectionToAdapter(final VertxTestContext ctx) {
+
+        final Promise<ProtonConnection> connectionTracker = Promise.promise();
+
+        if (connection == null || connection.isDisconnected()) {
+            connectionTracker.complete();
+        } else {
+            context.runOnContext(go -> {
+                connection.closeHandler(connectionTracker);
+                connection.close();
+            });
+        }
+
+        connectionTracker.future()
+                .onComplete(con -> {
+                    log.info("connection to AMQP adapter closed");
+                    context = null;
+                    connection = null;
+                    sender = null;
+                    ctx.completeNow();
+                });
+    }
+
+    /**
+     * Clean up after the test.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
+        helper.deleteObjects(ctx);
     }
 
     /**
@@ -127,7 +171,7 @@ public abstract class AmqpAdapterTestBase {
             result.fail(new IllegalStateException("not connected"));
         } else {
             context.runOnContext(go -> {
-                final ProtonSender sender = connection.createSender(target);
+                sender = connection.createSender(target);
                 sender.setQoS(senderQos);
                 sender.closeHandler(remoteClose -> {
                     if (remoteClose.failed()) {

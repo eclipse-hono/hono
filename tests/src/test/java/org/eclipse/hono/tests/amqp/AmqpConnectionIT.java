@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,6 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -46,22 +45,6 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
-
-    /**
-     * Closes the connection to the adapter.
-     *
-     * @param ctx The Vert.x test context.
-     */
-    @Override
-    @AfterEach
-    public void disconnect(final VertxTestContext ctx) {
-        if (connection != null) {
-            connection.closeHandler(null);
-            connection.close();
-            connection = null;
-        }
-        helper.disconnect().onComplete(ctx.completing());
-    }
 
     /**
      * Verifies that the adapter opens a connection to registered devices with credentials.

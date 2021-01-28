@@ -47,10 +47,8 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -93,32 +91,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     }
 
     /**
-     * Sets up the fixture.
+     * Creates a random tenant.
      *
-     * @param testInfo Meta info about the test being run.
      * @param ctx The vert.x test context.
      */
-    @Override
     @BeforeEach
-    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
+    public void createRandomTenant(final VertxTestContext ctx) {
 
-        log.info("running {}", testInfo.getDisplayName());
-        helper = new IntegrationTestSupport(vertx);
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        helper.init()
-                .flatMap(x -> helper.registry.addTenant(tenantId))
-                .onComplete(ctx.completing());
-    }
-
-    /**
-     * Clean up after the test.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
+        helper.registry.addTenant(tenantId).onComplete(ctx.completing());
     }
 
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {

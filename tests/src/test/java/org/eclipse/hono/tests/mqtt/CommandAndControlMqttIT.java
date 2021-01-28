@@ -40,9 +40,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -103,28 +101,15 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     }
 
     /**
-     * Sets up the fixture.
-     */
-    @BeforeEach
-    @Override
-    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
-        LOGGER.info("running {}", testInfo.getDisplayName());
-        helper = new IntegrationTestSupport(vertx);
-        tenantId = helper.getRandomTenantId();
-        deviceId = helper.getRandomDeviceId(tenantId);
-        helper.init()
-                .flatMap(x -> helper.registry.addTenant(tenantId))
-                .onComplete(ctx.completing());
-    }
-
-    /**
-     * Clean up after the test.
+     * Adds a random tenant.
      *
      * @param ctx The vert.x test context.
      */
-    @AfterEach
-    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
+    @BeforeEach
+    public void addRandomTenant(final VertxTestContext ctx) {
+        tenantId = helper.getRandomTenantId();
+        deviceId = helper.getRandomDeviceId(tenantId);
+        helper.registry.addTenant(tenantId).onComplete(ctx.completing());
     }
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {

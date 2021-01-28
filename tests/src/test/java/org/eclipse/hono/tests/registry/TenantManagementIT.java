@@ -102,10 +102,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         getHelper().registry.addTenant()
             .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
-                    assertThat(httpResponse.getHeader(HttpHeaders.ETAG.toString())).isNotNull();
                     final String generatedId = assertLocationHeader(httpResponse.headers());
                     // update the global tenantId value for cleanup
                     getHelper().addTenantIdForRemoval(generatedId);
+                    assertThat(httpResponse.getHeader(HttpHeaders.ETAG.toString())).isNotNull();
                 });
                 context.completeNow();
             }));

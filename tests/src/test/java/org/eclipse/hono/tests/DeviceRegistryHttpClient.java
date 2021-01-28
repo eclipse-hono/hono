@@ -381,6 +381,40 @@ public final class DeviceRegistryHttpClient {
      * @param pageOffset The offset into the result set from which to include objects in the response.
      * @param filters The filters are predicates that objects in the result set must match.
      * @param sortOptions A list of sort options.
+     * @return A future indicating the outcome of the operation. The future will contain the response if the
+     *         response contained the expected status code. Otherwise the future will fail.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> searchTenants(
+            final Optional<Integer> pageSize,
+            final Optional<Integer> pageOffset,
+            final List<String> filters,
+            final List<String> sortOptions) {
+
+        Objects.requireNonNull(pageSize);
+        Objects.requireNonNull(pageOffset);
+        Objects.requireNonNull(filters);
+        Objects.requireNonNull(sortOptions);
+
+        final MultiMap queryParams = MultiMap.caseInsensitiveMultiMap();
+
+        pageSize.ifPresent(
+                pSize -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_SIZE, String.valueOf(pSize)));
+        pageOffset.ifPresent(
+                pOffset -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, String.valueOf(pOffset)));
+        filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
+        sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
+
+        return httpClient.get(searchTenantsUri(), queryParams, (ResponsePredicate[]) null);
+    }
+
+    /**
+     * Finds tenants with optional filters, paging and sorting options.
+     *
+     * @param pageSize The maximum number of results to include in a response.
+     * @param pageOffset The offset into the result set from which to include objects in the response.
+     * @param filters The filters are predicates that objects in the result set must match.
+     * @param sortOptions A list of sort options.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will contain the response if the
      *         response contained the expected status code. Otherwise the future will fail.

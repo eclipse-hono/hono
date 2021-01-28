@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -56,7 +55,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
@@ -72,10 +70,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     protected static final String DEVICE_PASSWORD = "device-password";
 
     private static final long DEFAULT_TEST_TIMEOUT = 15000; // ms
-    /**
-     * The sender link to use for uploading messages to the adapter.
-     */
-    protected ProtonSender sender;
 
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
         ctx.verify(() -> {
@@ -120,26 +114,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @return The name of the endpoint.
      */
     protected abstract String getEndpointName();
-
-    /**
-     * Delete all random tenants and devices generated during the execution of a test case.
-     *
-     * @param context The Vert.x test context.
-     */
-    @AfterEach
-    public void after(final VertxTestContext context) {
-        helper.deleteObjects(context);
-    }
-
-    /**
-     * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and close senders and consumers.
-     *
-     * @param context The Vert.x test context.
-     */
-    @AfterEach
-    public void disconnectAdapter(final VertxTestContext context) {
-        closeConnectionToAdapter().onComplete(context.completing());
-    }
 
     /**
      * Verifies that a message containing a payload which has the <em>empty notification</em>
@@ -561,28 +535,5 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     log.error("error setting up AMQP protocol adapter", t);
                     return Future.failedFuture(t);
                 });
-    }
-
-    private Future<Void> closeConnectionToAdapter() {
-
-        final Promise<ProtonConnection> connectionTracker = Promise.promise();
-
-        if (connection == null || connection.isDisconnected()) {
-            connectionTracker.complete();
-        } else {
-            context.runOnContext(go -> {
-                connection.closeHandler(connectionTracker);
-                connection.close();
-            });
-        }
-
-        return connectionTracker.future()
-                .onComplete(con -> {
-                    log.info("connection to AMQP adapter closed");
-                    context = null;
-                    connection = null;
-                    sender = null;
-                })
-                .mapEmpty();
     }
 }

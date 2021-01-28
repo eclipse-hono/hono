@@ -15,6 +15,7 @@ package org.eclipse.hono.tests;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -662,9 +663,8 @@ public final class IntegrationTestSupport {
         initRegistryClient();
         applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         return applicationClientFactory.connect()
-                .map(con -> {
+                .onSuccess(con -> {
                     LOGGER.info("connected to AMQP Messaging Network [{}:{}]", downstreamProps.getHost(), downstreamProps.getPort());
-                    return Future.succeededFuture();
                 });
     }
 
@@ -728,18 +728,52 @@ public final class IntegrationTestSupport {
 
                 // then delete tenants
 
-                .flatMap(x -> CompositeFuture
-                        .join(tenantsToDelete
-                                .stream()
-                                .map(tenantId -> registry.removeTenant(tenantId, true))
-                                .collect(Collectors.toList())))
+                .compose(x -> {
+                    if (!tenantsToDelete.isEmpty()) {
+                        LOGGER.debug("deleting {} temporary tenants ...", tenantsToDelete.size());
+                    }
+                    return CompositeFuture.join(tenantsToDelete.stream()
+                                    .map(tenantId -> registry.removeTenant(tenantId, true))
+                                    .collect(Collectors.toList()));
+                })
+
+                .compose(ok -> registry.searchTenants(
+                        Optional.of(30),
+                        Optional.of(0),
+                        List.of(),
+                        List.of()))
+                .map(searchResponse -> {
+                    switch (searchResponse.statusCode()) {
+                    case HttpURLConnection.HTTP_OK:
+                        final JsonObject response = searchResponse.bodyAsJsonObject();
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("search tenants result: {}{}", System.lineSeparator(), response.encodePrettily());
+                        }
+                        return response.getInteger("total");
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        return 0;
+                    default:
+                        LOGGER.info("search for tenants failed: {} - {}",
+                                searchResponse.statusCode(), searchResponse.statusMessage());
+                        return 0;
+                    }
+                })
+                .otherwise(t -> {
+                    LOGGER.info("error querying tenants endpoint", t);
+                    return 0;
+                })
 
                 // complete, and check if we successfully deleted the devices
 
-                .onComplete(ctx.succeeding(x -> {
-                    ctx.verify(() -> assertThat(devicesDeleted.get())
+                .onComplete(ctx.succeeding(tenantsInRegistry -> {
+                    ctx.verify(() -> {
+                        assertThat(devicesDeleted.get())
                             .as("successfully deleted devices")
-                            .isTrue());
+                            .isTrue();
+                        assertThat(tenantsInRegistry)
+                            .as("registry contains no other tenants after successful deletion of temporary tenants")
+                            .isEqualTo(0);
+                    });
                     ctx.completeNow();
                 }));
 
@@ -770,6 +804,7 @@ public final class IntegrationTestSupport {
     public String getRandomTenantId() {
         final String tenantId = UUID.randomUUID().toString();
         tenantsToDelete.add(tenantId);
+        LOGGER.debug("registered random tenant [tenant-id: {}] for removal", tenantId);
         return tenantId;
     }
 
@@ -781,19 +816,8 @@ public final class IntegrationTestSupport {
      * @see #deleteObjects(VertxTestContext)
      */
     public void addTenantIdForRemoval(final String tenantId) {
+        LOGGER.debug("registering tenant [tenant-id: {}] for removal", tenantId);
         tenantsToDelete.add(tenantId);
-    }
-
-    /**
-     * Adds a device identifier to the list
-     * of devices to be deleted after the current test has finished.
-     *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device's identifier.
-     * @see #deleteObjects(VertxTestContext)
-     */
-    public void addDeviceIdForRemoval(final String tenantId, final String deviceId) {
-        devicesToDelete.computeIfAbsent(tenantId, t -> new HashSet<>()).add(deviceId);
     }
 
     /**
@@ -808,7 +832,21 @@ public final class IntegrationTestSupport {
         final String deviceId = UUID.randomUUID().toString();
         final Set<String> devices = devicesToDelete.computeIfAbsent(tenantId, t -> new HashSet<>());
         devices.add(deviceId);
+        LOGGER.debug("registered random device [tenant-id: {}, device-id: {}] for removal", tenantId, deviceId);
         return deviceId;
+    }
+
+    /**
+     * Adds a device identifier to the list
+     * of devices to be deleted after the current test has finished.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device's identifier.
+     * @see #deleteObjects(VertxTestContext)
+     */
+    public void addDeviceIdForRemoval(final String tenantId, final String deviceId) {
+        LOGGER.debug("registering device [tenant-id: {}, device-id: {}] for removal", tenantId, deviceId);
+        devicesToDelete.computeIfAbsent(tenantId, t -> new HashSet<>()).add(deviceId);
     }
 
     /**
