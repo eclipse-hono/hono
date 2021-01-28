@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -31,7 +32,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.QoS;
@@ -43,6 +43,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpan;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -69,16 +71,15 @@ public class ProtonBasedDownstreamSenderTest {
     @BeforeEach
     public void setUp() {
 
-        span = TracingMockSupport.mockSpan();
-        final Tracer tracer = TracingMockSupport.mockTracer(span);
-
+        span = NoopSpan.INSTANCE;
+        final Tracer tracer = NoopTracerFactory.create();
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(mock(EventBus.class));
 
-        final ClientConfigProperties clientConfigProperties = new ClientConfigProperties();
-        connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, clientConfigProperties, tracer);
+        connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, new ClientConfigProperties(), tracer);
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
+
         protonSender = AmqpClientUnitTestHelper.mockProtonSender();
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(protonSender));
 
@@ -86,56 +87,55 @@ public class ProtonBasedDownstreamSenderTest {
     }
 
     /**
-     * Verifies that a ClientErrorException when creating an AMQP sender is returned as a server error
-     * on the <em>sendEvent</em> invocation.
+     * Verifies that a ClientErrorException that occurs when creating an AMQP sender link is
+     * mapped to a ServerErrorException with status 503 by the <em>sendEvent</em> method.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testSenderClientCreationErrorIsMappedToServerErrorOnSendEvent(final VertxTestContext ctx) {
 
-        // GIVEN a scenario where creating the AMQP sender always fails with a client error
-        when(connection.createSender(anyString(), any(), any())).thenReturn(Future.failedFuture(new ClientErrorException(
-                HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender")));
-
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         final RegistrationAssertion device = new RegistrationAssertion("4711");
-        // WHEN sending an event message
-        sender.sendEvent(tenant, device, null, null, null, span.context())
-                .onComplete(ctx.failing(thr -> {
-                    ctx.verify(() -> {
-                        // THEN the invocation is failed with a server error
-                        assertThat(thr).isInstanceOf(ServiceInvocationException.class);
-                        assertThat(((ServiceInvocationException) thr).getErrorCode())
-                                .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-                    });
-                    ctx.completeNow();
-                }));
+
+        testSenderClientCreationErrorIsMappedToServerErrorOnSending(
+                ctx,
+                () -> sender.sendEvent(tenant, device, null, null, null, span.context()));
     }
 
     /**
-     * Verifies that a ClientErrorException when creating an AMQP sender is returned as a server error
-     * on the <em>sendTelemetry</em> invocation.
+     * Verifies that a ClientErrorException that occurs when creating an AMQP sender link is
+     * mapped to a ServerErrorException with status 503 by the <em>sendTelemetry</em> method.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testSenderClientCreationErrorIsMappedToServerErrorOnSendTelemetry(final VertxTestContext ctx) {
 
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final RegistrationAssertion device = new RegistrationAssertion("4711");
+
+        testSenderClientCreationErrorIsMappedToServerErrorOnSending(
+                ctx,
+                () -> sender.sendTelemetry(tenant, device, QoS.AT_MOST_ONCE, null, null, null, span.context()));
+    }
+
+    private void testSenderClientCreationErrorIsMappedToServerErrorOnSending(
+            final VertxTestContext ctx,
+            final Supplier<Future<Void>> sendMethod) {
+
         // GIVEN a scenario where creating the AMQP sender always fails with a client error
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.failedFuture(new ClientErrorException(
                 HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender")));
 
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        final RegistrationAssertion device = new RegistrationAssertion("4711");
-        // WHEN sending a telemetry message
-        sender.sendTelemetry(tenant, device, QoS.AT_MOST_ONCE, null, null, null, span.context())
+        // WHEN sending a message
+        sendMethod.get()
                 .onComplete(ctx.failing(thr -> {
                     ctx.verify(() -> {
                         // THEN the invocation is failed with a server error
-                        assertThat(thr).isInstanceOf(ServiceInvocationException.class);
-                        assertThat(((ServiceInvocationException) thr).getErrorCode())
-                                .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                        assertThat(thr).isInstanceOfSatisfying(
+                                ServiceInvocationException.class,
+                                error -> assertThat(error.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                     });
                     ctx.completeNow();
                 }));
