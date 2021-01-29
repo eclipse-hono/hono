@@ -1,0 +1,261 @@
+/**
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+
+
+package org.eclipse.hono.application.client.amqp;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
+import org.eclipse.hono.test.VertxMockSupport;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+
+
+/**
+ * Tests verifying behavior of {@link ProtonBasedApplicationClientFactory}.
+ *
+ */
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+class ProtonBasedApplicationClientFactoryTest {
+
+    private ProtonReceiver receiver;
+    private HonoConnection connection;
+    private ProtonBasedApplicationClientFactory client;
+
+    /**
+     * Sets up the fixture.
+     */
+    @BeforeEach
+    void setUp() {
+        final var vertx = mock(Vertx.class);
+        connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx);
+        receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
+        when(connection.createReceiver(
+                anyString(),
+                any(ProtonQoS.class),
+                any(ProtonMessageHandler.class),
+                anyInt(),
+                anyBoolean(),
+                VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(receiver));
+        client = new ProtonBasedApplicationClientFactory(connection);
+    }
+
+    /**
+     * Verifies that starting the client triggers the underlying connection to be established.
+     *
+     * @param ctx The vertx test context.
+     */
+    @Test
+    void testConnectTriggersConnectionEstablishment(final VertxTestContext ctx) {
+        when(connection.connect()).thenReturn(Future.succeededFuture(connection));
+        client.connect().onComplete(ctx.succeeding(ok -> {
+            ctx.verify(() -> verify(connection).connect());
+            ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that disconnecting the client stops the underlying connection.
+     */
+    @Test
+    void testDisconnectTerminatesConnection() {
+        client.disconnect();
+        verify(connection).disconnect(VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that disconnecting the client stops the underlying connection.
+     */
+    @Test
+    void testDisconnectWithHandlerTerminatesConnection() {
+
+        final Promise<Void> result = Promise.promise();
+        client.disconnect(result);
+        assertThat(result.future().isComplete()).isFalse();
+        final ArgumentCaptor<Handler<AsyncResult<Void>>> resultHandler = VertxMockSupport.argumentCaptorHandler();
+        verify(connection).disconnect(resultHandler.capture());
+        resultHandler.getValue().handle(Future.succeededFuture());
+        assertThat(result.future().succeeded()).isTrue();
+    }
+
+    /**
+     * Verifies that the message consumer created by the factory catches an exception
+     * thrown by the client provided handler and releases the message.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void testCreateTelemetryConsumerReleasesMessageOnException(final VertxTestContext ctx) {
+
+        // GIVEN a client provided message handler that throws an exception on
+        // each message received
+        final Handler<DownstreamMessage<AmqpMessageContext>> consumer = VertxMockSupport.mockHandler();
+        doThrow(new IllegalArgumentException("message does not contain required properties"),
+                new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST))
+            .when(consumer).handle(any(DownstreamMessage.class));
+
+        client.createTelemetryConsumer("tenant", consumer, t -> {})
+            .onComplete(ctx.succeeding(mc -> {
+                final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
+                ctx.verify(() -> {
+                    verify(connection).createReceiver(
+                            eq("telemetry/tenant"),
+                            eq(ProtonQoS.AT_LEAST_ONCE),
+                            messageHandler.capture(),
+                            anyInt(),
+                            anyBoolean(),
+                            VertxMockSupport.anyHandler());
+
+                    final var msg = ProtonHelper.message();
+                    // WHEN a message is received and the client provided consumer
+                    // throws an IllegalArgumentException
+                    var delivery = mock(ProtonDelivery.class);
+                    messageHandler.getValue().handle(delivery, msg);
+                    // THEN the message is forwarded to the client provided handler
+                    verify(consumer).handle(any(DownstreamMessage.class));
+                    // AND the AMQP message is being released
+                    verify(delivery).disposition(any(Released.class), eq(Boolean.TRUE));
+
+                    // WHEN a message is received and the client provided consumer
+                    // throws a ClientErrorException
+                    delivery = mock(ProtonDelivery.class);
+                    messageHandler.getValue().handle(delivery, msg);
+                    // THEN the message is forwarded to the client provided handler
+                    verify(consumer, times(2)).handle(any(DownstreamMessage.class));
+                    // AND the AMQP message is being rejected
+                    verify(delivery).disposition(any(Rejected.class), eq(Boolean.TRUE));
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the message consumer created by the factory allows the client provided handler
+     * to manually perform a disposition update for a received message.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void testCreateTelemetryConsumerSupportsManualDispositionHandling(final VertxTestContext ctx) {
+
+        // GIVEN a client provided message handler that manually settles messages
+        final Handler<DownstreamMessage<AmqpMessageContext>> consumer = VertxMockSupport.mockHandler();
+
+        // WHEN creating a telemetry consumer
+        client.createTelemetryConsumer("tenant", consumer, t -> {})
+            .onComplete(ctx.succeeding(mc -> {
+                final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
+                ctx.verify(() -> {
+                    verify(connection).createReceiver(
+                            eq("telemetry/tenant"),
+                            eq(ProtonQoS.AT_LEAST_ONCE),
+                            messageHandler.capture(),
+                            anyInt(),
+                            anyBoolean(),
+                            VertxMockSupport.anyHandler());
+                    final var delivery = mock(ProtonDelivery.class);
+                    final var msg = ProtonHelper.message();
+                    // over which a message is being received
+                    messageHandler.getValue().handle(delivery, msg);
+                    // THEN the message is forwarded to the client provided handler
+                    final ArgumentCaptor<DownstreamMessage<AmqpMessageContext>> downstreamMessage = ArgumentCaptor.forClass(DownstreamMessage.class);
+                    verify(consumer).handle(downstreamMessage.capture());
+                    final var messageContext = downstreamMessage.getValue().getMessageContext();
+                    ProtonHelper.modified(messageContext.getDelivery(), true, true, true);
+                    // AND the AMQP message is being settled with the modified outcome
+                    verify(delivery).disposition(any(Modified.class), eq(Boolean.TRUE));
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the message consumer created by the factory settles an event with the
+     * accepted outcome if the client provided handler does not throw an exception.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void testCreateEventConsumerAcceptsMessage(final VertxTestContext ctx) {
+
+        // GIVEN a client provided message handler
+        final Handler<DownstreamMessage<AmqpMessageContext>> consumer = VertxMockSupport.mockHandler();
+
+        // WHEN creating an event consumer
+        client.createEventConsumer("tenant", consumer, t -> {})
+            .onComplete(ctx.succeeding(mc -> {
+                final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
+                ctx.verify(() -> {
+                    verify(connection).createReceiver(
+                            eq("event/tenant"),
+                            eq(ProtonQoS.AT_LEAST_ONCE),
+                            messageHandler.capture(),
+                            anyInt(),
+                            anyBoolean(),
+                            VertxMockSupport.anyHandler());
+                    final var delivery = mock(ProtonDelivery.class);
+                    when(delivery.isSettled()).thenReturn(Boolean.FALSE);
+                    final var msg = ProtonHelper.message();
+                    // over which a message is being received
+                    messageHandler.getValue().handle(delivery, msg);
+                    // THEN the message is forwarded to the client provided handler
+                    verify(consumer).handle(any(DownstreamMessage.class));
+                    // AND the AMQP message is being accepted
+                    verify(delivery).disposition(any(Accepted.class), eq(Boolean.TRUE));
+                });
+                ctx.completeNow();
+            }));
+    }
+
+}

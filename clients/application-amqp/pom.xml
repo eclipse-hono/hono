@@ -37,5 +37,11 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-amqp-common</artifactId>
     </dependency>
+
+    <!--  testing -->
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>client-test-utils</artifactId>
+    </dependency>
   </dependencies>
 </project>
