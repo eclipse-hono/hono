@@ -86,7 +86,9 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
      */
     public void registerInternalCommandConsumer(
             final BiFunction<String, CommandHandlers, Lifecycle> internalCommandConsumerSupplier) {
-        internalCommandConsumers.add(internalCommandConsumerSupplier.apply(adapterInstanceId, commandHandlers));
+        final Lifecycle consumer = internalCommandConsumerSupplier.apply(adapterInstanceId, commandHandlers);
+        log.info("register internal command consumer {}", consumer.getClass().getSimpleName());
+        internalCommandConsumers.add(consumer);
     }
 
     /**

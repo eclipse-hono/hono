@@ -92,7 +92,6 @@ public final class KafkaBasedCommand implements Command {
      * <li>a non-empty <em>correlation-id</em> header if the <em>response-required</em> header is set to {@code true}.</li>
      * </ul>
      * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
-     * <p>
      *
      * @param record The record containing the command.
      * @return The command.
@@ -110,6 +109,47 @@ public final class KafkaBasedCommand implements Command {
             throw new IllegalArgumentException("unsupported topic");
         }
         final String tenantId = honoTopic.getTenantId();
+        return from(record, tenantId);
+    }
+
+    /**
+     * Creates a command from a Kafka consumer record, forwarded by the Command Router.
+     * <p>
+     * The message is required to contain a <em>tenant_id</em> header and a <em>key</em> with the command
+     * target device id, matching the value of the <em>device_id</em> header.
+     * If that is not the case, an {@link IllegalArgumentException} is thrown.
+     * <p>
+     * In addition, the record is expected to contain
+     * <ul>
+     * <li>a <em>subject</em> header</li>
+     * <li>a non-empty <em>correlation-id</em> header if the <em>response-expected</em> header is set to {@code true}.</li>
+     * </ul>
+     * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
+     * <p>
+     * If the <em>via</em> header is set, its value will be set as target gateway of the created command.
+     *
+     * @param record The record containing the command.
+     * @return The command.
+     * @throws NullPointerException if record is {@code null}.
+     * @throws IllegalArgumentException if the record doesn't correctly reference a target device.
+     */
+    public static KafkaBasedCommand fromRoutedCommandRecord(final KafkaConsumerRecord<String, Buffer> record) {
+        Objects.requireNonNull(record);
+
+        final String tenantId = getHeader(record, MessageHelper.APP_PROPERTY_TENANT_ID);
+        if (Strings.isNullOrEmpty(tenantId)) {
+            throw new IllegalArgumentException("tenant is not set");
+        }
+        final KafkaBasedCommand command = from(record, tenantId);
+        final String gatewayId = getHeader(record, MessageHelper.APP_PROPERTY_CMD_VIA);
+        if (!Strings.isNullOrEmpty(gatewayId)) {
+            command.setGatewayId(gatewayId);
+        }
+        return command;
+    }
+
+    private static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record,
+            final String tenantId) {
         final String deviceId = getHeader(record, MessageHelper.APP_PROPERTY_DEVICE_ID);
         if (Strings.isNullOrEmpty(deviceId)) {
             throw new IllegalArgumentException("device identifier is not set");
@@ -140,25 +180,6 @@ public final class KafkaBasedCommand implements Command {
                 subject,
                 contentType,
                 responseRequired);
-    }
-
-    /**
-     * Creates a command from a Kafka consumer record.
-     * <p>
-     * The command is created as described in {@link #from(KafkaConsumerRecord)}.
-     * Additionally, gateway information is extracted from the <em>via</em> header of the record.
-     *
-     * @param record The record containing the command.
-     * @return The command.
-     * @throws NullPointerException if record is {@code null}.
-     */
-    public static KafkaBasedCommand fromRoutedCommandRecord(final KafkaConsumerRecord<String, Buffer> record) {
-        final KafkaBasedCommand command = from(record);
-        final String gatewayId = getHeader(record, MessageHelper.APP_PROPERTY_CMD_VIA);
-        if (!Strings.isNullOrEmpty(gatewayId)) {
-            command.setGatewayId(gatewayId);
-        }
-        return command;
     }
 
     private static String getHeader(final KafkaConsumerRecord<String, Buffer> record, final String header) {

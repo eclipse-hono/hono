@@ -25,23 +25,24 @@ import org.eclipse.hono.util.TelemetryConstants;
 public final class HonoTopic {
 
     private final Type type;
-    private final String tenantId;
+    private final String suffix;
     private final String topicString;
 
     /**
      * Creates a new topic from the given topic type and tenant ID.
      *
      * @param type The type of the topic.
-     * @param tenantId The ID of the tenant that the topic belongs to.
+     * @param suffix The suffix after the type specific topic part. For types other than {@link Type#COMMAND_INTERNAL}
+     *              this is the internal ID of the tenant that the topic belongs to.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public HonoTopic(final Type type, final String tenantId) {
+    public HonoTopic(final Type type, final String suffix) {
         Objects.requireNonNull(type);
-        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(suffix);
 
         this.type = type;
-        this.tenantId = tenantId;
-        topicString = type.prefix + tenantId;
+        this.suffix = suffix;
+        topicString = type.prefix + suffix;
     }
 
     /**
@@ -63,10 +64,12 @@ public final class HonoTopic {
             type = Type.COMMAND;
         } else if (topicString.startsWith(Type.COMMAND_RESPONSE.prefix)) {
             type = Type.COMMAND_RESPONSE;
+        } else if (topicString.startsWith(Type.COMMAND_INTERNAL.prefix)) {
+            type = Type.COMMAND_INTERNAL;
         }
         if (type != null) {
-            final String tenantId = topicString.substring(type.prefix.length());
-            return !tenantId.isEmpty() ? new HonoTopic(type, tenantId) : null;
+            final String suffix = topicString.substring(type.prefix.length());
+            return !suffix.isEmpty() ? new HonoTopic(type, suffix) : null;
         } else {
             return null;
         }
@@ -75,10 +78,22 @@ public final class HonoTopic {
     /**
      * Gets the tenantId from the topic.
      *
-     * @return The tenantId.
+     * @return The tenantId or {@code null} in case of a {@link Type#COMMAND_INTERNAL} topic.
      */
     public String getTenantId() {
-        return tenantId;
+        return type == Type.COMMAND_INTERNAL ? null : suffix;
+    }
+
+    /**
+     * Gets the suffix after the type specific topic part.
+     * <p>
+     * For types other than {@link Type#COMMAND_INTERNAL} this is the internal ID
+     * of the tenant that the topic belongs to.
+     *
+     * @return The suffix.
+     */
+    public String getSuffix() {
+        return suffix;
     }
 
     /**
@@ -125,7 +140,8 @@ public final class HonoTopic {
         TELEMETRY(TelemetryConstants.TELEMETRY_ENDPOINT),
         EVENT(EventConstants.EVENT_ENDPOINT),
         COMMAND(CommandConstants.COMMAND_ENDPOINT),
-        COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT);
+        COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT),
+        COMMAND_INTERNAL(CommandConstants.INTERNAL_COMMAND_ENDPOINT);
 
         private static final String SEPARATOR = ".";
         private static final String NAMESPACE = "hono";
