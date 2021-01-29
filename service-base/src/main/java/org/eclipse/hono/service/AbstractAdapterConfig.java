@@ -28,6 +28,7 @@ import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClie
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
+import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -128,6 +129,9 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         Objects.requireNonNull(adapterProperties);
         Objects.requireNonNull(samplerFactory);
 
+        final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
+        final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
+
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
@@ -147,6 +151,12 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
             commandConsumerFactory.registerInternalCommandConsumer(
                     (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+
+            if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaAdminClientConfig,
+                                kafkaConsumerConfig, id, handlers, getTracer()));
+            }
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         }
 

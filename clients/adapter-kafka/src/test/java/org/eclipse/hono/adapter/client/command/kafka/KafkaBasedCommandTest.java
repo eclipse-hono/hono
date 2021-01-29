@@ -89,7 +89,7 @@ public class KafkaBasedCommandTest {
      */
     @Test
     public void testFromRoutedCommandRecordSucceeds() {
-        final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, "myAdapterInstanceId").toString();
         final String correlationId = "the-correlation-id";
         final String gatewayId = "gw-1";
         final String targetDeviceId = "4711";
@@ -97,6 +97,7 @@ public class KafkaBasedCommandTest {
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(targetDeviceId, subject, correlationId));
         headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
+        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, Constants.DEFAULT_TENANT));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, targetDeviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.fromRoutedCommandRecord(commandRecord);
         assertTrue(cmd.isValid());
@@ -106,6 +107,26 @@ public class KafkaBasedCommandTest {
         assertThat(cmd.getGatewayId()).isEqualTo(gatewayId);
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertTrue(cmd.isOneWay());
+    }
+
+    /**
+     * Verifies that a command cannot be created from a record that doesn't contain a <em>tenant_id</em> header
+     * if the record is parsed as a command forwarded by the Command Router.
+     */
+    @Test
+    public void testFromRoutedCommandRecordFailsForMissingTenantId() {
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, "myAdapterInstanceId").toString();
+        final String correlationId = "the-correlation-id";
+        final String gatewayId = "gw-1";
+        final String targetDeviceId = "4711";
+        final String subject = "doThis";
+
+        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(targetDeviceId, subject, correlationId));
+        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, targetDeviceId, headers);
+        assertThrows(IllegalArgumentException.class, () -> {
+            KafkaBasedCommand.fromRoutedCommandRecord(commandRecord);
+        });
     }
 
     /**

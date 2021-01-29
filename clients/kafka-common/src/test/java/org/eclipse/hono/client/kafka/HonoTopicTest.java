@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 public class HonoTopicTest {
 
     private final String tenantId = "the-tenant";
+    private final String adapterInstanceId = "the-adapter-instance-id";
 
     /**
      * Verifies that the toString method returns the expected string.
@@ -42,6 +43,9 @@ public class HonoTopicTest {
         final HonoTopic commandResponse = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId);
         assertThat(commandResponse.toString()).isEqualTo("hono.command_response." + tenantId);
 
+        final HonoTopic commandInternal = new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, adapterInstanceId);
+        assertThat(commandInternal.toString()).isEqualTo("hono.command_internal." + adapterInstanceId);
+
     }
 
     /**
@@ -58,13 +62,20 @@ public class HonoTopicTest {
 
         assertTopicProperties(HonoTopic.fromString("hono.command_response." + tenantId), HonoTopic.Type.COMMAND_RESPONSE);
 
+        assertTopicProperties(HonoTopic.fromString("hono.command_internal." + adapterInstanceId), HonoTopic.Type.COMMAND_INTERNAL);
+
     }
 
     private void assertTopicProperties(final HonoTopic actual, final HonoTopic.Type expectedType) {
         assertThat(actual).isNotNull();
-        assertThat(actual.getTenantId()).isEqualTo(tenantId);
+        if (expectedType == HonoTopic.Type.COMMAND_INTERNAL) {
+            assertThat(actual.getSuffix()).isEqualTo(adapterInstanceId);
+            assertThat(actual.toString()).isEqualTo(expectedType.prefix + adapterInstanceId);
+        } else {
+            assertThat(actual.getTenantId()).isEqualTo(tenantId);
+            assertThat(actual.toString()).isEqualTo(expectedType.prefix + tenantId);
+        }
         assertThat(actual.getType()).isEqualTo(expectedType);
-        assertThat(actual.toString()).isEqualTo(expectedType.prefix + tenantId);
     }
 
     /**
@@ -114,6 +125,10 @@ public class HonoTopicTest {
         assertThat(HonoTopic.Type.COMMAND_RESPONSE.endpoint).isEqualTo("command_response");
         assertThat(HonoTopic.Type.COMMAND_RESPONSE.prefix).isEqualTo("hono.command_response.");
         assertThat(HonoTopic.Type.COMMAND_RESPONSE.toString()).isEqualTo("command_response");
+
+        assertThat(HonoTopic.Type.COMMAND_INTERNAL.endpoint).isEqualTo("command_internal");
+        assertThat(HonoTopic.Type.COMMAND_INTERNAL.prefix).isEqualTo("hono.command_internal.");
+        assertThat(HonoTopic.Type.COMMAND_INTERNAL.toString()).isEqualTo("command_internal");
 
     }
 
