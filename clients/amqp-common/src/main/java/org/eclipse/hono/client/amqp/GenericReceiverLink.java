@@ -50,9 +50,9 @@ public class GenericReceiverLink extends AbstractHonoClient {
      *                   during handling. NOTE: When using {@code false} here, make sure that deliveries are
      *                   quickly updated and settled, so that the messages don't remain <em>in flight</em>
      *                   for long.
-     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
+     * @param closeHook An (optional) handler to invoke when the link is closed by the peer.
      * @return A future indicating the outcome.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters except close hook are {@code null}.
      */
     public static Future<GenericReceiverLink> create(
             final HonoConnection con,

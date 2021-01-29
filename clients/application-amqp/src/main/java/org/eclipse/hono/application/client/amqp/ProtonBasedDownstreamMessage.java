@@ -67,7 +67,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      * @param msg The proton message to wrap.
      * @param delivery The delivery that the message is associated with.
      * @return The new instance.
-     * @throws NullPointerException if message is {@code null}.
+     * @throws NullPointerException if message or delivery are {@code null}.
      */
     public static ProtonBasedDownstreamMessage from(final Message msg, final ProtonDelivery delivery) {
         return new ProtonBasedDownstreamMessage(msg, delivery);
