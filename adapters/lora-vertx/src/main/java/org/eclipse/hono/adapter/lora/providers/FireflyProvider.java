@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Set;
 
@@ -20,8 +21,6 @@ import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.springframework.stereotype.Component;
-
-import com.google.common.io.BaseEncoding;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -83,7 +82,7 @@ public class FireflyProvider extends JsonBasedLoraProvider {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_FIREFLY_PAYLOAD, String.class)
-                .map(s -> Buffer.buffer(BaseEncoding.base16().decode(s.toUpperCase())))
+                .map(s -> Buffer.buffer(s.getBytes(StandardCharsets.UTF_8)))
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued payload property"));
     }
 

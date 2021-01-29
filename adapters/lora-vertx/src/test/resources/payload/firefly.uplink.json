@@ -47,7 +47,7 @@
   "raw_payload":"62756D6C7578",
   "port":2,
   "payload_encrypted":false,
-  "payload":"62756D6C7578",
+  "payload":"bumlux",
   "parsed_packet":{
     "port":2,
     "pending":false,
