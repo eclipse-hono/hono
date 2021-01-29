@@ -24,7 +24,9 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.amqp.GenericReceiverLink;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -32,6 +34,7 @@ import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -60,26 +63,60 @@ public class ProtonBasedApplicationClientFactory implements AmqpApplicationClien
 
     /**
      * {@inheritDoc}
-     *
-     * @return The outcome of the underlying connection's {@link HonoConnection#connect()} method.
      */
     @Override
-    public Future<Void> start() {
+    public final Future<HonoConnection> connect() {
         LOG.info("connecting to Hono endpoint");
-        return connection.connect().mapEmpty();
+        return connection.connect();
     }
 
     /**
      * {@inheritDoc}
-     *
-     * @return The outcome of the underlying connection's {@link HonoConnection#shutdown(Handler)} method.
      */
     @Override
-    public Future<Void> stop() {
-        LOG.info("shutting down connection to Hono endpoint");
-        final Promise<Void> result = Promise.promise();
-        connection.shutdown(result);
-        return result.future();
+    public final void disconnect() {
+        disconnect(Promise.promise());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
+        LOG.info("disconnecting from Hono endpoint");
+        connection.disconnect(completionHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<Void> isConnected() {
+        return connection.isConnected();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        return connection.isConnected(waitForCurrentConnectAttemptTimeout);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
+        connection.addDisconnectListener(listener);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
+        connection.addReconnectListener(listener);
     }
 
     /**
@@ -100,7 +137,7 @@ public class ProtonBasedApplicationClientFactory implements AmqpApplicationClien
      * </ul>
      */
     @Override
-    public Future<MessageConsumer> createTelemetryConsumer(
+    public final Future<MessageConsumer> createTelemetryConsumer(
             final String tenantId,
             final Handler<DownstreamMessage<AmqpMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
@@ -130,7 +167,7 @@ public class ProtonBasedApplicationClientFactory implements AmqpApplicationClien
      * </ul>
      */
     @Override
-    public Future<MessageConsumer> createEventConsumer(
+    public final Future<MessageConsumer> createEventConsumer(
             final String tenantId,
             final Handler<DownstreamMessage<AmqpMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
@@ -160,7 +197,7 @@ public class ProtonBasedApplicationClientFactory implements AmqpApplicationClien
      * </ul>
      */
     @Override
-    public Future<MessageConsumer> createTelemetryConsumer(
+    public final Future<MessageConsumer> createTelemetryConsumer(
             final String tenantId,
             final Function<DownstreamMessage<AmqpMessageContext>, Future<Void>> messageHandler,
             final Handler<Throwable> closeHandler) {
@@ -190,7 +227,7 @@ public class ProtonBasedApplicationClientFactory implements AmqpApplicationClien
      * </ul>
      */
     @Override
-    public Future<MessageConsumer> createEventConsumer(
+    public final Future<MessageConsumer> createEventConsumer(
             final String tenantId,
             final Function<DownstreamMessage<AmqpMessageContext>, Future<Void>> messageHandler,
             final Handler<Throwable> closeHandler) {

@@ -46,6 +46,7 @@ import org.mockito.ArgumentCaptor;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -84,7 +85,6 @@ class ProtonBasedApplicationClientFactoryTest {
                 anyInt(),
                 anyBoolean(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(receiver));
-
         client = new ProtonBasedApplicationClientFactory(connection);
     }
 
@@ -94,32 +94,43 @@ class ProtonBasedApplicationClientFactoryTest {
      * @param ctx The vertx test context.
      */
     @Test
-    void testStartTriggersConnectionEstablishment(final VertxTestContext ctx) {
+    void testConnectTriggersConnectionEstablishment(final VertxTestContext ctx) {
         when(connection.connect()).thenReturn(Future.succeededFuture(connection));
-        client.start().onComplete(ctx.succeeding(ok -> {
+        client.connect().onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> verify(connection).connect());
             ctx.completeNow();
         }));
     }
 
     /**
-     * Verifies that stopping the client shuts down the underlying connection.
+     * Verifies that disconnecting the client stops the underlying connection.
      */
     @Test
-    void testStopShutsDownConnection() {
-        final var result = client.stop();
-        assertThat(result.isComplete()).isFalse();
-        final ArgumentCaptor<Handler<AsyncResult<Void>>> shutdownHandler = VertxMockSupport.argumentCaptorHandler();
-        verify(connection).shutdown(shutdownHandler.capture());
-        shutdownHandler.getValue().handle(Future.succeededFuture());
-        assertThat(result.succeeded()).isTrue();
+    void testDisconnectTerminatesConnection() {
+        client.disconnect();
+        verify(connection).disconnect(VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that disconnecting the client stops the underlying connection.
+     */
+    @Test
+    void testDisconnectWithHandlerTerminatesConnection() {
+
+        final Promise<Void> result = Promise.promise();
+        client.disconnect(result);
+        assertThat(result.future().isComplete()).isFalse();
+        final ArgumentCaptor<Handler<AsyncResult<Void>>> resultHandler = VertxMockSupport.argumentCaptorHandler();
+        verify(connection).disconnect(resultHandler.capture());
+        resultHandler.getValue().handle(Future.succeededFuture());
+        assertThat(result.future().succeeded()).isTrue();
     }
 
     /**
      * Verifies that the message consumer created by the factory catches an exception
      * thrown by the client provided handler and releases the message.
      *
-     * @param ctx The vertx test context.
+     * @param ctx The vert.x test context.
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -171,7 +182,7 @@ class ProtonBasedApplicationClientFactoryTest {
      * Verifies that the message consumer created by the factory allows the client provided handler
      * to manually perform a disposition update for a received message.
      *
-     * @param ctx The vertx test context.
+     * @param ctx The vert.x test context.
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -212,7 +223,7 @@ class ProtonBasedApplicationClientFactoryTest {
      * Verifies that the message consumer created by the factory settles an event with the
      * accepted outcome if the client provided handler does not throw an exception.
      *
-     * @param ctx The vertx test context.
+     * @param ctx The vert.x test context.
      */
     @Test
     @SuppressWarnings("unchecked")

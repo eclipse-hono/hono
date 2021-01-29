@@ -18,7 +18,8 @@ import java.util.function.Function;
 import org.eclipse.hono.application.client.ApplicationClientFactory;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.client.ConnectionLifecycle;
+import org.eclipse.hono.client.HonoConnection;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -26,7 +27,7 @@ import io.vertx.core.Handler;
 /**
  * A factory for creating clients for Hono's AMQP-based north bound APIs.
  */
-public interface AmqpApplicationClientFactory extends ApplicationClientFactory<AmqpMessageContext>, Lifecycle {
+public interface AmqpApplicationClientFactory extends ApplicationClientFactory<AmqpMessageContext>, ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a client for consuming messages from Hono's north bound <em>Telemetry API</em>.
