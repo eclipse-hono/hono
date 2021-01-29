@@ -19,7 +19,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -53,7 +52,7 @@ public class CachingKafkaProducerFactoryTest {
 
     private static final String PRODUCER_NAME = "test-producer";
 
-    private final Map<String, String> config = new HashMap<>();
+    private final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
 
     private CachingKafkaProducerFactory<String, Buffer> factory;
 
@@ -79,9 +78,7 @@ public class CachingKafkaProducerFactoryTest {
 
         factory = new CachingKafkaProducerFactory<>(instanceSupplier);
 
-        config.put("bootstrap.servers", "localhost:9092");
-        config.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        config.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        configProperties.setProducerConfig(Map.of("bootstrap.servers", "localhost:9092"));
     }
 
     /**
@@ -92,7 +89,8 @@ public class CachingKafkaProducerFactoryTest {
 
         assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
 
-        final KafkaProducer<String, Buffer> createProducer = factory.getOrCreateProducer(PRODUCER_NAME, config);
+        final KafkaProducer<String, Buffer> createProducer = factory.getOrCreateProducer(PRODUCER_NAME,
+                configProperties);
 
         final Optional<KafkaProducer<String, Buffer>> actual = factory.getProducer(PRODUCER_NAME);
         assertThat(actual).isNotEmpty();
@@ -110,8 +108,8 @@ public class CachingKafkaProducerFactoryTest {
         final String producerName2 = "second-producer";
 
         // GIVEN a factory that contains two producers
-        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(producerName1, config);
-        final KafkaProducer<String, Buffer> producer2 = factory.getOrCreateProducer(producerName2, config);
+        final KafkaProducer<String, Buffer> producer1 = factory.getOrCreateProducer(producerName1, configProperties);
+        final KafkaProducer<String, Buffer> producer2 = factory.getOrCreateProducer(producerName2, configProperties);
 
         // WHEN removing one producer
         factory.closeProducer(producerName1);

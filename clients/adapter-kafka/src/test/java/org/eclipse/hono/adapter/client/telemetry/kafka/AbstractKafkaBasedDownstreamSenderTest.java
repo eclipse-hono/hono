@@ -28,6 +28,7 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -61,7 +62,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private static final String PRODUCER_NAME = "test-producer";
 
     protected final Tracer tracer = NoopTracerFactory.create();
-    private final Map<String, String> config = new HashMap<>();
+    private final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
     private final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, TENANT_ID);
     private final TenantObject tenant = new TenantObject(TENANT_ID, true);
     private final RegistrationAssertion device = new RegistrationAssertion(DEVICE_ID);
@@ -73,7 +74,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
      */
     @BeforeEach
     public void setUp() {
-        config.put("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092");
+        config.setProducerConfig(Map.of("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092"));
     }
 
     /**

@@ -49,8 +49,7 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
             final KafkaProducerConfigProperties kafkaProducerConfig, final ProtocolAdapterProperties adapterConfig,
             final Tracer tracer) {
 
-        super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig.getProducerConfig(EventConstants.EVENT_ENDPOINT),
-                adapterConfig, tracer);
+        super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig, adapterConfig, tracer);
     }
 
     /**

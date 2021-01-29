@@ -35,7 +35,7 @@ public interface KafkaProducerFactory<K, V> {
      * Creates a new factory that produces {@link KafkaProducer#createShared(Vertx, String, Map) shared producers}.
      * Shared producers can safely be shared between verticle instances.
      * <p>
-     * Config must always be the same for the same key in {@link #getOrCreateProducer(String, Map)}.
+     * Config must always be the same for the same key in {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)}.
      * <p>
      * The resources of a shared producer are released when the last producer with a given name is closed.
      *
@@ -65,7 +65,7 @@ public interface KafkaProducerFactory<K, V> {
      * @param config The Kafka configuration with which the producer is to be created.
      * @return an existing or new producer.
      */
-    KafkaProducer<K, V> getOrCreateProducer(String producerName, Map<String, String> config);
+    KafkaProducer<K, V> getOrCreateProducer(String producerName, KafkaProducerConfigProperties config);
 
     /**
      * Closes the producer with the given producer name if it exists.

@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -53,7 +54,7 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final Tracer tracer;
 
-    private final Map<String, String> config;
+    private final KafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, Buffer> producerFactory;
     private final String producerName;
 
@@ -66,9 +67,10 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public AbstractKafkaBasedMessageSender(final KafkaProducerFactory<String, Buffer> producerFactory,
+    public AbstractKafkaBasedMessageSender(
+            final KafkaProducerFactory<String, Buffer> producerFactory,
             final String producerName,
-            final Map<String, String> config,
+            final KafkaProducerConfigProperties config,
             final Tracer tracer) {
         Objects.requireNonNull(producerFactory);
         Objects.requireNonNull(producerName);
