@@ -40,7 +40,8 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * Producers are closed and removed from the cache if they throw a {@link #isFatalError(Throwable) fatal exception}.
  * This is triggered by {@link KafkaProducer#exceptionHandler(Handler)} and run asynchronously after the
  * {@link io.vertx.kafka.client.producer.impl.KafkaWriteStreamImpl#send(ProducerRecord, Handler) send operation} has
- * finished. A following invocation of {@link #getOrCreateProducer(String, Map)} will then return a new instance.
+ * finished. A following invocation of {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)} will then
+ * return a new instance.
  *
  * @param <K> The type for the record key serialization.
  * @param <V> The type for the record value serialization.
@@ -69,17 +70,17 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * This method first tries to look up an already existing producer using the given name. If no producer exists yet,
      * a new instance is created using the given factory and put to the cache.
      * <p>
-     * The given config is ignored when an existing producers is returned.
+     * The given config is ignored when an existing producer is returned.
      *
      * @param producerName The name to identify the producer.
      * @param config The Kafka configuration with which the producer is to be created.
      * @return an existing or new producer.
      */
     @Override
-    public KafkaProducer<K, V> getOrCreateProducer(final String producerName, final Map<String, String> config) {
+    public KafkaProducer<K, V> getOrCreateProducer(final String producerName, final KafkaProducerConfigProperties config) {
 
         activeProducers.computeIfAbsent(producerName, (name) -> {
-            final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, config);
+            final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, config.getProducerConfig(producerName));
             return producer.exceptionHandler(getExceptionHandler(name, producer));
         });
 

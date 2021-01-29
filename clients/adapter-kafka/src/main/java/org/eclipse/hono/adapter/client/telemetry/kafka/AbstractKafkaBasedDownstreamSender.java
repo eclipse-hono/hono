@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -50,10 +51,9 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-
     public AbstractKafkaBasedDownstreamSender(final KafkaProducerFactory<String, Buffer> producerFactory,
-            final String producerName, final Map<String, String> config, final ProtocolAdapterProperties adapterConfig,
-            final Tracer tracer) {
+            final String producerName, final KafkaProducerConfigProperties config,
+            final ProtocolAdapterProperties adapterConfig, final Tracer tracer) {
         super(producerFactory, producerName, config, tracer);
 
         this.adapterConfig = Objects.requireNonNull(adapterConfig);
