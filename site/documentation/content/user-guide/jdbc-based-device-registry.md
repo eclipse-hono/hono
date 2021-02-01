@@ -11,9 +11,17 @@ In addition to the above APIs, this Device Registry also exposes HTTP endpoints 
 
 Please refer to the [Device Registry Management API]({{< relref "/api/management#tenants" >}}) for information about managing tenants.
 
+{{% warning %}}
+The JDBC based device registry doesn't support [search tenants]({{< relref "/api/management#tenants/searchTenants" >}}) operation defined by the Device Registry Management API.
+{{% /warning %}}
+
 ## Managing Devices
 
 Please refer to the [Device Registry Management API]({{< relref "/api/management#devices" >}}) for information about managing devices.
+
+{{% warning %}}
+The JDBC based device registry doesn't support [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device Registry Management API.
+{{% /warning %}}
 
 ## Managing Credentials
 
