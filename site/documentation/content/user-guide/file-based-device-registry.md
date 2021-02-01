@@ -20,6 +20,10 @@ The resources have been designed to provide convenient access to the registry's 
 
 Please refer to the [Device Registry Management API]({{< relref "/api/management#tenants" >}}) for information about managing tenants.
 
+{{% warning %}}
+The file based device registry doesn't support [search tenants]({{< relref "/api/management#tenants/searchTenants" >}}) operation defined by the Device Registry Management API.
+{{% /warning %}}
+
 ## Managing Devices
 
 Please refer to the [Device Registry Management API]({{< relref "/api/management#devices" >}}) for information about managing devices.
