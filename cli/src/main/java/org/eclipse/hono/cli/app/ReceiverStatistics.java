@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.PostConstruct;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,10 +104,10 @@ public class ReceiverStatistics {
         return Future.succeededFuture();
     }
 
-    private void handleMessage(final String endpoint, final Message msg) {
-        final String deviceId = MessageHelper.getDeviceId(msg);
+    private void handleMessage(final String endpoint, final DownstreamMessage<? extends MessageContext> msg) {
+        final String deviceId = msg.getDeviceId();
 
-        final Buffer payload = MessageHelper.getPayload(msg);
+        final Buffer payload = msg.getPayload();
 
         if (LOG_STATISTIC.isInfoEnabled()) {
             final long now = System.nanoTime();
@@ -141,9 +141,7 @@ public class ReceiverStatistics {
         LOG_STATISTIC.trace("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
                 payload);
 
-        if (msg.getApplicationProperties() != null) {
-            LOG_STATISTIC.trace("... with application properties: {}", msg.getApplicationProperties().getValue());
-        }
+        LOG_STATISTIC.trace("... with properties: {}", msg.getProperties().getPropertiesMap());
     }
 
     private void statistic(final Long id) {

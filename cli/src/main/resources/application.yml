@@ -39,19 +39,13 @@ message:
 ---
 
 spring:
-  profiles: receiver-kafka
+  profiles: kafka
 
 hono:
   kafka:
     consumerConfig:
       bootstrap.servers: localhost:9092
       group.id: hono-cli
-
-message:
-  type: all
-
-print:
-  verbose: true
 
 ---
 
