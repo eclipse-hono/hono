@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapter-base-quarkus</artifactId>
     <relativePath>../base-quarkus</relativePath>
-    <version>1.6.0-SNAPSHOT</version>
+    <version>1.6.0</version>
   </parent>
   <artifactId>hono-adapter-amqp-vertx-quarkus</artifactId>
   <name>Hono AMQP Adapter (Quarkus)</name>
