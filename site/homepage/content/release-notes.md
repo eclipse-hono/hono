@@ -2,11 +2,11 @@
 title = "Release Notes"
 +++
 
-## 1.6.0 (not yet released)
+## 1.6.0
 
 ### New Features
 
-* Kafka is now supported as a messaging system for events and telemetry messages.
+* Apache Kafka is now supported as a messaging system for events and telemetry messages.
   This can be enabled by configuring protocol adapters to use Hono's new Kafka-based
   client. Please refer to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration/" %}})
   for details.
@@ -34,13 +34,12 @@ title = "Release Notes"
   *cert* property. This can be used instead of specifying the client certificate's subject DN and public key's
   validity period explicitly in the *auth-id* and *secrets* properties. This should make setting the correct *auth-id*
   value much less error prone.
-* Hono now supports *auto-provisioning* of devices that connect via gateway. 
-  For more information please refer to the 
-  [Device Provisioning]({{% doclink "/concepts/provisioning/#gateway-based-auto-provisioning" %}}) concept and to the 
-  [Device registry management API]({{% doclink "/api/management#/devices/createDeviceRegistration" %}}) on how to 
+* Hono now supports *auto-provisioning* of devices that connect via gateway. For more information please refer to the
+  [Device Provisioning]({{% doclink "/concepts/provisioning/#gateway-based-auto-provisioning" %}}) concept and to the
+  [Device registry management API]({{% doclink "/api/management#/devices/createDeviceRegistration" %}}) on how to
   create a device registration for a gateway which is enabled for auto-provisioning.
 * The Device Registry Management API has been extended now to support searching tenants with optional filters,
-  paging and sorting options. Please refer to the 
+  paging and sorting options. Please refer to the
   [Device registry management API]({{% doclink "/api/management#/tenants/searchTenants" %}}) for details.
 * The MongoDB based device registry now supports searching tenants with optional filters, paging and sorting options.
 
@@ -75,6 +74,17 @@ title = "Release Notes"
   permissions can no longer be loaded from the class path using a `classpath://` URI. In practice this should
   have no impact because the Hono chart comes with a default permissions file which the Authentication
   server is pre-configured to load from the file system.
+
+## 1.5.2
+
+### Fixes & Enhancements
+
+* The protocol adapters erroneously indicated a client related error to devices if the downstream AMQP container
+  rejected a message with an `amqp:resource-limit-exceeded` error condition. This has been fixed so that the adapters
+  now correctly indicate a server related problem instead.
+* The containers for the Device Registry implementations, the Authentication server, the Device Connection and
+  Command Router services did not shut down gracefully upon receiving a SIGTERM signal. This has been fixed.
+* The LoRA protocol adapter failed to start due to a missing bean declaration. This has been fixed.
 
 ## 1.5.1
 
