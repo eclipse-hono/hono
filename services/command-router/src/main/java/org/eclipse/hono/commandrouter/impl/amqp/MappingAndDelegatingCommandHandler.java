@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -127,55 +125,53 @@ public class MappingAndDelegatingCommandHandler {
         command.logToSpan(currentSpan);
         final ProtonBasedCommandContext commandContext = new ProtonBasedCommandContext(command, messageDelivery, currentSpan);
         if (command.isValid()) {
-            mapAndDelegateIncomingCommand(tenantId, deviceId, commandContext);
+            mapAndDelegateIncomingCommand(commandContext);
         } else {
             // command message is invalid
             commandContext.reject("malformed command message");
         }
     }
 
-    private void mapAndDelegateIncomingCommand(final String tenantId, final String deviceId,
-            final CommandContext commandContext) {
+    private void mapAndDelegateIncomingCommand(final CommandContext commandContext) {
         final Command command = commandContext.getCommand();
 
         // determine last used gateway device id
         LOG.trace("determine command target gateway/adapter for [{}]", command);
-        final Future<JsonObject> commandTargetFuture = commandTargetMapper.getTargetGatewayAndAdapterInstance(tenantId,
-                deviceId, commandContext.getTracingContext());
+        commandTargetMapper
+                .getTargetGatewayAndAdapterInstance(command.getTenant(), command.getDeviceId(), commandContext.getTracingContext())
+                .onSuccess(result -> {
+                    final String targetAdapterInstanceId = result
+                            .getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
+                    final String targetDeviceId = result.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
+                    final String targetGatewayId = targetDeviceId.equals(command.getDeviceId()) ? null : targetDeviceId;
 
-        commandTargetFuture.onComplete(cmdTargetResult -> {
-            if (cmdTargetResult.succeeded()) {
-                final String targetDeviceId = cmdTargetResult.result().getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
-                final String targetAdapterInstance = cmdTargetResult.result().getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
+                    if (Objects.isNull(targetGatewayId)) {
+                        LOG.trace("command not mapped to gateway, use original device id [{}]", command.getDeviceId());
+                    } else {
+                        command.setGatewayId(targetGatewayId);
+                        LOG.trace("determined target gateway [{}] for device [{}]", targetGatewayId,
+                                command.getDeviceId());
+                        commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
+                    }
 
-                final String targetGatewayId = targetDeviceId.equals(deviceId) ? null : targetDeviceId;
-                if (targetGatewayId == null) {
-                    LOG.trace("command not mapped to gateway, use original device id [{}]", command.getDeviceId());
-                } else {
-                    LOG.trace("determined target gateway [{}] for device [{}]", targetGatewayId, command.getDeviceId());
-                    commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
-                    command.setGatewayId(targetGatewayId);
-                }
-                LOG.trace("delegate command to target adapter instance '{}' [command: {}]", targetAdapterInstance,
-                        commandContext.getCommand());
-                internalCommandSender.sendCommand(commandContext, targetAdapterInstance);
+                    LOG.trace("delegate command to target adapter instance '{}' [command: {}]", targetAdapterInstanceId,
+                            commandContext.getCommand());
+                    internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId);
+                })
+                .onFailure(cause -> {
+                    final String errorMsg;
 
-            } else {
-                if (cmdTargetResult.cause() instanceof ServiceInvocationException
-                        && ((ServiceInvocationException) cmdTargetResult.cause()).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-                    LOG.debug("no target adapter instance found for command for device {}", deviceId);
-                    TracingHelper.logError(commandContext.getTracingSpan(),
-                            "no target adapter instance found for command with device id " + deviceId);
-                } else {
-                    LOG.debug("error getting target gateway and adapter instance for command with device id {}",
-                            deviceId, cmdTargetResult.cause());
-                    TracingHelper.logError(commandContext.getTracingSpan(),
-                            "error getting target gateway and adapter instance for command with device id " + deviceId,
-                            cmdTargetResult.cause());
-                }
-                commandContext.release();
-            }
-        });
+                    if (ServiceInvocationException.extractStatusCode(cause) == HttpURLConnection.HTTP_NOT_FOUND) {
+                        errorMsg = "no target adapter instance found for command with device id "
+                                + command.getDeviceId();
+                    } else {
+                        errorMsg = "error getting target gateway and adapter instance for command with device id"
+                                + command.getDeviceId();
+                    }
+                    LOG.debug(errorMsg, cause);
+                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg, cause);
+                    commandContext.release();
+                });
     }
 
 }

@@ -147,11 +147,11 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (deviceConnectionInfo instanceof Lifecycle) {
             startServiceClient((Lifecycle) deviceConnectionInfo, "Device Connection info");
         }
-        startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
-
         // initialize components dependent on the above clients
         commandTargetMapper.initialize(registrationClient, deviceConnectionInfo);
         commandConsumerFactory.initialize(commandTargetMapper);
+        startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
+
         return Future.succeededFuture();
     }
 

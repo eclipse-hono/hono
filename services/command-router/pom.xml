@@ -48,6 +48,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-adapter-amqp</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-adapter-kafka</artifactId>
+    </dependency>
   </dependencies>
 
   <profiles>
