@@ -1,5 +1,5 @@
 <!--
-    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-adapter-base-spring</artifactId>
+    <artifactId>hono-adapters-spring</artifactId>
     <relativePath>../base-spring</relativePath>
     <version>1.7.0-SNAPSHOT</version>
   </parent>

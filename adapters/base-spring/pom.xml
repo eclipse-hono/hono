@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -20,9 +20,9 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <packaging>pom</packaging>
-  <artifactId>hono-adapter-base-spring</artifactId>
+  <artifactId>hono-adapters-spring</artifactId>
 
-  <name>Hono Protocol Adapter Base (Spring)</name>
+  <name>Hono Protocol Adapters (Spring)</name>
   <description>Defines common dependencies for Spring-based protocol adapter implementations</description>
 
     <dependencies>
