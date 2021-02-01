@@ -20,8 +20,12 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrati
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
+import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -60,6 +64,7 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
@@ -277,9 +282,18 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public CommandConsumerFactory commandConsumerFactory() {
-        return new ProtonBasedCommandConsumerFactoryImpl(
-                commandConsumerConnection(),
-                SendMessageSampler.Factory.noop());
+        if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
+            return new KafkaBasedCommandConsumerFactoryImpl(
+                    vertx(),
+                    kafkaProducerFactory(),
+                    kafkaProducerConfig(),
+                    kafkaConsumerConfig(),
+                    getTracer());
+        } else {
+            return new ProtonBasedCommandConsumerFactoryImpl(
+                    commandConsumerConnection(),
+                    SendMessageSampler.Factory.noop());
+        }
     }
 
     /**
@@ -335,6 +349,44 @@ public class ApplicationConfig {
     @Scope("prototype")
     public HonoConnection registrationServiceConnection() {
         return HonoConnection.newConnection(vertx(), registrationClientConfig());
+    }
+
+    //Kafka based
+    /**
+     * Exposes configuration properties for a consumer accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.command.kafka")
+    @Bean
+    public KafkaConsumerConfigProperties kafkaConsumerConfig() {
+        final KafkaConsumerConfigProperties kafkaConsumerConfigProperties = new KafkaConsumerConfigProperties();
+        kafkaConsumerConfigProperties.setDefaultClientIdPrefix("cmd-router");
+        return kafkaConsumerConfigProperties;
+    }
+
+    /**
+     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.command.kafka")
+    @Bean
+    public KafkaProducerConfigProperties kafkaProducerConfig() {
+        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+        configProperties.setDefaultClientIdPrefix("cmd-router");
+        return configProperties;
+    }
+
+    /**
+     * Exposes a factory for creating producers for sending messages via the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Scope("prototype")
+    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return KafkaProducerFactory.sharedProducerFactory(vertx());
     }
 
     private static void setConfigServerRoleIfUnknown(final AuthenticatingClientConfigProperties config,

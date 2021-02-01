@@ -26,10 +26,13 @@ public interface CommandConsumerFactory extends Lifecycle {
 
     /**
      * Initializes the CommandConsumerFactory with the given commandTargetMapper.
+     * <p>
+     * This method must be invoked before the {@link #start()} method.
      *
      * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
      *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
      *            here, that is supposed to be done by the calling method.
+     * @throws NullPointerException if commandTargetMapper is {@code null}.
      */
     void initialize(CommandTargetMapper commandTargetMapper);
 

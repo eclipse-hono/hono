@@ -288,6 +288,15 @@ public final class KafkaBasedCommand implements Command {
         return correlationId;
     }
 
+    /**
+     * Returns the kafka consumer record corresponding to this command.
+     *
+     * @return The kafka consumer record.
+     */
+    public KafkaConsumerRecord<String, Buffer> getRecord() {
+        return record;
+    }
+
     private void requireValid() {
         if (!isValid()) {
             throw new IllegalStateException("command is invalid");

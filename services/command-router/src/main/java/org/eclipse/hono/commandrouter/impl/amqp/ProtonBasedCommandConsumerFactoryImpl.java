@@ -84,17 +84,28 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     @Override
     public void initialize(final CommandTargetMapper commandTargetMapper) {
         Objects.requireNonNull(commandTargetMapper);
-
         mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(connection, commandTargetMapper);
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
-
-// TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in order to close unused tenant-scoped receiver links
-//        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
-//                this::handleTenantTimeout);
-        connection.addReconnectListener(c -> recreateConsumers());
-        // trigger creation of adapter specific consumer link (with retry if failed)
-        recreateConsumers();
         initialized.set(true);
+    }
+
+    @Override
+    public Future<Void> start() {
+        if (!initialized.get()) {
+            return Future.failedFuture("not initialized");
+        }
+
+        return connection.connect()
+                .map(ok -> {
+                    // TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in
+                    // order to close unused tenant-scoped receiver links
+                    // connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                    // this::handleTenantTimeout);
+                    connection.addReconnectListener(c -> recreateConsumers());
+                    // trigger creation of adapter specific consumer link (with retry if failed)
+                    recreateConsumers();
+                    return null;
+                });
     }
 
     @Override
