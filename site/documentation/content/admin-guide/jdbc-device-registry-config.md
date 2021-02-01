@@ -1,6 +1,6 @@
 +++
 title = "JDBC Based Device Registry Configuration"
-weight = 315
+weight = 313
 +++
 
 The JDBC based Device Registry components provides an implementation of Eclipse Hono™'s

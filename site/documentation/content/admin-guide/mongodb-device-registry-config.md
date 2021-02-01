@@ -1,6 +1,6 @@
 +++
 title = "MongoDB Based Device Registry Configuration"
-weight = 315
+weight = 310
 +++
 
 The MongoDB based Device Registry component provides an implementation of Eclipse Hono&trade;'s [Device Registration]({{< relref "/api/device-registration" >}}),
