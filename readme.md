@@ -24,5 +24,4 @@ Please check out the [Eclipse Hono project home page](https://www.eclipse.org/ho
 
 ## Build status
 
-- [![Jenkins Build Status](https://ci.eclipse.org/hono/buildStatus/icon?job=Hono%20CI%20Pipeline)](https://ci.eclipse.org/hono/job/Hono%20CI%20Pipeline/)
-- [![Travis Build Status](https://travis-ci.org/eclipse/hono.svg?branch=master)](https://travis-ci.org/eclipse/hono)
+- [Continuous Integration Build](https://github.com/eclipse/hono/actions?query=workflow%3A%22Build+and+run+integration+tests%22)
