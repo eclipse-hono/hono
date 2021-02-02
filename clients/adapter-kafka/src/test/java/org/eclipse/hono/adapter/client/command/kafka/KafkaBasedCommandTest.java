@@ -71,7 +71,7 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject, correlationId));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_EXPECTED, "true"));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_REQUIRED, "true"));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertTrue(cmd.isValid());
@@ -109,12 +109,12 @@ public class KafkaBasedCommandTest {
     }
 
     /**
-     * Verifies that a command can be created from a valid record that has no <em>response-expected</em>
+     * Verifies that a command can be created from a valid record that has no <em>response-required</em>
      * and no <em>correlation-id</em> header.
      * Verifies that the command reports that it is a one-way command.
      */
     @Test
-    public void testFromRecordSucceedsWithoutResponseExpectedAndCorrelationId() {
+    public void testFromRecordSucceedsWithoutResponseRequiredAndCorrelationId() {
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String deviceId = "4711";
         final String subject = "doThis";
@@ -131,17 +131,17 @@ public class KafkaBasedCommandTest {
     }
 
     /**
-     * Verifies that a valid command cannot be created from a record that has the <em>response-expected</em>
+     * Verifies that a valid command cannot be created from a record that has the <em>response-required</em>
      * header set to "true" but has no <em>correlation-id</em> header.
      */
     @Test
-    public void testFromRecordFailsForMissingCorrelationIdWithResponseExpected() {
+    public void testFromRecordFailsForMissingCorrelationIdWithResponseRequired() {
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String deviceId = "4711";
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_EXPECTED, "true"));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_REQUIRED, "true"));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertFalse(cmd.isValid());
