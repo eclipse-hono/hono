@@ -60,7 +60,7 @@ The command message MAY contain arbitrary payload, set as message value, to be s
 For that, the Business Application connects to the *Kafka Cluster* and writes a message to the tenant-specific topic `hono.command.${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to send the command for.
 The Business Application can consume the corresponding command response from the `hono.command_response.${tenant_id}` topic.
 
-In contrast to a one-way command, a request/response command contains a *response-expected* header with value `true` and a *correlation-id* header, providing the identifier that is used to correlate a response message to the original request.
+In contrast to a one-way command, a request/response command contains a *response-required* header with value `true` and a *correlation-id* header, providing the identifier that is used to correlate a response message to the original request.
 
 **Preconditions**
 
@@ -86,7 +86,7 @@ The following table provides an overview of the headers the *Business Applicatio
 | :------------------ | :-------: | :-------- | :---------- |
 | *correlation-id*    | yes       | *string*  | The identifier used to correlate a response message to the original request. It is used as the *correlation-id* header in the response. |
 | *device_id*         | yes       | *string*  | The identifier of the device that the command is targeted at. |
-| *response-expected* | yes       | *boolean* | MUST be set with a value of `true`, meaning that a response from the device is expected for the command. |
+| *response-required* | yes       | *boolean* | MUST be set with a value of `true`, meaning that the device is required to send a response for the command. |
 | *subject*           | yes       | *string*  | The name of the command to be executed by the device. |
 | *content-type*      | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 

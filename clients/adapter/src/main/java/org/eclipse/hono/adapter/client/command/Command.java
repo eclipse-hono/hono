@@ -25,7 +25,7 @@ import io.vertx.core.buffer.Buffer;
 public interface Command {
 
     /**
-     * Checks if this command is a <em>one-way</em> command (meaning there is no response expected).
+     * Checks if this command is a <em>one-way</em> command (meaning there is no response required).
      *
      * @return {@code true} if this is a one-way command.
      */

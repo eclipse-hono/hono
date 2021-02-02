@@ -39,9 +39,9 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 public final class KafkaBasedCommand implements Command {
 
     /**
-     * The name of the boolean Kafka record header that defines whether a response is expected for the command.
+     * The name of the boolean Kafka record header that defines whether a response is required for the command.
      */
-    public static final String HEADER_RESPONSE_EXPECTED = "response-expected";
+    public static final String HEADER_RESPONSE_REQUIRED = "response-required";
 
     /**
      * If present, the command is invalid.
@@ -54,7 +54,7 @@ public final class KafkaBasedCommand implements Command {
     private final String subject;
     private final String contentType;
     private final String requestId;
-    private final boolean responseExpected;
+    private final boolean responseRequired;
 
     private String gatewayId;
 
@@ -66,7 +66,7 @@ public final class KafkaBasedCommand implements Command {
             final String correlationId,
             final String subject,
             final String contentType,
-            final boolean responseExpected) {
+            final boolean responseRequired) {
 
         this.validationError = validationError;
         this.record = commandRecord;
@@ -75,7 +75,7 @@ public final class KafkaBasedCommand implements Command {
         this.correlationId = correlationId;
         this.subject = subject;
         this.contentType = contentType;
-        this.responseExpected = responseExpected;
+        this.responseRequired = responseRequired;
         requestId = Commands.getRequestId(correlationId);
     }
 
@@ -89,7 +89,7 @@ public final class KafkaBasedCommand implements Command {
      * In addition, the record is expected to contain
      * <ul>
      * <li>a <em>subject</em> header</li>
-     * <li>a non-empty <em>correlation-id</em> header if the <em>response-expected</em> header is set to {@code true}.</li>
+     * <li>a non-empty <em>correlation-id</em> header if the <em>response-required</em> header is set to {@code true}.</li>
      * </ul>
      * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
      * <p>
@@ -124,10 +124,10 @@ public final class KafkaBasedCommand implements Command {
         }
         final String contentType = getHeader(record, MessageHelper.SYS_PROPERTY_CONTENT_TYPE);
         final String correlationId = getHeader(record, MessageHelper.SYS_PROPERTY_CORRELATION_ID);
-        final boolean responseExpected = Optional
-                .ofNullable(RecordUtil.getHeaderValue(record.headers(), HEADER_RESPONSE_EXPECTED, Boolean.class))
+        final boolean responseRequired = Optional
+                .ofNullable(RecordUtil.getHeaderValue(record.headers(), HEADER_RESPONSE_REQUIRED, Boolean.class))
                 .orElse(false);
-        if (responseExpected && Strings.isNullOrEmpty(correlationId)) {
+        if (responseRequired && Strings.isNullOrEmpty(correlationId)) {
             validationErrorJoiner.add("correlation-id is not set");
         }
 
@@ -139,7 +139,7 @@ public final class KafkaBasedCommand implements Command {
                 Strings.isNullOrEmpty(correlationId) ? null : correlationId,
                 subject,
                 contentType,
-                responseExpected);
+                responseRequired);
     }
 
     /**
@@ -167,7 +167,7 @@ public final class KafkaBasedCommand implements Command {
 
     @Override
     public boolean isOneWay() {
-        return !responseExpected;
+        return !responseRequired;
     }
 
     @Override
