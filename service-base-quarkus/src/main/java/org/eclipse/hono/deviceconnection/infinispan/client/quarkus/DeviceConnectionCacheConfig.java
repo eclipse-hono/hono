@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,12 +27,8 @@ import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
 /**
  * A collection of properties for configuring the connection to an Infinispan cache that contains
  * Device Connection information.
- * <p>
- * This class has been defined on its own so that the same prefix can be used as for
- * the {@link org.eclipse.hono.service.quarkus.ProtocolAdapterConfig#deviceConnection} property.
- *
  */
-@ConfigProperties(prefix = "hono.deviceConnection", namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
+@ConfigProperties(namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
 public class DeviceConnectionCacheConfig extends InfinispanRemoteConfigurationProperties {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceConnectionCacheConfig.class);

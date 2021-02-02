@@ -40,8 +40,10 @@ import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSende
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.quarkus.QuarkusRequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.config.quarkus.QuarkusApplicationConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionClient;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
@@ -54,6 +56,7 @@ import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
+import org.eclipse.hono.service.quarkus.monitoring.QuarkusConnectionEventProducerConfig;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -67,6 +70,7 @@ import org.slf4j.LoggerFactory;
 import com.github.benmanes.caffeine.cache.Cache;
 
 import io.opentracing.Tracer;
+import io.quarkus.arc.config.ConfigPrefix;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.DeploymentOptions;
@@ -100,11 +104,37 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     protected ResourceLimitChecks resourceLimitChecks;
 
-    @Inject
-    protected ProtocolAdapterConfig config;
+    @ConfigPrefix("hono.app")
+    protected QuarkusApplicationConfigProperties appConfig;
 
-    @Inject
+    @ConfigPrefix("hono.messaging")
+    protected QuarkusRequestResponseClientConfigProperties downstreamSenderConfig;
+
+    @ConfigPrefix("hono.command")
+    protected QuarkusRequestResponseClientConfigProperties commandConfig;
+
+    @ConfigPrefix("hono.tenant")
+    protected QuarkusRequestResponseClientConfigProperties tenantClientConfig;
+
+    @ConfigPrefix("hono.registration")
+    protected QuarkusRequestResponseClientConfigProperties deviceRegistrationClientConfig;
+
+    @ConfigPrefix("hono.credentials")
+    protected QuarkusRequestResponseClientConfigProperties credentialsClientConfig;
+
+    @ConfigPrefix("hono.commandRouter")
+    protected QuarkusRequestResponseClientConfigProperties commandRouterConfig;
+
+    // either this property or the deviceConnectionCacheConfig property
+    // will contain a valid configuration
+    @ConfigPrefix("hono.deviceConnection")
+    protected QuarkusRequestResponseClientConfigProperties deviceConnectionClientConfig;
+
+    @ConfigPrefix("hono.deviceConnection")
     protected DeviceConnectionCacheConfig deviceConnectionCacheConfig;
+
+    @ConfigPrefix("hono.connectionEvents")
+    protected QuarkusConnectionEventProducerConfig connectionEventsConfig;
 
     @Inject
     protected C protocolAdapterProperties;
@@ -121,13 +151,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected abstract AbstractProtocolAdapterBase<C> adapter();
 
     void onStart(final @Observes StartupEvent ev) {
-        LOG.info("deploying {} {} instances ...", config.app.getMaxInstances(), getAdapterName());
+        LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getAdapterName());
 
         final CompletableFuture<Void> startup = new CompletableFuture<>();
         final Promise<String> deploymentTracker = Promise.promise();
         vertx.deployVerticle(
                 () -> adapter(),
-                new DeploymentOptions().setInstances(config.app.getMaxInstances()),
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
                 deploymentTracker);
         deploymentTracker.future()
             .compose(s -> healthCheckServer.start())
@@ -182,7 +212,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         final DeviceRegistrationClient registrationClient = registrationClient();
 
-        if (config.commandRouter.isHostConfigured()) {
+        if (commandRouterConfig.isHostConfigured()) {
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
@@ -215,9 +245,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The component or {@code null} if the configured producer type is <em>none</em> or unsupported.
      */
     protected ConnectionEventProducer connectionEventProducer() {
-        switch (config.connectionEvents.getType()) {
+        switch (connectionEventsConfig.getType()) {
         case logging:
-            return new LoggingConnectionEventProducer(config.connectionEvents);
+            return new LoggingConnectionEventProducer(connectionEventsConfig);
         case events:
             return new HonoEventConnectionEventProducer();
         default:
@@ -226,14 +256,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties tenantServiceClientConfig() {
-        setConfigServerRoleIfUnknown(config.tenant, "Tenant");
-        setDefaultConfigNameIfNotSet(config.tenant);
-        return config.tenant;
+        setConfigServerRoleIfUnknown(tenantClientConfig, "Tenant");
+        setDefaultConfigNameIfNotSet(tenantClientConfig);
+        return tenantClientConfig;
     }
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache() {
         if (tenantResponseCache == null) {
-            tenantResponseCache = Caches.newCaffeineCache(config.tenant);
+            tenantResponseCache = Caches.newCaffeineCache(tenantClientConfig);
         }
         return tenantResponseCache;
     }
@@ -251,14 +281,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties registrationServiceClientConfig() {
-        setConfigServerRoleIfUnknown(config.registration, "Device Registration");
-        setDefaultConfigNameIfNotSet(config.registration);
-        return config.registration;
+        setConfigServerRoleIfUnknown(deviceRegistrationClientConfig, "Device Registration");
+        setDefaultConfigNameIfNotSet(deviceRegistrationClientConfig);
+        return deviceRegistrationClientConfig;
     }
 
     private Cache<Object, RegistrationResult> registrationResponseCache() {
         if (registrationResponseCache == null) {
-            registrationResponseCache = Caches.newCaffeineCache(config.registration);
+            registrationResponseCache = Caches.newCaffeineCache(deviceRegistrationClientConfig);
         }
         return registrationResponseCache;
     }
@@ -276,14 +306,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties credentialsServiceClientConfig() {
-        setConfigServerRoleIfUnknown(config.credentials, "Credentials");
-        setDefaultConfigNameIfNotSet(config.credentials);
-        return config.credentials;
+        setConfigServerRoleIfUnknown(credentialsClientConfig, "Credentials");
+        setDefaultConfigNameIfNotSet(credentialsClientConfig);
+        return credentialsClientConfig;
     }
 
     private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache() {
         if (credentialsResponseCache == null) {
-            credentialsResponseCache = Caches.newCaffeineCache(config.credentials);
+            credentialsResponseCache = Caches.newCaffeineCache(credentialsClientConfig);
         }
         return credentialsResponseCache;
     }
@@ -301,9 +331,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
-        setConfigServerRoleIfUnknown(config.commandRouter, "Command Router");
-        setDefaultConfigNameIfNotSet(config.commandRouter);
-        return config.commandRouter;
+        setConfigServerRoleIfUnknown(commandRouterConfig, "Command Router");
+        setDefaultConfigNameIfNotSet(commandRouterConfig);
+        return commandRouterConfig;
     }
 
     /**
@@ -318,9 +348,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
-        setConfigServerRoleIfUnknown(config.deviceConnection, "Device Connection");
-        setDefaultConfigNameIfNotSet(config.deviceConnection);
-        return config.deviceConnection;
+        setConfigServerRoleIfUnknown(deviceConnectionClientConfig, "Device Connection");
+        setDefaultConfigNameIfNotSet(deviceConnectionClientConfig);
+        return deviceConnectionClientConfig;
     }
 
     /**
@@ -330,7 +360,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected DeviceConnectionClient deviceConnectionClient() {
 
-        if (config.deviceConnection.isHostConfigured()) {
+        if (deviceConnectionClientConfig.isHostConfigured()) {
             return new ProtonBasedDeviceConnectionClient(
                     HonoConnection.newConnection(vertx, deviceConnectionServiceClientConfig(), tracer),
                     messageSamplerFactory);
@@ -352,9 +382,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private ClientConfigProperties downstreamSenderConfig() {
-        setConfigServerRoleIfUnknown(config.messaging, "Downstream");
-        setDefaultConfigNameIfNotSet(config.messaging);
-        return config.messaging;
+        setConfigServerRoleIfUnknown(downstreamSenderConfig, "Downstream");
+        setDefaultConfigNameIfNotSet(downstreamSenderConfig);
+        return downstreamSenderConfig;
     }
 
     /**
@@ -371,7 +401,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private ClientConfigProperties commandConsumerFactoryConfig() {
-        final ClientConfigProperties props = new ClientConfigProperties(config.command);
+        final ClientConfigProperties props = new ClientConfigProperties(commandConfig);
         setConfigServerRoleIfUnknown(props, "Command & Control");
         setDefaultConfigNameIfNotSet(props);
         return props;
@@ -426,7 +456,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {
-        final ClientConfigProperties props = new ClientConfigProperties(config.messaging);
+        final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
         setConfigServerRoleIfUnknown(props, "Command Response");
         setDefaultConfigNameIfNotSet(props);
         return props;
