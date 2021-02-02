@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,9 +19,11 @@ import java.util.function.BiConsumer;
 
 import javax.annotation.PostConstruct;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.application.client.ApplicationClientFactory;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -33,7 +35,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
+ * A command line client for receiving messages from via Hono's north bound Telemetry and/or Event APIs.
  * <p>
  * Messages are output to stdout.
  * <p>
@@ -52,12 +54,21 @@ public class Receiver extends AbstractApplicationClient {
      * The type of messages to create a consumer for.
      */
     @Value(value = "${message.type}")
-    protected String messageType;
+    protected String messageType = TYPE_ALL;
 
     /**
      * Bi consumer to handle messages based on endpoint.
      */
-    private BiConsumer<String, Message> messageHandler = (endpoint, msg) -> handleMessage(endpoint, msg);
+    private BiConsumer<String, DownstreamMessage<? extends MessageContext>> messageHandler = this::handleMessage;
+
+    // TODO remove the client factory from here and use the one from parent once
+    //  org.eclipse.hono.application.client.ApplicationClientFactory supports C&C
+    private ApplicationClientFactory<? extends MessageContext> clientFactory;
+
+    @Autowired
+    public final void setApplicationClientFactory(final ApplicationClientFactory<? extends MessageContext> factory) {
+        this.clientFactory = Objects.requireNonNull(factory);
+    }
 
     /**
      * Set message handler for processing adaption.
@@ -65,7 +76,7 @@ public class Receiver extends AbstractApplicationClient {
      * @param messageHandler message handler.
      * @throws NullPointerException if message handler is {@code null}.
      */
-    void setMessageHandler(final BiConsumer<String, Message> messageHandler) {
+    void setMessageHandler(final BiConsumer<String, DownstreamMessage<? extends MessageContext>> messageHandler) {
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -77,21 +88,29 @@ public class Receiver extends AbstractApplicationClient {
      */
     @PostConstruct
     Future<CompositeFuture> start() {
-        return clientFactory.connect()
-                .compose(con -> {
-                    clientFactory.addReconnectListener(this::createConsumer);
-                    return createConsumer(con);
-                })
+
+        final Future<Void> startFuture;
+        if (clientFactory instanceof AmqpApplicationClientFactory) {
+            final AmqpApplicationClientFactory amqpClientFactory = (AmqpApplicationClientFactory) clientFactory;
+            startFuture = amqpClientFactory.connect()
+                    .onComplete(con -> amqpClientFactory.addReconnectListener(client -> createConsumer()))
+                    .mapEmpty();
+        } else {
+            startFuture = Future.succeededFuture();
+        }
+
+        return startFuture
+                .compose(c -> createConsumer())
                 .onComplete(this::handleCreateConsumerStatus);
     }
 
-    private CompositeFuture createConsumer(final HonoConnection connection) {
+    private CompositeFuture createConsumer() {
 
-        final Handler<Void> closeHandler = closeHook -> {
-            log.info("close handler of consumer is called");
+        final Handler<Throwable> closeHandler = cause -> {
+            log.info("close handler of consumer is called", cause);
             vertx.setTimer(connectionRetryInterval, reconnect -> {
-                log.info("attempting to re-open the consumer link ...");
-                createConsumer(connection);
+                log.info("attempting to re-create the consumer ...");
+                createConsumer();
             });
         };
 
@@ -128,17 +147,15 @@ public class Receiver extends AbstractApplicationClient {
      * @param endpoint receiving endpoint, "telemetry" or "event".
      * @param msg received message
      */
-    private void handleMessage(final String endpoint, final Message msg) {
-        final String deviceId = MessageHelper.getDeviceId(msg);
+    private void handleMessage(final String endpoint, final DownstreamMessage<? extends MessageContext> msg) {
+        final String deviceId = msg.getDeviceId();
 
-        final Buffer payload = MessageHelper.getPayload(msg);
+        final Buffer payload = msg.getPayload();
 
         log.info("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
                 payload);
 
-        if (msg.getApplicationProperties() != null) {
-            log.info("... with application properties: {}", msg.getApplicationProperties().getValue());
-        }
+        log.info("... with properties: {}", msg.getProperties().getPropertiesMap());
     }
 
     private void handleCreateConsumerStatus(final AsyncResult<CompositeFuture> startup) {

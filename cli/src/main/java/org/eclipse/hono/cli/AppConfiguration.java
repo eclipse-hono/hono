@@ -13,6 +13,10 @@
 
 package org.eclipse.hono.cli;
 
+import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
+import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
+import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientFactoryImpl;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -75,7 +79,7 @@ public class AppConfiguration {
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.kafka")
-    @Profile("receiver-kafka")
+    @Profile("kafka")
     @Bean
     public KafkaConsumerConfigProperties honoKafkaClientConfig() {
         return new KafkaConsumerConfigProperties();
@@ -86,8 +90,37 @@ public class AppConfiguration {
      *
      * @return The factory.
      */
+    // TODO remove this client factory once org.eclipse.hono.application.client.ApplicationClientFactory supports C&C
     @Bean
     public ApplicationClientFactory clientFactory() {
         return ApplicationClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()));
+    }
+
+    /**
+     * Exposes a factory for creating clients for Hono's AMQP-based northbound APIs as a Spring bean.
+     *
+     * @return The factory.
+     * @param vertx The vertx instance to be used.
+     * @param clientConfig The client configuration properties.
+     */
+    @Profile("!kafka")
+    @Bean
+    public org.eclipse.hono.application.client.ApplicationClientFactory<AmqpMessageContext> amqpClientFactory(
+            final Vertx vertx, final ClientConfigProperties clientConfig) {
+        return new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, clientConfig));
+    }
+
+    /**
+     * Exposes a factory for creating clients for Hono's Kafka-based northbound APIs as a Spring bean.
+     *
+     * @param vertx The vertx instance to be used.
+     * @param kafkaConsumerConfigProperties The consumer configuration properties.
+     * @return The factory.
+     */
+    @Profile("kafka")
+    @Bean
+    public org.eclipse.hono.application.client.ApplicationClientFactory<KafkaMessageContext> kafkaClientFactory(
+            final Vertx vertx, final KafkaConsumerConfigProperties kafkaConsumerConfigProperties) {
+        return new KafkaApplicationClientFactoryImpl(vertx, kafkaConsumerConfigProperties);
     }
 }
