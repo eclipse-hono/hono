@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.config;
 
+import java.time.Duration;
+
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.core.metrics.MetricsOptions;
@@ -24,7 +26,7 @@ public class VertxProperties {
 
     private boolean preferNative = false;
     private boolean enableMetrics = MetricsOptions.DEFAULT_METRICS_ENABLED;
-    private long maxEventLoopExecuteTimeMillis = 2000L;
+    private Duration maxEventLoopExecuteTime = Duration.ofSeconds(2);
     private long dnsQueryTimeout = 5000L;
 
     /**
@@ -58,19 +60,19 @@ public class VertxProperties {
     }
 
     /**
-     * Sets the maximum number of milliseconds that a task on the event loop may
+     * Sets the maximum duration that a task on the event loop may
      * run without being considered to block the event loop.
      * <p>
-     * The default value of this property is 2000 milliseconds.
+     * The default value of this property is 2 seconds.
      *
-     * @param executeTime The number of milliseconds.
-     * @throws IllegalArgumentException if execute time is less than 1.
+     * @param executeTime The duration.
+     * @throws IllegalArgumentException if execute time is less than 1ms.
      */
-    public final void setMaxEventLoopExecuteTime(final long executeTime) {
-        if (executeTime < 1) {
-            throw new IllegalArgumentException("maxEventLoopExecuteTime must be > 0");
+    public final void setMaxEventLoopExecuteTime(final Duration executeTime) {
+        if (executeTime.toMillis() < 1) {
+            throw new IllegalArgumentException("maxEventLoopExecuteTime must be >= 1ms");
           }
-        this.maxEventLoopExecuteTimeMillis = executeTime;
+        this.maxEventLoopExecuteTime = executeTime;
     }
 
     /**
@@ -103,8 +105,8 @@ public class VertxProperties {
             options.setMetricsOptions(new MetricsOptions().setEnabled(true));
         }
 
-        options.setMaxEventLoopExecuteTime(maxEventLoopExecuteTimeMillis * 1000000L);
-        options.setWarningExceptionTime(maxEventLoopExecuteTimeMillis * 1500000L);
+        options.setMaxEventLoopExecuteTime(maxEventLoopExecuteTime.toNanos());
+        options.setWarningExceptionTime(maxEventLoopExecuteTime.toMillis() * 1_500_000L);
         options.setAddressResolverOptions(new AddressResolverOptions()
                 .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                 .setCacheMaxTimeToLive(0) // support DNS based service resolution

@@ -43,8 +43,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
 
-    <!-- milliseconds before vert.x complains about blocking the event loop -->
-    <max.event-loop.execute-time>5000</max.event-loop.execute-time>
+    <!-- duration before vert.x complains about blocking the event loop -->
+    <max.event-loop.execute-time>PT5S</max.event-loop.execute-time>
 
     <!-- logging profile used by all Hono components: prod, dev or trace -->
     <logging.profile>prod</logging.profile>
