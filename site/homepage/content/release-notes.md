@@ -2,6 +2,15 @@
 title = "Release Notes"
 +++
 
+## 1.7.0 (not yet released)
+
+### Fixes & Enhancements
+
+* The common configuration property for setting the vert.x instance's max-event-loop-execute-time had erroneously
+  been documented as `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME_MILLIS`, accepting an integer representing the duration as
+  number of milliseconds. However, the correct property is named `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME` and accepts an
+  ISO-8601 Duration string instead of an integer.
+
 ## 1.6.0
 
 ### New Features
