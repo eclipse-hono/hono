@@ -74,7 +74,7 @@ public class ReceiverTest {
     @MethodSource("clientFactoryVariants")
     public void testTelemetryStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
             final VertxTestContext context) {
-        receiver.setProtocolAgnosticApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClientFactory(applicationClientFactory);
         receiver.messageType = "telemetry";
 
         receiver.start().onComplete(
@@ -97,7 +97,7 @@ public class ReceiverTest {
     @MethodSource("clientFactoryVariants")
     public void testEventStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
             final VertxTestContext context) {
-        receiver.setProtocolAgnosticApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClientFactory(applicationClientFactory);
         receiver.messageType = "event";
         receiver.start().onComplete(
                 context.succeeding(result -> {
@@ -119,7 +119,7 @@ public class ReceiverTest {
     @MethodSource("clientFactoryVariants")
     public void testDefaultStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
             final VertxTestContext context) {
-        receiver.setProtocolAgnosticApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClientFactory(applicationClientFactory);
         receiver.messageType = "all";
 
         receiver.start().onComplete(
@@ -142,7 +142,7 @@ public class ReceiverTest {
     @MethodSource("clientFactoryVariants")
     public void testInvalidTypeStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
             final VertxTestContext context) {
-        receiver.setProtocolAgnosticApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClientFactory(applicationClientFactory);
         receiver.messageType = "xxxxx";
         receiver.start().onComplete(
                 context.failing(result -> context.completeNow()));

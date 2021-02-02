@@ -66,8 +66,7 @@ public class Receiver extends AbstractApplicationClient {
     private ApplicationClientFactory<? extends MessageContext> clientFactory;
 
     @Autowired
-    public final void setProtocolAgnosticApplicationClientFactory(
-            final ApplicationClientFactory<? extends MessageContext> factory) {
+    public final void setApplicationClientFactory(final ApplicationClientFactory<? extends MessageContext> factory) {
         this.clientFactory = Objects.requireNonNull(factory);
     }
 
