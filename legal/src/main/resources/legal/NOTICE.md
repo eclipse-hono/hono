@@ -199,7 +199,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/jsonwebtoken/jjwt/${jjwt.version}/jjwt-${jjwt.version}-sources.jar).
 
-### Kafka Clients
+### Kafka Clients ${kafka-clients.version}
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
@@ -207,7 +207,7 @@ Your use of *Kafka Clients* is subject to the terms and conditions of the Apache
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/apache/kafka/clients).
+The source code is available from [GitHub](https://github.com/apache/kafka/tree/${kafka-clients.version}).
 
 ### LOG4J-over-SLF4J ${slf4j.version}
 

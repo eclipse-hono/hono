@@ -51,6 +51,7 @@
     <jgroups.version>4.1.9.Final</jgroups.version>
     <jjwt.version>0.11.2</jjwt.version>
     <junit.jupiter.version>5.7.0</junit.jupiter.version>
+    <kafka-clients.version>2.6.0</kafka-clients.version>
     <log4j.version>2.12.1</log4j.version>
     <logback.version>1.2.3</logback.version>
     <mchange-commons.version>0.2.15</mchange-commons.version>
@@ -428,6 +429,11 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-kafka-client</artifactId>
         <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>${kafka-clients.version}</version>
       </dependency>
 
       <!-- Netty -->
