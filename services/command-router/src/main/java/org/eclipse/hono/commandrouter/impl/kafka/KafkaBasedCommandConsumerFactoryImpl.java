@@ -58,7 +58,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final Tracer tracer;
 
     private CommandTargetMapper commandTargetMapper;
-    private MappingAndDelegatingCommandHandler commandHandler;
+    private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
 
     /**
      * Creates a new factory to process commands via the Kafka cluster.
@@ -105,7 +105,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             return Future.failedFuture("not initialized");
         }
 
-        commandHandler = new MappingAndDelegatingCommandHandler(commandTargetMapper, internalCommandSender, tracer);
+        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(commandTargetMapper, internalCommandSender,
+                tracer);
         //TODO in the next iteration: handling of offsets and commits. 
         // And if required, to use a consumer(at most once) class similar to the AbstractAtLeastOnceKafkaConsumer
         kafkaConsumer

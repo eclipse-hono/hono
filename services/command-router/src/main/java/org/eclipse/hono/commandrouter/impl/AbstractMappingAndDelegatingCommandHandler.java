@@ -10,19 +10,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.commandrouter.impl.kafka;
+package org.eclipse.hono.commandrouter.impl;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommand;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
+import org.eclipse.hono.adapter.client.command.InternalCommandSender;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.CommandConsumer;
-import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -30,41 +26,36 @@ import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
- * Handler for commands received at the tenant-specific topic.
+ * Handler for mapping the received commands and forwarding using
+ * {@link org.eclipse.hono.adapter.client.command.InternalCommandSender}.
  */
-public class MappingAndDelegatingCommandHandler implements Lifecycle {
-    private static final Logger log = LoggerFactory.getLogger(MappingAndDelegatingCommandHandler.class);  
+public abstract class AbstractMappingAndDelegatingCommandHandler implements Lifecycle {
+
+    /**
+     * A logger to be shared with subclasses.
+     */
+    protected final Logger log = LoggerFactory.getLogger(getClass());
+
     private final CommandTargetMapper commandTargetMapper;
-    private final KafkaBasedInternalCommandSender internalCommandSender;
-    private final Tracer tracer;
+    private final InternalCommandSender internalCommandSender;
 
     /**
      * Creates a new MappingAndDelegatingCommandHandler instance.
      *
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
-     * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MappingAndDelegatingCommandHandler(
-            final CommandTargetMapper commandTargetMapper,
-            final KafkaBasedInternalCommandSender internalCommandSender,
-            final Tracer tracer) {
+    public AbstractMappingAndDelegatingCommandHandler(final CommandTargetMapper commandTargetMapper,
+            final InternalCommandSender internalCommandSender) {
         Objects.requireNonNull(commandTargetMapper);
         Objects.requireNonNull(internalCommandSender);
-        Objects.requireNonNull(tracer);
 
         this.commandTargetMapper = commandTargetMapper;
         this.internalCommandSender = internalCommandSender;
-        this.tracer = tracer;
     }
 
     @Override
@@ -73,7 +64,7 @@ public class MappingAndDelegatingCommandHandler implements Lifecycle {
     }
 
     @Override
-        public Future<Void> stop() {
+    public Future<Void> stop() {
         return internalCommandSender.stop();
     }
 
@@ -84,36 +75,10 @@ public class MappingAndDelegatingCommandHandler implements Lifecycle {
      * Determines the target gateway (if applicable) and protocol adapter instance for an incoming command
      * and delegates the command to the resulting protocol adapter instance.
      *
-     * @param consumerRecord The consumer record corresponding to the command.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param commandContext The context of the command to send.
+     * @throws NullPointerException if the commandContext is {@code null}.
      */
-    public void mapAndDelegateIncomingCommandMessage(final KafkaConsumerRecord<String, Buffer> consumerRecord) {
-        Objects.requireNonNull(consumerRecord);
-
-        final KafkaBasedCommand command;
-        try {
-            command = KafkaBasedCommand.from(consumerRecord);
-        } catch (final IllegalArgumentException exception) {
-            log.debug("command record is invalid", exception);
-            return;
-        }
-
-        final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, consumerRecord);
-        final Span currentSpan = CommandConsumer.createSpan("map and delegate command", command.getTenant(),
-                command.getDeviceId(), null, tracer, spanContext);
-        final KafkaBasedCommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan);
-
-        command.logToSpan(currentSpan);
-        if (command.isValid()) {
-            log.trace("received valid command record [{}]", command);
-            mapAndDelegateIncomingCommand(commandContext);
-        } else {
-            log.debug("received invalid command record [{}]", command);
-            commandContext.reject("malformed command message");
-        }
-    }
-
-    private void mapAndDelegateIncomingCommand(final CommandContext commandContext) {
+    protected final void mapAndDelegateIncomingCommand(final CommandContext commandContext) {
         final Command command = commandContext.getCommand();
 
         // determine last used gateway device id

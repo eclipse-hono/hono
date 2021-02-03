@@ -61,7 +61,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     private final AtomicBoolean recreatingConsumers = new AtomicBoolean(false);
     private final AtomicBoolean tryAgainRecreatingConsumers = new AtomicBoolean(false);
 
-    private MappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
+    private ProtonBasedMappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     /**
      * List of tenant ids corresponding to the tenants for which consumers have been registered.
@@ -84,7 +84,8 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     @Override
     public void initialize(final CommandTargetMapper commandTargetMapper) {
         Objects.requireNonNull(commandTargetMapper);
-        mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(connection, commandTargetMapper);
+        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(connection,
+                commandTargetMapper);
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
         initialized.set(true);
     }

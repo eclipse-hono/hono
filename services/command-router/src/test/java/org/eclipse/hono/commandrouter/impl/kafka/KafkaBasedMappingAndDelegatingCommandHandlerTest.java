@@ -48,11 +48,11 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
 /**
- * Verifies behavior of {@link MappingAndDelegatingCommandHandler}.
+ * Verifies behavior of {@link KafkaBasedMappingAndDelegatingCommandHandler}.
  */
-public class MappingAndDelegatingCommandHandlerTest {
+public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
     private CommandTargetMapper commandTargetMapper;
-    private MappingAndDelegatingCommandHandler cmdHandler;
+    private KafkaBasedMappingAndDelegatingCommandHandler cmdHandler;
     private KafkaBasedInternalCommandSender internalCommandSender;
     private String tenantId;
     private String deviceId;
@@ -73,13 +73,13 @@ public class MappingAndDelegatingCommandHandlerTest {
 
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
 
-        cmdHandler = new MappingAndDelegatingCommandHandler(commandTargetMapper, internalCommandSender,
+        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(commandTargetMapper, internalCommandSender,
                 TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
     }
 
     /**
      * Verifies the behaviour of the 
-     * {@link MappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
+     * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
      * method in a scenario with a valid command record.
      */
     @Test
@@ -106,7 +106,7 @@ public class MappingAndDelegatingCommandHandlerTest {
 
     /**
      * Verifies the behaviour of the 
-     * {@link MappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
+     * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
      * method in a scenario with an invalid command record.
      */
     @Test
@@ -123,7 +123,7 @@ public class MappingAndDelegatingCommandHandlerTest {
 
     /**
      * Verifies the behaviour of the 
-     * {@link MappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
+     * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
      * method in a scenario where no target adapter instance is found for the incoming command record.
      */
     @Test
@@ -143,7 +143,7 @@ public class MappingAndDelegatingCommandHandlerTest {
 
     /**
      * Verifies the behaviour of the 
-     * {@link MappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
+     * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
      * method in a scenario where there is no device id in the incoming command record.
      */
     @Test
