@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,10 +21,10 @@ import java.util.Objects;
  */
 public class SignatureSupportingConfigProperties {
 
-    private String sharedSecret;
-    private String keyPath;
-    private long tokenExpirationSeconds = 600L;
-    private String certificatePath;
+    private String sharedSecret = null;
+    private String keyPath = null;
+    private long tokenExpiration = 600L;
+    private String certPath = null;
 
     /**
      * Gets the secret used for creating and validating HmacSHA256 based signatures.
@@ -78,7 +78,7 @@ public class SignatureSupportingConfigProperties {
      * @return The number of seconds after which tokens expire.
      */
     public final long getTokenExpiration() {
-        return tokenExpirationSeconds;
+        return tokenExpiration;
     }
 
     /**
@@ -93,7 +93,7 @@ public class SignatureSupportingConfigProperties {
         if (seconds <= 0) {
             throw new IllegalArgumentException("token expiration must be > 0");
         }
-        this.tokenExpirationSeconds = seconds;
+        this.tokenExpiration = seconds;
     }
 
     /**
@@ -106,7 +106,7 @@ public class SignatureSupportingConfigProperties {
      * @throws NullPointerException if the path is {@code null}.
      */
     public final void setCertPath(final String certPath) {
-        this.certificatePath = Objects.requireNonNull(certPath);
+        this.certPath = Objects.requireNonNull(certPath);
     }
 
     /**
@@ -116,7 +116,7 @@ public class SignatureSupportingConfigProperties {
      * @return The path to the file or {@code null} if not set.
      */
     public final String getCertPath() {
-        return certificatePath;
+        return certPath;
     }
 
     /**
@@ -134,6 +134,6 @@ public class SignatureSupportingConfigProperties {
      * @return {@code true} if any of sharedSecret or certificatePath is not {@code null}.
      */
     public final boolean isAppropriateForValidating() {
-        return sharedSecret != null || certificatePath != null;
+        return sharedSecret != null || certPath != null;
     }
 }

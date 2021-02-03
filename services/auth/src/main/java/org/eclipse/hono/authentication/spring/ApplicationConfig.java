@@ -11,12 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.impl;
+package org.eclipse.hono.authentication.spring;
 
 import org.eclipse.hono.authentication.AuthenticationEndpoint;
 import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
-import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;

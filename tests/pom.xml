@@ -116,6 +116,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.amqp-adapter.image>hono-adapter-amqp-vertx</hono.amqp-adapter.image>
     <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
 
+    <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
+    <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
+
     <default.java.options>
       -XX:MinRAMPercentage=80
       -XX:MaxRAMPercentage=90
@@ -362,6 +365,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus</hono.mqtt-adapter.image>
         <hono.amqp-adapter.config-dir>opt/hono/config</hono.amqp-adapter.config-dir>
         <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus</hono.amqp-adapter.image>
+        <hono.auth-server.config-dir>opt/hono/config</hono.auth-server.config-dir>
+        <hono.auth-server.image>hono-service-auth-quarkus</hono.auth-server.image>
       </properties>
     </profile>
     <profile>
@@ -600,7 +605,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.repository}/hono-service-auth-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-auth:${project.version}</from>
+                    <from>${docker.repository}/${hono.auth-server.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -609,7 +614,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/auth</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>${hono.auth-server.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
