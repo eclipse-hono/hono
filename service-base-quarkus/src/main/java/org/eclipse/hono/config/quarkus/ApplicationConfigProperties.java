@@ -12,18 +12,15 @@
  */
 
 
-package org.eclipse.hono.client.quarkus;
-
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+package org.eclipse.hono.config.quarkus;
 
 import io.quarkus.arc.config.ConfigProperties;
 
 
 /**
- * Standard {@link RequestResponseClientConfigProperties} which can be bound to environment
- * variables by Quarkus.
+ * Standard {@link ApplicationConfigProperties} which can be bound to environment variables by Quarkus.
  *
  */
-@ConfigProperties(namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class QuarkusRequestResponseClientConfigProperties extends RequestResponseClientConfigProperties {
+@ConfigProperties(prefix = "hono.app", namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
+public class ApplicationConfigProperties extends org.eclipse.hono.config.ApplicationConfigProperties {
 }

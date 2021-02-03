@@ -37,7 +37,7 @@ public class ResourceLimitChecksProducer {
     @Produces
     @IfBuildProperty(name = "hono.metrics", stringValue = "prometheus")
     ResourceLimitChecks prometheusResourceLimitChecks(
-            final ResourceLimitChecksConfig config,
+            final PrometheusBasedResourceLimitChecksConfig config,
             final Vertx vertx,
             final Tracer tracer) {
 

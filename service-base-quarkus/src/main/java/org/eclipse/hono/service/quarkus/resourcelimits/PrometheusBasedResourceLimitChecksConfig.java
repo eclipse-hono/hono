@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@
 
 package org.eclipse.hono.service.quarkus.resourcelimits;
 
-import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
-
 import io.quarkus.arc.config.ConfigProperties;
 import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
 
@@ -23,5 +21,5 @@ import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
  * Resource Limit Checks configuration.
  */
 @ConfigProperties(prefix = "hono.resourceLimits.prometheusBased", namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class ResourceLimitChecksConfig extends PrometheusBasedResourceLimitChecksConfig {
+public class PrometheusBasedResourceLimitChecksConfig extends org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig {
 }

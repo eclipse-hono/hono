@@ -12,17 +12,16 @@
  */
 
 
-package org.eclipse.hono.config.quarkus;
-
-import org.eclipse.hono.config.ServerConfig;
+package org.eclipse.hono.service.quarkus.monitoring;
 
 import io.quarkus.arc.config.ConfigProperties;
 
 
 /**
- * Standard {@link ServerConfig} which can be bound to environment variables by Quarkus.
+ * Standard {@link ConnectionEventProducerConfig} which can be bound to environment
+ * variables by Quarkus.
  *
  */
-@ConfigProperties(namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class QuarkusServerConfig extends ServerConfig {
+@ConfigProperties(prefix = "hono.connectionEvents", namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
+public class ConnectionEventProducerConfig extends org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig {
 }

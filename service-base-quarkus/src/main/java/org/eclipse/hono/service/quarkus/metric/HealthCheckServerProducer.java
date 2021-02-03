@@ -19,7 +19,7 @@ import java.util.List;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.config.quarkus.QuarkusServerConfig;
+import org.eclipse.hono.config.quarkus.ServerConfig;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.metric.PrometheusScrapingResource;
@@ -70,7 +70,7 @@ public class HealthCheckServerProducer {
     HealthCheckServer healthCheckServer(
             final Vertx vertx,
             @ConfigPrefix("hono.healthCheck")
-            final QuarkusServerConfig healthCheckkServerConfig,
+            final ServerConfig healthCheckkServerConfig,
             final List<Handler<Router>> additionalResources) {
         final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, healthCheckkServerConfig);
         server.setAdditionalResources(additionalResources);

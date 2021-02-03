@@ -14,15 +14,13 @@
 
 package org.eclipse.hono.config.quarkus;
 
-import org.eclipse.hono.config.ApplicationConfigProperties;
-
 import io.quarkus.arc.config.ConfigProperties;
 
 
 /**
- * Standard {@link ApplicationConfigProperties} which can be bound to environment variables by Quarkus.
+ * Standard {@link ServerConfig} which can be bound to environment variables by Quarkus.
  *
  */
 @ConfigProperties(namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class QuarkusApplicationConfigProperties extends ApplicationConfigProperties {
+public class ServerConfig extends org.eclipse.hono.config.ServerConfig {
 }

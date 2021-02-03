@@ -28,7 +28,7 @@ import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
  * A collection of properties for configuring the connection to an Infinispan cache that contains
  * Device Connection information.
  */
-@ConfigProperties(namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
+@ConfigProperties(prefix = "hono.deviceConnection", namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
 public class DeviceConnectionCacheConfig extends InfinispanRemoteConfigurationProperties {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceConnectionCacheConfig.class);

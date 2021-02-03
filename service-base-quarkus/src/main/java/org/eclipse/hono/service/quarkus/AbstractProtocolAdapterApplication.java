@@ -38,12 +38,11 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrati
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.quarkus.QuarkusRequestResponseClientConfigProperties;
+import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.config.quarkus.QuarkusApplicationConfigProperties;
+import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionClient;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
@@ -56,7 +55,7 @@ import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
-import org.eclipse.hono.service.quarkus.monitoring.QuarkusConnectionEventProducerConfig;
+import org.eclipse.hono.service.quarkus.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -76,6 +75,7 @@ import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.cpu.CpuCoreSensor;
 
 /**
  * A Quarkus main application base class for Hono protocol adapters.
@@ -104,40 +104,40 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     protected ResourceLimitChecks resourceLimitChecks;
 
-    @ConfigPrefix("hono.app")
-    protected QuarkusApplicationConfigProperties appConfig;
+    @Inject
+    protected ConnectionEventProducerConfig connectionEventsConfig;
+
+    @Inject
+    protected C protocolAdapterProperties;
+
+    @Inject
+    protected ApplicationConfigProperties appConfig;
 
     @ConfigPrefix("hono.messaging")
-    protected QuarkusRequestResponseClientConfigProperties downstreamSenderConfig;
+    protected RequestResponseClientConfigProperties downstreamSenderConfig;
 
     @ConfigPrefix("hono.command")
-    protected QuarkusRequestResponseClientConfigProperties commandConfig;
+    protected RequestResponseClientConfigProperties commandConfig;
 
     @ConfigPrefix("hono.tenant")
-    protected QuarkusRequestResponseClientConfigProperties tenantClientConfig;
+    protected RequestResponseClientConfigProperties tenantClientConfig;
 
     @ConfigPrefix("hono.registration")
-    protected QuarkusRequestResponseClientConfigProperties deviceRegistrationClientConfig;
+    protected RequestResponseClientConfigProperties deviceRegistrationClientConfig;
 
     @ConfigPrefix("hono.credentials")
-    protected QuarkusRequestResponseClientConfigProperties credentialsClientConfig;
+    protected RequestResponseClientConfigProperties credentialsClientConfig;
 
     @ConfigPrefix("hono.commandRouter")
-    protected QuarkusRequestResponseClientConfigProperties commandRouterConfig;
+    protected RequestResponseClientConfigProperties commandRouterConfig;
 
     // either this property or the deviceConnectionCacheConfig property
     // will contain a valid configuration
     @ConfigPrefix("hono.deviceConnection")
-    protected QuarkusRequestResponseClientConfigProperties deviceConnectionClientConfig;
-
-    @ConfigPrefix("hono.deviceConnection")
-    protected DeviceConnectionCacheConfig deviceConnectionCacheConfig;
-
-    @ConfigPrefix("hono.connectionEvents")
-    protected QuarkusConnectionEventProducerConfig connectionEventsConfig;
+    protected RequestResponseClientConfigProperties deviceConnectionClientConfig;
 
     @Inject
-    protected C protocolAdapterProperties;
+    protected DeviceConnectionCacheConfig deviceConnectionCacheConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;
@@ -195,9 +195,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     System.getProperty("java.vm.name"),
                     System.getProperty("java.vm.vendor"),
                     Runtime.getRuntime().maxMemory() >> 20,
-                    Runtime.getRuntime().availableProcessors());
+                    CpuCoreSensor.availableProcessors());
         }
-
     }
 
     /**

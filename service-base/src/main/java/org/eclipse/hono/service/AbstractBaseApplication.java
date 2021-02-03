@@ -33,6 +33,7 @@ import org.springframework.boot.ApplicationRunner;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.cpu.CpuCoreSensor;
 
 /**
  * A base class for implementing Spring Boot applications.
@@ -143,7 +144,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
                     System.getProperty("java.vm.name"),
                     System.getProperty("java.vm.vendor"),
                     Runtime.getRuntime().maxMemory() >> 20,
-                    Runtime.getRuntime().availableProcessors());
+                    CpuCoreSensor.availableProcessors());
         }
 
         final int startupTimeoutSeconds = config.getStartupTimeout();
