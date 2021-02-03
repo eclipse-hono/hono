@@ -56,7 +56,7 @@
                       <port>5672</port>
                     </ports>
                     <env>
-                      <JAVA_MAIN_CLASS>org.eclipse.hono.service.auth.impl.Application</JAVA_MAIN_CLASS>
+                      <JAVA_MAIN_CLASS>org.eclipse.hono.authentication.spring.Application</JAVA_MAIN_CLASS>
                     </env>
                   </build>
                 </image>

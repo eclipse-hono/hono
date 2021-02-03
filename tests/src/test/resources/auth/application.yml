@@ -2,7 +2,7 @@ hono:
   app:
     maxInstances: 1
   healthCheck:
-    insecurePortBindAddress: 0.0.0.0
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: ${vertx.health.port}
   auth:
     amqp:
@@ -10,15 +10,30 @@ hono:
       keyPath: /etc/hono/certs/auth-server-key.pem
       certPath: /etc/hono/certs/auth-server-cert.pem
     svc:
-      permissionsPath: /etc/hono/permissions.json
+      permissionsPath: "/${hono.auth-server.config-dir}/permissions.json"
       signing:
         # extend token expiration to 1h in order to prevent
         # connection loss during test execution
         tokenExpiration: 3600
       supportedSaslMechanisms: "PLAIN"
   vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    maxEventLoopExecuteTime: "${max.event-loop.execute-time}"
     preferNative: true
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.authentication":
+        level: INFO
+      "org.eclipse.hono.authentication.file":
+        level: INFO
+  vertx:
+    prefer-native-transport: true
 
 spring:
   jmx:

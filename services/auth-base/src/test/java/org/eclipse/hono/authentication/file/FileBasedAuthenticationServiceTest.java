@@ -27,6 +27,7 @@ import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
+import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,9 +52,27 @@ public class FileBasedAuthenticationServiceTest {
     private static final String TOKEN = "not-a-real-token";
     private static final Duration TOKEN_LIFETIME = Duration.ofMinutes(5);
     private FileBasedAuthenticationService authService;
+    private FileBasedAuthenticationServiceConfigProperties props;
 
     @BeforeEach
     void createInstance(final Vertx vertx) {
+        this.props = new FileBasedAuthenticationServiceConfigProperties() {
+            private final SignatureSupportingConfigProperties signatureProps = new SignatureSupportingConfigProperties();
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public SignatureSupportingConfigProperties getSigning() {
+                return signatureProps;
+            }
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public SignatureSupportingConfigProperties getValidation() {
+                return signatureProps;
+            }
+        };
         this.authService = getService("target/test-classes/authentication-service-test-permissions.json");
         authService.init(vertx, vertx.getOrCreateContext());
     }
@@ -64,7 +83,6 @@ public class FileBasedAuthenticationServiceTest {
         when(tokenFactory.createToken(anyString(), any(Authorities.class))).thenReturn(TOKEN);
         when(tokenFactory.getTokenLifetime()).thenReturn(TOKEN_LIFETIME);
 
-        final var props = new FileBasedAuthenticationServiceConfigProperties();
         props.setPermissionsPath(permissionsPath);
 
         final var service = new FileBasedAuthenticationService();
@@ -88,7 +106,6 @@ public class FileBasedAuthenticationServiceTest {
     @Test
     public void testDoStartLoadsPermissionsUsingUriSyntax(final Vertx vertx, final VertxTestContext ctx) {
 
-        final var props = new FileBasedAuthenticationServiceConfigProperties();
         props.setPermissionsPath("file://target/test-classes/authentication-service-test-permissions.json");
         authService.setConfig(props);
 
@@ -104,7 +121,6 @@ public class FileBasedAuthenticationServiceTest {
     @Test
     public void testDoStartFailsForNonExistingPermissionsPath(final Vertx vertx, final VertxTestContext ctx) {
 
-        final var props = new FileBasedAuthenticationServiceConfigProperties();
         props.setPermissionsPath("/no/such/path");
         authService.setConfig(props);
 

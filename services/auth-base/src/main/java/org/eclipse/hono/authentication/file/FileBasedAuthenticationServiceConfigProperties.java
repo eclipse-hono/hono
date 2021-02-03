@@ -24,10 +24,10 @@ import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
  * Configuration properties for the {@code FileBasedAuthenticationService}.
  *
  */
-public class FileBasedAuthenticationServiceConfigProperties {
+public abstract class FileBasedAuthenticationServiceConfigProperties {
 
-    private final SignatureSupportingConfigProperties signing = new SignatureSupportingConfigProperties();
-    private String permissionsPath;
+    // explicitly initialized with null so that Quarkus doesn't complain about missing configuration property
+    private String permissionsPath = null;
     private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
 
     /**
@@ -35,18 +35,14 @@ public class FileBasedAuthenticationServiceConfigProperties {
      *
      * @return The properties.
      */
-    public final SignatureSupportingConfigProperties getSigning() {
-        return signing;
-    }
+    public abstract SignatureSupportingConfigProperties getSigning();
 
     /**
      * Gets the properties for determining key material for validating tokens issued by this service.
      *
      * @return The properties.
      */
-    public final SignatureSupportingConfigProperties getValidation() {
-        return signing;
-    }
+    public abstract SignatureSupportingConfigProperties getValidation();
 
     /**
      * Gets the path to the file that the authorization rules are loaded from.
