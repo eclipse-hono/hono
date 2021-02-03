@@ -61,12 +61,12 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
- * Verifies behavior of {@link MappingAndDelegatingCommandHandler}.
+ * Verifies behavior of {@link ProtonBasedMappingAndDelegatingCommandHandler}.
  */
-public class MappingAndDelegatingCommandHandlerTest {
+public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
     private CommandTargetMapper commandTargetMapper;
-    private MappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
+    private ProtonBasedMappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
     // sender used in the DelegatedCommandSender
     private ProtonSender sender;
 
@@ -97,8 +97,8 @@ public class MappingAndDelegatingCommandHandlerTest {
 
         commandTargetMapper = mock(CommandTargetMapper.class);
 
-        mappingAndDelegatingCommandHandler = new MappingAndDelegatingCommandHandler(
-                connection, commandTargetMapper);
+        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(connection,
+                commandTargetMapper);
     }
 
     /**

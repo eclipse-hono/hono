@@ -13,59 +13,47 @@
 
 package org.eclipse.hono.commandrouter.impl.amqp;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.client.command.Command;
-import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandSender;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
  * Handler for commands received at the tenant-specific address.
  */
-public class MappingAndDelegatingCommandHandler {
-
-    private static final Logger LOG = LoggerFactory.getLogger(MappingAndDelegatingCommandHandler.class);
-
-    private final HonoConnection connection;
-    private final CommandTargetMapper commandTargetMapper;
-    private final ProtonBasedInternalCommandSender internalCommandSender;
+public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappingAndDelegatingCommandHandler {
+    private final Tracer tracer;
 
     /**
-     * Creates a new MappingAndDelegatingCommandHandler instance.
+     * Creates a new ProtonBasedMappingAndDelegatingCommandHandler instance.
      *
      * @param connection The connection to the AMQP network.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MappingAndDelegatingCommandHandler(
+    public ProtonBasedMappingAndDelegatingCommandHandler(
             final HonoConnection connection,
             final CommandTargetMapper commandTargetMapper) {
-        this.connection = Objects.requireNonNull(connection);
-        this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
-
-        this.internalCommandSender = new ProtonBasedInternalCommandSender(connection);
+        super(commandTargetMapper, new ProtonBasedInternalCommandSender(connection));
+        this.tracer = connection.getTracer();
     }
 
     /**
@@ -91,7 +79,7 @@ public class MappingAndDelegatingCommandHandler {
 
         // this is the place where a command message on the "command/${tenant}" address arrives *first*
         if (Strings.isNullOrEmpty(message.getAddress())) {
-            LOG.debug("command message has no address");
+            log.debug("command message has no address");
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing command target address"));
             messageDelivery.disposition(rejected, true);
@@ -100,13 +88,13 @@ public class MappingAndDelegatingCommandHandler {
         final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(message.getAddress());
         final String deviceId = targetAddress.getResourceId();
         if (!tenantId.equals(targetAddress.getTenantId())) {
-            LOG.debug("command message address contains invalid tenant [expected: {}, found: {}]", tenantId, targetAddress.getTenantId());
+            log.debug("command message address contains invalid tenant [expected: {}, found: {}]", tenantId, targetAddress.getTenantId());
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized to send command to tenant"));
             messageDelivery.disposition(rejected, true);
             return;
         } else if (Strings.isNullOrEmpty(deviceId)) {
-            LOG.debug("invalid command message address: {}", message.getAddress());
+            log.debug("invalid command message address: {}", message.getAddress());
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
             messageDelivery.disposition(rejected, true);
@@ -115,13 +103,13 @@ public class MappingAndDelegatingCommandHandler {
 
         final ProtonBasedCommand command = ProtonBasedCommand.from(message);
         if (command.isValid()) {
-            LOG.trace("received valid command message: {}", command);
+            log.trace("received valid command message: {}", command);
         } else {
-            LOG.debug("received invalid command message: {}", command);
+            log.debug("received invalid command message: {}", command);
         }
-        final SpanContext spanContext = TracingHelper.extractSpanContext(connection.getTracer(), message);
+        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
         final Span currentSpan = CommandConsumer.createSpan("map and delegate command", tenantId, deviceId, null,
-                connection.getTracer(), spanContext);
+                tracer, spanContext);
         command.logToSpan(currentSpan);
         final ProtonBasedCommandContext commandContext = new ProtonBasedCommandContext(command, messageDelivery, currentSpan);
         if (command.isValid()) {
@@ -131,47 +119,4 @@ public class MappingAndDelegatingCommandHandler {
             commandContext.reject("malformed command message");
         }
     }
-
-    private void mapAndDelegateIncomingCommand(final CommandContext commandContext) {
-        final Command command = commandContext.getCommand();
-
-        // determine last used gateway device id
-        LOG.trace("determine command target gateway/adapter for [{}]", command);
-        commandTargetMapper
-                .getTargetGatewayAndAdapterInstance(command.getTenant(), command.getDeviceId(), commandContext.getTracingContext())
-                .onSuccess(result -> {
-                    final String targetAdapterInstanceId = result
-                            .getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
-                    final String targetDeviceId = result.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
-                    final String targetGatewayId = targetDeviceId.equals(command.getDeviceId()) ? null : targetDeviceId;
-
-                    if (Objects.isNull(targetGatewayId)) {
-                        LOG.trace("command not mapped to gateway, use original device id [{}]", command.getDeviceId());
-                    } else {
-                        command.setGatewayId(targetGatewayId);
-                        LOG.trace("determined target gateway [{}] for device [{}]", targetGatewayId,
-                                command.getDeviceId());
-                        commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
-                    }
-
-                    LOG.trace("delegate command to target adapter instance '{}' [command: {}]", targetAdapterInstanceId,
-                            commandContext.getCommand());
-                    internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId);
-                })
-                .onFailure(cause -> {
-                    final String errorMsg;
-
-                    if (ServiceInvocationException.extractStatusCode(cause) == HttpURLConnection.HTTP_NOT_FOUND) {
-                        errorMsg = "no target adapter instance found for command with device id "
-                                + command.getDeviceId();
-                    } else {
-                        errorMsg = "error getting target gateway and adapter instance for command with device id"
-                                + command.getDeviceId();
-                    }
-                    LOG.debug(errorMsg, cause);
-                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg, cause);
-                    commandContext.release();
-                });
-    }
-
 }
