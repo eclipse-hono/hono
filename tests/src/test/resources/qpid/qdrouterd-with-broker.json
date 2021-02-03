@@ -8,7 +8,8 @@
   ["authServicePlugin", {
     "name": "Hono Auth",
     "host": "hono-service-auth.hono",
-    "port": 5672
+    "port": 5671,
+    "sslProfile": "external"
   }],
 
   ["sslProfile", {

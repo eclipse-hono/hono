@@ -622,7 +622,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   </build>
                   <run>
                     <ports>
-                      <port>+auth.ip:auth.amqp.port:5672</port>
+                      <port>+auth.ip:auth.amqps.port:5671</port>
                       <port>+auth.ip:auth.health.port:${vertx.health.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/auth.port.properties</portPropertyFile>
@@ -1358,7 +1358,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               </environmentVariables>
               <systemProperties>
                 <auth.host>${auth.ip}</auth.host>
-                <auth.amqp.port>${auth.amqp.port}</auth.amqp.port>
+                <auth.amqps.port>${auth.amqps.port}</auth.amqps.port>
                 <hono.username>hono-client</hono.username>
                 <hono.password>secret</hono.password>
                 <tenant.admin.username>http-adapter@HONO</tenant.admin.username>

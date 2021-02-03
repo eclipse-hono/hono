@@ -22,8 +22,9 @@ hono:
 
   auth:
     host: ${hono.auth.host}
-    port: 5672
+    port: 5671
     name: device-registry
+    trustStorePath: "/etc/hono/certs/trusted-certs.pem"
     validation:
       certPath: /etc/hono/certs/auth-server-cert.pem
 

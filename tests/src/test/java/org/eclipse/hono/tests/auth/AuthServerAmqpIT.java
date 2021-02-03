@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,7 @@ import io.vertx.junit5.VertxTestContext;
 
 
 /**
- * Tests verifying behavior of a running Auth server.
+ * Tests verifying behavior of a running Authentication server.
  *
  */
 @ExtendWith(VertxExtension.class)
@@ -62,6 +62,7 @@ public class AuthServerAmqpIT {
         clientProps.setHost(host);
         clientProps.setPort(port);
         clientProps.setName("test-client");
+        clientProps.setTrustStorePath(IntegrationTestSupport.TRUST_STORE_PATH);
 
         final ConnectionFactory clientFactory = new ConnectionFactoryImpl(vertx, clientProps);
         return new AuthenticationServerClient(vertx, clientFactory);

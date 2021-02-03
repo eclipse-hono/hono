@@ -7,8 +7,9 @@ hono:
     insecurePort: ${vertx.health.port}
   auth:
     host: ${hono.auth.host}
-    port: 5672
+    port: 5671
     name: device-connection
+    trustStorePath: "/etc/hono/certs/trusted-certs.pem"
     validation:
       certPath: /etc/hono/certs/auth-server-cert.pem
   deviceConnection:

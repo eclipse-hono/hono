@@ -156,7 +156,7 @@ public final class IntegrationTestSupport {
      * The name of the system property to use for setting the port number that the Auth service
      * should listen on.
      */
-    public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
+    public static final String PROPERTY_AUTH_PORT = "auth.amqps.port";
     /**
      * The name of the system property to use for setting the username that protocol adapters
      * use for authenticating to the Device Registry in a SASL handshake.
@@ -302,7 +302,7 @@ public final class IntegrationTestSupport {
     /**
      * The port number that the Auth service listens on.
      */
-    public static final int AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
+    public static final int AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQPS);
 
     /**
      * The username of the principal that has access to the DEFAULT_TENANT only.

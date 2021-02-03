@@ -6,8 +6,7 @@ hono:
     insecurePort: ${vertx.health.port}
   auth:
     amqp:
-      insecurePortEnabled: true
-      insecurePortBindAddress: 0.0.0.0
+      bindAddress: "0.0.0.0"
       keyPath: /etc/hono/certs/auth-server-key.pem
       certPath: /etc/hono/certs/auth-server-cert.pem
     svc:
@@ -16,6 +15,7 @@ hono:
         # extend token expiration to 1h in order to prevent
         # connection loss during test execution
         tokenExpiration: 3600
+      supportedSaslMechanisms: "PLAIN"
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
