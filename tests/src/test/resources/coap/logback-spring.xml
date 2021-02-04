@@ -29,25 +29,33 @@
   </root>
 
   <springProfile name="trace">
-    <logger name="org.eclipse.hono.adapter" level="TRACE"/>
+    <logger name="org.eclipse.hono.adapter.coap" level="TRACE"/>
+    <logger name="org.eclipse.hono.adapter.coap.impl" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.client.amqp" level="TRACE"/>
+    <logger name="org.eclipse.hono.client.impl" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.auth" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.auth.device" level="TRACE"/>
+    <logger name="org.eclipse.hono.util" level="TRACE"/>
   </springProfile>
 
   <springProfile name="dev">
-    <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
+    <logger name="org.eclipse.hono.adapter.coap" level="DEBUG"/>
+    <logger name="org.eclipse.hono.adapter.coap.impl" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.client.amqp" level="DEBUG"/>
-    <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.impl" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service.auth.device" level="DEBUG"/>
+    <logger name="org.eclipse.hono.util" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
-    <logger name="org.eclipse.hono" level="INFO"/>
   </springProfile>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>

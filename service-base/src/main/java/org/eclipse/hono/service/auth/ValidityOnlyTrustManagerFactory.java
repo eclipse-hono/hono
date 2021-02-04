@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import java.time.Instant;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
 
@@ -33,7 +32,7 @@ import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 
 
 /**
- * A {@link TrustManagerFactory} that trusts an X.509 certificate that is currently
+ * A {@link javax.net.ssl.TrustManagerFactory} that trusts an X.509 certificate that is currently
  * valid according to its <em>not before</em> and <em>not after</em> properties.
  *
  */
@@ -80,8 +79,10 @@ public final class ValidityOnlyTrustManagerFactory extends SimpleTrustManagerFac
                     // where the certificate's signature should be validated using the
                     // tenant's root CA certificate
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("accepting client certificate [not before: {}, not after: {}, issuer DN: {}]",
-                                notBefore, notAfter, deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253));
+                        LOG.debug("accepting client certificate [not before: {}, not after: {}, subject DN: {}, issuer DN: {}]",
+                                notBefore, notAfter,
+                                deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253),
+                                deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253));
                     }
                 }
             }
