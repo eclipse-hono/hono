@@ -47,6 +47,7 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
