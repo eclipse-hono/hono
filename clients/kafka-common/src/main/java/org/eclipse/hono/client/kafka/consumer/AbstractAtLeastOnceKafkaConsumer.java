@@ -262,6 +262,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     private Future<Void> commit(final boolean retry) {
+        if (offsetsToBeCommitted.isEmpty()) {
+            return Future.succeededFuture();
+        }
+
         final Promise<Void> commitPromise = Promise.promise();
         kafkaConsumer.commit(commitPromise);
         return commitPromise.future()
@@ -283,6 +287,11 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     private Future<Map<TopicPartition, OffsetAndMetadata>> commitCurrentOffsets() {
+        if (offsetsToBeCommitted.isEmpty()) {
+            LOG.debug("no offsets to commit");
+            return Future.succeededFuture();
+        }
+
         LOG.debug("committing the current offsets");
         LOG.trace("committing offsets: {}", offsetsToBeCommitted);
 
