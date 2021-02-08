@@ -77,9 +77,9 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  */
 public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
-    // TODO add unit test
-
     private static final Logger LOG = LoggerFactory.getLogger(AbstractAtLeastOnceKafkaConsumer.class);
+
+    boolean stopped = false; // visible for testing
 
     private final KafkaConsumer<String, Buffer> kafkaConsumer;
     private final Set<String> topics;
@@ -88,7 +88,6 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
     private final Map<TopicPartition, OffsetAndMetadata> offsetsToBeCommitted = new HashMap<>();
-    private boolean stopped = true;
 
     /**
      * Creates a new consumer.
