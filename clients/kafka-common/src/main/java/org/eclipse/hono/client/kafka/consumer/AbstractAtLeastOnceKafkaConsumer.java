@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.apache.kafka.common.errors.TimeoutException;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -214,10 +215,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                     final Promise<KafkaConsumerRecords<String, Buffer>> pollPromise = Promise.promise();
                     kafkaConsumer.poll(pollTimeout, pollPromise);
                     return pollPromise.future()
-                            .onSuccess(records -> {
-                                stopped = false;
-                                handleBatch(records);
-                            }) // do not wait for the processing to finish
+                            .onSuccess(this::handleBatch) // do not wait for the processing to finish
                             .recover(cause -> Future.failedFuture(new KafkaConsumerPollException(cause)))
                             .mapEmpty();
                 });
@@ -237,29 +235,24 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
+        try {
+            LOG.debug("Polled {} records", records.size());
 
-        LOG.debug("Polled {} records", records.size());
+            for (int i = 0; i < records.size(); i++) {
+                if (stopped) {
+                    return;
+                }
 
-        for (int i = 0; i < records.size(); i++) {
-            if (stopped) {
-                return;
-            }
-            final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
-            try {
+                final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
                 final T message = createMessage(record);
                 messageHandler.handle(message);
                 addToCurrentOffsets(record);
-            } catch (final Exception ex) {
-                LOG.error("Error handling record, closing the consumer: ", ex);
-                tryCommitAndClose().onComplete(v -> closeHandler.handle(ex));
-                return;
             }
+            commit(true).compose(ok -> poll()).onSuccess(this::handleBatch);
+        } catch (final Exception ex) {
+            LOG.error("Error handling record, closing the consumer: ", ex);
+            tryCommitAndClose().onComplete(v -> closeHandler.handle(ex));
         }
-
-        commit(true)
-                .compose(ok -> poll())
-                .onSuccess(this::handleBatch);
-
     }
 
     private Future<KafkaConsumerRecords<String, Buffer>> poll() {
@@ -301,7 +294,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 })
                 .recover(cause -> {
                     LOG.error("Error committing offsets: " + cause);
-                    if ((cause instanceof org.apache.kafka.common.errors.TimeoutException) && retry) {
+                    if ((cause instanceof TimeoutException) && retry) {
                         LOG.debug("Committing offsets timed out. Maybe increase 'default.api.timeout.ms'?");
                         return commit(false); // retry once
                     } else {
