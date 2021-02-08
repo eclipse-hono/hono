@@ -15,19 +15,15 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -226,8 +222,21 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
 
         LOG.debug("Polled {} records", records.size());
-        CompositeFuture.all(processBatch(records))
-                .compose(ok -> commit(true))
+
+        for (int i = 0; i < records.size(); i++) {
+            final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
+            try {
+                final T message = createMessage(record);
+                messageHandler.handle(message);
+                addToCurrentOffsets(record);
+            } catch (final Exception ex) {
+                LOG.error("Error handling record, closing the consumer: ", ex);
+                tryCommitAndClose();
+                return;
+            }
+        }
+
+        commit(true)
                 .compose(ok -> poll())
                 .onSuccess(this::handleBatch);
 
@@ -243,27 +252,6 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                     closeAndCallHandler(exception);
                     return Future.failedFuture(exception);
                 });
-    }
-
-    @SuppressWarnings("rawtypes")
-    private List<Future> processBatch(final KafkaConsumerRecords<String, Buffer> records) {
-        return IntStream.range(0, records.size())
-                .mapToObj(records::recordAt)
-                .map(this::processRecord)
-                .collect(Collectors.toList());
-    }
-
-    private Future<Void> processRecord(final KafkaConsumerRecord<String, Buffer> record) {
-        try {
-            final T message = createMessage(record);
-            messageHandler.handle(message);
-            addToCurrentOffsets(record);
-            return Future.succeededFuture();
-        } catch (final Exception ex) {
-            LOG.error("Error handling record, closing the consumer: ", ex);
-            tryCommitAndClose();
-            return Future.failedFuture(ex);
-        }
     }
 
     private void addToCurrentOffsets(final KafkaConsumerRecord<String, Buffer> record) {
