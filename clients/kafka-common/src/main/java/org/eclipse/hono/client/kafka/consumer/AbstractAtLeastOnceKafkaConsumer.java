@@ -85,6 +85,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
     private final Map<TopicPartition, OffsetAndMetadata> offsetsToBeCommitted = new HashMap<>();
+    private boolean stopped = true;
 
     /**
      * Creates a new consumer.
@@ -200,7 +201,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                     final Promise<KafkaConsumerRecords<String, Buffer>> pollPromise = Promise.promise();
                     kafkaConsumer.poll(pollTimeout, pollPromise);
                     return pollPromise.future()
-                            .onSuccess(this::handleBatch) // do not wait for the processing to finish
+                            .onSuccess(records -> {
+                                stopped = false;
+                                handleBatch(records);
+                            }) // do not wait for the processing to finish
                             .recover(cause -> Future.failedFuture(new KafkaConsumerPollException(cause)))
                             .mapEmpty();
                 });
@@ -224,6 +228,9 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
         LOG.debug("Polled {} records", records.size());
 
         for (int i = 0; i < records.size(); i++) {
+            if (stopped) {
+                return;
+            }
             final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
             try {
                 final T message = createMessage(record);
@@ -243,6 +250,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     private Future<KafkaConsumerRecords<String, Buffer>> poll() {
+        if (stopped) {
+            return Future.failedFuture("consumer already stopped"); // stop consuming
+        }
+
         final Promise<KafkaConsumerRecords<String, Buffer>> pollPromise = Promise.promise();
         kafkaConsumer.poll(pollTimeout, pollPromise);
         return pollPromise.future()
@@ -263,7 +274,9 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
     private Future<Void> commit(final boolean retry) {
         if (offsetsToBeCommitted.isEmpty()) {
-            return Future.succeededFuture();
+            return Future.succeededFuture(); // poll next batch
+        } else if (stopped) {
+            return Future.failedFuture("consumer already stopped"); // stop consuming
         }
 
         final Promise<Void> commitPromise = Promise.promise();
@@ -307,6 +320,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     private Future<Void> tryCommitAndClose() {
+        stopped = true;
         final Promise<Void> returnFuture = Promise.promise();
 
         commitCurrentOffsets()
@@ -327,6 +341,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     private Future<Void> closeConsumer() {
+        stopped = true;
         final Promise<Void> promise = Promise.promise();
         kafkaConsumer.close(promise);
         offsetsToBeCommitted.clear();
