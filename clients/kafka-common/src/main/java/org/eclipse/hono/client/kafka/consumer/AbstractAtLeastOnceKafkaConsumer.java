@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka.consumer;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -87,6 +88,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final Handler<T> messageHandler;
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
+    private final Map<TopicPartition, OffsetAndMetadata> offsetsToBeCommitted = new HashMap<>();
 
     /**
      * Creates a new consumer.
@@ -209,17 +211,30 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     /**
-     * Closes the underlying Kafka consumer.
+     * Closes the underlying Kafka consumer and tries to commit the current offsets before.
      * <p>
      * This does not invoke the close handler.
      *
-     * @return A future that will complete when the Kafka consumer is closed.
+     * @return A future that will complete when the Kafka consumer is closed. If the offsets have been committed
+     *         successfully, the future will succeed, otherwise, it will fail.
      */
     @Override
     public Future<Void> stop() {
-        final Promise<Void> promise = Promise.promise();
-        kafkaConsumer.close(promise);
-        return promise.future();
+        final Promise<Void> returnFuture = Promise.promise();
+
+        commitCurrentOffsets()
+                .onComplete(commitResult -> {
+                    closeConsumer()
+                            .onComplete(v -> {
+                                if (commitResult.succeeded()) {
+                                    returnFuture.complete();
+                                } else {
+                                    returnFuture.fail(commitResult.cause());
+                                }
+                            });
+                });
+
+        return returnFuture.future();
     }
 
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
@@ -256,20 +271,30 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
         try {
             final T message = createMessage(record);
             messageHandler.handle(message);
+            addToCurrentOffsets(record);
             return Future.succeededFuture();
         } catch (final Exception ex) {
             LOG.error("Error handling record, closing the consumer: ", ex);
-            commitCurrentOffset(record); // prevents that already processed records from the batch are consumed again
-            stop();
+            stop(); // commit currentOffsets and close consumer
             return Future.failedFuture(ex);
         }
+    }
+
+    private void addToCurrentOffsets(final KafkaConsumerRecord<String, Buffer> record) {
+        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        // Kafka expects the offset to be committed that should be read next, therefore it is the current + 1
+        final OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1, "");
+        offsetsToBeCommitted.put(topicPartition, offsetAndMetadata);
     }
 
     private Future<Void> commit(final boolean retry) {
         final Promise<Void> commitPromise = Promise.promise();
         kafkaConsumer.commit(commitPromise);
         return commitPromise.future()
-                .onSuccess(ok -> LOG.debug("Committed offsets"))
+                .onSuccess(ok -> {
+                    LOG.debug("Committed offsets");
+                    offsetsToBeCommitted.clear();
+                })
                 .recover(cause -> {
                     LOG.error("Error committing offsets: " + cause);
                     if ((cause instanceof org.apache.kafka.common.errors.TimeoutException) && retry) {
@@ -283,16 +308,26 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 });
     }
 
-    private void commitCurrentOffset(final KafkaConsumerRecord<String, Buffer> record) {
-        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
-        final OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1, "");
-        kafkaConsumer.commit(Map.of(topicPartition, offsetAndMetadata));
+    private Future<Map<TopicPartition, OffsetAndMetadata>> commitCurrentOffsets() {
+        LOG.debug("committing the current offsets");
+        LOG.trace("committing offsets: {}", offsetsToBeCommitted);
+
+        final Promise<Map<TopicPartition, OffsetAndMetadata>> completionHandler = Promise.promise();
+        kafkaConsumer.commit(offsetsToBeCommitted, completionHandler);
+        return completionHandler.future();
     }
 
     private void closeWithError(final Throwable exception) {
         LOG.error("Closing consumer with cause", exception);
         closeHandler.handle(exception);
-        stop();
+        closeConsumer();
+    }
+
+    private Future<Void> closeConsumer() {
+        final Promise<Void> promise = Promise.promise();
+        kafkaConsumer.close(promise);
+        offsetsToBeCommitted.clear();
+        return promise.future();
     }
 
 }
