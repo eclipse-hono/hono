@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -46,7 +46,7 @@ if [ ! -d themes/hugo-theme-learn ]
 then
   git clone https://github.com/matcornic/hugo-theme-learn.git themes/hugo-theme-learn
   cd themes/hugo-theme-learn
-  git checkout 2.2.0
+  git checkout 2.5.0
   cd ../..
 fi
 
