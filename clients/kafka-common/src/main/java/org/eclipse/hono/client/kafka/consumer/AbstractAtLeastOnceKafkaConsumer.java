@@ -48,7 +48,7 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * handled by the message handler.
  * <p>
  * The consumer starts consuming when {@link #start()} is invoked. It needs to be closed by invoking {@link #stop()} to
- * release the resources.
+ * release the resources. A stopped instance cannot be started again.
  * <p>
  * </p>
  * ERROR CASES:
@@ -188,6 +188,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      */
     @Override
     public Future<Void> start() {
+
+        if (stopped) {
+            return Future.failedFuture("consumer already stopped"); // the underlying Kafka consumer cannot be reopened
+        }
 
         final Promise<Void> promise = Promise.promise();
         if (topics != null) {
