@@ -319,8 +319,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
     private void closeAndCallHandler(final Throwable exception) {
         LOG.error("Closing consumer with cause", exception);
-        closeHandler.handle(exception);
-        closeConsumer();
+        closeConsumer().onComplete(v -> closeHandler.handle(exception));
     }
 
     private Future<Void> tryCommitAndClose() {
