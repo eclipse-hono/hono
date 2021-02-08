@@ -67,7 +67,7 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * throws an unexpected exception, the Kafka consumer will be closed and the exception will be passed to the close
  * handler. <b>The message handler is expected to handle processing errors internally and should not deliberately throw
  * exceptions.</b> Any exception in the message processing will stop the consumption permanently, because a new consumer
- * will try to consume the same message again will then get the same exception.
+ * will try to consume the same message again and will then get the same exception.
  * <p>
  * If {@link KafkaConsumer#commit(Handler)} times out, the commit will be retried once. If the retry fails or the commit
  * fails with another exception, the Kafka consumer will be closed and the close handler will be passed a

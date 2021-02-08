@@ -46,7 +46,8 @@ public class TelemetryConsumer extends DownstreamMessageConsumer {
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param config The Kafka consumer configuration properties to use.
      * @param tenantId The tenant to consume telemetry data for.
-     * @param messageHandler The handler to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record. The handler should not
+     *            throw exceptions.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @return a future indicating the outcome. When {@link #start()} completes successfully, the future will be
      *         completed with the consumer. Otherwise the future will fail with the cause.

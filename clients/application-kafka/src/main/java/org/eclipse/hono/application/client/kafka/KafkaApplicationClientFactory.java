@@ -30,9 +30,10 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
      * <p>
-     * The messages passed in to the consumer will be acknowledged automatically if the message handler does not throw
-     * an exception. <b> NB: Be very careful about throwing exceptions in the message handler, after that no more
-     * telemetry messages will be consumed for the client until the problem is fixed!</b>
+     * The messages passed in to the consumer will be acknowledged automatically when the message handler completes. <b>
+     * The message handler is expected to handle processing errors internally and should not deliberately throw
+     * exceptions.</b> Any exception in the message handler will stop the consumption permanently, because a new
+     * consumer will try to consume the same message again and will then get the same exception.
      * <p>
      * If a fatal error occurs, the consumer will be closed and the close-handler, if it is not {@code null}, invoked
      * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
@@ -44,11 +45,11 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
      * operation fails, the consumer will be closed and the close handler will be passed a
      * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws an exception, the
-     * consumer will be closed without invoking the close handler. If the offset commit fails, the consumer will be
-     * closed and the close handler will be passed a {@link KafkaConsumerCommitException}.
+     * consumer will be closed and the exception will be passed to the close handler. If the offset commit fails, the
+     * consumer will be closed and the close handler will be passed a {@link KafkaConsumerCommitException}.
      *
      * @param tenantId The tenant to consume data for.
-     * @param messageHandler The handler to invoke with every message received.
+     * @param messageHandler The handler to invoke with every message received. The handler should not throw exceptions.
      * @param closeHandler The handler invoked when the consumer is closed due to an error.
      * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
      *         cannot be started.
@@ -63,9 +64,10 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
     /**
      * Creates a client for consuming data from Hono's north bound <em>Event API</em>.
      * <p>
-     * The messages passed in to the consumer will be acknowledged automatically if the message handler does not throw
-     * an exception. <b> NB: Be very careful about throwing exceptions in the message handler, after that no more event
-     * messages will be consumed for the client until the problem is fixed!</b>
+     * The messages passed in to the consumer will be acknowledged automatically when the message handler completes. <b>
+     * The message handler is expected to handle processing errors internally and should not deliberately throw
+     * exceptions.</b> Any exception in the message handler will stop the consumption permanently, because a new
+     * consumer will try to consume the same message again and will then get the same exception.
      * <p>
      * If a fatal error occurs, the consumer will be closed and the close-handler, if it is not {@code null}, invoked
      * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
@@ -77,11 +79,11 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
      * operation fails, the consumer will be closed and the close handler will be passed a
      * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws an exception, the
-     * consumer will be closed without invoking the close handler. If the offset commit fails, the consumer will be
-     * closed and the close handler will be passed a {@link KafkaConsumerCommitException}.
+     * consumer will be closed and the exception will be passed to the close handler. If the offset commit fails, the
+     * consumer will be closed and the close handler will be passed a {@link KafkaConsumerCommitException}.
      *
      * @param tenantId The tenant to consume data for.
-     * @param messageHandler The handler to invoke with every message received.
+     * @param messageHandler The handler to invoke with every message received. The handler should not throw exceptions.
      * @param closeHandler The handler invoked when the consumer is closed due to an error.
      * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
      *         cannot be started.
