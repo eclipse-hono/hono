@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
@@ -37,12 +38,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.EncodeException;
-import io.vertx.core.json.Json;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import io.vertx.kafka.client.producer.RecordMetadata;
-import io.vertx.kafka.client.producer.impl.KafkaHeaderImpl;
 
 /**
  * A client for publishing messages to a Kafka cluster.
@@ -244,11 +243,7 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
 
             properties.forEach((k, v) -> {
                 try {
-                    final Buffer headerValue = (v instanceof String)
-                            ? Buffer.buffer((String) v)
-                            : Buffer.buffer(Json.encode(v));
-
-                    headers.add(new KafkaHeaderImpl(k, headerValue));
+                    headers.add(KafkaMessageHelper.createKafkaHeader(k, v));
                 } catch (final EncodeException e) {
                     log.info("failed to serialize property with key [{}] to Kafka header", k);
                     span.log("failed to create Kafka header from property: " + k);
