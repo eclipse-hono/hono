@@ -220,21 +220,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      */
     @Override
     public Future<Void> stop() {
-        final Promise<Void> returnFuture = Promise.promise();
-
-        commitCurrentOffsets()
-                .onComplete(commitResult -> {
-                    closeConsumer()
-                            .onComplete(v -> {
-                                if (commitResult.succeeded()) {
-                                    returnFuture.complete();
-                                } else {
-                                    returnFuture.fail(commitResult.cause());
-                                }
-                            });
-                });
-
-        return returnFuture.future();
+        return tryCommitAndClose();
     }
 
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
@@ -254,7 +240,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 .recover(cause -> {
                     LOG.error("Error polling messages: " + cause);
                     final KafkaConsumerPollException exception = new KafkaConsumerPollException(cause);
-                    closeWithError(exception);
+                    closeAndCallHandler(exception);
                     return Future.failedFuture(exception);
                 });
     }
@@ -275,7 +261,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
             return Future.succeededFuture();
         } catch (final Exception ex) {
             LOG.error("Error handling record, closing the consumer: ", ex);
-            stop(); // commit currentOffsets and close consumer
+            tryCommitAndClose();
             return Future.failedFuture(ex);
         }
     }
@@ -302,7 +288,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                         return commit(false); // retry once
                     } else {
                         final KafkaConsumerCommitException exception = new KafkaConsumerCommitException(cause);
-                        closeWithError(exception);
+                        closeAndCallHandler(exception);
                         return Future.failedFuture(exception);
                     }
                 });
@@ -317,10 +303,30 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
         return completionHandler.future();
     }
 
-    private void closeWithError(final Throwable exception) {
+    private void closeAndCallHandler(final Throwable exception) {
         LOG.error("Closing consumer with cause", exception);
         closeHandler.handle(exception);
         closeConsumer();
+    }
+
+    private Future<Void> tryCommitAndClose() {
+        final Promise<Void> returnFuture = Promise.promise();
+
+        commitCurrentOffsets()
+                .onComplete(commitResult -> {
+                    // always close consumer
+                    closeConsumer()
+                            .onComplete(v -> {
+                                // return outcome of commit
+                                if (commitResult.succeeded()) {
+                                    returnFuture.complete();
+                                } else {
+                                    returnFuture.fail(commitResult.cause());
+                                }
+                            });
+                });
+
+        return returnFuture.future();
     }
 
     private Future<Void> closeConsumer() {
