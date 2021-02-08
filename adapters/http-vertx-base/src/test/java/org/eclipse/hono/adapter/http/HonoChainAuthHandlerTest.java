@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.http;
+package org.eclipse.hono.adapter.http;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -34,6 +34,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AbstractDeviceCredentials;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
+import org.eclipse.hono.service.http.HttpContext;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.AsyncResult;

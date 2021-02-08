@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.http;
+package org.eclipse.hono.adapter.http;
 
 import java.util.Optional;
 
@@ -47,7 +47,8 @@ public final class AuthHandlerTools {
      * <p>
      * Note that the routing context is failed with just the exception, no status
      * code. Setting the status code on the response corresponding to the exception
-     * is to be done in the failure handler, e.g. as implemented in the {@link DefaultFailureHandler}.
+     * is to be done in the failure handler, e.g. as implemented in the
+     * {@link org.eclipse.hono.service.http.DefaultFailureHandler}.
      *
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.

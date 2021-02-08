@@ -45,7 +45,6 @@ import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
-import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -78,6 +77,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.handler.AuthHandler;
+import io.vertx.ext.web.handler.BasicAuthHandler;
 
 /**
  * Spring Boot configuration for the mongodb based device registry application.
@@ -499,7 +499,7 @@ public class ApplicationConfig {
      * Creates a new instance of an auth handler to provide basic authentication for the 
      * HTTP based Device Registry Management endpoint.
      * <p>
-     * This creates an instance of the {@link HonoBasicAuthHandler} with an auth provider of type
+     * This method creates a {@link BasicAuthHandler} using an auth provider of type
      * {@link MongoAuth} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
      * is set to {@code true}.
      *
@@ -513,10 +513,9 @@ public class ApplicationConfig {
     @Scope("prototype")
     public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
         if (httpServiceConfigProperties.isAuthenticationRequired()) {
-            return new HonoBasicAuthHandler(
+            return BasicAuthHandler.create(
                     MongoAuth.create(mongoClient(), new JsonObject()),
-                    httpServerProperties().getRealm(),
-                    tracer());
+                    httpServerProperties().getRealm());
         }
         return null;
     }
