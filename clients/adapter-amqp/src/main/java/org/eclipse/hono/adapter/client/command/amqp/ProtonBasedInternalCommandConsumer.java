@@ -146,8 +146,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
             // command.isValid() check not done here - it is to be done in the command handler
             commandHandler.handleCommand(commandContext);
         } else {
-            LOG.info("no command handler found for command with device id {}, gateway id {} [tenant-id: {}]",
-                    command.getDeviceId(), command.getGatewayId(), command.getTenant());
+            LOG.info("no command handler found for command [{}]", command);
             TracingHelper.logError(currentSpan, "no command handler found for command");
             commandContext.release();
         }

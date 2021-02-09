@@ -26,6 +26,7 @@ import org.eclipse.hono.adapter.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.adapter.client.command.CommandHandlers;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
+import org.eclipse.hono.client.kafka.RecordUtil;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -207,7 +208,9 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         try {
             command = KafkaBasedCommand.fromRoutedCommandRecord(record);
         } catch (final IllegalArgumentException e) {
-            LOG.debug("command record is invalid", e);
+            LOG.debug("command record is invalid [tenant-id: {}, device-id: {}]",
+                    RecordUtil.getStringHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_TENANT_ID),
+                    RecordUtil.getStringHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_DEVICE_ID), e);
             return;
         }
         final CommandHandlerWrapper commandHandler = commandHandlers.getCommandHandler(command.getTenant(),
@@ -229,8 +232,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             // command.isValid() check not done here - it is to be done in the command handler
             commandHandler.handleCommand(commandContext);
         } else {
-            LOG.info("no command handler found for command with device id {}, gateway id {} [tenant-id: {}]",
-                    command.getDeviceId(), command.getGatewayId(), command.getTenant());
+            LOG.info("no command handler found for command [{}]", command);
             TracingHelper.logError(currentSpan, "no command handler found for command");
             commandContext.release();
         }

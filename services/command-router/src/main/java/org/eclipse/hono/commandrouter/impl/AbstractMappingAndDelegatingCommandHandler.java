@@ -29,8 +29,8 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 
 /**
- * Handler for mapping the received commands and forwarding using
- * {@link org.eclipse.hono.adapter.client.command.InternalCommandSender}.
+ * Handler for mapping received commands to the corresponding target protocol adapter instance
+ * and forwarding them using the {@link org.eclipse.hono.adapter.client.command.InternalCommandSender}.
  */
 public abstract class AbstractMappingAndDelegatingCommandHandler implements Lifecycle {
 
