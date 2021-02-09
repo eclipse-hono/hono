@@ -18,10 +18,13 @@ pluralizeListTitles = "false"
   description = "A set of micro-services for connecting millions of devices."
   copyright = "The Eclipse Hono Project"
 
+  # additional (custom) stylesheets to load automatically on every page
+  custom_css = ["css/hono.css"]
+
   # used in shortcode "homelink" to create absoulte URL for links into the home page
   homeBaseUrl = "https://www.eclipse.org/hono/"
 
-  # Prefix URL to edit current page. Will display an "Edit this page" button on top right hand corner of every page. 
+  # Prefix URL to edit current page. Will display an "Edit this page" button on top right hand corner of every page.
   # Useful to give opportunity to people to create merge request for your doc.
   # See the config.toml file from this documentation site to have an example.
   editURL = "https://github.com/eclipse/hono/edit/master/site/documentation/content/"
@@ -29,12 +32,12 @@ pluralizeListTitles = "false"
   showVisitedLinks = false
   # Disable search function. It will hide search bar
   disableSearch = false
-  # Javascript and CSS cache are automatically busted when new version of site is generated. 
+  # Javascript and CSS cache are automatically busted when new version of site is generated.
   # Set this to true to disable this behavior (some proxies don't handle well this optimization)
   disableAssetsBusting = false
   # Set this to true to disable copy-to-clipboard button for inline code.
   disableInlineCopyToClipBoard = true
-  # A title for shortcuts in menu is set by default. Set this to true to disable it. 
+  # A title for shortcuts in menu is set by default. Set this to true to disable it.
   disableShortcutsTitle = true
   # When using mulitlingual website, disable the switch language button.
   disableLanguageSwitchingButton = false
@@ -46,7 +49,7 @@ pluralizeListTitles = "false"
   ordersectionsby = "weight"
   # Change default color scheme with a variant one. Can be "red", "blue", "green".
   themeVariant = "hono"
-  
+
   # Twitter
   twitter = "EclipseHono"
   twitterImage = "images/twitter_image.png"
