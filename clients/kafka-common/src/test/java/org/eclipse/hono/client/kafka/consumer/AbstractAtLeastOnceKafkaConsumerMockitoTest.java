@@ -15,6 +15,7 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -103,10 +104,10 @@ public class AbstractAtLeastOnceKafkaConsumerMockitoTest {
 
         // WHEN committing fails
         doAnswer(invocation -> {
-            final Promise<Void> promise = invocation.getArgument(0);
+            final Promise<Void> promise = invocation.getArgument(1);
             promise.handle(Future.failedFuture(commitError));
             return 1L;
-        }).when(mockKafkaConsumer).commit(VertxMockSupport.anyHandler());
+        }).when(mockKafkaConsumer).commit(anyMap(), VertxMockSupport.anyHandler());
 
         final Handler<Throwable> closeHandler = cause -> ctx.verify(() -> {
 
@@ -201,16 +202,10 @@ public class AbstractAtLeastOnceKafkaConsumerMockitoTest {
                 });
 
         doAnswer(invocation -> {
-            final Promise<Void> promise = invocation.getArgument(0);
-            promise.handle(Future.succeededFuture());
-            return 1L;
-        }).when(mockKafkaConsumer).commit(VertxMockSupport.anyHandler());
-
-        doAnswer(invocation -> {
             final Promise<Map<TopicPartition, OffsetAndMetadata>> promise = invocation.getArgument(1);
             promise.handle(Future.succeededFuture());
             return 1L;
-        }).when(mockKafkaConsumer).commit(any(), VertxMockSupport.anyHandler());
+        }).when(mockKafkaConsumer).commit(anyMap(), VertxMockSupport.anyHandler());
 
         doAnswer(invocation -> {
             final Promise<Void> promise = invocation.getArgument(0);

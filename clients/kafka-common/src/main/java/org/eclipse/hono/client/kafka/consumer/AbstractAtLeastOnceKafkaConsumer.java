@@ -247,7 +247,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 messageHandler.handle(message);
                 addToCurrentOffsets(record);
             }
-            commit(true).compose(ok -> poll()).onSuccess(this::handleBatch);
+            commit(true).compose(ok -> poll()).onSuccess(this::handleBatch); // this is "the loop"
         } catch (final Exception ex) {
             LOG.error("Error handling record, closing the consumer: ", ex);
             tryCommitAndClose().onComplete(v -> closeHandler.handle(ex));
@@ -284,13 +284,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
             return Future.failedFuture("consumer already stopped"); // stop consuming
         }
 
-        final Promise<Void> commitPromise = Promise.promise();
-        kafkaConsumer.commit(commitPromise);
-        return commitPromise.future()
-                .onSuccess(ok -> {
-                    LOG.debug("Committed offsets");
-                    offsetsToBeCommitted.clear();
-                })
+        return commitCurrentOffsets()
                 .recover(cause -> {
                     LOG.error("Error committing offsets: " + cause);
                     if ((cause instanceof TimeoutException) && retry) {
@@ -304,7 +298,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 });
     }
 
-    private Future<Map<TopicPartition, OffsetAndMetadata>> commitCurrentOffsets() {
+    private Future<Void> commitCurrentOffsets() {
         if (offsetsToBeCommitted.isEmpty()) {
             LOG.debug("no offsets to commit");
             return Future.succeededFuture();
@@ -315,7 +309,12 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
         final Promise<Map<TopicPartition, OffsetAndMetadata>> completionHandler = Promise.promise();
         kafkaConsumer.commit(offsetsToBeCommitted, completionHandler);
-        return completionHandler.future();
+        return completionHandler.future()
+                .map(committedOffsets -> {
+                    LOG.debug("successfully committed offsets");
+                    offsetsToBeCommitted.clear();
+                    return null;
+                });
     }
 
     private void closeAndCallHandler(final Throwable exception) {
