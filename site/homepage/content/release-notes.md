@@ -11,6 +11,14 @@ title = "Release Notes"
   number of milliseconds. However, the correct property is named `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME` and accepts an
   ISO-8601 Duration string instead of an integer.
 
+### API Changes
+
+* The already deprecated classes `org.eclipse.hono.service.cache.SpringBasedExpiringValueCache` and
+  `org.eclipse.hono.service.cache.SpringCacheProvider` have been removed.
+* The `org.eclipse.hono.service.AbstractApplication` and `org.eclipse.hono.service.AbstractBaseApplication` classes
+  have been moved to `org.eclipse.hono.service.spring.AbstractApplication` and `org.eclipse.hono.service.spring.AbstractApplication`
+  in the newly added `service-base-spring` module respectively.
+
 ## 1.6.0
 
 ### New Features
