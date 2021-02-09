@@ -15,10 +15,10 @@ package org.eclipse.hono.deviceregistry.mongodb;
 
 import java.util.Objects;
 
-import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
+import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;

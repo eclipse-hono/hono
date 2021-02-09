@@ -1,5 +1,5 @@
 <!--
-    Copyright (c) 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -21,7 +21,7 @@
   </parent>
   <artifactId>hono-service-base-quarkus</artifactId>
 
-  <name>Hono Service Base Quarkus</name>
+  <name>Hono Service Base (Quarkus)</name>
   <description>Base classes for implementing Hono services using Quarkus.</description>
   <url>https://www.eclipse.org/hono</url>
 
