@@ -36,8 +36,8 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 
 /**
  * A Kafka based sender for sending commands to an internal command topic
- * (<em>hono.command_internal.adapterInstanceId</em>). The corresponding protocol 
- * adapter consumes commands by subscribing to this topic.
+ * (<em>hono.command_internal.${adapterInstanceId}</em>).
+ * Protocol adapters consume commands by subscribing to this topic.
  */
 public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSender implements InternalCommandSender {
 
