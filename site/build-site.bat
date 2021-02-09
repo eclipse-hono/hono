@@ -1,5 +1,5 @@
 @rem ***************************************************************************
-@rem Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+@rem Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 @rem
 @rem See the NOTICE file(s) distributed with this work for additional
 @rem information regarding copyright ownership.
@@ -25,7 +25,7 @@ IF NOT EXIST themes\hugo-universal-theme (
   ECHO Going to download theme 'universal' for hugo...
   git clone https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
   cd themes\hugo-universal-theme
-  git checkout 2765194e3b464a4912fd13dd02b736e45542cbb2
+  git checkout 1.0.0
   ECHO Remove images from theme
   DEL /Q static\img\*
   cd ..\..
@@ -47,7 +47,7 @@ IF NOT EXIST themes\hugo-theme-learn (
   ECHO Going to download theme 'learn' for hugo...
   git clone https://github.com/matcornic/hugo-theme-learn.git themes\hugo-theme-learn
   cd themes\hugo-theme-learn
-  git checkout 2.2.0
+  git checkout 2.5.0
   cd ..\..
 ) ELSE (
   ECHO Hugo theme 'learn' detected...

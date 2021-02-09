@@ -1,15 +1,14 @@
-<!--
-custom-header: custom headers in page. Meant to be overwritten when adding CSS imports.
-Don’t forget to include style HTML tag directive in your file
+<!-- Partial intended to be overwritten to add custom headers, like CSS or any other info
+<style type="text/css">
+    /* Custom css */
+</style>
 -->
-
 <link rel="stylesheet" href="https://www.eclipse.org/eclipse.org-common/themes/solstice/public/stylesheets/vendor/cookieconsent/cookieconsent.min.css">
 {{- with $.Params.swaggerUI }}
 <script src='{{ "js/swagger-ui-bundle-3.23.11.js" | relURL }}'></script>
 <script src='{{ "js/swagger-ui-standalone-preset-3.23.11.js" | relURL }}'></script>
 <link rel="stylesheet" href='{{ "css/swagger-ui-3.23.11.css" | relURL }}'>
 {{- end }}
-<link rel="stylesheet" href='{{ "css/hono.css" | relURL }}'>
 
 <!-- Twitter Card meta tags -->
 <meta name="twitter:card" content="summary_large_image">

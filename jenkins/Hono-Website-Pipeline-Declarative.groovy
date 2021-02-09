@@ -91,7 +91,7 @@ spec:
         sh '''
             git clone https://github.com/matcornic/hugo-theme-learn.git ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-learn
             cd ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-learn
-            git checkout 2.2.0
+            git checkout 2.5.0
         '''
         echo "cloning Hugo Universal theme..."
         sh '''
