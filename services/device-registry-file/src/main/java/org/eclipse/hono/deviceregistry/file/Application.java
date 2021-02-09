@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,8 @@ package org.eclipse.hono.deviceregistry.file;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.eclipse.hono.service.AbstractBaseApplication;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.spring.AbstractBaseApplication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;

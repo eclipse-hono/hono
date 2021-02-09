@@ -16,7 +16,7 @@ package org.eclipse.hono.service.auth.impl;
 import java.util.Objects;
 
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
-import org.eclipse.hono.service.AbstractApplication;
+import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;

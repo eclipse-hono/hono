@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service;
+package org.eclipse.hono.service.spring;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -24,6 +24,9 @@ import java.util.concurrent.TimeoutException;
 import javax.annotation.PreDestroy;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.NoopHealthCheckServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
