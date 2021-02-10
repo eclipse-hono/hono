@@ -1,5 +1,7 @@
 +++
-title = "Contributing"
+linkTitle = "Contributing"
+title = "How to get involved in the Hono Project"
+description = "General requirements and specific instructions for contributing code and/or documentation to Hono."
 weight = 610
 [menu.main]
     parent = "Community"

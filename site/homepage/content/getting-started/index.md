@@ -1,6 +1,7 @@
 ---
 title: "Getting started with Eclipse Hono"
 linkTitle: "Getting started"
+description: "Take a quick tour and learn how Hono can help you connect devices via HTTP and/or MQTT and how downstream applications can consume the data published by devices."
 menu: "main"
 weight: 100
 resources:

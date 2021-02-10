@@ -7,6 +7,29 @@ canonifyurls = false
 googleAnalytics = "GTM-5WLCZXC"
 pluralizeListTitles = "false"
 
+[privacy]
+  [privacy.disqus]
+    disable = true
+  [privacy.googleAnalytics]
+    anonymizeIP = false
+    disable = true
+    respectDoNotTrack = false
+    useSessionStorage = false
+  [privacy.instagram]
+    disable = true
+    simple = false
+  [privacy.twitter]
+    disable = true
+    enableDNT = false
+    simple = false
+  [privacy.vimeo]
+    disable = true
+    enableDNT = false
+    simple = false
+  [privacy.youtube]
+    disable = true
+    privacyEnhanced = false
+
 [markup.goldmark.renderer]
     unsafe = true
 
@@ -17,17 +40,16 @@ pluralizeListTitles = "false"
 
 [params]
     author = "The Eclipse Hono Project"
-    description = "A set of micro-services for connecting millions of devices."
     copyright = "&copy; 2019-2021 The Eclipse Hono Project"
     viewMorePostLink = "/blog/"
     defaultKeywords = []
-    defaultDescription = "A set of micro-services for connecting millions of devices."
+    defaultDescription = "Eclipse Hono provides means for connecting millions of IoT devices using arbitrary protocols and interacting with them via uniform APIs."
 
     # used in shortcode "doclink" to create absoulte URLs for links into the documentation
     docsBaseUrl = "https://www.eclipse.org/hono/docs"
 
     # Twitter
-    twitter = "EclipseHono"
+    twitter_site = "EclipseHono"
 
     # Style options: default (light-blue), blue, green, marsala, pink, red, turquoise, violet
     style = "hono"
@@ -49,19 +71,19 @@ pluralizeListTitles = "false"
     enable = false
     # All carousel items are defined in their own files. You can find example items
     # at 'exampleSite/data/carousel'.
-    # For more informtion take a look at the README.
+    # For more information take a look at the README.
 
 [params.features]
     enable = true
     # All features are defined in their own files. You can find example items
     # at 'exampleSite/data/features'.
-    # For more informtion take a look at the README.
+    # For more information take a look at the README.
 
 [params.testimonials]
     enable = false
     # All testimonials are defined in their own files. You can find example items
     # at 'exampleSite/data/testimonials'.
-    # For more informtion take a look at the README.
+    # For more information take a look at the README.
     title = "Testimonials"
     subtitle = "Have a look what happy users said about Hono."
 
@@ -72,8 +94,8 @@ pluralizeListTitles = "false"
     enable = true
     # All clients are defined in their own files. You can find example items
     # at 'exampleSite/data/clients'.
-    # For more informtion take a look at the README.
-    title = "Who uses Eclipse Hono?"
+    # For more information take a look at the README.
+    title = "Who is using Eclipse Hono?"
     subtitle = ""
 
 [params.recent_posts]

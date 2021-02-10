@@ -3,8 +3,8 @@
   <meta name="robots" content="all,follow">
   <meta name="googlebot" content="index,follow,snippet,archive">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  {{ $title_plain := .Title | markdownify | plainify }}
-  <title>{{ $title_plain }} :: {{ .Site.Title | safeHTML }}</title>
+  {{ $title_plain := .Title | plainify | markdownify }}
+  <title>{{ $title_plain }}</title>
   <meta name="author" content="{{ .Param "author" }}" />
   {{ $keywords := .Site.Params.defaultKeywords | default (slice "" | first 0) }}
   {{ if isset .Params "tags" }}{{ range .Params.tags }}{{ $keywords = $keywords | append . }}{{ end }}{{ end }}
@@ -12,7 +12,7 @@
   {{ if gt (len $keywords) 0 }}
   <meta name="keywords" content="{{ delimit (uniq $keywords) ", " }}">
   {{ end }}
-  {{ $description_plain := default .Site.Params.defaultDescription .Description | markdownify | plainify }}
+  {{ $description_plain := default .Site.Params.defaultDescription .Description | plainify | markdownify}}
   <meta name="description" content="{{ $description_plain }}">
 
   {{ hugo.Generator }}
@@ -100,14 +100,12 @@
 
   <!-- Twitter Card meta tags -->
   <meta name="twitter:card" content="summary{{ if (and $is_blog (and $has_image $is_valid_image)) }}_large_image{{ end }}">
-  <meta name="twitter:site" content="@{{ .Site.Params.twitter }}">
+  {{ with .Param "twitter_site" }}<meta name="twitter:site" content="@{{ . }}">{{ end }}
   <meta name="twitter:title" content="{{ $title_plain | truncate 70 }}">
   {{ if $is_valid_image }}
   <meta name="twitter:image" content="{{ $image | absURL }}">
   {{ end }}
   <meta name="twitter:description" content="{{ $description_plain | truncate 200 }}">
   {{ with .Param "twitter_author" }}<meta name="twitter:creator" content="@{{ . }}">{{ end }}
-
-  <link rel="stylesheet" href="https://www.eclipse.org/eclipse.org-common/themes/solstice/public/stylesheets/vendor/cookieconsent/cookieconsent.min.css">
 
 </head>

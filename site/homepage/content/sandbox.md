@@ -1,8 +1,10 @@
-+++
-title = "Sandbox"
-menu = "main"
-weight = 160
-+++
+---
+linkTitle: "Sandbox"
+title: "Try Hono without installing locally"
+description: "The Sandbox environment can be used to play around with Hono's APIs without the need to set up a Kubernetes cluster and install Hono manually."
+menu: "main"
+weight: 160
+---
 
 We are providing a publicly accessible Eclipse Hono&trade; *sandbox* environment at `hono.eclipseprojects.io`.
 The main purpose of the system is to provide an environment for experimenting with devices and how to connect them to Hono without the need for setting up a local instance.

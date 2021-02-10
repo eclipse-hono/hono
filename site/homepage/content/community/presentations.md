@@ -1,5 +1,7 @@
 +++
-title = "Resources"
+linkTitle = "Resources"
+title = "Additional Resources covering Hono"
+description = "An arbitrary selection of presentations, screen casts etc. covering Hono's architecture, features and usage scenarios."
 weight = 620
 [menu.main]
     parent = "Community"

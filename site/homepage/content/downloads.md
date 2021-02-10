@@ -1,5 +1,6 @@
 +++
-title = "Downloads"
+title = "Artifacts for installing and using Hono"
+description = "Links to binary and source code artifacts required for installing and using Hono."
 menu = "main"
 linkTitle = "Download"
 weight = 150
