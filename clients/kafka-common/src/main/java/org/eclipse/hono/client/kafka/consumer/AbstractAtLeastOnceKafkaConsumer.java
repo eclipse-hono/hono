@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.common.errors.TimeoutException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +42,13 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * This consumer continuously polls for batches of messages from Kafka. Each message is passed to a message handler for
  * processing. When all messages of a batch are processed, this consumer commits the offset and polls for a new batch.
  * <p>
- * This consumer provides AT LEAST ONCE message processing. When the message handler completes, the message is
- * considered to be processed and will be "acknowledged" with the following commit. If an error occurs, the underlying
- * Kafka consumer will be closed. In this case, other consumer instances in the same consumer group will consume the
- * messages from the last committed offset. Already processed messages will then be again in the next batch and be
- * passed to the message handler. If de-duplication of messages is required, it must be handled by the message handler.
+ * This consumer provides AT LEAST ONCE message processing. When the message handler completes without throwing an
+ * exception, the message is considered to be processed and will be "acknowledged" with the following commit.
+ * <p>
+ * If a fatal error occurs, the underlying Kafka consumer will be closed. In this case, other consumer instances in the
+ * same consumer group will consume the messages from the last committed offset. Already processed messages might be
+ * polled again with the next batch and then passed to the message handler. If de-duplication of messages is required,
+ * it must be handled by the message handler.
  * <p>
  * The consumer starts consuming when {@link #start()} is invoked. It needs to be closed by invoking {@link #stop()} to
  * release the resources. A stopped instance cannot be started again.
@@ -65,9 +68,10 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * <p>
  * If the message processing fails because either {@link #createMessage(KafkaConsumerRecord)} or the message handler
  * throws an unexpected exception, the Kafka consumer will be closed and the exception will be passed to the close
- * handler. <b>The message handler is expected to handle processing errors internally and should not deliberately throw
- * exceptions.</b> Any exception in the message processing will stop the consumption permanently, because a new consumer
- * will try to consume the same message again and will then get the same exception.
+ * handler. <b>The message handler may throw a{@link ServerErrorException} to indicate a transient error.</b> In this
+ * case the consumer will not be closed, instead the current offsets are committed and the failed message will be polled
+ * again with the next batch of records. Any other exceptions in the message processing will stop the consumption
+ * permanently, because a new consumer will try to consume the same message again and will then get the same exception.
  * <p>
  * If {@link KafkaConsumer#commit(Handler)} times out, the commit will be retried once. If the retry fails or the commit
  * fails with another exception, the Kafka consumer will be closed and the close handler will be passed a
@@ -94,8 +98,8 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topic The Kafka topic to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler should not
-     *            throw exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
+     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -116,8 +120,8 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topics The Kafka topics to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler should not
-     *            throw exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
+     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -138,8 +142,8 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topicPattern The pattern of Kafka topic names to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler should not
-     *            throw exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
+     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -244,12 +248,17 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
                 final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
                 final T message = createMessage(record);
-                messageHandler.handle(message);
-                addToCurrentOffsets(record);
+                try {
+                    messageHandler.handle(message);
+                    addToCurrentOffsets(record);
+                } catch (final ServerErrorException serverErrorException) {
+                    LOG.debug("Message handler failed", serverErrorException);
+                    // will commit the offset of the failed record and then poll again
+                }
             }
-            commit(true).compose(ok -> poll()).onSuccess(this::handleBatch); // this is "the loop"
+            commit(true).compose(ok -> poll()).onSuccess(this::handleBatch);
         } catch (final Exception ex) {
-            LOG.error("Error handling record, closing the consumer: ", ex);
+            LOG.error("Consumer failed, closing", ex);
             tryCommitAndClose().onComplete(v -> closeHandler.handle(ex));
         }
     }

@@ -15,6 +15,7 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +30,7 @@ import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.AuthenticationException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -214,6 +216,55 @@ public class AbstractAtLeastOnceKafkaConsumerKafkaMockConsumerTest {
                     for (int i = 0; i < numberOfBatches; i++) {
                         scheduleBatch(i * recordsPerBatch, recordsPerBatch);
                     }
+
+                }));
+    }
+
+    /**
+     * Verifies that when the message handler throws the expected {@link org.eclipse.hono.client.ServerErrorException},
+     * the offsets are committed and the consumer polls again starting from the failed record without closing the
+     * consumer.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testExpectedServerErrorExceptionInMessageProcessing(final VertxTestContext ctx) {
+        final int recordsPerBatch = 20;
+        final int failingMessageOffset = recordsPerBatch - 1;
+
+        final AtomicInteger messageHandlerInvocations = new AtomicInteger();
+
+        final Handler<JsonObject> messageHandler = msg -> {
+
+            if (messageHandlerInvocations.getAndIncrement() == failingMessageOffset) {
+                // WHEN the message handler throws a ServerErrorException
+                throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+            }
+
+            ctx.verify(() -> {
+                // THEN the offset of the failed message is committed...
+                if (messageHandlerInvocations.get() >= recordsPerBatch) {
+                    assertThat(getCommittedOffset(topicPartition)).isEqualTo(failingMessageOffset);
+                }
+            });
+
+            // ...AND the consumer keeps consuming
+            if (messageHandlerInvocations.get() == (recordsPerBatch * 2) - 1) {
+                ctx.completeNow();
+            }
+        };
+
+        final Handler<Throwable> closeHandler = cause -> ctx
+                .failNow(new RuntimeException("Consumer closed unexpectedly", cause)); // must not happen
+
+        // GIVEN a started consumer that polls two batches
+        new TestConsumer(vertxKafkaConsumer, TOPIC, messageHandler, closeHandler).start()
+                .onComplete(ctx.succeeding(v -> {
+
+                    mockConsumer.updateBeginningOffsets(Map.of(topicPartition, ((long) 0))); // define start offset
+                    mockConsumer.rebalance(Collections.singletonList(topicPartition)); // trigger partition assignment
+                    scheduleBatch(0, recordsPerBatch);
+                    scheduleBatch(failingMessageOffset, recordsPerBatch); // start from failed message
 
                 }));
     }
