@@ -168,6 +168,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-base</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-base</artifactId>
       <scope>test</scope>
     </dependency>

@@ -18,7 +18,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.adapter.amqp.VertxBasedAmqpProtocolAdapter;
-import org.eclipse.hono.service.quarkus.AbstractProtocolAdapterApplication;
+import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
 /**
  * The Hono AMQP adapter main application class.

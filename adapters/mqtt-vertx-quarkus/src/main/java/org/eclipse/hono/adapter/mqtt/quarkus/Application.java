@@ -21,7 +21,7 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.adapter.mqtt.impl.HttpBasedMessageMapping;
 import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
-import org.eclipse.hono.service.quarkus.AbstractProtocolAdapterApplication;
+import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
 import io.vertx.ext.web.client.WebClient;
 
