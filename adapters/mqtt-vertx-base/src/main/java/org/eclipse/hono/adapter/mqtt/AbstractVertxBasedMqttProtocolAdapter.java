@@ -1162,22 +1162,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-            final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
-            final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
-                    targetAddress.getTenantId(),
-                    targetAddress.getResourceId(),
-                    ctx.authenticatedDevice(),
-                    currentSpan.context());
-            final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
-            final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
-                                    isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
-                                    .map(success -> tenantTracker.result());
+        final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
 
         return CompositeFuture.all(tenantTracker, commandResponseTracker)
-                .compose(success -> CompositeFuture.all(tokenTracker, tenantValidationTracker))
-                .compose(ok -> sendCommandResponse(commandResponseTracker.result(),
-                        currentSpan.context()))
+                .compose(success -> {
+                    final Future<RegistrationAssertion> deviceRegistrationTracker = getRegistrationAssertion(
+                            targetAddress.getTenantId(),
+                            targetAddress.getResourceId(),
+                            ctx.authenticatedDevice(),
+                            currentSpan.context());
+                    final Future<Void> tenantValidationTracker = CompositeFuture.all(
+                            isAdapterEnabled(tenantTracker.result()),
+                            checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
+                            .mapEmpty();
+                    return CompositeFuture.all(deviceRegistrationTracker, tenantValidationTracker);
+                })
+                .compose(ok -> sendCommandResponse(commandResponseTracker.result(), currentSpan.context()))
                 .compose(delivery -> {
                     log.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
                             targetAddress.getTenantId(), targetAddress.getResourceId());
