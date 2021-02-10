@@ -58,27 +58,15 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-base</artifactId>
+      <artifactId>hono-adapter-base</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-infinispan</artifactId>
+      <artifactId>hono-service-base</artifactId>
     </dependency>
     <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing</groupId>
-      <artifactId>opentracing-noop</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing</groupId>
-      <artifactId>opentracing-util</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.wildfly.security</groupId>
-      <artifactId>wildfly-elytron-password-impl</artifactId>
     </dependency>
 
     <!-- Testing -->
@@ -119,7 +107,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>service-base-test-utils</artifactId>
+      <artifactId>adapter-base-test-utils</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

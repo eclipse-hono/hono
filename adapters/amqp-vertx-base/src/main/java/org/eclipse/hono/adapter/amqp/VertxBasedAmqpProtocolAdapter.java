@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,14 +35,7 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterSaslAuthenticatorFactory;
-import org.eclipse.hono.adapter.amqp.AmqpContext;
-import org.eclipse.hono.adapter.amqp.SaslExternalAuthHandler;
-import org.eclipse.hono.adapter.amqp.SaslPlainAuthHandler;
-import org.eclipse.hono.adapter.amqp.SaslResponseContext;
+import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -52,7 +45,6 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.AdapterConnectionsExceededException;
 import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.auth.device.CredentialsApiAuthProvider;

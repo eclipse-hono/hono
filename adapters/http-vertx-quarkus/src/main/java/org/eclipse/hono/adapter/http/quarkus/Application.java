@@ -18,7 +18,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.service.quarkus.AbstractProtocolAdapterApplication;
+import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
 /**
  * The Hono HTTP adapter main application class.
