@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
+import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
+import org.eclipse.hono.adapter.http.HonoChainAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
@@ -27,11 +30,8 @@ import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
-import org.eclipse.hono.service.http.HonoBasicAuthHandler;
-import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.X509AuthHandler;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 

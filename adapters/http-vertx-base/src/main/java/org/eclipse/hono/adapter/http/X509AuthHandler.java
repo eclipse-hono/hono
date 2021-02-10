@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.http;
+package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
@@ -23,6 +23,8 @@ import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
+import org.eclipse.hono.service.http.HttpContext;
+import org.eclipse.hono.service.http.TracingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
