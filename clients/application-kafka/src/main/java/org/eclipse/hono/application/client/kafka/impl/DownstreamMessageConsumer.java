@@ -18,7 +18,6 @@ import java.util.Objects;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.consumer.AbstractAtLeastOnceKafkaConsumer;
 
 import io.vertx.core.Future;
@@ -40,8 +39,8 @@ public abstract class DownstreamMessageConsumer
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topic The Kafka topic to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
-     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, it will be invoked again with the message.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.

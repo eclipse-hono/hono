@@ -18,7 +18,6 @@ import java.util.Objects;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 
@@ -47,8 +46,8 @@ public class TelemetryConsumer extends DownstreamMessageConsumer {
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param config The Kafka consumer configuration properties to use.
      * @param tenantId The tenant to consume telemetry data for.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
-     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, it will be invoked again with the message.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @return a future indicating the outcome. When {@link #start()} completes successfully, the future will be
      *         completed with the consumer. Otherwise the future will fail with the cause.

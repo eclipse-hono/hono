@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -124,59 +123,6 @@ public class AbstractAtLeastOnceKafkaConsumerMockitoTest {
         testConsumerRef.set(testConsumer);
 
         // GIVEN a started test consumer
-        testConsumer.start();
-
-    }
-
-    /**
-     * Verifies that when an error occurs during message processing, the consumer is closed, the current offset
-     * committed and the close handler invoked with the error.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testMessageProcessingError(final VertxTestContext ctx) {
-
-        final int numberOfRecords = 50;
-        final int corruptMessageOffset = numberOfRecords - 1; // offsets start with 0
-
-        final IllegalStateException unexpectedError = new IllegalStateException("this should not have happened");
-
-        final AtomicLong committedOffset = new AtomicLong();
-
-        final KafkaConsumer<String, Buffer> mockKafkaConsumer = mockVertxKafkaConsumer(numberOfRecords);
-
-        doAnswer(invocation -> {
-            final Map<io.vertx.kafka.client.common.TopicPartition, io.vertx.kafka.client.consumer.OffsetAndMetadata> offsets = invocation
-                    .getArgument(0);
-            committedOffset
-                    .set(offsets.get(new io.vertx.kafka.client.common.TopicPartition(TOPIC, PARTITION)).getOffset());
-
-            final Promise<Map<TopicPartition, OffsetAndMetadata>> promise = invocation.getArgument(1);
-            promise.handle(Future.succeededFuture());
-            return 1L;
-        }).when(mockKafkaConsumer).commit(any(), VertxMockSupport.anyHandler());
-
-        final AtomicReference<TestConsumer> testConsumerRef = new AtomicReference<>();
-        final TestConsumer testConsumer = new TestConsumer(mockKafkaConsumer, TOPIC,
-                msg -> {
-                    // WHEN message processing fails
-                    if (msg.getInteger(TestConsumer.RECORD_OFFSET) == corruptMessageOffset) {
-                        throw unexpectedError;
-                    }
-                }, cause -> ctx.verify(() -> {
-
-                    // THEN the offset is committed...
-                    assertThat(committedOffset.get()).isEqualTo(corruptMessageOffset);
-                    // ... AND the test consumer is closed...
-                    assertThat(testConsumerRef.get().stopped).isTrue();
-                    // ...AND the close handler is invoked with the exception
-                    assertThat(cause).isEqualTo(unexpectedError);
-
-                    ctx.completeNow();
-                }));
-        testConsumerRef.set(testConsumer);
-
         testConsumer.start();
 
     }

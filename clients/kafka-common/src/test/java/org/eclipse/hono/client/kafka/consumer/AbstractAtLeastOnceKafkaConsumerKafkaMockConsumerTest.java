@@ -15,7 +15,6 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +29,6 @@ import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.AuthenticationException;
-import org.eclipse.hono.client.ServerErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -221,14 +219,13 @@ public class AbstractAtLeastOnceKafkaConsumerKafkaMockConsumerTest {
     }
 
     /**
-     * Verifies that when the message handler throws the expected {@link org.eclipse.hono.client.ServerErrorException},
-     * the offsets are committed and the consumer polls again starting from the failed record without closing the
-     * consumer.
+     * Verifies that when the message handler throws a runtime exception, the offsets are committed and the consumer
+     * polls again starting from the failed record without closing the consumer.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testExpectedServerErrorExceptionInMessageProcessing(final VertxTestContext ctx) {
+    public void testThatErrorInMessageHandlerCausesRedelivery(final VertxTestContext ctx) {
         final int recordsPerBatch = 20;
         final int failingMessageOffset = recordsPerBatch - 1;
 
@@ -237,8 +234,8 @@ public class AbstractAtLeastOnceKafkaConsumerKafkaMockConsumerTest {
         final Handler<JsonObject> messageHandler = msg -> {
 
             if (messageHandlerInvocations.getAndIncrement() == failingMessageOffset) {
-                // WHEN the message handler throws a ServerErrorException
-                throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                // WHEN the message handler throws a runtime exception
+                throw new RuntimeException();
             }
 
             ctx.verify(() -> {

@@ -16,7 +16,6 @@ package org.eclipse.hono.application.client.kafka;
 import org.eclipse.hono.application.client.ApplicationClientFactory;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerCommitException;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerPollException;
 
@@ -45,14 +44,14 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
      * <p>
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
      * operation fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerPollException} indicating the cause. The provided message handler may throw
-     * a{@link ServerErrorException} to indicate a transient error. If the message handler throws another exception, the
-     * consumer will be closed and the exception will be passed to the close handler. If the offset commit fails, the
-     * consumer will be closed and the close handler will be passed a {@link KafkaConsumerCommitException}.
+     * {@link KafkaConsumerPollException} indicating the cause. If the provided the message handler throws a runtime
+     * exception, the current offsets are committed and the failed message will be polled again with the next batch of
+     * records. If the offset commit fails, the consumer will be closed and the close handler will be passed a
+     * {@link KafkaConsumerCommitException}.
      *
      * @param tenantId The tenant to consume data for.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
-     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, it will be invoked again with the message.
      * @param closeHandler The handler invoked when the consumer is closed due to an error.
      * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
      *         cannot be started.
@@ -81,13 +80,14 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
      * <p>
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
      * operation fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws an exception, the
-     * consumer will be closed and the exception will be passed to the close handler. If the offset commit fails, the
-     * consumer will be closed and the close handler will be passed a {@link KafkaConsumerCommitException}.
+     * {@link KafkaConsumerPollException} indicating the cause. If the provided the message handler throws a runtime
+     * exception, the current offsets are committed and the failed message will be polled again with the next batch of
+     * records. If the offset commit fails, the consumer will be closed and the close handler will be passed a
+     * {@link KafkaConsumerCommitException}.
      *
      * @param tenantId The tenant to consume data for.
-     * @param messageHandler The handler to be invoked for each message created from a record. The handler may throw a
-     *            {@link ServerErrorException} to indicate a transient error but should not throw any other exceptions.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, it will be invoked again with the message.
      * @param closeHandler The handler invoked when the consumer is closed due to an error.
      * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
      *         cannot be started.
