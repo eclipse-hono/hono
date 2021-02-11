@@ -742,6 +742,14 @@ components:
          type: object
          additionalProperties: false
          properties:
+            "id":
+               type: string
+               required: false
+               description: |
+                  The identifier of the trust anchor. This identifier must be unique
+                  among a tenant's trust anchors. If this property is not provided,
+                  then the device registry assigns a unique identifier.
+               example: A user provided identifier could look like "DEFAULT_TENANT_CA_2021_2022".
             "subject-dn":
                type: string
                description: |
