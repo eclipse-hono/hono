@@ -31,6 +31,7 @@ import org.eclipse.hono.deviceregistry.mongodb.model.TenantDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
+import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.HealthCheckProvider;
@@ -74,7 +75,8 @@ import io.vertx.ext.mongo.UpdateOptions;
  * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
-public final class MongoDbBasedTenantService implements TenantService, TenantManagementService, Lifecycle, HealthCheckProvider {
+public final class MongoDbBasedTenantService extends AbstractTenantManagementService
+        implements TenantService, TenantManagementService, Lifecycle, HealthCheckProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantService.class);
 
@@ -175,8 +177,11 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         return Future.succeededFuture();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Future<OperationResult<Void>> updateTenant(
+    public Future<OperationResult<Void>> processUpdateTenant(
             final String tenantId,
             final Tenant tenantObj,
             final Optional<String> resourceVersion,
@@ -188,11 +193,11 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> processUpdateTenant(tenantId, tenantObj, resourceVersion, span))
+                .compose(ok -> modifyTenant(tenantId, tenantObj, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
-    private Future<OperationResult<Void>> processUpdateTenant(
+    private Future<OperationResult<Void>> modifyTenant(
             final String tenantId,
             final Tenant newTenant,
             final Optional<String> resourceVersion,
@@ -430,9 +435,12 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
                                 () -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Future<OperationResult<Id>> createTenant(
-            final Optional<String> tenantId,
+    public Future<OperationResult<Id>> processCreateTenant(
+            final String tenantId,
             final Tenant tenantObj,
             final Span span) {
 
@@ -440,14 +448,12 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(span);
 
-        final String tenantIdOrGenerated = tenantId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier());
-
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> processCreateTenant(tenantIdOrGenerated, tenantObj, span))
+                .compose(ok -> addTenant(tenantId, tenantObj, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
-    private Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantObj,
+    private Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenantObj,
             final Span span) {
 
         final TenantDto newTenantDto = TenantDto.forCreation(tenantId, tenantObj, new Versioned<>(tenantObj).getVersion());

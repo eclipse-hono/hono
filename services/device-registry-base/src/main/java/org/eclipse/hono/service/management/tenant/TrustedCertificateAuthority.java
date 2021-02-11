@@ -44,6 +44,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 @JsonInclude(value = Include.NON_NULL)
 public class TrustedCertificateAuthority {
+    @JsonProperty(RegistryManagementConstants.FIELD_ID)
+    private String id;
 
     private X500Principal subjectDn;
 
@@ -84,6 +86,26 @@ public class TrustedCertificateAuthority {
                 return false;
             }
         }
+    }
+
+    /**
+     * Gets the identifier of the trust anchor.
+     *
+     * @return the identifier of the trust anchor.
+     */
+    public final String getId() {
+        return id;
+    }
+
+    /**
+     * Sets the identifier of the trust anchor.
+     *
+     * @param id the identifier of the trust anchor.
+     * @return A reference to this for fluent use.
+     */
+    public final TrustedCertificateAuthority setId(final String id) {
+        this.id = id;
+        return this;
     }
 
     /**
