@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Id;
@@ -57,7 +58,7 @@ import io.vertx.core.json.JsonObject;
  * On startup this adapter loads all registered tenants from a file. On shutdown all tenants kept in memory are written
  * to the file.
  */
-public final class FileBasedTenantService implements TenantService, TenantManagementService, Lifecycle {
+public final class FileBasedTenantService extends AbstractTenantManagementService implements TenantService, TenantManagementService, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedTenantService.class);
 
@@ -385,15 +386,17 @@ public final class FileBasedTenantService implements TenantService, TenantManage
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Future<OperationResult<Id>> createTenant(final Optional<String> tenantId, final Tenant tenantSpec,
+    protected Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantSpec,
             final Span span) {
-
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
+        Objects.requireNonNull(span);
 
-        final String tenantIdValue = tenantId.orElseGet(this::generateTenantId);
-        return Future.succeededFuture(add(tenantIdValue, tenantSpec, span));
+        return Future.succeededFuture(add(tenantId, tenantSpec, span));
     }
 
     /**
@@ -439,22 +442,17 @@ public final class FileBasedTenantService implements TenantService, TenantManage
     }
 
     /**
-     * Updates the tenant information.
-     *
-     * @param tenantId The tenant to update
-     * @param tenantSpec The new tenant information
-     * @param expectedResourceVersion The version identifier of the tenant information to update.
-     * @return A future indicating the outcome of the operation.
-     * @throws NullPointerException if either of the input parameters is {@code null}.
+     * {@inheritDoc}
      */
     @Override
-    public Future<OperationResult<Void>> updateTenant(final String tenantId, final Tenant tenantSpec,
-            final Optional<String> expectedResourceVersion,
-            final Span span) {
+    protected Future<OperationResult<Void>> processUpdateTenant(final String tenantId, final Tenant tenantSpec,
+            final Optional<String> resourceVersion, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
+        Objects.requireNonNull(resourceVersion);
+        Objects.requireNonNull(span);
 
-        return Future.succeededFuture(update(tenantId, tenantSpec, expectedResourceVersion, span));
+        return Future.succeededFuture(update(tenantId, tenantSpec, resourceVersion, span));
     }
 
     /**

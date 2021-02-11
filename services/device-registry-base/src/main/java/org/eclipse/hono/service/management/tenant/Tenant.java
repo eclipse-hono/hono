@@ -16,16 +16,19 @@ package org.eclipse.hono.service.management.tenant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
@@ -396,5 +399,71 @@ public class Tenant {
         return Optional.ofNullable(trustedCertificateAuthorities)
                 .map(list -> list.stream().anyMatch(ca -> subjectDn.equals(ca.getSubjectDn())))
                 .orElse(false);
+    }
+
+    /**
+     * Asserts that the trust anchor IDs are unique for this tenant and also assigns a unique ID
+     * to each trust anchor for which the ID is not provided.
+     *
+     * @return A reference to this for fluent use.
+     * @throws IllegalStateException if the trust anchor IDs are not unique for this tenant.
+     */
+    public final Tenant assertTrustAnchorIdUniquenessAndCreateMissingIds() {
+        assertTrustAnchorIdUniqueness();
+        createMissingTrustAnchorIds();
+        return this;
+    }
+
+    /**
+     * Assigns a unique ID to each trust anchor that does not have one already.
+     */
+    private void createMissingTrustAnchorIds() {
+        Optional.ofNullable(trustedCertificateAuthorities)
+                .ifPresent(trustAnchors -> trustAnchors.stream()
+                        .filter(trustAnchor -> Objects.isNull(trustAnchor.getId()))
+                        .forEach(trustAnchor -> {
+                            //Check if the generated id already exists, if so then generate a new id
+                            // else set the generated id.
+                            String generatedId;
+                            do {
+                                generatedId = DeviceRegistryUtils.getUniqueIdentifier();
+                            } while (trustAnchorIdExists(generatedId));
+                            trustAnchor.setId(generatedId);
+                        }));
+    }
+
+    private boolean trustAnchorIdExists(final String id) {
+        return Optional.ofNullable(trustedCertificateAuthorities)
+                .map(trustAnchors -> trustAnchors.stream()
+                        .map(TrustedCertificateAuthority::getId)
+                        .filter(Objects::nonNull)
+                        .anyMatch(existingId -> existingId.equals(id)))
+                .orElse(false);
+    }
+
+    /**
+     * Assert that the trust anchor IDs are unique for this tenant.
+     *
+     * @throws IllegalStateException if the trust anchor IDs are not unique for this tenant.
+     */
+    private void assertTrustAnchorIdUniqueness() {
+        if (Objects.nonNull(trustedCertificateAuthorities)) {
+
+            final Set<String> trustAnchorIds = new HashSet<>();
+            final AtomicInteger count = new AtomicInteger(0);
+
+            trustedCertificateAuthorities
+                    .stream()
+                    .map(TrustedCertificateAuthority::getId)
+                    .filter(Objects::nonNull)
+                    .forEach(id -> {
+                        trustAnchorIds.add(id);
+                        count.incrementAndGet();
+                    });
+
+            if (trustAnchorIds.size() != count.get()) {
+                throw new IllegalStateException("trusted anchor IDs must be unique within each tenant object");
+            }
+        }
     }
 }

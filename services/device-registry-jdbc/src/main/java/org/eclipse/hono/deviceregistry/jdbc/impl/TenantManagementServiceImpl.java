@@ -42,8 +42,12 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
         this.store = store;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Future<OperationResult<Id>> createTenant(final String tenantId, final Tenant tenantObj, final Span span) {
+    public Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantObj,
+            final Span span) {
 
         return this.store
 
@@ -77,8 +81,12 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Future<OperationResult<Void>> updateTenant(final String tenantId, final Tenant tenantObj, final Optional<String> resourceVersion, final Span span) {
+    public Future<OperationResult<Void>> processUpdateTenant(final String tenantId, final Tenant tenantObj,
+            final Optional<String> resourceVersion, final Span span) {
 
         return this.store
 

@@ -4,6 +4,12 @@ title = "Release Notes"
 
 ## 1.7.0 (not yet released)
 
+### New Features
+* The Device Registry Management API has been extended now to support an optional unique identifier 
+  for trust anchors belonging to a tenant. The file, JDBC and MongoDB based device registries
+  support this feature. Please refer to the
+  [Device registry management API]({{% doclink "/api/management#/tenants/" %}}) for details.
+
 ### Fixes & Enhancements
 
 * The common configuration property for setting the vert.x instance's max-event-loop-execute-time had erroneously
