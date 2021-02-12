@@ -55,6 +55,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
      *
      * @param record The record.
      * @throws NullPointerException if the record is {@code null}.
+     * @throws IllegalArgumentException if the topic does not contain a tenant id.
      */
     public KafkaDownstreamMessage(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);

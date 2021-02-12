@@ -246,7 +246,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                     addToCurrentOffsets(record);
                 } catch (final RuntimeException messageHandlingError) {
                     LOG.debug("Message handler failed", messageHandlingError);
-                    // will commit the offset of the failed record and then resume polling (will include failed record)
+                    // resume with committing the current offsets and then polling (failed record will be polled again)
                     break;
                 }
             }
