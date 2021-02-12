@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service;
+package org.eclipse.hono.adapter;
 
 /**
  * An exception indicating that a device's attempt to establish a connection

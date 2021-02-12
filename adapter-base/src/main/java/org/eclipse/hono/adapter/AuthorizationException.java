@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service;
+package org.eclipse.hono.adapter;
 
 import java.net.HttpURLConnection;
 

@@ -12,11 +12,12 @@
  */
 
 
-package org.eclipse.hono.service;
+package org.eclipse.hono.deviceregistry.util;
 
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.util.ServiceClient;
+import org.eclipse.hono.service.HealthCheckProvider;
 
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 

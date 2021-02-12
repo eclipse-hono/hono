@@ -12,14 +12,14 @@
  */
 
 
-package org.eclipse.hono.service;
+package org.eclipse.hono.adapter;
 
 /**
  * An exception indicating that a device's attempt to establish a connection
- * with a protocol adapter has failed because the tenant's connection limit
+ * with a protocol adapter has failed because the tenant's data volume limit
  * has been exceeded.
  */
-public class TenantConnectionsExceededException extends AuthorizationException {
+public class DataVolumeExceededException extends AuthorizationException {
 
     private static final long serialVersionUID = 1L;
 
@@ -30,7 +30,7 @@ public class TenantConnectionsExceededException extends AuthorizationException {
      * @param msg The detail message or {@code null}.
      * @param cause The root cause or {@code null}.
      */
-    public TenantConnectionsExceededException(final String tenant, final String msg, final Throwable cause) {
+    public DataVolumeExceededException(final String tenant, final String msg, final Throwable cause) {
         super(tenant, msg, cause);
     }
 }

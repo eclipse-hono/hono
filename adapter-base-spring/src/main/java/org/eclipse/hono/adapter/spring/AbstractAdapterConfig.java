@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.AdapterConfigurationSupport;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
@@ -56,7 +57,6 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
-import org.eclipse.hono.service.AdapterConfigurationSupport;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;

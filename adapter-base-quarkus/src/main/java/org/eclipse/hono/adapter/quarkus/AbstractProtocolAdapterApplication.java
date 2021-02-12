@@ -20,6 +20,7 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.AdapterConfigurationSupport;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
@@ -50,7 +51,6 @@ import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConne
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.DeviceConnectionCacheConfig;
-import org.eclipse.hono.service.AdapterConfigurationSupport;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
