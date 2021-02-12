@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.monitoring;
+package org.eclipse.hono.adapter.monitoring;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationAssertion;

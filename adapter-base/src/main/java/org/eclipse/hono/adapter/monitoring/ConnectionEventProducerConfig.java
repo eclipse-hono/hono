@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.monitoring;
+package org.eclipse.hono.adapter.monitoring;
 
 import java.util.Objects;
 

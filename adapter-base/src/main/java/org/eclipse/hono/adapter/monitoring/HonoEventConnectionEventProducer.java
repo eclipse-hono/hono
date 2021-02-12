@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.monitoring;
+package org.eclipse.hono.adapter.monitoring;
 
 /**
  * A connection event producer based on the Hono <em>Event API</em>.

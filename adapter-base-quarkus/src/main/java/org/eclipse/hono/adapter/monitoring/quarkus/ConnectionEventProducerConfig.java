@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.quarkus.monitoring;
+package org.eclipse.hono.adapter.monitoring.quarkus;
 
 import io.quarkus.arc.config.ConfigProperties;
 
@@ -23,5 +23,5 @@ import io.quarkus.arc.config.ConfigProperties;
  *
  */
 @ConfigProperties(prefix = "hono.connectionEvents", namingStrategy = ConfigProperties.NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class ConnectionEventProducerConfig extends org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig {
+public class ConnectionEventProducerConfig extends org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig {
 }

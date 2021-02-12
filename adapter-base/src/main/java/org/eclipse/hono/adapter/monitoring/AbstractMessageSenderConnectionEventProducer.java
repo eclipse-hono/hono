@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.monitoring;
+package org.eclipse.hono.adapter.monitoring;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
