@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
@@ -38,7 +37,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
@@ -137,22 +135,12 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
         final SendMessageSampler.Sample sample = this.sampler.start(this.tenantId);
 
-        final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
-                ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
+        final ClientConfigProperties config = connection.getConfig();
+        final Long timerId = config.getSendMessageTimeout() > 0
+                ? connection.getVertx().setTimer(config.getSendMessageTimeout(), id -> {
                     if (!result.future().isComplete()) {
-                        final ServerErrorException exception = new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE,
-                                "waiting for delivery update timed out after "
-                                        + connection.getConfig().getSendMessageTimeout() + "ms");
-                        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
-                                messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
-                        // settle and release the delivery - this ensures that the message isn't considered "in flight"
-                        // anymore in the AMQP messaging network and that it doesn't count towards the link capacity
-                        // (it would be enough to just settle the delivery without an outcome but that cannot be done with proton-j as of now)
-                        Optional.ofNullable(deliveryRef.get())
-                                .ifPresent(delivery -> ProtonHelper.released(delivery, true));
-                        result.fail(exception);
-                        sample.timeout();
+                        handleSendMessageTimeout(message, config.getSendMessageTimeout(), deliveryRef.get(), sample,
+                                result, null);
                     }
                 })
                 : null;

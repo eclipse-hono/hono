@@ -252,7 +252,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
                         })
                         .map(amqpMessage -> {
                             Tags.HTTP_STATUS.set(currentSpan, MessageHelper.getStatus(amqpMessage));
-                            if (sender.isOpen()) {
+                            if (HonoProtonHelper.isLinkOpenAndConnected(sender)) {
                                 final ProtonDelivery responseDelivery = sender.send(amqpMessage);
                                 //TODO handle send exception
                                 logger.debug("sent response message to client  [correlation-id: {}, content-type: {}]",

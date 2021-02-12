@@ -34,10 +34,13 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.ProtonSession;
 
 /**
  * Helper class that provides mocks for objects that are needed by unit tests for
@@ -80,7 +83,8 @@ public final class AmqpClientUnitTestHelper {
     }
 
     /**
-     * Creates a mocked Proton sender which always returns {@code true} when its isOpen method is called.
+     * Creates a mocked Proton sender which always returns {@code true} when its isOpen method is called
+     * and whose connection is not disconnected.
      *
      * @return The mocked sender.
      */
@@ -90,12 +94,14 @@ public final class AmqpClientUnitTestHelper {
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
         when(sender.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
         when(sender.getTarget()).thenReturn(mock(Target.class));
+        mockLinkConnection(sender);
 
         return sender;
     }
 
     /**
-     * Creates a mocked Proton receiver which always returns {@code true} when its isOpen method is called.
+     * Creates a mocked Proton receiver which always returns {@code true} when its isOpen method is called
+     * and whose connection is not disconnected.
      *
      * @return The mocked receiver.
      */
@@ -103,8 +109,17 @@ public final class AmqpClientUnitTestHelper {
 
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        mockLinkConnection(receiver);
 
         return receiver;
+    }
+
+    private static void mockLinkConnection(final ProtonLink<?> link) {
+        final ProtonConnection connection = mock(ProtonConnection.class);
+        when(connection.isDisconnected()).thenReturn(false);
+        final ProtonSession session = mock(ProtonSession.class);
+        when(session.getConnection()).thenReturn(connection);
+        when(link.getSession()).thenReturn(session);
     }
 
     /**

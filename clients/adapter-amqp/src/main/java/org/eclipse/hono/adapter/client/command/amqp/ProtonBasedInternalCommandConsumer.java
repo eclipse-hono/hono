@@ -28,6 +28,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -157,7 +158,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
             connection.isConnected(getDefaultConnectionCheckTimeout())
                     .compose(res -> {
                         // recreate adapter specific consumer
-                        if (adapterSpecificConsumer == null || !adapterSpecificConsumer.isOpen()) {
+                        if (!HonoProtonHelper.isLinkOpenAndConnected(adapterSpecificConsumer)) {
                             log.debug("recreate adapter specific command consumer link");
                             return createAdapterSpecificConsumer();
                         }

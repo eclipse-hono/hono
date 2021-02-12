@@ -38,6 +38,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.Strings;
 
 import io.opentracing.SpanContext;
@@ -342,7 +343,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                         @SuppressWarnings("rawtypes")
                         final List<Future> consumerCreationFutures = new ArrayList<>();
                         // recreate adapter specific consumer
-                        if (adapterSpecificConsumer == null || !adapterSpecificConsumer.isOpen()) {
+                        if (!HonoProtonHelper.isLinkOpenAndConnected(adapterSpecificConsumer)) {
                             log.debug("recreate adapter specific command consumer link");
                             consumerCreationFutures.add(createAdapterSpecificConsumer());
                         }
