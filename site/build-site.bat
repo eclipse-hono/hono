@@ -25,7 +25,7 @@ IF NOT EXIST themes\hugo-universal-theme (
   ECHO Going to download theme 'universal' for hugo...
   git clone https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
   cd themes\hugo-universal-theme
-  git checkout 1.0.0
+  git checkout 1.1.1
   ECHO Remove images from theme
   DEL /Q static\img\*
   cd ..\..

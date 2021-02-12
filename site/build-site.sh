@@ -31,7 +31,7 @@ if [ ! -d themes/hugo-universal-theme ]
 then
   git clone https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
   cd themes/hugo-universal-theme
-  git checkout 1.0.0
+  git checkout 1.1.1
   echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
   rm static/img/*
   cd ../..

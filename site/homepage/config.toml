@@ -18,7 +18,7 @@ pluralizeListTitles = "false"
 [params]
     author = "The Eclipse Hono Project"
     description = "A set of micro-services for connecting millions of devices."
-    copyright = "&copy; 2019 The Eclipse Hono Project"
+    copyright = "&copy; 2019-2021 The Eclipse Hono Project"
     viewMorePostLink = "/blog/"
     defaultKeywords = []
     defaultDescription = "A set of micro-services for connecting millions of devices."
@@ -28,7 +28,6 @@ pluralizeListTitles = "false"
 
     # Twitter
     twitter = "EclipseHono"
-    twitterImage = "img/twitter_image.png"
 
     # Style options: default (light-blue), blue, green, marsala, pink, red, turquoise, violet
     style = "hono"
