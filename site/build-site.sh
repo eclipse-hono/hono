@@ -30,12 +30,13 @@ cd homepage/
 if [ ! -d themes/hugo-universal-theme ]
 then
   git clone https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
-  cd themes/hugo-universal-theme
-  git checkout 1.1.1
-  echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
-  rm static/img/*
-  cd ../..
 fi
+cd themes/hugo-universal-theme
+git fetch
+git checkout 1.1.1
+echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
+rm static/img/*
+cd ../..
 
 echo "Going to build homepage in directory: $TARGET"
 hugo -v -d $TARGET
@@ -45,10 +46,11 @@ cd documentation/
 if [ ! -d themes/hugo-theme-learn ]
 then
   git clone https://github.com/matcornic/hugo-theme-learn.git themes/hugo-theme-learn
-  cd themes/hugo-theme-learn
-  git checkout 2.5.0
-  cd ../..
 fi
+cd themes/hugo-theme-learn
+git fetch
+git checkout 2.5.0
+cd ../..
 
 echo "Going to build documentation in directory: $TARGET/docs"
 hugo -v -d $TARGET/docs

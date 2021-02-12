@@ -10,6 +10,10 @@ title = "Release Notes"
   been documented as `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME_MILLIS`, accepting an integer representing the duration as
   number of milliseconds. However, the correct property is named `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME` and accepts an
   ISO-8601 Duration string instead of an integer.
+* The hugo themes for the Hono website and the documentation have been updated to the latest versions respectively.
+  In order for the site module build to succeed with the `hugo` binary installed locally, the
+  `site/homepage/themes/hugo-universal-theme` and `site/documentation/themes/hugo-theme-learn` folders need to be deleted.
+  They will automatically be (re-)created as part of the build.
 
 ### API Changes
 

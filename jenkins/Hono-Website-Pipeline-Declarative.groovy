@@ -97,7 +97,7 @@ spec:
         sh '''
             git clone https://github.com/devcows/hugo-universal-theme.git ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
             cd ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
-            git checkout 1.0.0
+            git checkout 1.1.1
             echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
             rm ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme/static/img/*
         '''
