@@ -247,6 +247,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 } catch (final RuntimeException messageHandlingError) {
                     LOG.debug("Message handler failed", messageHandlingError);
                     // will commit the offset of the failed record and then resume polling (will include failed record)
+                    break;
                 }
             }
             commit(true).compose(ok -> poll()).onSuccess(this::handleBatch);
