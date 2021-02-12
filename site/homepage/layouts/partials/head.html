@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {{ $title_plain := .Title | markdownify | plainify }}
   <title>{{ $title_plain }} :: {{ .Site.Title | safeHTML }}</title>
-  <meta name="author" content="{{ .Site.Author.name }}" />
+  <meta name="author" content="{{ .Param "author" }}" />
   {{ $keywords := .Site.Params.defaultKeywords | default (slice "" | first 0) }}
   {{ if isset .Params "tags" }}{{ range .Params.tags }}{{ $keywords = $keywords | append . }}{{ end }}{{ end }}
   {{ if isset .Params "keywords" }}{{ range .Params.keywords }}{{ $keywords = $keywords | append . }}{{ end }}{{ end }}
