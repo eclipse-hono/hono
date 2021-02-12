@@ -30,6 +30,7 @@ import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -201,7 +202,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         final Span currentSpan = newChildSpan(null, command);
         TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
 
-        if (sender.isOpen()) {
+        if (HonoProtonHelper.isLinkOpenAndConnected(sender)) {
             final Promise<BufferResult> responseTracker = Promise.promise();
             final Message request = ProtonHelper.message();
 

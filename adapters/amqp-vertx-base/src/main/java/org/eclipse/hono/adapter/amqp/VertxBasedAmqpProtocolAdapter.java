@@ -855,7 +855,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                             "malformed command message"));
                 }
-                if (!sender.isOpen()) {
+                if (!HonoProtonHelper.isLinkOpenAndConnected(sender)) {
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                             "sender link is not open"));
                 }
@@ -975,8 +975,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
                     : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
-                log.debug("waiting for delivery update timed out after {}ms [{}]",
-                        getConfig().getSendMessageToDeviceTimeout(), command);
+                final String linkOrConnectionClosedInfo = HonoProtonHelper.isLinkOpenAndConnected(sender)
+                        ? "" : " (link or connection already closed)";
+                log.debug("waiting for delivery update timed out after {}ms{} [{}]",
+                        getConfig().getSendMessageToDeviceTimeout(), linkOrConnectionClosedInfo, command);
                 if (isCommandSettled.compareAndSet(false, true)) {
                     // timeout reached -> release command
                     final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,

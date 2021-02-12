@@ -40,6 +40,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.RequestResponseResult;
@@ -961,7 +962,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     @Override
     public final boolean isOpen() {
-        return sender != null && sender.isOpen() && receiver != null && receiver.isOpen();
+        return HonoProtonHelper.isLinkOpenAndConnected(sender) && HonoProtonHelper.isLinkOpenAndConnected(receiver);
     }
 
     @Override

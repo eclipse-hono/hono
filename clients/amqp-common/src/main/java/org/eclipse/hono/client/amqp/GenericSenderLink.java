@@ -44,6 +44,7 @@ import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AddressHelper;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -207,7 +208,7 @@ public class GenericSenderLink extends AbstractHonoClient {
      * @return {@code true} if the link is open and can be used to send messages.
      */
     public final boolean isOpen() {
-        return sender.isOpen();
+        return HonoProtonHelper.isLinkOpenAndConnected(sender);
     }
 
     /**
@@ -360,20 +361,8 @@ public class GenericSenderLink extends AbstractHonoClient {
         final Long timerId = config.getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(config.getSendMessageTimeout(), id -> {
                     if (timeoutReached.compareAndSet(false, true)) {
-                        final ServerErrorException exception = new SendMessageTimeoutException(
-                                "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
-                        logMessageSendingError(
-                                "waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
-                                messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
-                        // settle and release the delivery - this ensures that the message isn't considered "in flight"
-                        // anymore in the AMQP messaging network and that it doesn't count towards the link capacity
-                        // (it would be enough to just settle the delivery without an outcome but that cannot be done with proton-j as of now)
-                        Optional.ofNullable(deliveryRef.get())
-                                .ifPresent(delivery -> ProtonHelper.released(delivery, true));
-                        TracingHelper.logError(currentSpan, exception.getMessage());
-                        Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
-                        currentSpan.finish();
-                        sample.timeout();
+                        handleSendMessageTimeout(message, config.getSendMessageTimeout(), deliveryRef.get(), sample,
+                                null, currentSpan);
                     }
                 })
                 : null;
@@ -419,21 +408,12 @@ public class GenericSenderLink extends AbstractHonoClient {
 
         final SendMessageSampler.Sample sample = sampler.start(tenantId);
 
-        final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
-                ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
+        final ClientConfigProperties config = connection.getConfig();
+        final Long timerId = config.getSendMessageTimeout() > 0
+                ? connection.getVertx().setTimer(config.getSendMessageTimeout(), id -> {
                     if (!result.future().isComplete()) {
-                        final ServerErrorException exception = new SendMessageTimeoutException(
-                                "waiting for delivery update timed out after "
-                                        + connection.getConfig().getSendMessageTimeout() + "ms");
-                        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
-                                messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
-                        // settle and release the delivery - this ensures that the message isn't considered "in flight"
-                        // anymore in the AMQP messaging network and that it doesn't count towards the link capacity
-                        // (it would be enough to just settle the delivery without an outcome but that cannot be done with proton-j as of now)
-                        Optional.ofNullable(deliveryRef.get())
-                                .ifPresent(delivery -> ProtonHelper.released(delivery, true));
-                        result.fail(exception);
-                        sample.timeout();
+                        handleSendMessageTimeout(message, config.getSendMessageTimeout(), deliveryRef.get(), sample,
+                                result, null);
                     }
                 })
                 : null;
@@ -477,6 +457,54 @@ public class GenericSenderLink extends AbstractHonoClient {
                     Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
                 })
                 .onComplete(r -> currentSpan.finish());
+    }
+
+    /**
+     * Handles a timeout waiting for a delivery update after sending a message.
+     *
+     * @param message The message for which the timeout occurred.
+     * @param sendMessageTimeout The timeout value.
+     * @param delivery The message delivery to release (may be {@code null}).
+     * @param sample The sample to log a timeout on (may be {@code null}).
+     * @param resultPromise The promise to fail with an exception (may be {@code null}).
+     * @param spanToLogToAndFinish The span to log the error to and finish (may be {@code null})
+     * @throws NullPointerException if message is {@code null}.
+     */
+    protected void handleSendMessageTimeout(
+            final Message message,
+            final long sendMessageTimeout,
+            final ProtonDelivery delivery,
+            final SendMessageSampler.Sample sample,
+            final Promise<ProtonDelivery> resultPromise,
+            final Span spanToLogToAndFinish) {
+        Objects.requireNonNull(message);
+
+        final String linkOrConnectionClosedInfo = HonoProtonHelper.isLinkOpenAndConnected(sender)
+                ? "" : " (link or connection already closed)";
+        final String exceptionMsg = "waiting for delivery update timed out after " + sendMessageTimeout + "ms";
+
+        final ServerErrorException exception = HonoProtonHelper.isLinkOpenAndConnected(sender)
+                ? new SendMessageTimeoutException(exceptionMsg)
+                : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, exceptionMsg + linkOrConnectionClosedInfo);
+        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms{}",
+                message.getMessageId(), getMessageAddress(message), sendMessageTimeout, linkOrConnectionClosedInfo);
+        // settle and release the delivery - this ensures that the message isn't considered "in flight"
+        // anymore in the AMQP messaging network and that it doesn't count towards the link capacity
+        // (it would be enough to just settle the delivery without an outcome but that cannot be done with proton-j as of now)
+        if (delivery != null) {
+            ProtonHelper.released(delivery, true);
+        }
+        if (spanToLogToAndFinish != null) {
+            TracingHelper.logError(spanToLogToAndFinish, exception.getMessage());
+            Tags.HTTP_STATUS.set(spanToLogToAndFinish, HttpURLConnection.HTTP_UNAVAILABLE);
+            spanToLogToAndFinish.finish();
+        }
+        if (resultPromise != null) {
+            resultPromise.fail(exception);
+        }
+        if (sample != null) {
+            sample.timeout();
+        }
     }
 
     private Future<ProtonDelivery> mapUnacceptedOutcomeToErrorResult(final ProtonDelivery delivery) {

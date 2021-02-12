@@ -36,6 +36,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.AbstractHonoClient;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
 import org.eclipse.hono.util.TriTuple;
@@ -627,7 +628,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      * from the peer.
      */
     public final boolean isOpen() {
-        return sender != null && sender.isOpen() && receiver != null && receiver.isOpen();
+        return HonoProtonHelper.isLinkOpenAndConnected(sender) && HonoProtonHelper.isLinkOpenAndConnected(receiver);
     }
 
     /**

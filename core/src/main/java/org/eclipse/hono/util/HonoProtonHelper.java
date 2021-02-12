@@ -167,6 +167,26 @@ public final class HonoProtonHelper {
     }
 
     /**
+     * Checks if a link is open and the underlying transport connection is set.
+     *
+     * @param link The link to check (may be {@code null}).
+     * @return {@code true} if the link is open and the underlying connection is set.
+     */
+    public static boolean isLinkOpenAndConnected(final ProtonLink<?> link) {
+        if (link != null && link.isOpen()) {
+            if (link.getSession() != null && link.getSession().getConnection() != null
+                    && !link.getSession().getConnection().isDisconnected()) {
+                return true;                
+            }
+            final String localLinkAddress = link instanceof ProtonSender ? link.getTarget().getAddress()
+                    : link.getSource().getAddress();
+            LOG.debug("{} link [address: {}] is locally open but underlying transport is disconnected",
+                    link instanceof ProtonSender ? "sender" : "receiver", localLinkAddress);
+        }
+        return false;
+    }
+
+    /**
      * Executes some code on a given context.
      *
      * @param <T> The type of the result that the code produces.
@@ -257,7 +277,7 @@ public final class HonoProtonHelper {
 
             if (link == null) {
                 closeHandler.handle(null);
-            } else if (link.isOpen()) {
+            } else if (isLinkOpenAndConnected(link)) {
 
                 final long timerId = context.owner().setTimer(detachTimeOut, tid -> {
                     // from the local peer's point of view
@@ -279,7 +299,7 @@ public final class HonoProtonHelper {
                 // close the link and wait for peer's detach frame to trigger the close handler
                 link.close();
             } else {
-                // link is already closed,
+                // link is already closed or transport is disconnected,
                 // nothing to do
                 result.complete();
             }
