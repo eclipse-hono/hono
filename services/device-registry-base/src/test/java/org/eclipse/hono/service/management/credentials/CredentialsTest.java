@@ -212,19 +212,29 @@ public class CredentialsTest {
     }
 
     /**
-     * Test encoding a x509 secret.
+     * Test encoding an X.509 secret.
      */
     @Test
     public void testEncodeX509Credential() {
 
         final X509CertificateSecret x509Secret = new X509CertificateSecret();
         addCommonProperties(x509Secret);
-        final var credential = X509CertificateCredential.fromSubjectDn("CN=foo, O=bar", List.of(x509Secret));
+        var credential = X509CertificateCredential.fromSubjectDn("CN=foo, O=bar", List.of(x509Secret));
 
-        final JsonObject json = JsonObject.mapFrom(credential);
+        JsonObject json = JsonObject.mapFrom(credential);
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
         assertEquals("CN=foo,O=bar", json.getString(RegistryManagementConstants.FIELD_AUTH_ID));
-        final JsonObject secret = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
+        JsonObject secret = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
+        assertCommonSecretProperties(secret);
+
+        credential = X509CertificateCredential.fromSubjectDn("emailAddress=hono@eclipse.org,O=Eclipse", List.of(x509Secret));
+        json = JsonObject.mapFrom(credential);
+        assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
+        assertEquals(
+                // OID(emailAddress)=(ASN.1 ia5str encoding of the email address)
+                "1.2.840.113549.1.9.1=#1610686f6e6f4065636c697073652e6f7267,O=Eclipse",
+                json.getString(RegistryManagementConstants.FIELD_AUTH_ID));
+        secret = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
         assertCommonSecretProperties(secret);
     }
 
