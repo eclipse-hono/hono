@@ -18,10 +18,10 @@ import java.util.Optional;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
+import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;

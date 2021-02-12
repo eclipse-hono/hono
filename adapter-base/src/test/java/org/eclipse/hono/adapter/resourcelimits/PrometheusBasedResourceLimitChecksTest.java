@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.service.resourcelimits;
+package org.eclipse.hono.adapter.resourcelimits;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,6 +37,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
+import org.eclipse.hono.adapter.resourcelimits.LimitedResource;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecks;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.ConnectionDuration;

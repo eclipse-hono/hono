@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.resourcelimits;
+package org.eclipse.hono.adapter.resourcelimits;
 
 import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 

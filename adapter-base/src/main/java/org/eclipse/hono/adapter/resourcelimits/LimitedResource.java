@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.resourcelimits;
+package org.eclipse.hono.adapter.resourcelimits;
 
 /**
  * A holder for a limited resource's current and max value.

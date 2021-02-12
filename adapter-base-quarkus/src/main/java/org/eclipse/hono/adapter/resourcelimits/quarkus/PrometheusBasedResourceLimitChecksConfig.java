@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.quarkus.resourcelimits;
+package org.eclipse.hono.adapter.resourcelimits.quarkus;
 
 import io.quarkus.arc.config.ConfigProperties;
 import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
@@ -21,5 +21,5 @@ import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
  * Resource Limit Checks configuration.
  */
 @ConfigProperties(prefix = "hono.resourceLimits.prometheusBased", namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class PrometheusBasedResourceLimitChecksConfig extends org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig {
+public class PrometheusBasedResourceLimitChecksConfig extends org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig {
 }

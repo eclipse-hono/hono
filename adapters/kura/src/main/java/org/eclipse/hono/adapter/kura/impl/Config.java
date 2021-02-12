@@ -17,10 +17,10 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
+import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
