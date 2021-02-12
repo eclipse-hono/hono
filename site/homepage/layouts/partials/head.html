@@ -62,7 +62,7 @@
   <link href="{{ "css/owl.theme.css" | relURL}}" rel="stylesheet">
 
   <!-- RSS feed -->
-  <link rel="alternate" href="{{ "/index.xml" | absURL }}" type="application/rss+xml" title="{{ .Site.Title }}">
+  <link rel="alternate" href="{{ "/index.xml" | relURL }}" type="application/rss+xml" title="{{ .Site.Title }}">
 
   <!-- Facebook OpenGraph tags -->
   {{ $is_blog := and (eq .Type "blog") (eq .Kind "page") }}
