@@ -35,6 +35,8 @@
     <californium.version>2.6.0</californium.version>
     <commons-cli.version>1.2</commons-cli.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.14.0</dispatch-router.image.name>
+    <kafka.image.name>confluentinc/cp-kafka:6.1.0</kafka.image.name>
+    <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.0</zookeeper.image.name>
     <guava.version>28.0-jre</guava.version>
     <gson.version>2.8.5</gson.version>
     <h2.version>1.4.200</h2.version>

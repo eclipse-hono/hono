@@ -42,16 +42,21 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.commandrouter.host>hono-service-command-router.hono</hono.commandrouter.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
+    <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
 
     <!-- duration before vert.x complains about blocking the event loop -->
     <max.event-loop.execute-time>PT5S</max.event-loop.execute-time>
 
     <!-- logging profile used by all Hono components: prod, dev or trace -->
     <logging.profile>prod</logging.profile>
+    <!-- messaging profile configurable for integration tests: kafka or empty (defaults to AMQP) -->
+    <messaging.profile></messaging.profile>
     <!-- maximum time (milliseconds) to wait for successful startup of a single service component -->
     <service.startup.timeout>120000</service.startup.timeout>
     <!-- color used by components of the AMQP Messaging Network for logging -->
     <log.color.amqp-network>magenta</log.color.amqp-network>
+    <!-- color used by components of the AMQP Messaging Network for logging -->
+    <log.color.kafka>blue</log.color.kafka>
     <!-- color used by components of the device registry for logging -->
     <log.color.hono-device-registry>green</log.color.hono-device-registry>
     <!-- color used by protocol adapters for logging -->
@@ -80,6 +85,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
     <hono.commandrouter.disabled>true</hono.commandrouter.disabled>
     <hono.device-connection.disabled>false</hono.device-connection.disabled>
+
+    <!--
+      Messaging related properties - AMQP is used as the default one.
+    -->
+    <hono.kafka.disabled>true</hono.kafka.disabled>
+    <hono.zookeeper.disabled>true</hono.zookeeper.disabled>
+    <hono.kafka.log-level>WARN</hono.kafka.log-level>
 
     <!--
       Device Registry related properties - The MongoDB based device registry is used as the default one.
@@ -256,6 +268,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>hono-client-application-amqp</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-application-kafka</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -306,6 +323,20 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
         <hono.commandrouter.disabled>false</hono.commandrouter.disabled>
         <hono.device-connection.disabled>true</hono.device-connection.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>kafka</id>
+      <activation>
+        <property>
+          <name>hono.messaging.type</name>
+          <value>kafka</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.kafka.disabled>false</hono.kafka.disabled>
+        <hono.zookeeper.disabled>false</hono.zookeeper.disabled>
+        <messaging.profile>kafka,</messaging.profile>
       </properties>
     </profile>
     <profile>
@@ -418,6 +449,63 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <stripClassifier>true</stripClassifier>
                   <stripVersion>true</stripVersion>
                   <excludeTransitive>true</excludeTransitive>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.0.0</version>
+            <executions>
+              <execution>
+                <id>reserve-network-port</id>
+                <goals>
+                  <goal>reserve-network-port</goal>
+                </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <randomPort>true</randomPort>
+                  <portNames>
+                    <!--
+                      The port on which Kafka's advertised listener for the Docker-external clients is set up
+                      must be the same on which Docker exposes the container port to the "outside".
+                      The docker-maven-plugin cannot be used since the advertised listener is defined as an
+                      environment variable of the container and the plugin chooses the random port after the definition
+                      of the container is made.
+                    -->
+                    <portName>kafka.port</portName>
+                  </portNames>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!--
+              The standard Maven plugin for writing properties cannot be used as it is only capable of writing
+              all project properties to file but not specific ones only.
+            -->
+            <groupId>com.internetitem</groupId>
+            <artifactId>write-properties-file-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>post-integration-test</phase>
+                <goals>
+                  <goal>write-properties-file</goal>
+                </goals>
+                <configuration>
+                  <filename>kafka.port.properties</filename>
+                  <outputDirectory>${project.build.directory}/docker</outputDirectory>
+                  <properties>
+                    <property>
+                      <name>kafka.port</name>
+                      <value>${kafka.port}</value>
+                    </property>
+                    <property>
+                      <name>docker.host.address</name>
+                      <value>${docker.host.address}</value>
+                    </property>
+                  </properties>
                 </configuration>
               </execution>
             </executions>
@@ -782,6 +870,68 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                   </run>
                 </image>
+                <!-- ##### Zookeeper ##### -->
+                <image>
+                  <name>${zookeeper.image.name}</name>
+                  <alias>hono-zookeeper-test</alias>
+                  <run>
+                    <skip>${hono.zookeeper.disabled}</skip>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>zookeeper.hono</alias>
+                    </network>
+                    <log>
+                      <prefix>Zookeeper</prefix>
+                      <color>${log.color.kafka}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(binding to port).*</log>
+                    </wait>
+                    <env>
+                      <ZOOKEEPER_CLIENT_PORT>2181</ZOOKEEPER_CLIENT_PORT>
+                      <ZOOKEEPER_TICK_TIME>2000</ZOOKEEPER_TICK_TIME>
+                    </env>
+                  </run>
+                </image>
+                <!-- ##### Kafka ##### -->
+                <image>
+                  <name>${kafka.image.name}</name>
+                  <alias>hono-kafka-test</alias>
+                  <run>
+                    <skip>${hono.kafka.disabled}</skip>
+                    <ports>
+                      <port>${kafka.port}:${kafka.port}</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>kafka.hono</alias>
+                    </network>
+                    <log>
+                      <prefix>Kafka</prefix>
+                      <color>${log.color.kafka}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(\[KafkaServer id=1\] started).*</log>
+                    </wait>
+                    <env>
+                      <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
+                      <KAFKA_ZOOKEEPER_CONNECT>zookeeper.hono:2181</KAFKA_ZOOKEEPER_CONNECT>
+                      <!-- setting the default listener, "PLAINTEXT", as this is the default value of KAFKA_INTER_BROKER_LISTENER_NAME -->
+                      <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>PLAINTEXT:PLAINTEXT,LISTENER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
+                      <KAFKA_ADVERTISED_LISTENERS>PLAINTEXT://kafka.hono:9092,LISTENER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
+                      <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
+                      <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
+                      <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
+                      <KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>0</KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>
+                      <!-- log level for kafka.server.KafkaServer needs to stay on INFO so that docker-maven-plugin can wait for container startup -->
+                      <KAFKA_LOG4J_LOGGERS>kafka.cluster=${hono.kafka.log-level},kafka.controller=${hono.kafka.log-level},kafka.coordinator=${hono.kafka.log-level},kafka.log=${hono.kafka.log-level},kafka.authorizer=${hono.kafka.log-level},kafka.zk=${hono.kafka.log-level},state.change.logger=${hono.kafka.log-level},kafka.server=${hono.kafka.log-level},kafka.server.KafkaServer=INFO</KAFKA_LOG4J_LOGGERS>
+                    </env>
+                  </run>
+                </image>
                 <!-- ##### Device Registration service ##### -->
                 <image>
                   <name>${docker.repository}/hono-service-device-registry-test:${project.version}</name>
@@ -1057,7 +1207,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
@@ -1128,7 +1278,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</JDK_JAVA_OPTIONS>
                       <!--
                         disable -Xmx calculation done by the runJava.sh script
@@ -1204,7 +1354,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${amqp.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-amqp</JAEGER_SERVICE_NAME>
@@ -1275,7 +1425,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${coap.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-coap</JAEGER_SERVICE_NAME>
@@ -1354,6 +1504,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
+                <downstream.bootstrap.servers>${docker.host.address}:${kafka.port}</downstream.bootstrap.servers>
                 <deviceconnection.enabled>${hono.commandrouter.disabled}</deviceconnection.enabled>
                 <deviceconnection.host>${deviceconnection.ip}</deviceconnection.host>
                 <deviceconnection.amqp.port>${deviceconnection.amqp.port}</deviceconnection.amqp.port>
@@ -1425,6 +1576,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <file>${project.build.directory}/docker/commandrouter.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
+                    <file>${project.build.directory}/docker/kafka.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.http.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.mqtt.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.amqp.port.properties</file>
@@ -1486,7 +1638,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <configuration>
                   <removeVolumes>true</removeVolumes>
                   <removeNamePattern>**/hono-*-test:*</removeNamePattern>
-                  <stopNamePattern>hono-*-test-*,all-in-one-*</stopNamePattern>
+                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*</stopNamePattern>
                 </configuration>
               </execution>
             </executions>

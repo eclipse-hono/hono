@@ -142,3 +142,15 @@ Router service component instead, the `command-router` maven profile can be set:
 ```sh
 mvn verify -Prun-tests,command-router
 ```
+
+### Running the Tests with Kafka as messaging network
+
+By default, the integration tests are run using an AMQP 1.0 based messaging network. In order to use Kafka instead, 
+the `hono.messaging.type` maven property can be set to `kafka`:
+
+```sh
+mvn verify -Dhono.messaging.type=kafka
+```
+
+If the docker containers are kept running, a connection to Kafka for debugging purposes can be made by using the 
+machine's `DOCKER_HOST` as IP address and the dynamically exposed port of the Kafka container.
