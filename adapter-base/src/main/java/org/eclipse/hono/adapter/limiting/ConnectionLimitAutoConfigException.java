@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.limiting;
+package org.eclipse.hono.adapter.limiting;
 
 /**
  * Indicates that the auto-configuration of the connection limit failed.

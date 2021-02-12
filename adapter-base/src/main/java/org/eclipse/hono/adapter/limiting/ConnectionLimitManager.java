@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.service.limiting;
+package org.eclipse.hono.adapter.limiting;
 
 /**
  * Enforces an upper limit of concurrent connections.

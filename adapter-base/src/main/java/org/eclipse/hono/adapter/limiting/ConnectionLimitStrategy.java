@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.limiting;
+package org.eclipse.hono.adapter.limiting;
 
 /**
  * A strategy to calculate a recommended connection limit for {@link DefaultConnectionLimitManager} based on the available

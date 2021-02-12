@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.limiting;
+package org.eclipse.hono.adapter.limiting;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,6 +20,9 @@ import static org.mockito.Mockito.when;
 
 import java.util.function.Supplier;
 
+import org.eclipse.hono.adapter.limiting.ConnectionLimitManager;
+import org.eclipse.hono.adapter.limiting.ConnectionLimitStrategy;
+import org.eclipse.hono.adapter.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.junit.jupiter.api.Test;
 
