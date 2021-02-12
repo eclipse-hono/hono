@@ -39,7 +39,8 @@ public abstract class DownstreamMessageConsumer
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topic The Kafka topic to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, it will be invoked again with the message.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.

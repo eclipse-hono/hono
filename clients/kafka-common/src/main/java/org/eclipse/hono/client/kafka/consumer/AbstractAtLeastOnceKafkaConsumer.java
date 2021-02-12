@@ -14,19 +14,17 @@
 package org.eclipse.hono.client.kafka.consumer;
 
 import java.time.Duration;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
+import org.apache.kafka.common.errors.TimeoutException;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -44,30 +42,29 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * processing. When all messages of a batch are processed, this consumer commits the offset and polls for a new batch.
  * <p>
  * This consumer provides AT LEAST ONCE message processing. When the message handler completes without throwing an
- * exception, the message is considered to be processed and will be "acknowledged" with the following commit. If an
- * error occurs, the underlying Kafka consumer will be closed. In this case, other consumer instances in the same
- * consumer group will consume the messages from the last committed offset. Already processed messages will then be
- * again in the next batch and be passed to the message handler. If de-duplication of messages is required, it must be
- * handled by the message handler.
+ * exception, the message is considered to be processed and will be "acknowledged" with the following commit.
+ * <p>
+ * If a fatal error occurs, the underlying Kafka consumer will be closed. In this case, other consumer instances in the
+ * same consumer group will consume the messages from the last committed offset. Already processed messages might be
+ * polled again with the next batch and then passed to the message handler. If de-duplication of messages is required,
+ * it must be handled by the message handler.
  * <p>
  * The consumer starts consuming when {@link #start()} is invoked. It needs to be closed by invoking {@link #stop()} to
- * release the resources.
+ * release the resources. A stopped instance cannot be started again.
  * <p>
  * </p>
  * ERROR CASES:
  * <p>
  * Errors can happen when polling, in message processing, and when committing the offset to Kafka.
- *
  * If a fatal error occurs, the underlying Kafka consumer will be closed and the close-handler invoked with an exception
  * indicating the cause. Therefore, the provided Kafka consumer must not be used anywhere else.
  * <p>
  * If {@link KafkaConsumer#poll(Duration, Handler)} fails during the start, {@link #start()} will return a failed
  * future. For subsequent {@code poll} operations, the Kafka consumer will be closed and the close handler will be
  * passed a {@link KafkaConsumerPollException}.
- *
  * <p>
- * If the message processing fails because either {@link #createMessage(KafkaConsumerRecord)} or the message handler
- * throws an exception, the Kafka consumer will be closed and the exception will be passed to the close handler.
+ * If the provided message handler throws a runtime exception, the current offsets are committed and the failed message
+ * will be polled again with the next batch of records.
  * <p>
  * If {@link KafkaConsumer#commit(Handler)} times out, the commit will be retried once. If the retry fails or the commit
  * fails with another exception, the Kafka consumer will be closed and the close handler will be passed a
@@ -77,9 +74,9 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  */
 public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
-    // TODO add unit test
-
     private static final Logger LOG = LoggerFactory.getLogger(AbstractAtLeastOnceKafkaConsumer.class);
+
+    boolean stopped = false; // visible for testing
 
     private final KafkaConsumer<String, Buffer> kafkaConsumer;
     private final Set<String> topics;
@@ -87,13 +84,15 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final Handler<T> messageHandler;
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
+    private final Map<TopicPartition, OffsetAndMetadata> offsetsToBeCommitted = new HashMap<>();
 
     /**
      * Creates a new consumer.
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topic The Kafka topic to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, the record will be polled again.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -114,7 +113,8 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topics The Kafka topics to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, the record will be polled again.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -135,7 +135,8 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      *
      * @param kafkaConsumer The Kafka consumer to be exclusively used by this instance to consume records.
      * @param topicPattern The pattern of Kafka topic names to consume records from.
-     * @param messageHandler The handler to be invoked for each message created from a record.
+     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
+     *            runtime exception, the record will be polled again.
      * @param closeHandler The handler to be invoked when the Kafka consumer has been closed due to an error.
      * @param pollTimeout The maximal number of milliseconds to wait for messages during a poll operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -170,6 +171,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     /**
      * Creates a message from the given Kafka consumer record. The message will be passed to the message handler
      * afterward.
+     * <p>
+     * If possible, implementations should not throw exceptions. Any exception thrown here, will stop message
+     * consumption permanently, because the consumer will not skip the message and new consumer instances will start
+     * consuming from the failed message again.
      *
      * @param record The record.
      * @return The message.
@@ -190,6 +195,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     @Override
     public Future<Void> start() {
 
+        if (stopped) {
+            return Future.failedFuture("consumer already stopped"); // the underlying Kafka consumer cannot be reopened
+        }
+
         final Promise<Void> promise = Promise.promise();
         if (topics != null) {
             kafkaConsumer.subscribe(topics, promise);
@@ -209,90 +218,141 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     /**
-     * Closes the underlying Kafka consumer.
+     * Closes the underlying Kafka consumer and tries to commit the current offsets before.
      * <p>
      * This does not invoke the close handler.
      *
-     * @return A future that will complete when the Kafka consumer is closed.
+     * @return A future that will complete when the Kafka consumer is closed. If the offsets have been committed
+     *         successfully, the future will succeed, otherwise, it will fail.
      */
     @Override
     public Future<Void> stop() {
-        final Promise<Void> promise = Promise.promise();
-        kafkaConsumer.close(promise);
-        return promise.future();
+        return tryCommitAndClose();
     }
 
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
+        try {
+            LOG.debug("Polled {} records", records.size());
 
-        LOG.debug("Polled {} records", records.size());
-        CompositeFuture.all(processBatch(records))
-                .compose(ok -> commit(true))
-                .compose(ok -> poll())
-                .onSuccess(this::handleBatch);
+            for (int i = 0; i < records.size(); i++) {
+                if (stopped) {
+                    return;
+                }
 
+                final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
+                final T message = createMessage(record);
+                try {
+                    messageHandler.handle(message);
+                    addToCurrentOffsets(record);
+                } catch (final RuntimeException messageHandlingError) {
+                    LOG.debug("Message handler failed", messageHandlingError);
+                    // resume with committing the current offsets and then polling (failed record will be polled again)
+                    break;
+                }
+            }
+            commit(true).compose(ok -> poll()).onSuccess(this::handleBatch);
+        } catch (final Exception ex) {
+            LOG.error("Consumer failed, closing", ex);
+            // indicates an unexpected programming error and ensures that the consumer does not silently stop consuming
+            tryCommitAndClose().onComplete(v -> closeHandler.handle(ex));
+        }
     }
 
     private Future<KafkaConsumerRecords<String, Buffer>> poll() {
+        if (stopped) {
+            return Future.failedFuture("consumer already stopped"); // stop consuming
+        }
+
         final Promise<KafkaConsumerRecords<String, Buffer>> pollPromise = Promise.promise();
         kafkaConsumer.poll(pollTimeout, pollPromise);
         return pollPromise.future()
                 .recover(cause -> {
                     LOG.error("Error polling messages: " + cause);
                     final KafkaConsumerPollException exception = new KafkaConsumerPollException(cause);
-                    closeWithError(exception);
+                    closeAndCallHandler(exception);
                     return Future.failedFuture(exception);
                 });
     }
 
-    @SuppressWarnings("rawtypes")
-    private List<Future> processBatch(final KafkaConsumerRecords<String, Buffer> records) {
-        return IntStream.range(0, records.size())
-                .mapToObj(records::recordAt)
-                .map(this::processRecord)
-                .collect(Collectors.toList());
-    }
-
-    private Future<Void> processRecord(final KafkaConsumerRecord<String, Buffer> record) {
-        try {
-            final T message = createMessage(record);
-            messageHandler.handle(message);
-            return Future.succeededFuture();
-        } catch (final Exception ex) {
-            LOG.error("Error handling record, closing the consumer: ", ex);
-            commitCurrentOffset(record); // prevents that already processed records from the batch are consumed again
-            stop();
-            return Future.failedFuture(ex);
-        }
+    private void addToCurrentOffsets(final KafkaConsumerRecord<String, Buffer> record) {
+        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        // Kafka expects the offset to be committed that should be read next, therefore it is the current + 1
+        final OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1, "");
+        offsetsToBeCommitted.put(topicPartition, offsetAndMetadata);
     }
 
     private Future<Void> commit(final boolean retry) {
-        final Promise<Void> commitPromise = Promise.promise();
-        kafkaConsumer.commit(commitPromise);
-        return commitPromise.future()
-                .onSuccess(ok -> LOG.debug("Committed offsets"))
+        if (offsetsToBeCommitted.isEmpty()) {
+            return Future.succeededFuture(); // poll next batch
+        } else if (stopped) {
+            return Future.failedFuture("consumer already stopped"); // stop consuming
+        }
+
+        return commitCurrentOffsets()
                 .recover(cause -> {
                     LOG.error("Error committing offsets: " + cause);
-                    if ((cause instanceof org.apache.kafka.common.errors.TimeoutException) && retry) {
+                    if ((cause instanceof TimeoutException) && retry) {
                         LOG.debug("Committing offsets timed out. Maybe increase 'default.api.timeout.ms'?");
                         return commit(false); // retry once
                     } else {
                         final KafkaConsumerCommitException exception = new KafkaConsumerCommitException(cause);
-                        closeWithError(exception);
+                        closeAndCallHandler(exception);
                         return Future.failedFuture(exception);
                     }
                 });
     }
 
-    private void commitCurrentOffset(final KafkaConsumerRecord<String, Buffer> record) {
-        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
-        final OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(record.offset() + 1, "");
-        kafkaConsumer.commit(Map.of(topicPartition, offsetAndMetadata));
+    private Future<Void> commitCurrentOffsets() {
+        if (offsetsToBeCommitted.isEmpty()) {
+            LOG.debug("no offsets to commit");
+            return Future.succeededFuture();
+        }
+
+        LOG.debug("committing the current offsets");
+        LOG.trace("committing offsets: {}", offsetsToBeCommitted);
+
+        final Promise<Map<TopicPartition, OffsetAndMetadata>> completionHandler = Promise.promise();
+        kafkaConsumer.commit(offsetsToBeCommitted, completionHandler);
+        return completionHandler.future()
+                .map(committedOffsets -> {
+                    LOG.debug("successfully committed offsets");
+                    offsetsToBeCommitted.clear();
+                    return null;
+                });
     }
 
-    private void closeWithError(final Throwable exception) {
+    private void closeAndCallHandler(final Throwable exception) {
         LOG.error("Closing consumer with cause", exception);
-        closeHandler.handle(exception);
-        stop();
+        closeConsumer().onComplete(v -> closeHandler.handle(exception));
+    }
+
+    private Future<Void> tryCommitAndClose() {
+        stopped = true;
+        final Promise<Void> returnFuture = Promise.promise();
+
+        commitCurrentOffsets()
+                .onComplete(commitResult -> {
+                    // always close consumer
+                    closeConsumer()
+                            .onComplete(v -> {
+                                // return outcome of commit
+                                if (commitResult.succeeded()) {
+                                    returnFuture.complete();
+                                } else {
+                                    returnFuture.fail(commitResult.cause());
+                                }
+                            });
+                });
+
+        return returnFuture.future();
+    }
+
+    private Future<Void> closeConsumer() {
+        stopped = true;
+        final Promise<Void> promise = Promise.promise();
+        kafkaConsumer.close(promise);
+        offsetsToBeCommitted.clear();
+        return promise.future();
     }
 
 }
