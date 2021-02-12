@@ -30,10 +30,8 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
      * <p>
-     * The messages passed in to the consumer will be acknowledged automatically when the message handler completes. <b>
-     * The message handler is expected to handle processing errors internally and should not deliberately throw
-     * exceptions.</b> Any exception in the message handler will stop the consumption permanently, because a new
-     * consumer will try to consume the same message again and will then get the same exception.
+     * The messages passed in to the consumer will be acknowledged automatically if the message handler does not throw
+     * an exception.
      * <p>
      * If a fatal error occurs, the consumer will be closed and the close-handler, if it is not {@code null}, invoked
      * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
@@ -44,7 +42,7 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
      * <p>
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
      * operation fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerPollException} indicating the cause. If the provided the message handler throws a runtime
+     * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws a runtime
      * exception, the current offsets are committed and the failed message will be polled again with the next batch of
      * records. If the offset commit fails, the consumer will be closed and the close handler will be passed a
      * {@link KafkaConsumerCommitException}.
@@ -66,10 +64,8 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
     /**
      * Creates a client for consuming data from Hono's north bound <em>Event API</em>.
      * <p>
-     * The messages passed in to the consumer will be acknowledged automatically when the message handler completes. <b>
-     * The message handler is expected to handle processing errors internally and should not deliberately throw
-     * exceptions.</b> Any exception in the message handler will stop the consumption permanently, because a new
-     * consumer will try to consume the same message again and will then get the same exception.
+     * The messages passed in to the consumer will be acknowledged automatically if the message handler does not throw
+     * an exception.
      * <p>
      * If a fatal error occurs, the consumer will be closed and the close-handler, if it is not {@code null}, invoked
      * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
@@ -80,7 +76,7 @@ public interface KafkaApplicationClientFactory extends ApplicationClientFactory<
      * <p>
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
      * operation fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerPollException} indicating the cause. If the provided the message handler throws a runtime
+     * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws a runtime
      * exception, the current offsets are committed and the failed message will be polled again with the next batch of
      * records. If the offset commit fails, the consumer will be closed and the close handler will be passed a
      * {@link KafkaConsumerCommitException}.

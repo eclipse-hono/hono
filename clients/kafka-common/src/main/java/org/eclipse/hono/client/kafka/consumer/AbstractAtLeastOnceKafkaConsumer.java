@@ -63,8 +63,8 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * future. For subsequent {@code poll} operations, the Kafka consumer will be closed and the close handler will be
  * passed a {@link KafkaConsumerPollException}.
  * <p>
- * If the provided the message handler throws a runtime exception, the current offsets are committed and the failed
- * message will be polled again with the next batch of records.
+ * If the provided message handler throws a runtime exception, the current offsets are committed and the failed message
+ * will be polled again with the next batch of records.
  * <p>
  * If {@link KafkaConsumer#commit(Handler)} times out, the commit will be retried once. If the retry fails or the commit
  * fails with another exception, the Kafka consumer will be closed and the close handler will be passed a
