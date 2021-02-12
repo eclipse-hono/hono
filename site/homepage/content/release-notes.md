@@ -12,6 +12,8 @@ title = "Release Notes"
   ISO-8601 Duration string instead of an integer.
 * The MQTT adapter failed to handle a command response message if the corresponding tenant object wasn't available
   in the cache. This has been fixed.
+* After a disconnect with the AMQP messaging network, protocol adapters failed to remove cached message senders,
+  leading to telemetry and event messages not getting sent. This has been fixed.
 
 ## 1.5.2
 

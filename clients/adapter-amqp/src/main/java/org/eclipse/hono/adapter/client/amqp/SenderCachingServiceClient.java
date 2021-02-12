@@ -72,6 +72,16 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     }
 
     /**
+     * {@inheritDoc}
+     *
+     * Clears the state of the client factory.
+     */
+    @Override
+    protected void onDisconnect() {
+        clientFactory.clearState();
+    }
+
+    /**
      * Gets an existing or creates a new sender for telemetry and/or event messages.
      * <p>
      * This method first tries to look up an already existing
