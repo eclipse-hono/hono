@@ -120,20 +120,6 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-infinispan</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-autoconfigure</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.springframework</groupId>
-          <artifactId>spring-beans</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
   </dependencies>
 
   <build>
