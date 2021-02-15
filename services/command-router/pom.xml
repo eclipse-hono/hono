@@ -52,12 +52,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-adapter-kafka</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
   </dependencies>
 
   <profiles>

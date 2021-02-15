@@ -44,12 +44,6 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-auth-jdbc</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
 
     <!-- JDBC drivers -->
     <dependency>

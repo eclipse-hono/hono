@@ -41,12 +41,6 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-auth-mongo</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
 
     <dependency>
       <groupId>org.eclipse.hono</groupId>

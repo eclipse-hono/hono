@@ -28,24 +28,21 @@ import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.metric.PrometheusScrapingResource;
+import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.ext.web.Router;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
@@ -53,6 +50,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  *
  */
 @Configuration
+@Import(PrometheusSupport.class)
 public class ApplicationConfig {
 
     private static final String BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER = "simpleAuthenticationServer";
@@ -240,18 +238,5 @@ public class ApplicationConfig {
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), healthCheckConfigProperties());
-    }
-
-    /**
-     * Creates a web resource that can be scraped by a Prometheus server.
-     *
-     * @param registry The Prometheus specific meter registry to scrape.
-     * @return The resource.
-     */
-    @Qualifier("healthchecks")
-    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
-    @Bean
-    public Handler<Router> prometheusScrapingResource(final PrometheusMeterRegistry registry) {
-        return new PrometheusScrapingResource(registry);
     }
 }

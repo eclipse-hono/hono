@@ -45,7 +45,7 @@ import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoin
 import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.metric.PrometheusScrapingResource;
+import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
@@ -53,30 +53,28 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.web.Router;
 
 /**
  * Spring Boot configuration for the Command Router service.
  *
  */
 @Configuration
+@Import(PrometheusSupport.class)
 public class ApplicationConfig {
 
     /**
@@ -436,19 +434,6 @@ public class ApplicationConfig {
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), healthCheckProperties());
-    }
-
-    /**
-     * Creates a web resource that can be scraped by a Prometheus server.
-     *
-     * @param registry The Prometheus specific meter registry to scrape.
-     * @return The resource.
-     */
-    @Qualifier("healthchecks")
-    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
-    @Bean
-    public Handler<Router> prometheusScrapingResource(final PrometheusMeterRegistry registry) {
-        return new PrometheusScrapingResource(registry);
     }
 
     // ---- Optional beans letting the Command Router component also implement the Device Connection API (e.g. for integration tests) ----

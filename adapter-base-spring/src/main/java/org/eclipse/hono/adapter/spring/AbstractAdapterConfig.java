@@ -64,7 +64,7 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
-import org.eclipse.hono.service.metric.PrometheusScrapingResource;
+import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
@@ -90,26 +90,27 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Scope;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
 /**
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
+@Configuration
+@Import(PrometheusSupport.class)
 public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractAdapterConfig.class);
@@ -894,27 +895,14 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
-     * Creates a web resource that can be scraped by a Prometheus server.
-     *
-     * @param registry The Prometheus specific meter registry to scrape.
-     * @return The resource.
-     */
-    @Qualifier("healthchecks")
-    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
-    @Bean
-    public Handler<Router> prometheusScrapingResource(final PrometheusMeterRegistry registry) {
-        return new PrometheusScrapingResource(registry);
-    }
-
-    /**
      * Exposes configuration properties for ResourceLimitChecks as a Spring bean.
      *
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.resource-limits.prometheus-based")
     @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
     @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
+    @ConfigurationProperties(prefix = "hono.resource-limits.prometheus-based")
     public PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig() {
         return new PrometheusBasedResourceLimitChecksConfig();
     }
@@ -926,7 +914,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * @throws NullPointerException if config is {@code null}.
      */
     @Bean
-    @ConditionalOnBean(PrometheusBasedResourceLimitChecksConfig.class)
+    @ConditionalOnBean(value = PrometheusBasedResourceLimitChecksConfig.class)
     public ResourceLimitChecks resourceLimitChecks() {
 
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
