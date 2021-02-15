@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.client.telemetry.kafka;
 import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
@@ -34,7 +33,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A client for publishing telemetry messages to a Kafka cluster.
  */
-public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSender implements TelemetrySender {
+public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSender implements KafkaTelemetrySender {
 
     /**
      * Creates a new Kafka-based telemetry sender.

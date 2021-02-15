@@ -21,8 +21,6 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.amqp.SenderCachingServiceClient;
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -41,7 +39,8 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A vertx-proton based sender for telemetry messages and events.
  */
-public class ProtonBasedDownstreamSender extends SenderCachingServiceClient implements TelemetrySender, EventSender {
+public class ProtonBasedDownstreamSender extends SenderCachingServiceClient
+        implements AmqpTelemetrySender, AmqpEventSender {
 
     private final boolean deviceDefaultsEnabled;
     private final boolean jmsVendorPropsEnabled;
