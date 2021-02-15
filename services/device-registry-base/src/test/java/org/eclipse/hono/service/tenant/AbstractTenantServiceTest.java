@@ -26,6 +26,7 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -408,13 +409,16 @@ public interface AbstractTenantServiceTest {
 
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
 
+        final String trustAnchorId = DeviceRegistryUtils.getUniqueIdentifier();
         final JsonArray expectedCaList = new JsonArray().add(new JsonObject()
+                .put(TenantConstants.FIELD_OBJECT_ID, trustAnchorId)
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8))
                 .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
 
         final Tenant tenant = new Tenant()
                 .setTrustedCertificateAuthorities(List.of(new TrustedCertificateAuthority()
+                        .setId(trustAnchorId)
                         .setSubjectDn(subjectDn)
                         .setPublicKey("NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8))
                         .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))

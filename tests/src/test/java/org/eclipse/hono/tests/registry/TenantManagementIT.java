@@ -15,9 +15,13 @@ package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
+import java.security.PublicKey;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +33,7 @@ import java.util.regex.Pattern;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
+import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -50,6 +55,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.jackson.JacksonCodec;
 import io.vertx.junit5.Timeout;
@@ -159,6 +165,44 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the service successfully creates a tenant from a request having a tenant anchor
+     * with an ID and an another without an ID.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantSucceedsForConfigurationWithMissingTrustAnchorIds(final VertxTestContext context) {
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor1 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority trustAnchor2 = Tenants
+                .createTrustAnchor(null, "CN=test-dn-1", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant()
+                .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+
+        getHelper().registry.addTenant(
+                tenantId,
+                tenant,
+                "application/json",
+                HttpURLConnection.HTTP_CREATED)
+                .compose(ok -> getHelper().registry.getTenant(tenantId))
+                .onComplete(context.succeeding(httpResponse -> {
+                    context.verify(() -> {
+                        final JsonObject response = httpResponse.bodyAsJsonObject();
+                        assertThat(response.getJsonArray(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)).hasSize(2);
+                        final JsonArray trustAnchors = response
+                                .getJsonArray(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
+                        assertThat(trustAnchors.getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID))
+                                .isEqualTo("test-ca");
+                        assertNotNull(trustAnchors.getJsonObject(1).getString(RegistryManagementConstants.FIELD_ID));
+                    });
+                    context.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that the a tenant cannot be created if the tenant ID is invalid.
      *
      * @param context The vert.x test context.
@@ -187,6 +231,32 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
             .onComplete(context.completing());
+    }
+
+    /**
+     * Verifies that the service returns a 400 status code for an add tenant request containing a malformed trust
+     * configuration (i.e with non-unique trust anchor IDs).
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForConfigurationWithNonUniqueTrustAnchorIds(final VertxTestContext context) {
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor1 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority trustAnchor2 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now().plus(366, ChronoUnit.DAYS), Instant.now().plus(730, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant()
+                .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+
+        getHelper().registry.addTenant(
+                tenantId,
+                tenant,
+                "application/json",
+                HttpURLConnection.HTTP_BAD_REQUEST)
+                .onComplete(context.completing());
     }
 
     /**
@@ -268,6 +338,41 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the service successfully updates a tenant from a request having a tenant anchor
+     * with an ID and an another without an ID.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantSucceedsForConfigurationWithMissingTrustAnchorIds(final VertxTestContext context) {
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor1 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority trustAnchor2 = Tenants
+                .createTrustAnchor(null, "CN=test-dn-1", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenantForUpdate = new Tenant()
+                .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+
+        getHelper().registry.addTenant(tenantId, new Tenant())
+                .compose(ok -> getHelper().registry.updateTenant(tenantId, tenantForUpdate, HttpURLConnection.HTTP_NO_CONTENT))
+                .compose(ok -> getHelper().registry.getTenant(tenantId))
+                .onComplete(context.succeeding(httpResponse -> {
+                    context.verify(() -> {
+                        final JsonObject response = httpResponse.bodyAsJsonObject();
+                        assertThat(response.getJsonArray(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)).hasSize(2);
+                        final JsonArray trustAnchors = response
+                                .getJsonArray(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
+                        assertThat(trustAnchors.getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID))
+                                .isEqualTo("test-ca");
+                        assertNotNull(trustAnchors.getJsonObject(1).getString(RegistryManagementConstants.FIELD_ID));
+                    });
+                    context.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that the service rejects an update request for a non-existing tenant.
      *
      * @param context The vert.x test context.
@@ -281,6 +386,29 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             .onComplete(context.completing());
     }
 
+    /**
+     * Verifies that the service returns a 400 status code for an update tenant request containing a malformed trust
+     * configuration (i.e with non-unique trust anchor IDs).
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantFailsForConfigurationWithNonUniqueTrustAnchorIds(final VertxTestContext context) {
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor1 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority trustAnchor2 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now().plus(366, ChronoUnit.DAYS), Instant.now().plus(730, ChronoUnit.DAYS));
+        final Tenant tenantForUpdate = new Tenant()
+                .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+
+        getHelper().registry.addTenant(tenantId, new Tenant())
+                .compose(ok -> getHelper().registry.updateTenant(tenantId, tenantForUpdate,
+                        HttpURLConnection.HTTP_BAD_REQUEST))
+                .onComplete(context.completing());
+    }
 
     /**
      * Verify that a correctly added tenant record can be successfully deleted again.

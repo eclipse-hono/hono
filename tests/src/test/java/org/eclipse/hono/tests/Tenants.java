@@ -94,12 +94,40 @@ public final class Tenants {
             final Instant notBefore,
             final Instant notAfter) {
 
+        final TrustedCertificateAuthority trustAnchor = createTrustAnchor(null, subjectDn, publicKey, algorithm,
+                notBefore, notAfter);
+        return new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor));
+    }
+
+    /**
+     * Create a trust anchor.
+     *
+     * @param id The trust anchor ID.
+     * @param subjectDn The subject DN of the trust anchor.
+     * @param publicKey The public key for the anchor.
+     * @param algorithm The public key algorithm.
+     * @param notBefore The earliest instant that the trust anchor may be used.
+     * @param notAfter The latest instant that the trust anchor may be used.
+     *
+     * @return The trust anchor. Never returns {@code null}.
+     * @throws NullPointerException if any of the arguments other than algorithm are {@code null}.
+     */
+    public static TrustedCertificateAuthority createTrustAnchor(
+            final String id,
+            final String subjectDn,
+            final byte[] publicKey,
+            final String algorithm,
+            final Instant notBefore,
+            final Instant notAfter) {
+
         final var trustedCa = new TrustedCertificateAuthority()
                 .setSubjectDn(subjectDn)
                 .setPublicKey(publicKey)
                 .setNotBefore(notBefore)
                 .setNotAfter(notAfter);
-        Optional.ofNullable(algorithm).ifPresent(alg -> trustedCa.setKeyAlgorithm(alg));
-        return new Tenant().setTrustedCertificateAuthorities(List.of(trustedCa));
+        Optional.ofNullable(algorithm).ifPresent(trustedCa::setKeyAlgorithm);
+        Optional.ofNullable(id).ifPresent(trustedCa::setId);
+
+        return trustedCa;
     }
 }

@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
@@ -27,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -35,6 +35,9 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import javax.security.auth.x500.X500Principal;
+
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -328,6 +331,73 @@ public class TenantTest {
         assertFalse(json.containsKey(RegistryManagementConstants.FIELD_MAX_CONNECTIONS));
         final ResourceLimits deserializedLimits = json.mapTo(ResourceLimits.class);
         assertThat(deserializedLimits.getMaxConnections(), is(-1));
+    }
+
+    /**
+     * Verify that the trust anchor IDs are unique.
+     */
+    @Test
+    public void verifyAssertTrustAnchorIdUniqueness() {
+        final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
+        // GIVEN a tenant with two trust anchor entries having same IDs
+        final JsonObject tenantJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray()
+                        // Tenant Anchor 1
+                        .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_ID, "NON-UNIQUE-ID")
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                                        subjectDn.getName(X500Principal.RFC2253))
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY,
+                                        "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8)))
+                        // Tenant Anchor 2
+                        .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_ID, "NON-UNIQUE-ID")
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                                        subjectDn.getName(X500Principal.RFC2253))
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY,
+                                        "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8))));
+
+        final Tenant tenant = tenantJson.mapTo(Tenant.class);
+        // The trust anchors IDs are not unique, thereby assertion fails
+        // with an IllegalStateException.
+        assertThrows(IllegalStateException.class, tenant::assertTrustAnchorIdUniquenessAndCreateMissingIds);
+    }
+
+    /**
+     * Verify that IDs are generated for the trust anchor entries with no IDs.
+     */
+    @Test
+    public void verifyCreateMissingTrustAnchorIds() {
+        final String trustedAnchorId1 = DeviceRegistryUtils.getUniqueIdentifier();
+        final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
+        // GIVEN a tenant with two trust anchor entries
+        final JsonObject tenantJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray()
+                        // Tenant Anchor 1
+                        .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_ID, trustedAnchorId1)
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                                        subjectDn.getName(X500Principal.RFC2253))
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY,
+                                        "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8)))
+                        // Tenant Anchor 2
+                        .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                                        subjectDn.getName(X500Principal.RFC2253))
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY,
+                                        "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8))));
+
+        final Tenant tenant = tenantJson.mapTo(Tenant.class);
+        // Assert and generate missing trust anchor ids
+        tenant.assertTrustAnchorIdUniquenessAndCreateMissingIds();
+
+        assertNotNull(tenant);
+        assertNotNull(tenant.getTrustedCertificateAuthorities());
+        assertEquals(2, tenant.getTrustedCertificateAuthorities().size());
+        // Verify trust anchor ids
+        assertNotNull(tenant.getTrustedCertificateAuthorities().get(0).getId());
+        assertEquals(trustedAnchorId1, tenant.getTrustedCertificateAuthorities().get(0).getId());
+        assertNotNull(tenant.getTrustedCertificateAuthorities().get(1).getId());
     }
 
     /**
