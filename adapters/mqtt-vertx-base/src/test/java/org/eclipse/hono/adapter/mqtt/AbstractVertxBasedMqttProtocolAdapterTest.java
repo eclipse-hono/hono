@@ -41,7 +41,6 @@ import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -436,7 +435,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(msg.topicName()).thenReturn(null);
         when(msg.payload()).thenReturn(payload);
-        adapter.handlePublishedMessage(msg, endpoint, null, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        mqttDeviceEndpoint.handlePublishedMessage(msg);
 
         // THEN the message is not processed
         verify(metrics, never()).reportTelemetry(
@@ -889,10 +889,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final CommandSubscriptionsManager<MqttProtocolAdapterProperties> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, properties);
-        endpoint.closeHandler(
-                handler -> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdSubscriptionsManager, OptionalInt.empty()));
-        adapter.onSubscribe(endpoint, null, msg, cmdSubscriptionsManager, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
+        mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
@@ -934,10 +933,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final CommandSubscriptionsManager<MqttProtocolAdapterProperties> cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, properties);
-        endpoint.closeHandler(
-                handler -> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdSubscriptionsManager, OptionalInt.empty()));
-        adapter.onSubscribe(endpoint, null, msg, cmdSubscriptionsManager, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
+        mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
@@ -986,7 +984,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        adapter.onSubscribe(endpoint, null, msg, new CommandSubscriptionsManager<>(vertx, properties), OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter sends a SUBACK packet to the device
         // which contains a failure status code for each unsupported filter
