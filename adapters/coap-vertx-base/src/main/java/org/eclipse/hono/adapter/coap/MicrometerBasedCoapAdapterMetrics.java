@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
+import org.eclipse.hono.adapter.metric.MicrometerBasedMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;

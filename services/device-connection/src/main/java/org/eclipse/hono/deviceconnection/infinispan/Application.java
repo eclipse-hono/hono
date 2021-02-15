@@ -37,7 +37,6 @@ import io.vertx.core.Verticle;
  * Device Connection API</a>.
  */
 @ComponentScan("org.eclipse.hono.service.auth")
-@ComponentScan("org.eclipse.hono.service.metric")
 @Import(value = { ApplicationConfig.class, EmbeddedCacheConfig.class, RemoteCacheConfig.class })
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

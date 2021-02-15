@@ -42,6 +42,13 @@
       <artifactId>vertx-auth-mongo</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-base</artifactId>
       <version>${project.version}</version>

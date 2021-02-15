@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.adapter.http;
 
-import org.eclipse.hono.service.metric.Metrics;
-import org.eclipse.hono.service.metric.NoopBasedMetrics;
+import org.eclipse.hono.adapter.metric.Metrics;
+import org.eclipse.hono.adapter.metric.NoopBasedMetrics;
 
 /**
  * Metrics for the HTTP based adapters.

@@ -43,7 +43,6 @@ import io.vertx.core.Verticle;
  * Device Registry Management API</a>.
  */
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @Import(value = { ApplicationConfig.class, FileBasedServiceConfig.class, NoopServiceConfig.class })
 @EnableAutoConfiguration
 public class Application extends AbstractBaseApplication {

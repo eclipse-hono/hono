@@ -23,7 +23,6 @@ import org.springframework.context.annotation.Configuration;
  * The Kura adapter main application class.
  */
 @ComponentScan("org.eclipse.hono.adapter.kura.impl")
-@ComponentScan("org.eclipse.hono.service.metric")
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @Configuration
 @EnableAutoConfiguration

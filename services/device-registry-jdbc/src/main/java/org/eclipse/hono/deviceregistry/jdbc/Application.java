@@ -37,7 +37,6 @@ import io.vertx.core.Verticle;
  * </p>
  */
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @Import(ApplicationConfig.class)
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

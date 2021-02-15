@@ -64,6 +64,7 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.PrometheusScrapingResource;
 import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
@@ -73,6 +74,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -80,14 +82,17 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.jdbc.JDBCAuth;
 import io.vertx.ext.jdbc.JDBCClient;
+import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.BasicAuthHandler;
 
@@ -180,6 +185,19 @@ public class ApplicationConfig {
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), healthCheckConfigProperties());
+    }
+
+    /**
+     * Creates a web resource that can be scraped by a Prometheus server.
+     *
+     * @param registry The Prometheus specific meter registry to scrape.
+     * @return The resource.
+     */
+    @Qualifier("healthchecks")
+    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
+    @Bean
+    public Handler<Router> prometheusScrapingResource(final PrometheusMeterRegistry registry) {
+        return new PrometheusScrapingResource(registry);
     }
 
     /**

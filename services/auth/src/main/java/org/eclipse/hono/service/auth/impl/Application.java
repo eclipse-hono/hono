@@ -20,7 +20,6 @@ import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
 import io.vertx.core.Future;
@@ -31,7 +30,6 @@ import io.vertx.core.Promise;
  * a connection that has been authenticated using SASL.
  *
  */
-@ComponentScan("org.eclipse.hono.service.metric")
 @Import(ApplicationConfig.class)
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

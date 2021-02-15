@@ -22,7 +22,6 @@ import org.springframework.context.annotation.Configuration;
  * The Hono HTTP adapter main application class.
  */
 @ComponentScan("org.eclipse.hono.adapter.http")
-@ComponentScan("org.eclipse.hono.service.metric")
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @Configuration
 @EnableAutoConfiguration

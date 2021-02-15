@@ -26,8 +26,8 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.hono.adapter.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.DataVolume;

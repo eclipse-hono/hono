@@ -63,6 +63,12 @@
       <groupId>org.wildfly.security</groupId>
       <artifactId>wildfly-elytron-password-impl</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
 
     <!-- testing -->
     <dependency>
@@ -115,16 +121,6 @@
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-graphite</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 

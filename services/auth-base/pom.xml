@@ -53,14 +53,6 @@
           <artifactId>vertx-web-client</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.vertx</groupId>
-          <artifactId>vertx-micrometer-metrics</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.github.ben-manes.caffeine</groupId>
           <artifactId>caffeine</artifactId>
         </exclusion>

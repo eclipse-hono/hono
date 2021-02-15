@@ -29,6 +29,12 @@
       <artifactId>hono-service-auth-base</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <profiles>

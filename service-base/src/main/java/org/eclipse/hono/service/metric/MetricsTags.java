@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -364,19 +364,19 @@ public final class MetricsTags {
     /**
      * The name of the tag that holds the name of the component that reports a metric.
      */
-    static final String TAG_COMPONENT_NAME = "component-name";
+    public static final String TAG_COMPONENT_NAME = "component-name";
     /**
      * The tag that holds the name of the host that the component reporting a metric is running on.
      */
-    static final String TAG_HOST           = "host";
+    public static final String TAG_HOST           = "host";
     /**
      * The name of the tag that holds the identifier of the tenant that a metric has been reported for.
      */
-    static final String TAG_TENANT         = "tenant";
+    public static final String TAG_TENANT         = "tenant";
     /**
      * The name of the tag that holds the type of message that a metric has been reported for.
      */
-    static final String TAG_TYPE           = "type";
+    public static final String TAG_TYPE           = "type";
 
     private MetricsTags() {
     }

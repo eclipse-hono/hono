@@ -64,6 +64,7 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
+import org.eclipse.hono.service.metric.PrometheusScrapingResource;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
@@ -94,12 +95,15 @@ import org.springframework.context.annotation.Scope;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -346,7 +350,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * The client is initialized with the connection provided by {@link #downstreamConnection()}.
      *
      * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
-     *                       {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
+     *                       {@link org.eclipse.hono.adapter.metric.MicrometerBasedMetrics}
      *                       out of the box.
      * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
@@ -370,7 +374,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      * The client is initialized with the connection provided by {@link #downstreamConnection()}.
      *
      * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
-     *                       {@link org.eclipse.hono.service.metric.MicrometerBasedMetrics}
+     *                       {@link org.eclipse.hono.adapter.metric.MicrometerBasedMetrics}
      *                       out of the box.
      * @param adapterConfig The protocol adapter's configuration properties.
      * @return The client.
@@ -887,6 +891,19 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), healthCheckConfigProperties());
+    }
+
+    /**
+     * Creates a web resource that can be scraped by a Prometheus server.
+     *
+     * @param registry The Prometheus specific meter registry to scrape.
+     * @return The resource.
+     */
+    @Qualifier("healthchecks")
+    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
+    @Bean
+    public Handler<Router> prometheusScrapingResource(final PrometheusMeterRegistry registry) {
+        return new PrometheusScrapingResource(registry);
     }
 
     /**

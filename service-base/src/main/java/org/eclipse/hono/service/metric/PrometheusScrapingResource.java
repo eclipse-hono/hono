@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,6 @@ package org.eclipse.hono.service.metric;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.stereotype.Component;
-
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
@@ -30,9 +26,6 @@ import io.vertx.ext.web.RoutingContext;
  * A vert.x HTTP resource for scraping Micrometer's {@code PrometheusMeterRegistry}.
  *
  */
-@Component
-@Qualifier("healthchecks")
-@ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
 public class PrometheusScrapingResource implements Handler<Router> {
 
     private final PrometheusMeterRegistry registry;
