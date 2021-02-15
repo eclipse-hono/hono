@@ -11,13 +11,17 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.http.impl;
+package org.eclipse.hono.adapter.mqtt.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.MessageMapping;
+import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.MqttContext;
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.adapter.mqtt.impl.HttpBasedMessageMapping;
+import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -32,18 +36,19 @@ import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.WebClient;
 
 /**
- * Spring Boot configuration for the HTTP adapter.
+ * Spring Boot configuration for the MQTT protocol adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_HTTP_ADAPTER = "Hono HTTP Adapter";
-    private static final String BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER = "vertxBasedHttpProtocolAdapter";
+    private static final String CONTAINER_ID_HONO_MQTT_ADAPTER = "Hono MQTT Adapter";
+    private static final String BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER = "vertxBasedMqttProtocolAdapter";
 
     /**
-     * Creates a new HTTP adapter instance.
+     * Creates a new MQTT protocol adapter instance.
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
@@ -51,39 +56,40 @@ public class Config extends AbstractAdapterConfig {
      *                            resource limits are exceeded.
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
+    @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter(
+    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final HttpAdapterMetrics metrics,
+            final MqttAdapterMetrics metrics,
             final Optional<ResourceLimitChecks> resourceLimitChecks) {
 
-        final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
+        final VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
         setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
+        adapter.setMessageMapping(messageMapping());
         return adapter;
     }
 
     @Override
     protected String getAdapterName() {
-        return CONTAINER_ID_HONO_HTTP_ADAPTER;
+        return CONTAINER_ID_HONO_MQTT_ADAPTER;
     }
 
     /**
-     * Exposes the HTTP adapter's configuration properties as a Spring bean.
+     * Exposes the MQTT adapter's configuration properties as a Spring bean.
      *
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.http")
-    public HttpProtocolAdapterProperties adapterProperties() {
-        return new HttpProtocolAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.mqtt")
+    public MqttProtocolAdapterProperties adapterProperties() {
+        return new MqttProtocolAdapterProperties();
     }
 
     @Bean
-    HttpAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
-        return new MicrometerBasedHttpAdapterMetrics(registry, vertx);
+    MqttAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedMqttAdapterMetrics(registry, vertx);
     }
 
     /**
@@ -94,18 +100,29 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
     }
 
     /**
-     * Exposes a factory for creating HTTP adapter instances.
+     * Exposes a factory for creating MQTT adapter instances.
      *
      * @return The factory bean.
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER);
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER);
         return factory;
+    }
+
+    /**
+     * Constructs messageMapping.
+     *
+     * @return Returns MessageMapping containing a webclient to perform mapper requests.
+     */
+    @Bean
+    public MessageMapping<MqttContext> messageMapping() {
+        final WebClient webClient = WebClient.create(vertx());
+        return new HttpBasedMessageMapping(webClient, adapterProperties());
     }
 }

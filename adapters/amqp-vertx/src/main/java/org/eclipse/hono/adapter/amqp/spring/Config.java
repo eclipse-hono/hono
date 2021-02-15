@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,16 +10,14 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
-package org.eclipse.hono.adapter.mqtt.impl;
+package org.eclipse.hono.adapter.amqp.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.mqtt.MessageMapping;
-import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
-import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
-import org.eclipse.hono.adapter.mqtt.MqttContext;
-import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
+import org.eclipse.hono.adapter.amqp.VertxBasedAmqpProtocolAdapter;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -34,19 +32,18 @@ import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
-import io.vertx.ext.web.client.WebClient;
 
 /**
- * Spring Boot configuration for the MQTT protocol adapter.
+ * Spring Boot configuration for the AMQP protocol adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_MQTT_ADAPTER = "Hono MQTT Adapter";
-    private static final String BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER = "vertxBasedMqttProtocolAdapter";
+    private static final String CONTAINER_ID_HONO_AMQP_ADAPTER = "Hono AMQP Adapter";
+    private static final String BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER = "vertxBasedAmqpProtocolAdapter";
 
     /**
-     * Creates a new MQTT protocol adapter instance.
+     * Creates an AMQP protocol adapter instance.
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
@@ -54,40 +51,52 @@ public class Config extends AbstractAdapterConfig {
      *                            resource limits are exceeded.
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
+    @Bean(name = BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedMqttProtocolAdapter vertxBasedMqttProtocolAdapter(
+    public VertxBasedAmqpProtocolAdapter vertxBasedAmqpProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final MqttAdapterMetrics metrics,
+            final AmqpAdapterMetrics metrics,
             final Optional<ResourceLimitChecks> resourceLimitChecks) {
 
-        final VertxBasedMqttProtocolAdapter adapter = new VertxBasedMqttProtocolAdapter();
+        final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
         setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
-        adapter.setMessageMapping(messageMapping());
         return adapter;
     }
 
     @Override
     protected String getAdapterName() {
-        return CONTAINER_ID_HONO_MQTT_ADAPTER;
+        return CONTAINER_ID_HONO_AMQP_ADAPTER;
+    }
+
+    @Bean
+    AmqpAdapterMetrics metrics(final MeterRegistry meterRegistry, final Vertx vertx) {
+        return new MicrometerBasedAmqpAdapterMetrics(meterRegistry, vertx);
     }
 
     /**
-     * Exposes the MQTT adapter's configuration properties as a Spring bean.
+     * Exposes the configuration properties of the AMQP adapter as a Spring bean.
      *
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.mqtt")
-    public MqttProtocolAdapterProperties adapterProperties() {
-        return new MqttProtocolAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.amqp")
+    public AmqpAdapterProperties adapterProperties() {
+        final AmqpAdapterProperties config = new AmqpAdapterProperties();
+        return config;
     }
 
+    /**
+     * Exposes a factory for creating AMQP adapter instances.
+     *
+     * @return The factory bean.
+     */
     @Bean
-    MqttAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
-        return new MicrometerBasedMqttAdapterMetrics(registry, vertx);
+    public ObjectFactoryCreatingFactoryBean serviceFactory() {
+        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER);
+        return factory;
     }
 
     /**
@@ -98,29 +107,6 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
-    }
-
-    /**
-     * Exposes a factory for creating MQTT adapter instances.
-     *
-     * @return The factory bean.
-     */
-    @Bean
-    public ObjectFactoryCreatingFactoryBean serviceFactory() {
-        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER);
-        return factory;
-    }
-
-    /**
-     * Constructs messageMapping.
-     *
-     * @return Returns MessageMapping containing a webclient to perform mapper requests.
-     */
-    @Bean
-    public MessageMapping<MqttContext> messageMapping() {
-        final WebClient webClient = WebClient.create(vertx());
-        return new HttpBasedMessageMapping(webClient, adapterProperties());
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP));
     }
 }

@@ -18,13 +18,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * The Kura adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.adapter.kura.impl")
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @Configuration
+@Import(Config.class)
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 

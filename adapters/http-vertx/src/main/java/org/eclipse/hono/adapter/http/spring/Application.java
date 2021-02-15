@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,26 +9,27 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
-package org.eclipse.hono.adapter.coap.impl;
+ *******************************************************************************/
+package org.eclipse.hono.adapter.http.spring;
 
 import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
- * The Hono COAP adapter main application class.
+ * The Hono HTTP adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.adapter.coap")
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @Configuration
+@Import(Config.class)
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 
     /**
-     * Starts the COAP Adapter application.
+     * Starts the HTTP Adapter application.
      *
      * @param args Command line args passed to the application.
      */

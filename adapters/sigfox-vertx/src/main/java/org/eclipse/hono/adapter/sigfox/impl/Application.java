@@ -17,13 +17,13 @@ import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Import;
 
 /**
  * The Hono Sigfox adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.adapter.sigfox")
-@ComponentScan("org.eclipse.hono.adapter.http")
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
+@Import(Config.class)
 @SpringBootApplication
 public class Application extends AbstractApplication {
 

@@ -11,13 +11,14 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.adapter.coap.impl;
+package org.eclipse.hono.adapter.coap.spring;
 
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
+import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;

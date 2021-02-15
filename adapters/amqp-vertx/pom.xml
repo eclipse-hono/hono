@@ -55,7 +55,7 @@
                       <port>${vertx.health.port}</port>
                     </ports>
                     <env>
-                      <JAVA_MAIN_CLASS>org.eclipse.hono.adapter.amqp.impl.Application</JAVA_MAIN_CLASS>
+                      <JAVA_MAIN_CLASS>org.eclipse.hono.adapter.amqp.spring.Application</JAVA_MAIN_CLASS>
                     </env>
                   </build>
                 </image>

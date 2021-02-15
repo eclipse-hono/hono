@@ -61,7 +61,7 @@
                       <port>${vertx.health.port}</port>
                     </ports>
                     <env>
-                      <JAVA_MAIN_CLASS>org.eclipse.hono.adapter.coap.impl.Application</JAVA_MAIN_CLASS>
+                      <JAVA_MAIN_CLASS>org.eclipse.hono.adapter.coap.spring.Application</JAVA_MAIN_CLASS>
                     </env>
                   </build>
                 </image>

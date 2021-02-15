@@ -11,20 +11,21 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.mqtt.impl;
+package org.eclipse.hono.adapter.mqtt.spring;
 
 import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * The Hono MQTT adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.adapter.mqtt")
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @Configuration
+@Import(Config.class)
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,14 +10,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.amqp.impl;
+
+package org.eclipse.hono.adapter.http.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
-import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
-import org.eclipse.hono.adapter.amqp.VertxBasedAmqpProtocolAdapter;
+import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
+import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -34,16 +35,16 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 
 /**
- * Spring Boot configuration for the AMQP protocol adapter.
+ * Spring Boot configuration for the HTTP adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_AMQP_ADAPTER = "Hono AMQP Adapter";
-    private static final String BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER = "vertxBasedAmqpProtocolAdapter";
+    private static final String CONTAINER_ID_HONO_HTTP_ADAPTER = "Hono HTTP Adapter";
+    private static final String BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER = "vertxBasedHttpProtocolAdapter";
 
     /**
-     * Creates an AMQP protocol adapter instance.
+     * Creates a new HTTP adapter instance.
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
@@ -51,14 +52,14 @@ public class Config extends AbstractAdapterConfig {
      *                            resource limits are exceeded.
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER)
+    @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedAmqpProtocolAdapter vertxBasedAmqpProtocolAdapter(
+    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final AmqpAdapterMetrics metrics,
+            final HttpAdapterMetrics metrics,
             final Optional<ResourceLimitChecks> resourceLimitChecks) {
 
-        final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
+        final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
         setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
@@ -67,36 +68,23 @@ public class Config extends AbstractAdapterConfig {
 
     @Override
     protected String getAdapterName() {
-        return CONTAINER_ID_HONO_AMQP_ADAPTER;
-    }
-
-    @Bean
-    AmqpAdapterMetrics metrics(final MeterRegistry meterRegistry, final Vertx vertx) {
-        return new MicrometerBasedAmqpAdapterMetrics(meterRegistry, vertx);
+        return CONTAINER_ID_HONO_HTTP_ADAPTER;
     }
 
     /**
-     * Exposes the configuration properties of the AMQP adapter as a Spring bean.
+     * Exposes the HTTP adapter's configuration properties as a Spring bean.
      *
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.amqp")
-    public AmqpAdapterProperties adapterProperties() {
-        final AmqpAdapterProperties config = new AmqpAdapterProperties();
-        return config;
+    @ConfigurationProperties(prefix = "hono.http")
+    public HttpProtocolAdapterProperties adapterProperties() {
+        return new HttpProtocolAdapterProperties();
     }
 
-    /**
-     * Exposes a factory for creating AMQP adapter instances.
-     *
-     * @return The factory bean.
-     */
     @Bean
-    public ObjectFactoryCreatingFactoryBean serviceFactory() {
-        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER);
-        return factory;
+    HttpAdapterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedHttpAdapterMetrics(registry, vertx);
     }
 
     /**
@@ -107,6 +95,18 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP));
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
+    }
+
+    /**
+     * Exposes a factory for creating HTTP adapter instances.
+     *
+     * @return The factory bean.
+     */
+    @Bean
+    public ObjectFactoryCreatingFactoryBean serviceFactory() {
+        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER);
+        return factory;
     }
 }
