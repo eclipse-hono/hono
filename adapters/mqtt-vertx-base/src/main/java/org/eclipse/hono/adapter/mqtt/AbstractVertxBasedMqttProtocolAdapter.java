@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -105,7 +107,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
-    private static final String KEY_TOPIC_FILTER = "filter";
+    private static final String LOG_FIELD_TOPIC_FILTER = "filter";
 
     private MqttAdapterMetrics metrics = MqttAdapterMetrics.NOOP;
 
@@ -587,93 +589,113 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(cmdSubscriptionsManager);
         Objects.requireNonNull(traceSamplingPriority);
 
-        final Map<String, Future<CommandSubscription>> topicFilters = new HashMap<>();
-        final Map<MqttTopicSubscription, Future<CommandSubscription>> subscriptionOutcome = new LinkedHashMap<>(
-                subscribeMsg.topicSubscriptions().size());
+        final Map<Object, Future<CommandSubscription>> uniqueSubscriptions = new HashMap<>();
+        final Deque<Future<CommandSubscription>> subscriptionOutcomes = new ArrayDeque<>(subscribeMsg.topicSubscriptions().size());
 
         final Span span = newSpan("SUBSCRIBE", endpoint, authenticatedDevice, traceSamplingPriority);
 
-        subscribeMsg.topicSubscriptions().forEach(subscription -> {
+        // process in reverse order and skip equivalent subscriptions, meaning the last of such subscriptions shall be used
+        // (done with respect to MQTT 3.1.1 spec section 3.8.4, processing multiple filters as if they had been submitted
+        //  using multiple separate SUBSCRIBE packets)
+        final Deque<MqttTopicSubscription> topicSubscriptions = new LinkedList<>(subscribeMsg.topicSubscriptions());
+        topicSubscriptions.descendingIterator().forEachRemaining(mqttTopicSub -> {
 
-            Future<CommandSubscription> result = topicFilters.get(subscription.topicName());
-            if (result != null) {
-
-                // according to the MQTT 3.1.1 spec (section 3.8.4) we need to
-                // make sure that we process multiple filters as if they had been
-                // submitted using multiple separate SUBSCRIBE packets
-                // we therefore always return the same result for duplicate topic filters
-                subscriptionOutcome.put(subscription, result);
-
+            final Future<CommandSubscription> result;
+            // we currently only support subscriptions for receiving commands
+            final CommandSubscription cmdSub = CommandSubscription.fromTopic(mqttTopicSub, authenticatedDevice,
+                    endpoint.clientIdentifier());
+            if (cmdSub == null) {
+                TracingHelper.logError(span, String.format("unsupported topic filter [%s]", mqttTopicSub.topicName()));
+                log.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
+                        mqttTopicSub.topicName(), mqttTopicSub.qualityOfService());
+                result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
             } else {
-
-                // we currently only support subscriptions for receiving commands
-                final CommandSubscription cmdSub = CommandSubscription.fromTopic(subscription, authenticatedDevice,
-                        endpoint.clientIdentifier());
-                if (cmdSub == null) {
-                    span.log(String.format("ignoring unsupported topic filter [%s]", subscription.topicName()));
-                    log.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
-                            subscription.topicName(), subscription.qualityOfService());
-                    result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
-                } else if (MqttQoS.EXACTLY_ONCE.equals(subscription.qualityOfService())) {
-                    // we do not support subscribing to commands using QoS 2
-                    span.log("ignoring command subscription with unsupported QoS 2");
-                    result = Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
+                if (uniqueSubscriptions.containsKey(cmdSub.getKey())) {
+                    final Map<String, Object> items = new HashMap<>(3);
+                    items.put(Fields.EVENT, "ignoring duplicate subscription");
+                    items.put(LOG_FIELD_TOPIC_FILTER, cmdSub.getTopic());
+                    items.put("requested QoS", cmdSub.getQos());
+                    span.log(items);
+                    result = uniqueSubscriptions.get(cmdSub.getKey());
                 } else {
-                    result = createCommandConsumer(endpoint, cmdSub, authenticatedDevice, cmdSubscriptionsManager, span)
-                            .map(consumer -> {
-                                final Map<String, Object> items = new HashMap<>(4);
-                                items.put(Fields.EVENT, "accepting subscription");
-                                items.put(KEY_TOPIC_FILTER, subscription.topicName());
-                                items.put("requested QoS", subscription.qualityOfService());
-                                items.put("granted QoS", subscription.qualityOfService());
-                                span.log(items);
-                                log.debug("created subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}, granted QoS: {}]",
-                                        cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
-                                        subscription.qualityOfService(), subscription.qualityOfService());
-                                cmdSubscriptionsManager.addSubscription(cmdSub, consumer);
-                                return cmdSub;
-                            }).recover(t -> {
-                                final Map<String, Object> items = new HashMap<>(4);
-                                items.put(Fields.EVENT, Tags.ERROR.getKey());
-                                items.put(KEY_TOPIC_FILTER, subscription.topicName());
-                                items.put("requested QoS", subscription.qualityOfService());
-                                items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
-                                TracingHelper.logError(span, items);
-                                log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
-                                        cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
-                                        subscription.qualityOfService(), t);
-                                return Future.failedFuture(t);
-                            });
+                    result = registerCommandSubscription(cmdSub, authenticatedDevice, endpoint, cmdSubscriptionsManager, span);
+                    uniqueSubscriptions.put(cmdSub.getKey(), result);
                 }
-                topicFilters.put(subscription.topicName(), result);
-                subscriptionOutcome.put(subscription, result);
             }
+            subscriptionOutcomes.addFirst(result); // add first to get the same order as in the SUBSCRIBE packet
         });
 
         // wait for all futures to complete before sending SUBACK
-        CompositeFuture.join(new ArrayList<>(subscriptionOutcome.values())).onComplete(v -> {
-
-            // return a status code for each topic filter contained in the SUBSCRIBE packet
-            final List<MqttQoS> grantedQosLevels = subscriptionOutcome.entrySet().stream()
-                    .map(subscriptionOutcomeEntry -> subscriptionOutcomeEntry.getValue().failed() ? MqttQoS.FAILURE
-                            : subscriptionOutcomeEntry.getKey().qualityOfService())
-                    .collect(Collectors.toList());
+        CompositeFuture.join(new ArrayList<>(subscriptionOutcomes)).onComplete(v -> {
 
             if (endpoint.isConnected()) {
+                // return a status code for each topic filter contained in the SUBSCRIBE packet
+                final List<MqttQoS> grantedQosLevels = subscriptionOutcomes.stream()
+                        .map(future -> future.failed() ? MqttQoS.FAILURE : future.result().getQos())
+                        .collect(Collectors.toList());
                 endpoint.subscribeAcknowledge(subscribeMsg.messageId(), grantedQosLevels);
-            }
 
-            // now that we have informed the device about the outcome
-            // we can send empty notifications for succeeded command subscriptions
-            // downstream
-            topicFilters.values().forEach(f -> {
-                if (f.succeeded() && f.result() != null) {
-                    final CommandSubscription s = f.result();
-                    sendConnectedTtdEvent(s.getTenant(), s.getDeviceId(), authenticatedDevice, span.context());
-                }
-            });
+                // now that we have informed the device about the outcome,
+                // we can send empty notifications for succeeded (distinct) command subscriptions downstream
+                subscriptionOutcomes.stream()
+                        .filter(Future::succeeded)
+                        .map(cmdSubFuture -> cmdSubFuture.result().getKey())
+                        .distinct()
+                        .forEach(cmdSubKey -> {
+                            sendConnectedTtdEvent(cmdSubKey.getTenantId(), cmdSubKey.getDeviceId(), authenticatedDevice, span.context());
+                        });
+            } else {
+                TracingHelper.logError(span, "skipped sending command subscription notification - endpoint not connected anymore");
+                log.debug("skipped sending command subscription notification - endpoint not connected anymore [tenant-id: {}, device-id: {}]",
+                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(""),
+                        Optional.ofNullable(authenticatedDevice).map(Device::getDeviceId).orElse(""));
+            }
             span.finish();
         });
+    }
+
+    private Future<CommandSubscription> registerCommandSubscription(
+            final CommandSubscription cmdSub,
+            final Device authenticatedDevice,
+            final MqttEndpoint endpoint,
+            final CommandSubscriptionsManager<T> cmdSubscriptionsManager,
+            final Span span) {
+
+        if (MqttQoS.EXACTLY_ONCE.equals(cmdSub.getQos())) {
+            // we do not support subscribing to commands using QoS 2
+            TracingHelper.logError(span, String.format("topic filter [%s] with unsupported QoS 2", cmdSub.getTopic()));
+            return Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
+        }
+        return createCommandConsumer(endpoint, cmdSub, authenticatedDevice, cmdSubscriptionsManager, span)
+                .map(consumer -> {
+                    final Map<String, Object> items = new HashMap<>(4);
+                    items.put(Fields.EVENT, "accepting subscription");
+                    items.put(LOG_FIELD_TOPIC_FILTER, cmdSub.getTopic());
+                    items.put("requested QoS", cmdSub.getQos());
+                    items.put("granted QoS", cmdSub.getQos());
+                    span.log(items);
+                    log.debug("created subscription [tenant: {}, device: {}, filter: {}, QoS: {}]",
+                            cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos());
+                    final CommandSubscription existingCmdSub = cmdSubscriptionsManager.getSubscription(cmdSub.getKey());
+                    if (existingCmdSub != null) {
+                        span.log(String.format("subscription replaces previous subscription [QoS %s, filter %s]",
+                                existingCmdSub.getQos(), existingCmdSub.getTopic()));
+                        log.debug("previous subscription [QoS {}, filter {}] is getting replaced",
+                                existingCmdSub.getQos(), existingCmdSub.getTopic());
+                    }
+                    cmdSubscriptionsManager.addSubscription(cmdSub, consumer);
+                    return cmdSub;
+                }).recover(t -> {
+                    final Map<String, Object> items = new HashMap<>(4);
+                    items.put(Fields.EVENT, Tags.ERROR.getKey());
+                    items.put(LOG_FIELD_TOPIC_FILTER, cmdSub.getTopic());
+                    items.put("requested QoS", cmdSub.getQos());
+                    items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
+                    TracingHelper.logError(span, items);
+                    log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
+                            cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos(), t);
+                    return Future.failedFuture(t);
+                });
     }
 
     private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice,
@@ -734,21 +756,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         unsubscribeMsg.topics().forEach(topic -> {
             final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
             if (cmdSub == null) {
-                final Map<String, Object> items = new HashMap<>(2);
-                items.put(Fields.EVENT, "ignoring unsupported topic filter");
-                items.put(KEY_TOPIC_FILTER, topic);
-                span.log(items);
+                TracingHelper.logError(span, String.format("unsupported topic filter [%s]", topic));
                 log.debug("ignoring unsubscribe request for unsupported topic filter [{}]", topic);
             } else {
-                final String tenantId = cmdSub.getTenant();
-                final String deviceId = cmdSub.getDeviceId();
                 final Map<String, Object> items = new HashMap<>(2);
                 items.put(Fields.EVENT, "unsubscribing device from topic");
-                items.put(KEY_TOPIC_FILTER, topic);
+                items.put(LOG_FIELD_TOPIC_FILTER, topic);
                 span.log(items);
                 log.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
-                        tenantId, deviceId, topic);
-                final Future<Void> removalDone = cmdSubscriptionsManager.removeSubscription(topic, span)
+                        cmdSub.getTenant(), cmdSub.getDeviceId(), topic);
+                final Future<Void> removalDone = cmdSubscriptionsManager.removeSubscription(cmdSub.getKey(), span)
                         .compose(getOnSubscriptionRemovedFunction(authenticatedDevice, endpoint, span));
                 removalDoneFutures.add(removalDone);
             }

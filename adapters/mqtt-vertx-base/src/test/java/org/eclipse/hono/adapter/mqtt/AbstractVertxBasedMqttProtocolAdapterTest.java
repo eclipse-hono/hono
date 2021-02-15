@@ -920,6 +920,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         givenAnAdapter(properties);
         givenAnEventSenderForAnyTenant();
         final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(true);
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
         // WHEN a device subscribes to commands
@@ -945,11 +946,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         verify(endpoint).closeHandler(closeHookCaptor.capture());
         // which closes the command consumer when the device disconnects
         closeHookCaptor.getValue().handle(null);
+        when(endpoint.isConnected()).thenReturn(false);
         verify(commandConsumer).close(any());
         // and since closing the command consumer fails with a precon-failed exception
         // there is only one notification sent during consumer creation,
         assertEmptyNotificationHasBeenSentDownstream("tenant", "deviceId", -1);
-        //no 'disconnectedTtdEvent' event with TTD = 0
+        // no 'disconnectedTtdEvent' event with TTD = 0
         assertEmptyNotificationHasNotBeenSentDownstream("tenant", "deviceId", 0);
     }
 
