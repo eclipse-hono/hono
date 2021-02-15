@@ -417,6 +417,7 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-micrometer-metrics</artifactId>
         <version>${vertx.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
