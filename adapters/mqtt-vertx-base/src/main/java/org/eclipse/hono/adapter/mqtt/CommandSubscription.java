@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,6 +51,7 @@ public final class CommandSubscription {
     private final boolean authenticated;
     private final boolean containsTenantId;
     private final boolean containsDeviceId;
+    private final Key key;
 
     private MqttQoS qos;
     private String clientId;
@@ -108,6 +109,7 @@ public final class CommandSubscription {
             this.authenticatedDeviceId = null;
             this.deviceId = resourceDeviceId;
         }
+        key = new Key(tenant, deviceId);
     }
 
     private CommandSubscription(final String topic, final Device authenticatedDevice, final MqttQoS qos, final String clientId) {
@@ -144,13 +146,14 @@ public final class CommandSubscription {
      * @param authenticatedDevice The authenticated device or {@code null}.
      * @param clientId The client identifier as provided by the remote MQTT client.
      * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if topic is {@code null}.
+     * @throws NullPointerException if mqttTopicSub is {@code null}.
      */
     public static CommandSubscription fromTopic(
             final MqttTopicSubscription mqttTopicSub,
             final Device authenticatedDevice,
             final String clientId) {
 
+        Objects.requireNonNull(mqttTopicSub);
         try {
             return new CommandSubscription(
                     mqttTopicSub.topicName(),
@@ -279,5 +282,64 @@ public final class CommandSubscription {
                 getRequestPart(),
                 topicCommandRequestId,
                 command.getName());
+    }
+
+    /**
+     * Gets the key to identify a subscription in the list of subscriptions of an MQTT Endpoint.
+     * An MQTT Endpoint can't have multiple subscriptions with the same key, meaning with
+     * respect to command subscriptions that there can only be one command subscription
+     * per device.
+     *
+     * @return The key.
+     */
+    public Key getKey() {
+        return key;
+    }
+
+    /**
+     * The key to identify a command subscription of a particular device.
+     */
+    public static final class Key {
+
+        private final String deviceId;
+        private final String tenantId;
+
+        /**
+         * Creates a new Key.
+         *
+         * @param tenantId The tenant identifier.
+         * @param deviceId The device identifier.
+         * @throws NullPointerException If tenantId or deviceId is {@code null}.
+         */
+        public Key(final String tenantId, final String deviceId) {
+            this.tenantId = Objects.requireNonNull(tenantId);
+            this.deviceId = Objects.requireNonNull(deviceId);
+        }
+
+        public String getDeviceId() {
+            return deviceId;
+        }
+
+        public String getTenantId() {
+            return tenantId;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final Key that = (Key) o;
+            return deviceId.equals(that.deviceId) &&
+                    tenantId.equals(that.tenantId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(deviceId, tenantId);
+        }
     }
 }

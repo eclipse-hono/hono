@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,14 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -28,22 +29,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
+import io.opentracing.log.Fields;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 /**
- * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs.
+ * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs for a particular MQTT endpoint.
  *
  * @param <T> The type of configuration properties the mqtt adapter supports/requires.
  */
 public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProperties> {
     private static final Logger LOG = LoggerFactory.getLogger(CommandSubscriptionsManager.class);
+    private static final String LOG_FIELD_TOPIC_FILTER = "filter";
     /**
-     * Map of the current subscriptions. Key is the topic name.
+     * Map of the current subscriptions of the MQTT endpoint handled by this CommandSubscriptionsManager.
      */
-    private final Map<String, Pair<CommandSubscription, CommandConsumer>> subscriptions = new ConcurrentHashMap<>();
+    private final Map<CommandSubscription.Key, Pair<CommandSubscription, CommandConsumer>> subscriptions = new ConcurrentHashMap<>();
     /**
      * Map of the requests waiting for an acknowledgement. Key is the command message id.
      */
@@ -98,8 +101,11 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
         Objects.requireNonNull(onAckHandler);
         Objects.requireNonNull(onAckTimeoutHandler);
 
-        waitingForAcknowledgement.put(msgId,
+        final PendingCommandRequest replacedObj = waitingForAcknowledgement.put(msgId,
                 PendingCommandRequest.from(startTimer(msgId), onAckHandler, onAckTimeoutHandler));
+        if (replacedObj != null) {
+            LOG.error("error registering ack handler; already waiting for ack of message id [{}]", msgId);
+        }
     }
 
     /**
@@ -109,8 +115,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
      * @return The PendingCommandRequest object containing timer-id, tenantObject, commandSubscription and 
      *         commandContext for the given msgId.
      */
-    private PendingCommandRequest removeFromWaitingForAcknowledgement(
-            final Integer msgId) {
+    private PendingCommandRequest removeFromWaitingForAcknowledgement(final Integer msgId) {
         return waitingForAcknowledgement.remove(msgId);
     }
 
@@ -125,28 +130,39 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
             final CommandConsumer commandConsumer) {
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandConsumer);
-        subscriptions.put(subscription.getTopic(), Pair.of(subscription, commandConsumer));
+        subscriptions.put(subscription.getKey(), Pair.of(subscription, commandConsumer));
     }
 
     /**
-     * Removes the subscription entry for the given topic.
+     * Gets the subscription with the given key, if set.
      *
-     * @param topic The topic string to unsubscribe.
+     * @param key The key identifying the tenant id and device id of the subscription to get.
+     * @return The subscription or {@code null}.
+     */
+    public CommandSubscription getSubscription(final CommandSubscription.Key key) {
+        final Pair<CommandSubscription, CommandConsumer> pair = subscriptions.get(key);
+        return pair != null ? pair.one() : null;
+    }
+
+    /**
+     * Removes the subscription entry for the given key.
+     *
+     * @param key The key of the subscription to unsubscribe.
      * @param span The span to log to if no subscription entry is found.
      * @return A succeeded future with the removed subscription and its associated command consumer or a failed future
      *         if no subscription entry was found for the given topic.
-     * @throws NullPointerException if topic or span is {@code null}.
+     * @throws NullPointerException if key or span is {@code null}.
      **/
-    public Future<Pair<CommandSubscription, CommandConsumer>> removeSubscription(final String topic,
-            final Span span) {
-        Objects.requireNonNull(topic);
+    public Future<Pair<CommandSubscription, CommandConsumer>> removeSubscription(final CommandSubscription.Key key, final Span span) {
+        Objects.requireNonNull(key);
         Objects.requireNonNull(span);
 
-        final Pair<CommandSubscription, CommandConsumer> removed = subscriptions.remove(topic);
+        final Pair<CommandSubscription, CommandConsumer> removed = subscriptions.remove(key);
         if (removed != null) {
             return Future.succeededFuture(removed);
         } else {
-            final String message = String.format("cannot remove subscription; none registered for topic [%s]", topic);
+            final String message = String.format(
+                    "cannot remove subscription; none registered for tenant [%s], device [%s]", key.getTenantId(), key.getDeviceId());
             LOG.debug(message);
             TracingHelper.logError(span, message);
             return Future.failedFuture(message);
@@ -171,9 +187,14 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
         Objects.requireNonNull(span);
 
         @SuppressWarnings("rawtypes")
-        final List<Future> removalFutures = subscriptions.keySet().stream()
-                .map(topic -> removeSubscription(topic, span).compose(onSubscriptionRemovedFunction))
-                .collect(Collectors.toList());
+        final List<Future> removalFutures = new ArrayList<>(subscriptions.size());
+        subscriptions.values().removeIf(sub -> {
+            final Map<String, Object> items = new HashMap<>(2);
+            items.put(Fields.EVENT, "removing subscription");
+            items.put(LOG_FIELD_TOPIC_FILTER, sub.one().getTopic());
+            span.log(items);
+            return removalFutures.add(onSubscriptionRemovedFunction.apply(sub));
+        });
         return CompositeFuture.join(removalFutures);
     }
 
@@ -181,7 +202,6 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
         if (config.getEffectiveSendMessageToDeviceTimeout() < 1) {
             return null;
         }
-
         return vertx.setTimer(config.getEffectiveSendMessageToDeviceTimeout(), timerId -> {
             Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
                     .ifPresent(value -> value.onAckTimeoutHandler.handle(null));
@@ -190,7 +210,7 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
 
     private void cancelTimer(final Long timerId) {
         vertx.cancelTimer(timerId);
-        LOG.trace("canceled Timer [timer-id: {}}", timerId);
+        LOG.trace("canceled Timer [timer-id: {}]", timerId);
     }
 
     /**
@@ -213,11 +233,12 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
         /**
          * Creates a new PendingCommandRequest instance.
          *
-         * @param timerId The unique ID of the timer.
+         * @param timerId The unique ID of the timer to way for the command request to be acknowledged (may be
+         *            {@code null} if no timeout is configured).
          * @param onAckHandler Handler to invoke when the device has acknowledged the command.
          * @param onAckTimeoutHandler Handler to invoke when there is a timeout waiting for the acknowledgement from the
          *            device.
-         * @throws NullPointerException if any of the parameters is {@code null}.
+         * @throws NullPointerException if onAckHandler or onAckTimeoutHandler is {@code null}.
          */        
         private static PendingCommandRequest from(final Long timerId, final Handler<Integer> onAckHandler,
                 final Handler<Void> onAckTimeoutHandler) {
