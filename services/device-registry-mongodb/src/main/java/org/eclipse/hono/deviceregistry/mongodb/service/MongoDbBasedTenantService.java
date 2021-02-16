@@ -452,9 +452,9 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
 
         final TenantDto newTenantDto = TenantDto.forCreation(tenantId, tenantObj, new Versioned<>(tenantObj).getVersion());
 
-        // the tenantId is either the device ID provided by the client
+        // the tenantId is either the ID provided by the client
         // or a newly created random ID
-        TracingHelper.TAG_DEVICE_ID.set(span, tenantId);
+        TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
         final JsonObject newTenantDtoJson = JsonObject.mapFrom(newTenantDto);
         final Promise<String> createTenantPromise = Promise.promise();
