@@ -168,11 +168,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-base</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-base</artifactId>
       <scope>test</scope>
     </dependency>
@@ -196,6 +191,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <scope>test</scope>
+      </dependency>
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-jms-client</artifactId>

@@ -28,13 +28,13 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.hono.adapter.auth.device.AbstractDeviceCredentials;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.AbstractDeviceCredentials;
-import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.http.HttpContext;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

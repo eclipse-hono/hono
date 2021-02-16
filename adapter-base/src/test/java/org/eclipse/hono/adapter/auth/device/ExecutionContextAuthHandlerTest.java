@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,6 +20,10 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+import org.eclipse.hono.adapter.auth.device.AbstractDeviceCredentials;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
+import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.junit.jupiter.api.Test;

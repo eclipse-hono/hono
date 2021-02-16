@@ -11,13 +11,15 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

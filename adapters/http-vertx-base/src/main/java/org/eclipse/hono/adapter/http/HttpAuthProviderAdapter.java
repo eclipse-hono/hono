@@ -15,9 +15,9 @@ package org.eclipse.hono.adapter.http;
 
 import java.util.Objects;
 
-import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
-import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
+import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.http.HttpContext;
 
 import io.vertx.core.AsyncResult;
@@ -33,7 +33,7 @@ import io.vertx.ext.web.RoutingContext;
  * so that it can be used from a plain vert.x {@link io.vertx.ext.web.handler.AuthHandler}, more specifically from
  * an implementation based on the {@link io.vertx.ext.web.handler.impl.AuthHandlerImpl} class.
  * <p>
- * Usually, a {@link DeviceCredentialsAuthProvider} is used from a Hono {@link org.eclipse.hono.service.auth.device.AuthHandler}
+ * Usually, a {@link DeviceCredentialsAuthProvider} is used from a Hono {@link org.eclipse.hono.adapter.auth.device.AuthHandler}
  * that will invoke the Hono specific AuthProvider methods. This makes sure that an <em>OpenTracing</em> span context
  * can be transferred directly (without serialization/deserialization) to the AuthProvider. It also allows a
  * <em>PreCredentialsValidationHandler</em> to be invoked with credentials obtained via the AuthProvider.

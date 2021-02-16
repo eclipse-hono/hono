@@ -36,6 +36,10 @@
       <artifactId>spring-boot-starter-logging</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-actuator-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.opentracing.contrib</groupId>
       <artifactId>opentracing-tracerresolver</artifactId>
     </dependency>

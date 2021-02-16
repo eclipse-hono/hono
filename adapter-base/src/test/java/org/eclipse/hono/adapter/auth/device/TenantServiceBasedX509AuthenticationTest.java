@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,6 +30,7 @@ import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.util.TenantObject;

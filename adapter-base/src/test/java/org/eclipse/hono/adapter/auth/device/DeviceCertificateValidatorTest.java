@@ -12,11 +12,12 @@
  */
 
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import java.security.cert.TrustAnchor;
 import java.util.List;
 
+import org.eclipse.hono.adapter.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.test.VertxTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

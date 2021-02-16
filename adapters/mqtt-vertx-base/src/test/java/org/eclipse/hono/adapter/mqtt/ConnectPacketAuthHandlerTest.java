@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.BeforeEach;

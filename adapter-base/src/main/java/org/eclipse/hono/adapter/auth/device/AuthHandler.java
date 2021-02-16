@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.ExecutionContext;

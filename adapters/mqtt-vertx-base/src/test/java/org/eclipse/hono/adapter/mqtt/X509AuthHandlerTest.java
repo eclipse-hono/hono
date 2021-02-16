@@ -27,11 +27,11 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.X509Authentication;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
-import org.eclipse.hono.service.auth.device.X509Authentication;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.junit.jupiter.api.BeforeEach;

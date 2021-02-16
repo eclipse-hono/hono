@@ -16,8 +16,8 @@ package org.eclipse.hono.adapter.http;
 
 import java.util.Objects;
 
-import org.eclipse.hono.service.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.service.auth.device.PreCredentialsValidationHandler;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.tracing.TracingHelper;

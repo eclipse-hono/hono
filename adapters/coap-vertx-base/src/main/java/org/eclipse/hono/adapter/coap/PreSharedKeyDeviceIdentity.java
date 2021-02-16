@@ -14,7 +14,7 @@ package org.eclipse.hono.adapter.coap;
 
 import java.util.Objects;
 
-import org.eclipse.hono.service.auth.device.DeviceCredentials;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;

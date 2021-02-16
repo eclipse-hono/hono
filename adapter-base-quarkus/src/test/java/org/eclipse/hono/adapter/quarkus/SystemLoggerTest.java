@@ -24,7 +24,7 @@ import java.lang.reflect.Method;
 import java.security.cert.TrustAnchor;
 import java.util.List;
 
-import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
+import org.eclipse.hono.adapter.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.test.VertxTools;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;

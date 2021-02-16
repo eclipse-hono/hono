@@ -34,6 +34,7 @@ import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
+import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
@@ -44,7 +45,6 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;

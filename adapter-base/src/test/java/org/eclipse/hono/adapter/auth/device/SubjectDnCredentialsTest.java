@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.junit.jupiter.api.Test;
 
 

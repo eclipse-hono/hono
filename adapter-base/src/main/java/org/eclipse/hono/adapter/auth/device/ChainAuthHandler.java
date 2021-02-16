@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import java.util.LinkedList;
 import java.util.List;

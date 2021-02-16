@@ -30,14 +30,6 @@
       <artifactId>hono-legal</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-amqp</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-kafka</artifactId>
-    </dependency>
-    <dependency>
      <groupId>org.eclipse.hono</groupId>
      <artifactId>hono-client</artifactId>
     </dependency>
@@ -72,6 +64,12 @@
       <artifactId>micrometer-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-micrometer-metrics</artifactId>
     </dependency>
@@ -85,33 +83,12 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-actuator-autoconfigure</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-crypto</artifactId>
+      <artifactId>spring-boot</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing</groupId>
-      <artifactId>opentracing-noop</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing.contrib</groupId>
-      <artifactId>opentracing-tracerresolver</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
     </dependency>
 
     <!-- testing -->

@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +28,8 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
+import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
