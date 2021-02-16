@@ -13,19 +13,18 @@
 
 package org.eclipse.hono.adapter.kura.impl;
 
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCacheConfig;
 import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 /**
  * The Kura adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @Configuration
-@Import(Config.class)
+@Import({ Config.class, HotrodCacheConfig.class })
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 

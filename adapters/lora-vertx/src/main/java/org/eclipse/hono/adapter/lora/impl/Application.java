@@ -13,17 +13,18 @@
 
 package org.eclipse.hono.adapter.lora.impl;
 
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCacheConfig;
 import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Import;
 
 /**
  * The Hono LoRa adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.adapter.lora")
-@ComponentScan("org.eclipse.hono.adapter.http")
-@ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
+@ComponentScan("org.eclipse.hono.adapter.lora.providers")
+@Import({ Config.class, HotrodCacheConfig.class })
 @SpringBootApplication
 public class Application extends AbstractApplication {
 

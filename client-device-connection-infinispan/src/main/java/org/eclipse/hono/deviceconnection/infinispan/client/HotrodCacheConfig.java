@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,7 @@ import io.vertx.core.Vertx;
  * Spring Boot configuration class defining beans for accessing a Hotrod based (remote) cache.
  */
 @Configuration
+@ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
 public class HotrodCacheConfig {
 
     /**
@@ -42,7 +43,6 @@ public class HotrodCacheConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.device-connection")
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public InfinispanRemoteConfigurationProperties remoteCacheProperties() {
         return new InfinispanRemoteConfigurationProperties();
     }
@@ -54,7 +54,6 @@ public class HotrodCacheConfig {
      * @return The newly created cache manager. The manager will not be started.
      */
     @Bean
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public RemoteCacheManager remoteCacheManager() {
         final InfinispanRemoteConfigurationProperties properties = remoteCacheProperties();
         return new RemoteCacheManager(properties.getConfigurationBuilder().build(), false);
@@ -69,7 +68,6 @@ public class HotrodCacheConfig {
      * @return The cache.
      */
     @Bean
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public HotrodCache<String, String> remoteCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
         return new HotrodCache<>(
                 vertx,
@@ -89,7 +87,6 @@ public class HotrodCacheConfig {
      */
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public DeviceConnectionClient hotrodBasedDeviceConnectionClient(
             final HotrodCache<String, String> cache,
             final Optional<Tracer> tracer) {
@@ -107,7 +104,6 @@ public class HotrodCacheConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.device-connection.common")
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public CommonCacheConfig commonCacheConfig() {
         return new CommonCacheConfig();
     }

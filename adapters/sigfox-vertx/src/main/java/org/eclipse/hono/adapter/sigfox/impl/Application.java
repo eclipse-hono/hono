@@ -13,17 +13,16 @@
 
 package org.eclipse.hono.adapter.sigfox.impl;
 
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCacheConfig;
 import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
 /**
  * The Hono Sigfox adapter main application class.
  */
-@ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
-@Import(Config.class)
+@Import({ Config.class, HotrodCacheConfig.class })
 @SpringBootApplication
 public class Application extends AbstractApplication {
 
