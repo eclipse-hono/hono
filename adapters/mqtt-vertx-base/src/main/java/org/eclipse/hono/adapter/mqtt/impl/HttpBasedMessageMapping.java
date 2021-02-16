@@ -28,10 +28,9 @@ import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;

@@ -44,7 +44,12 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-adapter-amqp</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
 
+    <!-- testing -->
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
