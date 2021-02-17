@@ -255,8 +255,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties tenantServiceClientConfig() {
-        setConfigServerRoleIfUnknown(tenantClientConfig, "Tenant");
-        setDefaultConfigNameIfNotSet(tenantClientConfig);
+        tenantClientConfig.setServerRoleIfUnknown("Tenant");
+        tenantClientConfig.setNameIfNotSet(getAdapterName());
         return tenantClientConfig;
     }
 
@@ -280,8 +280,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties registrationServiceClientConfig() {
-        setConfigServerRoleIfUnknown(deviceRegistrationClientConfig, "Device Registration");
-        setDefaultConfigNameIfNotSet(deviceRegistrationClientConfig);
+        deviceRegistrationClientConfig.setServerRoleIfUnknown("Device Registration");
+        deviceRegistrationClientConfig.setNameIfNotSet(getAdapterName());
         return deviceRegistrationClientConfig;
     }
 
@@ -305,8 +305,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties credentialsServiceClientConfig() {
-        setConfigServerRoleIfUnknown(credentialsClientConfig, "Credentials");
-        setDefaultConfigNameIfNotSet(credentialsClientConfig);
+        credentialsClientConfig.setServerRoleIfUnknown("Credentials");
+        credentialsClientConfig.setNameIfNotSet(getAdapterName());
         return credentialsClientConfig;
     }
 
@@ -330,8 +330,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
-        setConfigServerRoleIfUnknown(commandRouterConfig, "Command Router");
-        setDefaultConfigNameIfNotSet(commandRouterConfig);
+        commandRouterConfig.setServerRoleIfUnknown("Command Router");
+        commandRouterConfig.setNameIfNotSet(getAdapterName());
         return commandRouterConfig;
     }
 
@@ -347,8 +347,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
-        setConfigServerRoleIfUnknown(deviceConnectionClientConfig, "Device Connection");
-        setDefaultConfigNameIfNotSet(deviceConnectionClientConfig);
+        deviceConnectionClientConfig.setServerRoleIfUnknown("Device Connection");
+        deviceConnectionClientConfig.setNameIfNotSet(getAdapterName());
         return deviceConnectionClientConfig;
     }
 
@@ -381,8 +381,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private ClientConfigProperties downstreamSenderConfig() {
-        setConfigServerRoleIfUnknown(downstreamSenderConfig, "Downstream");
-        setDefaultConfigNameIfNotSet(downstreamSenderConfig);
+        downstreamSenderConfig.setServerRoleIfUnknown("Downstream");
+        downstreamSenderConfig.setNameIfNotSet(getAdapterName());
         return downstreamSenderConfig;
     }
 
@@ -401,8 +401,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private ClientConfigProperties commandConsumerFactoryConfig() {
         final ClientConfigProperties props = new ClientConfigProperties(commandConfig);
-        setConfigServerRoleIfUnknown(props, "Command & Control");
-        setDefaultConfigNameIfNotSet(props);
+        props.setServerRoleIfUnknown("Command & Control");
+        props.setNameIfNotSet(getAdapterName());
         return props;
     }
 
@@ -456,8 +456,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private ClientConfigProperties commandResponseSenderConfig() {
         final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
-        setConfigServerRoleIfUnknown(props, "Command Response");
-        setDefaultConfigNameIfNotSet(props);
+        props.setServerRoleIfUnknown("Command Response");
+        props.setNameIfNotSet(getAdapterName());
         return props;
     }
 

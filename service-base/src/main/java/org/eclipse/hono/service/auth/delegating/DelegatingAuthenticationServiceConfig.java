@@ -46,7 +46,9 @@ public class DelegatingAuthenticationServiceConfig {
     @ConfigurationProperties(prefix = "hono.auth")
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public AuthenticationServerClientConfigProperties authenticationServiceClientProperties() {
-        return new AuthenticationServerClientConfigProperties();
+        final var config = new AuthenticationServerClientConfigProperties();
+        config.setServerRoleIfUnknown("Authentication Server");
+        return config;
     }
 
     /**

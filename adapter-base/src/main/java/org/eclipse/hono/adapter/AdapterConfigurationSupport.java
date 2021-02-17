@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,33 +13,11 @@
 
 package org.eclipse.hono.adapter;
 
-import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
-
 /**
  * A base class that provides helper methods for configuring protocol adapters.
  *
  */
 public abstract class AdapterConfigurationSupport {
-
-    /**
-     * Sets a client configuration's server role name.
-     * <p>
-     * Does nothing if the configuration's <em>serverRole</em> property has
-     * a value other than {@value AuthenticatingClientConfigProperties#SERVER_ROLE_UNKNOWN}.
-     *
-     * @param config The client configuration.
-     * @param serverRole The role name.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    protected static void setConfigServerRoleIfUnknown(
-            final AuthenticatingClientConfigProperties config,
-            final String serverRole) {
-
-        if (config.getServerRole().equals(AuthenticatingClientConfigProperties.SERVER_ROLE_UNKNOWN)) {
-            config.setServerRole(serverRole);
-        }
-    }
 
     /**
      * Gets the name of the protocol adapter to configure.
@@ -50,19 +28,4 @@ public abstract class AdapterConfigurationSupport {
      * @return The protocol adapter name.
      */
     protected abstract String getAdapterName();
-
-    /**
-     * Sets the default name property of a client configuration.
-     * <p>
-     * Sets the <em>name</em> property to the value returned by {@link #getAdapterName()}
-     * if not set.
-     *
-     * @param config The configuration properties.
-     * @throws NullPointerException if config is {@code null}.
-     */
-    protected void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
-        if (config.getName() == null && getAdapterName() != null) {
-            config.setName(getAdapterName());
-        }
-    }
 }

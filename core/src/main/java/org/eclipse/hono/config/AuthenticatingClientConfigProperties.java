@@ -295,6 +295,18 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
     }
 
     /**
+     * Sets the default role name to use if the <em>serverRole</em> property has not been set explicitly.
+     *
+     * @param defaultRoleName The default name.
+     * @throws NullPointerException if name is {@code null}.
+     */
+    public final void setServerRoleIfUnknown(final String defaultRoleName) {
+        if (SERVER_ROLE_UNKNOWN.equals(serverRole)) {
+            setServerRole(defaultRoleName);
+        }
+    }
+
+    /**
      * Sets the name of the role that the server plays from the client's perspective.
      * <p>
      * The default value of this property is {@link #SERVER_ROLE_UNKNOWN}.

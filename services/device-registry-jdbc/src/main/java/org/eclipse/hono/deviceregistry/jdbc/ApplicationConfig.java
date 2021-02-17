@@ -385,8 +385,8 @@ public class ApplicationConfig {
     @Bean
     public ClientConfigProperties downstreamSenderConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
-        config.setName("Device Registry");
-        config.setServerRole("AMQP Messaging Network");
+        config.setNameIfNotSet("Device Registry");
+        config.setServerRoleIfUnknown("AMQP Messaging Network");
         return config;
     }
 

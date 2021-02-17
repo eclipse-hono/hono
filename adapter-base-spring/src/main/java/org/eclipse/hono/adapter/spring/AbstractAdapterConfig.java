@@ -267,8 +267,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public ClientConfigProperties downstreamSenderConfig() {
         final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "AMQP Messaging Network");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("AMQP Messaging Network");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 
@@ -449,8 +449,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public RequestResponseClientConfigProperties registrationClientConfig() {
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getRegistrationClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Device Registration");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Device Registration");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 
@@ -519,8 +519,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public RequestResponseClientConfigProperties credentialsClientConfig() {
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getCredentialsClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Credentials");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Credentials");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 
@@ -589,8 +589,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public RequestResponseClientConfigProperties tenantServiceClientConfig() {
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getTenantClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Tenant");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Tenant");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 
@@ -660,8 +660,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getDeviceConnectionClientFactoryConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Device Connection");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Device Connection");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 
@@ -721,8 +721,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getCommandRouterClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Command Router");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Command Router");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 
@@ -781,8 +781,8 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     public ClientConfigProperties commandConsumerFactoryConfig() {
         final ClientConfigProperties config = Optional.ofNullable(getCommandConsumerFactoryConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
-        setConfigServerRoleIfUnknown(config, "Command & Control");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Command & Control");
+        config.setNameIfNotSet(getAdapterName());
         return config;
     }
 

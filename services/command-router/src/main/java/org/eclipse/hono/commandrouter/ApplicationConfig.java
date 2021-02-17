@@ -27,7 +27,6 @@ import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -260,8 +259,8 @@ public class ApplicationConfig {
     @Bean
     public ClientConfigProperties commandConsumerFactoryConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
-        setConfigServerRoleIfUnknown(config, "Command & Control");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Command & Control");
+        config.setNameIfNotSet(COMPONENT_NAME);
         return config;
     }
 
@@ -321,8 +320,8 @@ public class ApplicationConfig {
     @Bean
     public RequestResponseClientConfigProperties registrationClientConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        setConfigServerRoleIfUnknown(config, "Device Registration");
-        setDefaultConfigNameIfNotSet(config);
+        config.setServerRoleIfUnknown("Device Registration");
+        config.setNameIfNotSet(COMPONENT_NAME);
         return config;
     }
 
@@ -390,19 +389,6 @@ public class ApplicationConfig {
     @Scope("prototype")
     public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
         return KafkaProducerFactory.sharedProducerFactory(vertx());
-    }
-
-    private static void setConfigServerRoleIfUnknown(final AuthenticatingClientConfigProperties config,
-            final String serverRole) {
-        if (config.getServerRole().equals(AuthenticatingClientConfigProperties.SERVER_ROLE_UNKNOWN)) {
-            config.setServerRole(serverRole);
-        }
-    }
-
-    private void setDefaultConfigNameIfNotSet(final ClientConfigProperties config) {
-        if (config.getName() == null) {
-            config.setName(COMPONENT_NAME);
-        }
     }
 
     /**

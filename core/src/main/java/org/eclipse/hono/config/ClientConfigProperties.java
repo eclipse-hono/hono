@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.config;
 
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -155,6 +156,19 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public final String getName() {
         return name;
+    }
+
+    /**
+     * Sets the default name to use if the <em>name</em> property has not been set explicitly.
+     *
+     * @param defaultName The name to set.
+     * @throws NullPointerException if default name is {@code null}.
+     */
+    public final void setNameIfNotSet(final String defaultName) {
+        Objects.requireNonNull(defaultName);
+        if (Strings.isNullOrEmpty(name)) {
+            setName(defaultName);
+        }
     }
 
     /**
