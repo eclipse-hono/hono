@@ -2,6 +2,7 @@
 linkTitle = "Get in Touch"
 title = "How to get in touch with the Hono Community"
 weight = 630
+type = "page"
 [menu.main]
     parent = "Community"
 +++

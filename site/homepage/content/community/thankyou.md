@@ -2,6 +2,7 @@
 linkTitle = "Thank you"
 title = "Organizations supporting the Development of Hono"
 weight = 650
+type = "page"
 [menu.main]
     parent = "Community"
 +++
