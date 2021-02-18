@@ -4,7 +4,7 @@
   <meta name="googlebot" content="index,follow,snippet,archive">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {{ $title_plain := .Title | plainify | markdownify }}
-  <title>{{ $title_plain }}</title>
+  <title>{{ $title_plain }} :: {{ .Site.Title | safeHTML }}</title>
   <meta name="author" content="{{ .Param "author" }}" />
   {{ $keywords := .Site.Params.defaultKeywords | default (slice "" | first 0) }}
   {{ if isset .Params "tags" }}{{ range .Params.tags }}{{ $keywords = $keywords | append . }}{{ end }}{{ end }}
