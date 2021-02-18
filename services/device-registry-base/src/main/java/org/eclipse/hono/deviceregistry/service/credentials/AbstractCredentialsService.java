@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,7 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementServ
 import org.eclipse.hono.service.management.device.AutoProvisioning;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.slf4j.Logger;
@@ -111,25 +112,48 @@ public abstract class AbstractCredentialsService implements CredentialsService {
      */
     protected abstract Future<CredentialsResult<JsonObject>> processGet(TenantKey tenant, CredentialKey key, JsonObject clientContext, Span span);
 
+    /**
+     * Gets a cache directive for a type of credentials.
+     *
+     * @param type The type of credentials.
+     * @param maxAge The number of seconds that the credentials may be cached.
+     * @return A max-age directive if the type is either hashed-password or X.509,
+     *         a no-cache directive otherwise.
+     * @throws NullPointerException if type is {@code null}.
+     */
+    protected final CacheDirective getCacheDirective(final String type, final long maxAge) {
+
+        switch (type) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+        case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+            return DeviceRegistryUtils.getCacheDirective(maxAge);
+        default:
+            return CacheDirective.noCacheDirective();
+        }
+    }
+
     @Override
     public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final Span span) {
         return get(tenantId, type, authId, null, span);
     }
 
     @Override
-    public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span) {
+    public final Future<CredentialsResult<JsonObject>> get(
+            final String tenantId,
+            final String type,
+            final String authId,
+            final JsonObject clientContext,
+            final Span span) {
 
-        return this.tenantInformationService
-
-                .tenantExists(tenantId, span)
-                .flatMap(result -> result.isError()
+        return this.tenantInformationService.tenantExists(tenantId, span)
+                .compose(result -> result.isError()
                         ? Future.succeededFuture(CredentialsResult.from(result.getStatus()))
                         : processGet(result.getPayload(), CredentialKey.from(result.getPayload(), authId, type), clientContext, span))
 
-                .flatMap(result -> {
+                .compose(result -> {
 
-                    if (isAutoProvisioningConfigured()
-                            && result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
+                    if (result.isNotFound()
+                            && isAutoProvisioningConfigured()
                             && isAutoProvisioningEnabled(type, clientContext)) {
 
                         return provisionDevice(result, tenantId, type, authId, clientContext, span);
@@ -139,7 +163,6 @@ public abstract class AbstractCredentialsService implements CredentialsService {
                         return Future.succeededFuture(result);
 
                     }
-
                 });
 
     }
