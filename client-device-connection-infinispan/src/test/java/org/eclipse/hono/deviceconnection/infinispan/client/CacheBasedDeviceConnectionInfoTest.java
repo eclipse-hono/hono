@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -29,16 +30,16 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.manager.DefaultCacheManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,7 +49,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -67,20 +67,15 @@ class CacheBasedDeviceConnectionInfoTest {
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
     private DeviceConnectionInfo info;
-    private BasicCache<String, String> cache;
     private Tracer tracer;
     private Span span;
+    private Cache<String, String> cache;
 
     static Stream<Set<String>> extraUnusedViaGateways() {
         return Stream.of(
                 Collections.emptySet(),
                 getViaGatewaysExceedingThreshold()
         );
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <K, V> Cache<K, V> mockCache() {
-        return mock(Cache.class);
     }
 
     private static Set<String> getViaGatewaysExceedingThreshold() {
@@ -94,18 +89,13 @@ class CacheBasedDeviceConnectionInfoTest {
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
-    void setUp(final Vertx vertx, final VertxTestContext testContext) {
-
-        final var cacheManager = new DefaultCacheManager(false);
-        cacheManager.defineConfiguration("cache-name", new ConfigurationBuilder()
-                .build());
-        cache = new EmbeddedCache<>(vertx, cacheManager, "cache-name");
-        cache.start().onComplete(testContext.completing());
+    void setUp() {
 
         span = TracingMockSupport.mockSpan();
         tracer = TracingMockSupport.mockTracer(span);
-
+        cache = mock(Cache.class);
         info = new CacheBasedDeviceConnectionInfo(cache, tracer);
     }
 
@@ -116,26 +106,45 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     void testSetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
-        final Cache<String, String> mockedCache = mockCache();
-        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.succeededFuture("oldValue"));
-        info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", mock(Span.class))
-            .onComplete(ctx.completing());
+
+        when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture("oldValue"));
+
+        info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", span)
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> {
+                    verify(cache).put(
+                            eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")),
+                            eq("gw-id"),
+                            anyLong(),
+                            any(TimeUnit.class));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
-     * Verifies that a request to set a gateway fails with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     * Verifies that a request to set a gateway fails with a {@link org.eclipse.hono.client.ServerErrorException}.
+     * if the underlying cache is not available.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
-        final Cache<String, String> mockedCache = mockCache();
-        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.failedFuture(new IOException("not available")));
-        info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", mock(Span.class))
+
+        when(cache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.failedFuture(new IOException("not available")));
+
+        info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", span)
             .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
+                ctx.verify(() -> {
+                    verify(cache).put(
+                            eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")),
+                            eq("gw-id"),
+                            anyLong(),
+                            any(TimeUnit.class));
+                    assertThat(t).isInstanceOfSatisfying(
+                            ServerErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR));
+                });
                 ctx.completeNow();
             }));
     }
@@ -147,12 +156,13 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     void testGetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
-        final Cache<String, String> mockedCache = mockCache();
-        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.get(anyString())).thenReturn(Future.succeededFuture("gw-id"));
-        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(Span.class))
+
+        when(cache.get(anyString())).thenReturn(Future.succeededFuture("gw-id"));
+
+        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", span)
             .onComplete(ctx.succeeding(value -> {
                 ctx.verify(() -> {
+                    verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")));
                     assertThat(value.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo("gw-id");
                 });
                 ctx.completeNow();
@@ -167,14 +177,16 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     void testGetLastKnownGatewayFailsForCacheAccessException(final VertxTestContext ctx) {
-        final Cache<String, String> mockedCache = mockCache();
-        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.get(anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
-        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(Span.class))
+
+        when(cache.get(anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
+
+        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", span)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(ServiceInvocationException.class);
-                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                    verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")));
+                    assertThat(t).isInstanceOfSatisfying(
+                            ServerErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR));
                 });
                 ctx.completeNow();
             }));
@@ -188,13 +200,16 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     void testGetLastKnownGatewayFailsForNonExistingEntry(final VertxTestContext ctx) {
-        final Cache<String, String> mockedCache = mockCache();
-        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.get(anyString())).thenReturn(Future.succeededFuture(null));
-        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(Span.class))
+
+        when(cache.get(anyString())).thenReturn(Future.succeededFuture(null));
+
+        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", span)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")));
+                    assertThat(t).isInstanceOfSatisfying(
+                            ClientErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                 });
                 ctx.completeNow();
             }));
@@ -207,10 +222,20 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     public void testSetCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-                .onComplete(ctx.succeeding(result -> ctx.completeNow()));
+
+        when(cache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.succeededFuture("oldValue"));
+
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice", "adapterInstance", null, span)
+                .onComplete(ctx.succeeding(ok -> {
+                    ctx.verify(() -> {
+                        verify(cache).put(
+                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")),
+                                eq("adapterInstance"),
+                                anyLong(),
+                                any(TimeUnit.class));
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -221,10 +246,20 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     public void testSetCommandHandlingAdapterInstanceWithLifespanSucceeds(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, Duration.ofSeconds(10), span)
-                .onComplete(ctx.succeeding(result -> ctx.completeNow()));
+
+        when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture("oldValue"));
+
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice", "adapterInstance", Duration.ofSeconds(10), span)
+                .onComplete(ctx.succeeding(ok -> {
+                    ctx.verify(() -> {
+                        verify(cache).put(
+                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")),
+                                eq("adapterInstance"),
+                                eq(10_000L),
+                                eq(TimeUnit.MILLISECONDS));
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -234,12 +269,15 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     public void testRemoveCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-        .compose(v -> info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
-                adapterInstance, span))
-        .onComplete(ctx.completing());
+
+        when(cache.remove(anyString(), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice", "adapterInstance", span)
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> verify(cache).remove(
+                        eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")),
+                        eq("adapterInstance")));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -251,34 +289,21 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     public void testRemoveCommandHandlingAdapterInstanceFailsForOtherDevice(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-        .compose(v -> {
-            return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice", adapterInstance, span);
-        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
-            ctx.completeNow();
-        })));
-    }
 
-    /**
-     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a PRECON_FAILED status
-     * if the given adapter instance parameter doesn't match the one of the entry registered for the given device.
-     *
-     * @param ctx The vert.x context.
-     */
-    @Test
-    public void testRemoveCommandHandlingAdapterInstanceFailsForOtherAdapterInstance(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-        .compose(v -> {
-            return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance", span);
-        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
-            ctx.completeNow();
-        })));
+        when(cache.remove(anyString(), anyString())).thenReturn(Future.succeededFuture(Boolean.FALSE));
+
+        info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice", "otherAdapter", span)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    verify(cache).remove(
+                            eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")),
+                            eq("otherAdapter"));
+                    assertThat(t).isInstanceOfSatisfying(
+                            ClientErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED));
+                });
+                ctx.completeNow();
+             }));
     }
 
     /**
@@ -289,17 +314,22 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     public void testGetCommandHandlingAdapterInstancesForDevice(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-        .compose(v -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Collections.emptySet(), span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, deviceId, adapterInstance);
-            assertGetInstancesResultSize(result, 1);
-            ctx.completeNow();
-        })));
+
+        final var entry = new JsonObject()
+                .put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, "testDevice")
+                .put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, "adapterInstance");
+        final var value = new JsonObject().put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES, new JsonArray().add(entry));
+
+        when(cache.get(anyString())).thenReturn(Future.succeededFuture("adapterInstance"));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, "testDevice", Set.of(), span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")));
+                    assertThat(result).isEqualTo(value);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -311,42 +341,19 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @Test
     public void testGetCommandHandlingAdapterInstancesWithExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
 
-        final Cache<String, String> mockedCache = spy(cache);
-        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, Duration.ofMillis(1), span)
-        .compose(v -> {
-            final Promise<JsonObject> instancesPromise = Promise.promise();
-            // wait 2ms to make sure entry has expired after that
-            vertx.setTimer(2, tid -> {
-                info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
-                        Collections.emptySet(), span)
-                        .onComplete(instancesPromise.future());
-            });
-            return instancesPromise.future();
-        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.completeNow();
-        })));
-    }
+        when(cache.get(anyString())).thenReturn(Future.succeededFuture(null));
 
-    /**
-     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails for a device with no
-     * viaGateways, if no matching instance has been registered.
-     *
-     * @param ctx The vert.x context.
-     */
-    @Test
-    public void testGetCommandHandlingAdapterInstancesFails(final VertxTestContext ctx) {
-        final String deviceId = "testDevice";
-        final Set<String> viaGateways = Collections.emptySet();
-        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
-                .onComplete(ctx.failing(t -> ctx.verify(() -> {
-                    assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-                    ctx.completeNow();
-                })));
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, "testDevice", Set.of(), span)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")));
+                    assertThat(t).isInstanceOfSatisfying(
+                            ClientErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -359,6 +366,7 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesForLastKnownGateway(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String otherAdapterInstance = "otherAdapterInstance";
@@ -366,22 +374,36 @@ class CacheBasedDeviceConnectionInfoTest {
         final String otherGatewayId = "gw-2";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
-        .compose(v -> {
-            // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, null, span);
-        }).compose(deviceConnectionResult -> {
-            return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span);
-        }).compose(u -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
-            // be sure that only the mapping for the last-known-gateway is returned, not the mappings for both via gateways
-            assertGetInstancesResultSize(result, 1);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice's last known gateway is set to gw-1
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture(gatewayId));
+
+        // and command handling adapter instances being set for both gateways
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
+
+        // but no command handling adapter instance registered for testDevice
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
+
+
+        // WHEN retrieving the list of command handling adapter instances for the device
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    // THEN the result contains the adapter instance registered for the gateway that the device
+                    // has been last seen on
+                    assertThat(result).isNotNull();
+                    assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
+                    // be sure that only the mapping for the last-known-gateway is returned, not the mappings for both via gateways
+                    assertGetInstancesResultSize(result, 1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -395,6 +417,7 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesWithMultiResultAndLastKnownGatewayNotInVia(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String otherAdapterInstance = "otherAdapterInstance";
@@ -403,23 +426,32 @@ class CacheBasedDeviceConnectionInfoTest {
         final String gatewayIdNotInVia = "gw-old";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
-        .compose(v -> {
-            // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, null, span);
-        }).compose(deviceConnectionResult -> {
-            return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayIdNotInVia, span);
-        }).compose(u -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
-            assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
-            // last-known-gateway is not in via list, therefore no single result is returned
-            assertGetInstancesResultSize(result, 2);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice's last known gateway is set to gw-old
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture(gatewayIdNotInVia));
+
+        // and command handling adapter instances being set for both gateways
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
+
+        // but no command handling adapter instance registered for testDevice nor gw-old
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayIdNotInVia))))
+            .thenReturn(Future.succeededFuture(Map.of()));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertThat(result).isNotNull();
+                    assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
+                    assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
+                    // last-known-gateway is not in via list, therefore no single result is returned
+                    assertGetInstancesResultSize(result, 2);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -433,6 +465,7 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesWithMultiResultAndNoAdapterForLastKnownGateway(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String otherAdapterInstance = "otherAdapterInstance";
@@ -441,23 +474,33 @@ class CacheBasedDeviceConnectionInfoTest {
         final String gatewayWithNoAdapterInstance = "gw-other";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId, gatewayWithNoAdapterInstance));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
-                .compose(v -> {
-                    // set command handling adapter instance for other gateway
-                    return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, null, span);
-                }).compose(deviceConnectionResult -> {
-            return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayWithNoAdapterInstance, span);
-        }).compose(u -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
-            assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
-            // no adapter registered for last-known-gateway, therefore no single result is returned
-            assertGetInstancesResultSize(result, 2);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice's last known gateway is set to gw-other
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture(gatewayWithNoAdapterInstance));
+
+        // and command handling adapter instances are set for gw-1 and gw-2
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
+                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
+
+        // but no command handling adapter instance is registered for testDevice nor gw-other
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayWithNoAdapterInstance))))
+            .thenReturn(Future.succeededFuture(Map.of()));
+
+        // WHEN retrieving command handling adapter instances for testDevice
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertThat(result).isNotNull();
+                    assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
+                    assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
+                    // no adapter registered for last-known-gateway, therefore no single result is returned
+                    assertGetInstancesResultSize(result, 2);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -471,21 +514,38 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesForSingleResultAndLastKnownGatewayNotInVia(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String gatewayId = "gw-1";
         final Set<String> viaGateways = new HashSet<>(Set.of("otherGatewayId"));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
-        .compose(deviceConnectionResult -> {
-            return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span);
-        }).compose(u -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice's last known gateway is set to gw-1
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture(gatewayId));
+
+        // and a command handling adapter instance is set for gw-1 only
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
+        // but not for the gateways in the via list
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of()));
+
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOfSatisfying(
+                            ClientErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -505,22 +565,33 @@ class CacheBasedDeviceConnectionInfoTest {
         final String gatewayId = "gw-1";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for device
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-        .compose(v -> {
-            // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, otherAdapterInstance, null, span);
-        }).compose(u -> {
-            return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span);
-        }).compose(w -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, deviceId, adapterInstance);
-            // be sure that only the mapping for the device is returned, not the mappings for the gateway
-            assertGetInstancesResultSize(result, 1);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice's last known gateway is set to gw-1
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture(gatewayId));
+
+        // and testDevice's and gw-1's command handling adapter instances are set to
+        // adapterInstance and otherAdapterInstance respectively
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
+
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertThat(result).isNotNull();
+                    assertGetInstancesResultMapping(result, deviceId, adapterInstance);
+                    // be sure that only the mapping for the device is returned, not the mappings for the gateway
+                    assertGetInstancesResultSize(result, 1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -534,26 +605,35 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesWithoutLastKnownGatewayIsGivingDevicePrecedence(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String otherAdapterInstance = "otherAdapterInstance";
         final String gatewayId = "gw-1";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for device
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
-        .compose(v -> {
-            // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, otherAdapterInstance, null, span);
-        }).compose(w -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, deviceId, adapterInstance);
-            // be sure that only the mapping for the device is returned, not the mappings for the gateway
-            assertGetInstancesResultSize(result, 1);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture());
+
+        // and testDevice's and gw-1's command handling adapter instances are set to
+        // adapterInstance and otherAdapterInstance respectively
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertNotNull(result);
+                    assertGetInstancesResultMapping(result, deviceId, adapterInstance);
+                    // be sure that only the mapping for the device is returned, not the mappings for the gateway
+                    assertGetInstancesResultSize(result, 1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -566,22 +646,32 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesForOneSubscribedVia(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String gatewayId = "gw-1";
         final String otherGatewayId = "gw-2";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
-        .compose(v -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
-            assertGetInstancesResultSize(result, 1);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture());
+
+        // and gw-1's command handling adapter instance is set to adapterInstance
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertNotNull(result);
+                    assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
+                    assertGetInstancesResultSize(result, 1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -594,6 +684,7 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesForMultipleSubscribedVias(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final String otherAdapterInstance = "otherAdapterInstance";
@@ -601,20 +692,28 @@ class CacheBasedDeviceConnectionInfoTest {
         final String otherGatewayId = "gw-2";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
-        .compose(v -> {
-            // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, null, span);
-        }).compose(u -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
-            assertNotNull(result);
-            assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
-            assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
-            assertGetInstancesResultSize(result, 2);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture());
+
+        // and gw-1's and gw-2's command handling adapter instance are set to
+        // adapterInstance and otherAdapterInstance respectively
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of(
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
+                    CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertNotNull(result);
+                    assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
+                    assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
+                    assertGetInstancesResultSize(result, 2);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -627,15 +726,29 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesFailsWithGivenGateways(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
         final String gatewayId = "gw-1";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture());
+
+        // and gw-1 has no command handling adapter instance registered
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of()));
+
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
-        .onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.completeNow();
-        })));
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOfSatisfying(
+                            ClientErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -648,20 +761,29 @@ class CacheBasedDeviceConnectionInfoTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesFailsForOtherTenantDevice(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
         final String deviceId = "testDevice";
-        final String adapterInstance = "adapterInstance";
         final String gatewayId = "gw-1";
-        final String otherGatewayId = "gw-2";
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
-        // set command handling adapter instance for other gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, adapterInstance, null, span)
-        .compose(v -> {
-            return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span);
-        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.completeNow();
-        })));
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+            .thenReturn(Future.succeededFuture());
+
+        // and gw-2's command handling adapter instance is set to adapterInstance
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+            .thenReturn(Future.succeededFuture(Map.of()));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOfSatisfying(
+                            ClientErrorException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

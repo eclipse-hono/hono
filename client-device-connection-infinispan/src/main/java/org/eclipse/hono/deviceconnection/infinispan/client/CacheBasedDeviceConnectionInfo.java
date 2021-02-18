@@ -234,8 +234,13 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return resultFuture;
     }
 
-    private Future<JsonObject> getInstancesQueryingAllGatewaysFirst(final String tenantId, final String deviceId,
-            final Set<String> viaGateways, final Span span) {
+    private Future<JsonObject> getInstancesQueryingAllGatewaysFirst(
+            final String tenantId,
+            final String deviceId,
+            final Set<String> viaGateways,
+            final Span span) {
+
+        LOG.debug("using optimzed query, retrieving {} via-gateways in one go", viaGateways.size());
         // get the command handling adapter instances for the device and *all* via-gateways in one call first
         // (this saves the extra lastKnownGateway check if only one adapter instance is returned)
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
@@ -389,15 +394,15 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
     }
 
-    private static String getGatewayEntryKey(final String tenantId, final String deviceId) {
+    static String getGatewayEntryKey(final String tenantId, final String deviceId) {
         return KEY_PREFIX_GATEWAY_ENTRIES_VALUE + KEY_SEPARATOR + tenantId + KEY_SEPARATOR + deviceId;
     }
 
-    private static String getAdapterInstanceEntryKey(final String tenantId, final String deviceId) {
+    static String getAdapterInstanceEntryKey(final String tenantId, final String deviceId) {
         return KEY_PREFIX_ADAPTER_INSTANCE_VALUES + KEY_SEPARATOR + tenantId + KEY_SEPARATOR + deviceId;
     }
 
-    private static Set<String> getAdapterInstanceEntryKeys(final String tenantId, final String deviceIdA,
+    static Set<String> getAdapterInstanceEntryKeys(final String tenantId, final String deviceIdA,
             final String deviceIdB) {
         final HashSet<String> keys = new HashSet<>(2);
         keys.add(getAdapterInstanceEntryKey(tenantId, deviceIdA));
@@ -422,7 +427,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return key.substring(pos + KEY_SEPARATOR.length());
     }
 
-    private static Set<String> getAdapterInstanceEntryKeys(final String tenantId, final String deviceIdA,
+    static Set<String> getAdapterInstanceEntryKeys(final String tenantId, final String deviceIdA,
             final Set<String> additionalDeviceIds) {
         final HashSet<String> keys = new HashSet<>(additionalDeviceIds.size() + 1);
         keys.add(getAdapterInstanceEntryKey(tenantId, deviceIdA));
