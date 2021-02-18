@@ -30,6 +30,7 @@ import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClie
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
+import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -176,14 +177,18 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                     downstreamEventKafkaSender(kafkaProducerFactory, kafkaProducerConfig, adapterProperties));
             adapter.setTelemetrySender(
                     downstreamTelemetryKafkaSender(kafkaProducerFactory, kafkaProducerConfig, adapterProperties));
+            //set the kafka based command response sender
+            adapter.setCommandResponseSender(kafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig));
         } else {
             // look up via bean factory is not possible because EventSender and TelemetrySender are implemented by
             // ProtonBasedDownstreamSender
             adapter.setEventSender(downstreamEventSender(samplerFactory, adapterProperties));
             adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
+            //set the proton based command response sender
+            adapter.setCommandResponseSender(protonBasedCommandResponseSender(samplerFactory, adapterProperties));
         }
 
-        adapter.setCommandResponseSender(commandResponseSender(samplerFactory, adapterProperties));
+
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient(samplerFactory));
@@ -841,7 +846,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
      */
     @Bean
     @Scope("prototype")
-    public CommandResponseSender commandResponseSender(
+    public CommandResponseSender protonBasedCommandResponseSender(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
@@ -849,6 +854,22 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 commandConsumerConnection(),
                 samplerFactory,
                 adapterConfig);
+    }
+
+
+    /**
+     * Exposes a client for sending command response messages downstream via <em>Kafka</em>.
+     *
+     * @param kafkaProducerFactory The producer factory to use.
+     * @param kafkaProducerConfig The producer configuration to use.
+     * @return The client.
+     */
+    @Bean
+    @Scope("prototype")
+    public CommandResponseSender kafkaBasedCommandResponseSender(
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig) {
+        return new KafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig, getTracer());
     }
 
     /**
