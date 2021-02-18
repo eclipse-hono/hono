@@ -49,7 +49,7 @@ import io.vertx.junit5.VertxTestContext;
  * by means of implementing the {@link #getDeviceManagementService()} and
  * {@link #getRegistrationService()} methods.
  */
-public interface RegistrationServiceTests {
+public interface AbstractRegistrationServiceTest {
 
     /**
      * The tenant used in tests.

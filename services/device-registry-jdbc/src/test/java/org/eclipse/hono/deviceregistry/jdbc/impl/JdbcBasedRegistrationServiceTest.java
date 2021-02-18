@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
-import org.eclipse.hono.service.registration.RegistrationServiceTests;
+import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 
-class JdbcBasedRegistrationServiceTest extends AbstractJdbcRegistryTest implements RegistrationServiceTests {
+class JdbcBasedRegistrationServiceTest extends AbstractJdbcRegistryTest implements AbstractRegistrationServiceTest {
 }

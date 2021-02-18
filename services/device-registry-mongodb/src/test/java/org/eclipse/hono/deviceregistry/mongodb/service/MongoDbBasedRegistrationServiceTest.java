@@ -22,8 +22,8 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationCo
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
-import org.eclipse.hono.service.registration.RegistrationServiceTests;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class MongoDbBasedRegistrationServiceTest implements RegistrationServiceTests {
+public class MongoDbBasedRegistrationServiceTest implements AbstractRegistrationServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
 

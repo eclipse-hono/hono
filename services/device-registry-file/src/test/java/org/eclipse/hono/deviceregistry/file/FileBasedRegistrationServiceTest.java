@@ -45,8 +45,8 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.Status;
+import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
-import org.eclipse.hono.service.registration.RegistrationServiceTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,7 +68,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests {@link FileBasedRegistrationService}.
  */
 @ExtendWith(VertxExtension.class)
-public class FileBasedRegistrationServiceTest implements RegistrationServiceTests {
+public class FileBasedRegistrationServiceTest implements AbstractRegistrationServiceTest {
 
     private static final String FILE_NAME = "/device-identities.json";
 
