@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -771,15 +771,11 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
 
     private CacheDirective getCacheDirective(final String type) {
 
-        if (getConfig().getCacheMaxAge() > 0) {
-            switch (type) {
-            case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
-            case CredentialsConstants.SECRETS_TYPE_X509_CERT:
-                return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());
-            default:
-                return CacheDirective.noCacheDirective();
-            }
-        } else {
+        switch (type) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+        case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+            return DeviceRegistryUtils.getCacheDirective(getConfig().getCacheMaxAge());
+        default:
             return CacheDirective.noCacheDirective();
         }
     }

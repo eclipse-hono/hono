@@ -143,7 +143,7 @@ public final class DeviceRegistryUtils {
      *                    returned by the service's operations may be cached for.
      * @return the cache directive corresponding to the given max age for the cache.
      */
-    public static CacheDirective getCacheDirective(final int cacheMaxAge) {
+    public static CacheDirective getCacheDirective(final long cacheMaxAge) {
         if (cacheMaxAge > 0) {
             return CacheDirective.maxAgeDirective(cacheMaxAge);
         } else {

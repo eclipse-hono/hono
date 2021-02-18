@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,11 +23,11 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -43,18 +43,27 @@ import io.vertx.core.json.JsonObject;
 public class CredentialsServiceImpl extends AbstractCredentialsService {
 
     private final TableAdapterStore store;
+    private final DeviceServiceProperties config;
 
     /**
      * Create a new instance.
      *
      * @param store The backing service to use.
+     * @param properties The configuration properties to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public CredentialsServiceImpl(final TableAdapterStore store) {
-        this.store = store;
+    public CredentialsServiceImpl(final TableAdapterStore store, final DeviceServiceProperties properties) {
+        this.store = Objects.requireNonNull(store);
+        this.config = Objects.requireNonNull(properties);
     }
 
     @Override
-    protected Future<CredentialsResult<JsonObject>> processGet(final TenantKey tenant, final CredentialKey key, final JsonObject clientContext, final Span span) {
+    protected Future<CredentialsResult<JsonObject>> processGet(
+            final TenantKey tenant,
+            final CredentialKey key,
+            final JsonObject clientContext,
+            final Span span) {
+
         return this.store.findCredentials(key, span.context())
                 .map(r -> {
 
@@ -86,7 +95,10 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                             .put(CredentialsConstants.FIELD_AUTH_ID, key.getAuthId())
                             .put(CredentialsConstants.FIELD_SECRETS, new JsonArray(secrets));
 
-                    return CredentialsResult.from(HttpURLConnection.HTTP_OK, payload, CacheDirective.noCacheDirective());
+                    return CredentialsResult.from(
+                            HttpURLConnection.HTTP_OK,
+                            payload,
+                            getCacheDirective(key.getType(), config.getCredentialsTtl().toSeconds()));
 
                 });
     }

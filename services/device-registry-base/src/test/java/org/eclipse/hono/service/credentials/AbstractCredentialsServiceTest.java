@@ -464,6 +464,7 @@ public interface AbstractCredentialsServiceTest {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
                                 assertThat(response.getCacheDirective()).isNotNull();
+                                assertThat(response.getCacheDirective().isCachingAllowed()).isTrue();
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -483,6 +484,7 @@ public interface AbstractCredentialsServiceTest {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
                                 assertThat(response.getCacheDirective()).isNotNull();
+                                assertThat(response.getCacheDirective().isCachingAllowed()).isTrue();
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -499,6 +501,7 @@ public interface AbstractCredentialsServiceTest {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
                                 assertThat(response.getCacheDirective()).isNotNull();
+                                assertThat(response.getCacheDirective().isCachingAllowed()).isTrue();
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -518,6 +521,7 @@ public interface AbstractCredentialsServiceTest {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
                                 assertThat(response.getCacheDirective()).isNotNull();
+                                assertThat(response.getCacheDirective().isCachingAllowed()).isFalse();
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),

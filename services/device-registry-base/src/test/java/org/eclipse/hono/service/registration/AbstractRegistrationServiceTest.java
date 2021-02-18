@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -107,6 +107,8 @@ public interface AbstractRegistrationServiceTest {
             .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk()).isTrue();
+                    assertThat(registrationResult.getCacheDirective()).isNotNull();
+                    assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
                 });
                 ctx.completeNow();
@@ -138,6 +140,8 @@ public interface AbstractRegistrationServiceTest {
             .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk()).isTrue();
+                    assertThat(registrationResult.getCacheDirective()).isNotNull();
+                    assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
                 });
                 ctx.completeNow();
@@ -178,6 +182,8 @@ public interface AbstractRegistrationServiceTest {
             .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk()).isTrue();
+                    assertThat(registrationResult.getCacheDirective()).isNotNull();
+                    assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
                         .contains(gatewayIdA, gatewayIdB, gatewayIdC);
                 });

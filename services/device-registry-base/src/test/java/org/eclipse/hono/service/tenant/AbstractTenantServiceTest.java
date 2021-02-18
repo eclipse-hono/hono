@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.tenant;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -346,29 +347,32 @@ public interface AbstractTenantServiceTest {
             // WHEN retrieving the tenant using the Tenant API
             return getTenantService().get("tenant", NoopSpan.INSTANCE);
         })
-        .onComplete(ctx.succeeding(response -> {
-            // THEN the properties of the originally registered tenant
-            // all show up in the tenant retrieved using the Tenant API
+        .onComplete(ctx.succeeding(tenantResult -> {
             ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
-                assertEquals("tenant", response.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+                assertThat(tenantResult.isOk()).isTrue();
+                // THEN the response can be cached
+                assertThat(tenantResult.getCacheDirective()).isNotNull();
+                assertThat(tenantResult.getCacheDirective().isCachingAllowed()).isTrue();
+                // and the properties of the originally registered tenant
+                // all show up in the tenant retrieved using the Tenant API
+                assertEquals("tenant", tenantResult.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
 
                 final JsonObject jsonTenantSpec = JsonObject.mapFrom(tenantSpec);
                 assertEquals(
                         jsonTenantSpec.getValue(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE),
-                        response.getPayload().getValue(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE));
+                        tenantResult.getPayload().getValue(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE));
                 assertEquals(
                         jsonTenantSpec.getValue(TenantConstants.FIELD_ENABLED),
-                        response.getPayload().getValue(TenantConstants.FIELD_ENABLED));
+                        tenantResult.getPayload().getValue(TenantConstants.FIELD_ENABLED));
                 assertEquals(
                         jsonTenantSpec.getValue(TenantConstants.FIELD_EXT),
-                        response.getPayload().getValue(TenantConstants.FIELD_EXT));
+                        tenantResult.getPayload().getValue(TenantConstants.FIELD_EXT));
                 assertEquals(
                         jsonTenantSpec.getValue(TenantConstants.FIELD_RESOURCE_LIMITS),
-                        response.getPayload().getValue(TenantConstants.FIELD_RESOURCE_LIMITS));
+                        tenantResult.getPayload().getValue(TenantConstants.FIELD_RESOURCE_LIMITS));
                 assertEquals(
                         jsonTenantSpec.getValue(TenantConstants.FIELD_ADAPTERS),
-                        response.getPayload().getValue(TenantConstants.FIELD_ADAPTERS));
+                        tenantResult.getPayload().getValue(TenantConstants.FIELD_ADAPTERS));
             });
             ctx.completeNow();
         }));
