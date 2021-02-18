@@ -25,8 +25,9 @@ import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.AmqpMessageContextConditionalVerifier;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.junit.jupiter.api.Test;
@@ -52,14 +53,14 @@ public class EventCoapIT extends CoapTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
-            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
 
-        return helper.amqpApplicationClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
     @Override
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
-        assertThat(msg.getMessageContext().getRawMessage().isDurable()).isTrue();
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        AmqpMessageContextConditionalVerifier.assertMessageIsDurable(msg);
     }
 
     @Override

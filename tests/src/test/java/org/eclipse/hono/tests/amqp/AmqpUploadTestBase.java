@@ -33,7 +33,7 @@ import org.apache.qpid.proton.message.Message;
 import org.assertj.core.api.Assertions;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -80,7 +80,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer);
+    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Handler<DownstreamMessage<? extends MessageContext>> messageConsumer);
 
     /**
      * Gets the endpoint name.
@@ -112,7 +112,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param msg The message to perform checks on.
      * @throws RuntimeException if any of the checks fail.
      */
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         // empty
     }
 

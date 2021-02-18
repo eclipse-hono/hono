@@ -21,12 +21,14 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -93,9 +95,10 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
-            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
 
-        return helper.amqpApplicationClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.applicationClient
+                .createTelemetryConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
     /**
@@ -106,6 +109,7 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @AssumeMessagingSystem(type = MessagingType.amqp)
     public void testUploadMessagesWithNoConsumerSendsErrors(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();

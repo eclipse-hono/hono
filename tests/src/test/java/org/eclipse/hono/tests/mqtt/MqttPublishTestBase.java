@@ -32,7 +32,7 @@ import java.util.function.Function;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
@@ -207,7 +207,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      */
     protected abstract Future<MessageConsumer> createConsumer(
             String tenantId,
-            Handler<DownstreamMessage<AmqpMessageContext>> messageHandler);
+            Handler<DownstreamMessage<? extends MessageContext>> messageHandler);
 
     /**
      * Verifies that a number of messages published to Hono's MQTT adapter
@@ -532,7 +532,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             final String tenantId,
             final Future<MqttConnAckMessage> connection,
             final Function<Buffer, Future<String>> sender,
-            final Function<Handler<DownstreamMessage<AmqpMessageContext>>, Future<MessageConsumer>> consumerSupplier,
+            final Function<Handler<DownstreamMessage<? extends MessageContext>>, Future<MessageConsumer>> consumerSupplier,
             final Function<MqttPublishMessage, Future<String>> errorMsgHandler,
             final String errorTopic)
             throws InterruptedException {
@@ -551,7 +551,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 ctx.failNow(new IllegalStateException("consumer received message although sending was supposed to fail"));
                 return;
             }
-            LOGGER.trace("received {}", msg.getMessageContext().getRawMessage());
+            LOGGER.trace("received {}", msg);
             ctx.verify(() -> {
                 IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
                 assertThat(msg.getQos().ordinal()).isEqualTo(getQos().ordinal());
@@ -697,7 +697,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @param msg The message to perform checks on.
      * @throws RuntimeException if any of the checks fail.
      */
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         // empty
     }
 }

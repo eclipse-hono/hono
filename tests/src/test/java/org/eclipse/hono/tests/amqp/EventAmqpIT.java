@@ -22,7 +22,8 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.tests.AmqpMessageContextConditionalVerifier;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.MessageHelper;
@@ -53,8 +54,8 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
-            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
-        return helper.amqpApplicationClient.createEventConsumer(tenantId, messageConsumer, close -> {});
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, close -> {});
     }
 
     @Override
@@ -63,8 +64,8 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     }
 
     @Override
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
-        assertThat(msg.getMessageContext().getRawMessage().isDurable()).isTrue();
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        AmqpMessageContextConditionalVerifier.assertMessageIsDurable(msg);
     }
 
     /**

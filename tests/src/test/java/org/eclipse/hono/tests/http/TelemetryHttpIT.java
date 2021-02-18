@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -68,8 +69,9 @@ public class TelemetryHttpIT extends HttpTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
-            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
-        return helper.amqpApplicationClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+        return helper.applicationClient
+                .createTelemetryConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
     /**
@@ -199,6 +201,8 @@ public class TelemetryHttpIT extends HttpTestBase {
             final VertxTestContext ctx)
             throws InterruptedException {
 
+        final AmqpApplicationClient amqpApplicationClient = (AmqpApplicationClient) helper.applicationClient;
+
         // GIVEN a device and a north bound message consumer that doesn't update the message delivery state
         final Tenant tenant = new Tenant();
         final Checkpoint messageReceived = ctx.checkpoint();
@@ -209,7 +213,7 @@ public class TelemetryHttpIT extends HttpTestBase {
         final AtomicReference<ProtonDelivery> deliveryRef = new AtomicReference<>();
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .compose(ok -> helper.amqpApplicationClient.createTelemetryConsumer(
+                .compose(ok -> amqpApplicationClient.createTelemetryConsumer(
                         tenantId,
                         msg -> {
                             final Promise<Void> result = Promise.promise();
