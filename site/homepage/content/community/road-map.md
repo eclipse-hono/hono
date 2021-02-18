@@ -1,6 +1,8 @@
 +++
-title = "Road Map"
+linkTitle = "Road Map"
+title = "Overview of past and future Hono Releases"
 weight = 640
+type = "page"
 [menu.main]
     parent = "Community"
 +++
