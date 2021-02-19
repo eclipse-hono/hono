@@ -21,9 +21,9 @@ import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.InternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -89,9 +89,9 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
     private static List<KafkaHeader> getHeaders(final KafkaBasedCommand command) {
         final List<KafkaHeader> headers = new ArrayList<>(command.getRecord().headers());
 
-        headers.add(KafkaMessageHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant()));
+        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant()));
         Optional.ofNullable(command.getGatewayId())
-                .ifPresent(id -> headers.add(KafkaMessageHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA,
+                .ifPresent(id -> headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA,
                         command.getGatewayId())));
 
         return headers;

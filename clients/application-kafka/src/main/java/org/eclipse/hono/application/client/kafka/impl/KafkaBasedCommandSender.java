@@ -19,9 +19,9 @@ import java.util.Optional;
 
 import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -96,7 +96,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
         props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
                 Objects.nonNull(contentType) ? contentType : MessageHelper.CONTENT_TYPE_OCTET_STREAM);
         props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
-        props.put(KafkaMessageHelper.HEADER_RESPONSE_REQUIRED, responseRequired);
+        props.put(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, responseRequired);
 
         return props;
     }

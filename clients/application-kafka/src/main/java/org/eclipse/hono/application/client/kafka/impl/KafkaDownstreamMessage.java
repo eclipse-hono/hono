@@ -23,7 +23,7 @@ import org.eclipse.hono.application.client.MessageProperties;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.KafkaMessageProperties;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.slf4j.Logger;
@@ -78,7 +78,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     }
 
     private String getContentType(final List<KafkaHeader> headers) {
-        return KafkaMessageHelper.getContentType(headers)
+        return KafkaRecordHelper.getContentType(headers)
                 .orElseGet(() -> {
                     log.debug("content type not present in Kafka record");
                     return MessageHelper.CONTENT_TYPE_OCTET_STREAM;
@@ -86,7 +86,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     }
 
     private QoS getQoS(final List<KafkaHeader> headers) {
-        return KafkaMessageHelper.getQoS(headers)
+        return KafkaRecordHelper.getQoS(headers)
                 .orElseGet(() -> {
                     log.debug("QoS not present in Kafka record");
                     return QoS.AT_LEAST_ONCE;
@@ -94,7 +94,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     }
 
     private Instant getCreationTime(final List<KafkaHeader> headers) {
-        return KafkaMessageHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
+        return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
                 .map(Instant::ofEpochMilli)
                 .orElseGet(() -> {
                     log.debug("creation time not present in Kafka record");
@@ -103,7 +103,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     }
 
     private Integer getTimeTillDisconnect(final List<KafkaHeader> headers) {
-        return KafkaMessageHelper.getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.class)
+        return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.class)
                 .orElseGet(() -> {
                     log.debug("ttd not present in Kafka record");
                     return null;

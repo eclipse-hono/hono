@@ -20,9 +20,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
@@ -243,7 +243,7 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
 
             properties.forEach((k, v) -> {
                 try {
-                    headers.add(KafkaMessageHelper.createKafkaHeader(k, v));
+                    headers.add(KafkaRecordHelper.createKafkaHeader(k, v));
                 } catch (final EncodeException e) {
                     log.info("failed to serialize property with key [{}] to Kafka header", k);
                     span.log("failed to create Kafka header from property: " + k);

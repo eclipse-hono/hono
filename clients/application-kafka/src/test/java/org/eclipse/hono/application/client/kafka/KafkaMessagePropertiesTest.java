@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -84,15 +84,15 @@ public class KafkaMessagePropertiesTest {
         final String intHeaderKey = "int";
         final int intHeaderValue = 1;
 
-        headers.add(KafkaMessageHelper.createKafkaHeader(HEADER_KEY, HEADER_VALUE));
-        headers.add(KafkaMessageHelper.createKafkaHeader(intHeaderKey, intHeaderValue));
+        headers.add(KafkaRecordHelper.createKafkaHeader(HEADER_KEY, HEADER_VALUE));
+        headers.add(KafkaRecordHelper.createKafkaHeader(intHeaderKey, intHeaderValue));
 
         final Map<String, Object> propertiesMap = new KafkaMessageProperties(record).getPropertiesMap();
 
-        final String decodedString = KafkaMessageHelper.decode((Buffer) propertiesMap.get(HEADER_KEY), String.class);
+        final String decodedString = KafkaRecordHelper.decode((Buffer) propertiesMap.get(HEADER_KEY), String.class);
         assertThat(decodedString).isEqualTo(HEADER_VALUE);
 
-        final Integer decodedInteger = KafkaMessageHelper.decode((Buffer) propertiesMap.get(intHeaderKey),
+        final Integer decodedInteger = KafkaRecordHelper.decode((Buffer) propertiesMap.get(intHeaderKey),
                 Integer.class);
         assertThat(decodedInteger).isEqualTo(intHeaderValue);
     }

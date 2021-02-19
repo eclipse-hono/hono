@@ -27,19 +27,18 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import io.vertx.kafka.client.producer.impl.KafkaHeaderImpl;
 
 /**
  * Utility methods for working with Kafka {@code Message}s.
  */
-public final class KafkaMessageHelper {
+public final class KafkaRecordHelper {
 
     /**
      * The name of the boolean Kafka record header that defines whether a response is required for the command.
      */
     public static final String HEADER_RESPONSE_REQUIRED = "response-required";
 
-    private KafkaMessageHelper() {
+    private KafkaRecordHelper() {
     }
 
     /**
@@ -64,7 +63,7 @@ public final class KafkaMessageHelper {
             encodedValue = Json.encode(value);
         }
 
-        return new KafkaHeaderImpl(key, Buffer.buffer(encodedValue));
+        return KafkaHeader.header(key, Buffer.buffer(encodedValue));
     }
 
     /**
@@ -127,6 +126,9 @@ public final class KafkaMessageHelper {
 
     /**
      * Gets the value of a Kafka header from the given headers.
+     * <p>
+     * If the headers contain multiple occurrences of the same key, the value of its first
+     * occurrence is returned.
      *
      * @param headers The Kafka headers to retrieve the value from.
      * @param key The header key.
@@ -203,5 +205,4 @@ public final class KafkaMessageHelper {
             return null;
         }
     }
-
 }
