@@ -90,7 +90,7 @@ abstract class AbstractJdbcRegistryTest {
 
         try (
                 var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
-                var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("create.devices.sql"))
+                var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("02-create.devices.sql"))
         ) {
             // pre-create database
             RunScript.execute(connection, script);
@@ -191,7 +191,7 @@ abstract class AbstractJdbcRegistryTest {
 
         try (
                 var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
-                var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("create.tenants.sql"))
+                var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("01-create.tenants.sql"))
         ) {
             // pre-create database
             RunScript.execute(connection, script);
