@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.common.errors.TimeoutException;
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,7 +255,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
                 final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
 
-                if (respectTtl && KafkaMessageHelper.isTtlElapsed(record.headers())) {
+                if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
                     addToCurrentOffsets(record); // ttl elapsed -> add offset and resume with the next record
                 } else {
                     final T message = createMessage(record);

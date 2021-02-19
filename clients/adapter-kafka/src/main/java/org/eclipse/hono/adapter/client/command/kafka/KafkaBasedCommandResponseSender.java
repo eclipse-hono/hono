@@ -18,9 +18,9 @@ import java.util.Objects;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -71,11 +71,11 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
     }
 
     private List<KafkaHeader> getHeaders(final CommandResponse response) {
-        return List.of(KafkaMessageHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID,
+        return List.of(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID,
                 response.getCorrelationId()),
-                KafkaMessageHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId()),
-                KafkaMessageHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_STATUS, response.getStatus()),
-                KafkaMessageHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId()),
+                KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_STATUS, response.getStatus()),
+                KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
                         Objects.nonNull(response.getContentType()) ? response.getContentType()
                                 : MessageHelper.CONTENT_TYPE_OCTET_STREAM));
     }
