@@ -859,7 +859,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             customizeDownstreamMessageProperties(props, ctx);
 
             if (endpoint == EndpointType.EVENT) {
-                return getEventSender().sendEvent(
+                return getEventSender(tenantObject).sendEvent(
                         tenantObject,
                         tokenTracker.result(),
                         ctx.contentType(),

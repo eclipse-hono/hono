@@ -1151,7 +1151,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 props,
                                 currentSpan.context());
                     } else {
-                        return getEventSender().sendEvent(
+                        return getEventSender(tenantValidationTracker.result()).sendEvent(
                                 tenantValidationTracker.result(),
                                 tokenFuture.result(),
                                 context.getMessageContentType(),

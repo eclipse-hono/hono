@@ -740,7 +740,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     }
                     final Future<Void> sendResult;
                     if (endpoint == EndpointType.EVENT) {
-                        sendResult = getEventSender().sendEvent(
+                        sendResult = getEventSender(tenantValidationTracker.result()).sendEvent(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
                                 contentType,

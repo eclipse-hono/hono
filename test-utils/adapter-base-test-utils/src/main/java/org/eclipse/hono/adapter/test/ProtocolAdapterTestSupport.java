@@ -200,7 +200,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCredentialsClient(credentialsClient);
         adapter.setCommandRouterClient(commandRouterClient);
-        adapter.setEventSender(eventSender);
+        adapter.setAmqpEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTelemetrySender(telemetrySender);
         adapter.setTenantClient(tenantClient);
@@ -352,7 +352,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());
-        this.adapter.setEventSender(this.eventSender);
+        this.adapter.setAmqpEventSender(this.eventSender);
         return this.eventSender;
     }
 
