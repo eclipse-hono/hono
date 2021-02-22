@@ -74,9 +74,9 @@
     <rxjava.version>2.2.12</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.26</snakeyaml.version>
-    <spring.version>5.2.11.RELEASE</spring.version>
-    <spring-boot.version>2.2.11.RELEASE</spring-boot.version>
-    <spring-security-crypto.version>5.2.7.RELEASE</spring-security-crypto.version>
+    <spring.version>5.2.13.RELEASE</spring.version>
+    <spring-boot.version>2.2.13.RELEASE</spring-boot.version>
+    <spring-security-crypto.version>5.2.9.RELEASE</spring-security-crypto.version>
     <testcontainers.version>1.15.1</testcontainers.version>
     <vertx.version>3.9.5</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
