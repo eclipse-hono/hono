@@ -802,8 +802,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             payloadSize,
                             ctx.getTimer());
                     // check that the remote MQTT client is still connected before sending PUBACK
-                    if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                        ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                    if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
+                        currentSpan.log("sending PUBACK");
+                        ctx.acknowledge();
                     }
                     currentSpan.finish();
                     return Future.<Void> succeededFuture();
@@ -1063,7 +1064,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         protected final void registerHandlers() {
             endpoint.publishHandler(this::handlePublishedMessage);
-            endpoint.publishAcknowledgeHandler(cmdSubscriptionsManager::handlePubAck);
+            endpoint.publishAcknowledgeHandler(this::handlePubAck);
             endpoint.subscribeHandler(this::onSubscribe);
             endpoint.unsubscribeHandler(this::onUnsubscribe);
             endpoint.closeHandler(v -> onClose());
@@ -1153,6 +1154,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         /**
+         * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
+         *
+         * @param msgId The message/packet id.
+         * @throws NullPointerException if msgId is {@code null}.
+         */
+        public void handlePubAck(final Integer msgId) {
+            Objects.requireNonNull(msgId);
+            cmdSubscriptionsManager.handlePubAck(msgId);
+        }
+
+        /**
          * Invoked when a device sends an MQTT <em>SUBSCRIBE</em> packet.
          * <p>
          * This method currently only supports topic filters for subscribing to
@@ -1170,8 +1182,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         protected final void onSubscribe(final MqttSubscribeMessage subscribeMsg) {
             Objects.requireNonNull(subscribeMsg);
-            final Map<Object, Future<CommandSubscription>> uniqueSubscriptions = new HashMap<>();
-            final Deque<Future<CommandSubscription>> subscriptionOutcomes = new ArrayDeque<>(subscribeMsg.topicSubscriptions().size());
+            final Map<Object, Future<Subscription>> uniqueSubscriptions = new HashMap<>();
+            final Deque<Future<Subscription>> subscriptionOutcomes = new ArrayDeque<>(subscribeMsg.topicSubscriptions().size());
 
             final Span span = newSpan("SUBSCRIBE");
 
@@ -1181,10 +1193,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Deque<MqttTopicSubscription> topicSubscriptions = new LinkedList<>(subscribeMsg.topicSubscriptions());
             topicSubscriptions.descendingIterator().forEachRemaining(mqttTopicSub -> {
 
-                final Future<CommandSubscription> result;
+                final Future<Subscription> result;
                 // we currently only support subscriptions for receiving commands
-                final CommandSubscription cmdSub = CommandSubscription.fromTopic(mqttTopicSub, authenticatedDevice,
-                        endpoint.clientIdentifier());
+                final CommandSubscription cmdSub = CommandSubscription.fromTopic(mqttTopicSub, authenticatedDevice);
                 if (cmdSub == null) {
                     TracingHelper.logError(span, String.format("unsupported topic filter [%s]", mqttTopicSub.topicName()));
                     log.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
@@ -1219,8 +1230,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     // now that we have informed the device about the outcome,
                     // we can send empty notifications for succeeded (distinct) command subscriptions downstream
                     subscriptionOutcomes.stream()
-                            .filter(Future::succeeded)
-                            .map(cmdSubFuture -> cmdSubFuture.result().getKey())
+                            .filter(subFuture -> subFuture.succeeded() && subFuture.result() instanceof CommandSubscription)
+                            .map(subFuture -> ((CommandSubscription) subFuture.result()).getKey())
                             .distinct()
                             .forEach(cmdSubKey -> {
                                 sendConnectedTtdEvent(cmdSubKey.getTenantId(), cmdSubKey.getDeviceId(), authenticatedDevice, span.context());
@@ -1235,21 +1246,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             });
         }
 
-        private Future<CommandSubscription> registerCommandSubscription(final CommandSubscription cmdSub, final Span span) {
+        private Future<Subscription> registerCommandSubscription(final CommandSubscription cmdSub, final Span span) {
 
             if (MqttQoS.EXACTLY_ONCE.equals(cmdSub.getQos())) {
-                // we do not support subscribing to commands using QoS 2
                 TracingHelper.logError(span, String.format("topic filter [%s] with unsupported QoS 2", cmdSub.getTopic()));
                 return Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
             }
             return createCommandConsumer(cmdSub, span)
                     .map(consumer -> {
-                        final Map<String, Object> items = new HashMap<>(4);
-                        items.put(Fields.EVENT, "accepting subscription");
-                        items.put(LOG_FIELD_TOPIC_FILTER, cmdSub.getTopic());
-                        items.put("requested QoS", cmdSub.getQos());
-                        items.put("granted QoS", cmdSub.getQos());
-                        span.log(items);
+                        cmdSub.logSubscribeSuccess(span);
                         log.debug("created subscription [tenant: {}, device: {}, filter: {}, QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos());
                         final CommandSubscription existingCmdSub = cmdSubscriptionsManager.getSubscription(cmdSub.getKey());
@@ -1260,14 +1265,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                     existingCmdSub.getQos(), existingCmdSub.getTopic());
                         }
                         cmdSubscriptionsManager.addSubscription(cmdSub, consumer);
-                        return cmdSub;
+                        return (Subscription) cmdSub;
                     }).recover(t -> {
-                        final Map<String, Object> items = new HashMap<>(4);
-                        items.put(Fields.EVENT, Tags.ERROR.getKey());
-                        items.put(LOG_FIELD_TOPIC_FILTER, cmdSub.getTopic());
-                        items.put("requested QoS", cmdSub.getQos());
-                        items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
-                        TracingHelper.logError(span, items);
+                        cmdSub.logSubscribeFailure(span, t);
                         log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos(), t);
                         return Future.failedFuture(t);
@@ -1371,35 +1371,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             Tags.MESSAGE_BUS_DESTINATION.set(commandContext.getTracingSpan(), publishTopic);
             TracingHelper.TAG_QOS.set(commandContext.getTracingSpan(), subscription.getQos().name());
 
+            final String targetInfo = command.isTargetedAtGateway()
+                    ? String.format("gateway [%s], device [%s]", command.getGatewayId(), command.getDeviceId())
+                    : String.format("device [%s]", command.getDeviceId());
+
             final Buffer payload = Optional.ofNullable(command.getPayload()).orElseGet(Buffer::buffer);
             endpoint.publish(publishTopic, payload, subscription.getQos(), false, false, sentHandler -> {
                 if (sentHandler.succeeded()) {
 
                     final Integer msgId = sentHandler.result();
-                    if (command.isTargetedAtGateway()) {
-                        log.debug("published command [packet-id: {}] to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                msgId, subscription.getTenant(), subscription.getDeviceId(), command.getDeviceId(),
-                                subscription.getClientId(), subscription.getQos(), publishTopic);
-                    } else {
-                        log.debug("published command [packet-id: {}] to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
-                                subscription.getQos(), publishTopic);
-                    }
+                    log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                            msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                            subscription.getQos(), publishTopic);
                     commandContext.getTracingSpan().log(subscription.getQos().value() > 0 ? "published command, packet-id: " + msgId
                             : "published command");
                     afterCommandPublished(msgId, commandContext, tenantObject, subscription, cmdSubscriptionsManager);
 
                 } else {
-
-                    if (command.isTargetedAtGateway()) {
-                        log.debug("error publishing command to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                subscription.getTenant(), subscription.getDeviceId(), command.getDeviceId(),
-                                subscription.getClientId(), subscription.getQos(), publishTopic, sentHandler.cause());
-                    } else {
-                        log.debug("error publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
-                                subscription.getQos(), publishTopic, sentHandler.cause());
-                    }
+                    log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                            targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                            subscription.getQos(), publishTopic, sentHandler.cause());
                     TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", sentHandler.cause());
                     reportPublishedCommand(
                             tenantObject,
@@ -1424,14 +1415,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final Handler<Integer> onAckHandler = msgId -> {
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
                     log.debug("received PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
-                            msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId());
+                            msgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
                     commandContext.getTracingSpan().log("received PUBACK from device");
                     commandContext.accept();
                 };
 
                 final Handler<Void> onAckTimeoutHandler = v -> {
                     log.debug("did not receive PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
-                            publishedMsgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId());
+                            publishedMsgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
                     TracingHelper.logError(commandContext.getTracingSpan(), "did not receive PUBACK from device");
                     commandContext.release();
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
@@ -1520,7 +1511,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         private Future<Void> sendDisconnectedTtdEvent(final String tenant, final String device, final Span span) {
-            final Span sendEventSpan = newChildSpan(span.context(), "Send Disconnected Event");
+            final Span sendEventSpan = newChildSpan(span.context(), "send Disconnected Event");
             return AbstractVertxBasedMqttProtocolAdapter.this.sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, sendEventSpan.context())
                     .onComplete(r -> sendEventSpan.finish()).mapEmpty();
         }
@@ -1569,7 +1560,5 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
             return span;
         }
-
     }
-
 }

@@ -70,18 +70,25 @@ public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProp
      * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
      *
      * @param msgId The message/packet id of the command published with QoS 1.
+     * @return {@code true} if a pending command request for the PUBACK was found.
      * @throws NullPointerException if msgId is {@code null}.
      */
-    public void handlePubAck(final Integer msgId) {
+    public boolean handlePubAck(final Integer msgId) {
         Objects.requireNonNull(msgId);
-        LOG.trace("acknowledgement received for command sent to device [packet-id: {}]", msgId);
-        Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
-                .ifPresentOrElse(pendingCommandRequest -> {
+        return Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
+                .map(pendingCommandRequest -> {
+                    LOG.trace("acknowledgement received for command sent to device [packet-id: {}]", msgId);
                     if (pendingCommandRequest.timerId != null) {
                         cancelTimer(pendingCommandRequest.timerId);
                     }
                     pendingCommandRequest.onAckHandler.handle(msgId);
-                }, () -> LOG.debug("no active command request found for received acknowledgement [packet-id: {}]", msgId));
+                    return true;
+                }).orElseGet(() -> {
+                    if (!subscriptions.isEmpty()) {
+                        LOG.trace("no active command request found for received acknowledgement [packet-id: {}]", msgId);
+                    }
+                    return false;
+                });
     }
 
     /**

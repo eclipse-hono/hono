@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -39,9 +40,9 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
-    private MqttPublishMessage message;
-    private MqttEndpoint deviceEndpoint;
-    private Device authenticatedDevice;
+    private final MqttPublishMessage message;
+    private final MqttEndpoint deviceEndpoint;
+    private final Device authenticatedDevice;
     private ResourceIdentifier topic;
     private String contentType;
     private Sample timer;
@@ -49,8 +50,15 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private PropertyBag propertyBag;
     private Optional<Duration> timeToLive = Optional.empty();
 
-    private MqttContext(final Span span, final Device authenticatedDevice) {
+    private MqttContext(
+            final MqttPublishMessage message,
+            final MqttEndpoint deviceEndpoint,
+            final Span span,
+            final Device authenticatedDevice) {
         super(span, authenticatedDevice);
+        this.message = Objects.requireNonNull(message);
+        this.deviceEndpoint = Objects.requireNonNull(deviceEndpoint);
+        this.authenticatedDevice = authenticatedDevice;
     }
 
     private static Optional<Duration> determineTimeToLive(final PropertyBag properties) {
@@ -91,7 +99,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
      * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
-     * @param authenticatedDevice The authenticated device identity.
+     * @param authenticatedDevice The authenticated device identity (may be {@code null}).
      * @return The context.
      * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
      */
@@ -105,10 +113,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         Objects.requireNonNull(deviceEndpoint);
         Objects.requireNonNull(span);
 
-        final MqttContext result = new MqttContext(span, authenticatedDevice);
-        result.message = publishedMessage;
-        result.deviceEndpoint = deviceEndpoint;
-        result.authenticatedDevice = authenticatedDevice;
+        final MqttContext result = new MqttContext(publishedMessage, deviceEndpoint, span, authenticatedDevice);
         Optional.ofNullable(publishedMessage.topicName())
             .map(PropertyBag::fromTopic)
             .ifPresent(bag -> {
@@ -215,7 +220,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
         if (authenticatedDevice != null) {
             return authenticatedDevice.getTenantId();
-        } else if (topic != null) {
+        } else if (topic != null && !Strings.isNullOrEmpty(topic.getTenantId())) {
             return topic.getTenantId();
         } else {
             return null;
@@ -226,11 +231,11 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * Gets the property bag object from the <em>property-bag</em>
      * set in the message's topic.
      *
-     * @return The property bag object or {@code null} if
-     *         there is no property bag set in the topic.
+     * @return The property bag (which may be empty) or
+     *         {@code null} if the topic is {@code null} or empty.
      */
     public PropertyBag propertyBag() {
-        return this.propertyBag;
+        return propertyBag;
     }
 
     /**
@@ -264,7 +269,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * Sends a PUBACK for the message to the device.
      */
     public void acknowledge() {
-        if (message != null && deviceEndpoint != null) {
+        if (message != null && deviceEndpoint != null && isAtLeastOnce()) {
             deviceEndpoint.publishAcknowledge(message.messageId());
         }
     }
