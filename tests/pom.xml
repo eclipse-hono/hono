@@ -90,7 +90,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       Messaging related properties - AMQP is used as the default one.
     -->
     <hono.kafka.disabled>true</hono.kafka.disabled>
-    <hono.zookeeper.disabled>true</hono.zookeeper.disabled>
     <hono.kafka.log-level>WARN</hono.kafka.log-level>
 
     <!--
@@ -335,7 +334,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </activation>
       <properties>
         <hono.kafka.disabled>false</hono.kafka.disabled>
-        <hono.zookeeper.disabled>false</hono.zookeeper.disabled>
         <messaging.profile>kafka,</messaging.profile>
       </properties>
     </profile>
@@ -875,7 +873,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${zookeeper.image.name}</name>
                   <alias>hono-zookeeper-test</alias>
                   <run>
-                    <skip>${hono.zookeeper.disabled}</skip>
+                    <skip>${hono.kafka.disabled}</skip>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>

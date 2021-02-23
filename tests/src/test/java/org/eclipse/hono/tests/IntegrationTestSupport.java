@@ -46,7 +46,6 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
-import org.eclipse.hono.application.client.kafka.KafkaApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -489,8 +488,6 @@ public final class IntegrationTestSupport {
      * via the AMQP Messaging Network using the new client.
      */
     public AmqpApplicationClientFactory amqpApplicationClient;
-
-    public KafkaApplicationClientFactory kafkaApplicationClientFactory;
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();

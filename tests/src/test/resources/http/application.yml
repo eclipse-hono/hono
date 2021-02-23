@@ -112,3 +112,4 @@ hono:
     producerConfig:
       bootstrap:
         servers: ${hono.kafka.bootstrap.servers}
+
