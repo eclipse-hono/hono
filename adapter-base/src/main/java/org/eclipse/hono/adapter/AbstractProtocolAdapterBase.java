@@ -251,12 +251,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         if (TenantConstants.MESSAGING_TYPE_KAFKA.equals(tenantConfig)) {
             if (kafkaEventSender == null) {
-                throw new IllegalArgumentException("Tenant configured messaging [kafka] not present");
+                throw new IllegalStateException("Tenant configured messaging [kafka] not present");
             }
             return kafkaEventSender;
         } else if (TenantConstants.MESSAGING_TYPE_AMQP.equals(tenantConfig)) {
             if (amqpEventSender == null) {
-                throw new IllegalArgumentException("Tenant configured messaging [amqp] not present");
+                throw new IllegalStateException("Tenant configured messaging [amqp] not present");
             }
             return amqpEventSender;
         }
@@ -453,7 +453,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (telemetrySender == null) {
             result.fail(new IllegalStateException("Telemetry message sender must be set"));
         } else if (amqpEventSender == null && kafkaEventSender == null) {
-            result.fail(new IllegalStateException("A event sender must be set"));
+            result.fail(new IllegalStateException("An event sender must be set"));
         } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsClient == null) {
@@ -469,8 +469,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
             startServiceClient(telemetrySender, "Telemetry");
-            startServiceClientIfSet(amqpEventSender, "AMQP-Event");
-            startServiceClientIfSet(kafkaEventSender, "Kafka-Event");
+            startServiceClient(amqpEventSender, "AMQP-Event");
+            startServiceClient(kafkaEventSender, "Kafka-Event");
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
             startServiceClient(credentialsClient, "Credentials service");
@@ -791,12 +791,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param serviceClient The client to start.
      * @param serviceName The name of the service that the client is for (used for logging).
-     * @return A future indicating the outcome of starting the client.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @return A future indicating the outcome of starting the client. If the given client is {@code null}, a succeeded
+     *         future will be returned.
+     * @throws NullPointerException if serviceName is {@code null} and serviceClient is not {@code null}.
      */
     protected final Future<Void> startServiceClient(final Lifecycle serviceClient, final String serviceName) {
 
-        Objects.requireNonNull(serviceClient);
+        if (serviceClient == null) {
+            return Future.succeededFuture();
+        }
+
         Objects.requireNonNull(serviceName);
 
         return serviceClient.start().map(c -> {
@@ -806,14 +810,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             log.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
             return Future.failedFuture(t);
         });
-    }
-
-    private Future<Void> startServiceClientIfSet(final Lifecycle serviceClient, final String serviceName) {
-        if (serviceClient == null) {
-            return Future.succeededFuture();
-        } else {
-            return startServiceClient(serviceClient, serviceName);
-        }
     }
 
     /**
