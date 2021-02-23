@@ -22,7 +22,7 @@ import io.vertx.core.Handler;
  *
  * @param <T> The type of context that messages are being received in.
  */
-public interface ApplicationClient<T extends MessageContext> {
+public interface ApplicationClient<T extends MessageContext> extends CommandSender {
 
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.

@@ -34,6 +34,11 @@ import io.vertx.kafka.client.producer.impl.KafkaHeaderImpl;
  */
 public final class KafkaMessageHelper {
 
+    /**
+     * The name of the boolean Kafka record header that defines whether a response is required for the command.
+     */
+    public static final String HEADER_RESPONSE_REQUIRED = "response-required";
+
     private KafkaMessageHelper() {
     }
 

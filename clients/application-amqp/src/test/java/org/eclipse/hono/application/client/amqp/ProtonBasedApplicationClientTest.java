@@ -48,6 +48,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -56,6 +57,7 @@ import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 
 /**
@@ -64,7 +66,7 @@ import io.vertx.proton.ProtonReceiver;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-class ProtonBasedApplicationClientFactoryTest {
+class ProtonBasedApplicationClientTest {
 
     private HonoConnection connection;
     private ProtonBasedApplicationClient client;
@@ -75,7 +77,9 @@ class ProtonBasedApplicationClientFactoryTest {
     @BeforeEach
     void setUp() {
         final var vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx);
+        when(connection.getVertx()).thenReturn(vertx);
         final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         when(connection.createReceiver(
                 anyString(),
@@ -84,6 +88,8 @@ class ProtonBasedApplicationClientFactoryTest {
                 anyInt(),
                 anyBoolean(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(receiver));
+        final ProtonSender sender = AmqpClientUnitTestHelper.mockProtonSender();
+        when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(sender));
         client = new ProtonBasedApplicationClient(connection);
     }
 
