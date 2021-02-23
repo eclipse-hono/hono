@@ -55,8 +55,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <service.startup.timeout>120000</service.startup.timeout>
     <!-- color used by components of the AMQP Messaging Network for logging -->
     <log.color.amqp-network>magenta</log.color.amqp-network>
-    <!-- color used by components of the AMQP Messaging Network for logging -->
-    <log.color.kafka>blue</log.color.kafka>
+    <log.color.kafka>magenta</log.color.kafka>
     <!-- color used by components of the device registry for logging -->
     <log.color.hono-device-registry>green</log.color.hono-device-registry>
     <!-- color used by protocol adapters for logging -->
