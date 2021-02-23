@@ -19,7 +19,6 @@ import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +28,7 @@ import io.vertx.mqtt.MqttTopicSubscription;
 /**
  * A device's MQTT subscription for command messages.
  * <p>
- * Supported topic names: {@code command|c/[+|TENANT]/[+|DEVICE_ID]/req|q/#}
+ * Supported topic filters: {@code command|c/[+|TENANT]/[+|DEVICE_ID]/req|q/#}
  * <p>
  * Examples:
  * <ol>
@@ -38,31 +37,78 @@ import io.vertx.mqtt.MqttTopicSubscription;
  * <li>{@code c///q/#} - authenticated device using short names</li>
  * </ol>
  */
-public final class CommandSubscription {
+public final class CommandSubscription extends AbstractSubscription {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandSubscription.class);
 
-    private final String endpoint;
     private final String req;
-    private final String tenant;
-    private final String deviceId;
-    private final String authenticatedDeviceId;
-    private final String topic;
-    private final boolean authenticated;
-    private final boolean containsTenantId;
-    private final boolean containsDeviceId;
     private final Key key;
 
-    private MqttQoS qos;
-    private String clientId;
+    private CommandSubscription(
+            final ResourceIdentifier topicResource,
+            final Device authenticatedDevice,
+            final MqttQoS qos) {
+        super(topicResource, authenticatedDevice, qos);
+        this.req = topicResource.elementAt(3);
+        this.key = new Key(getTenant(), getDeviceId());
+    }
 
-    private CommandSubscription(final String topic, final Device authenticatedDevice) {
-        this.topic = Objects.requireNonNull(topic);
+    /**
+     * Creates a command subscription object for the given topic.
+     * <p>
+     * If the authenticated device is given, it is used to either validate the tenant and device-id
+     * given via the topic or, if the topic doesn't contain these values, the authenticated device
+     * is used to provide tenant and device-id for the created command subscription object.
+     *
+     * @param topic The topic to subscribe for commands.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if topic is {@code null}.
+     */
+    public static CommandSubscription fromTopic(final String topic, final Device authenticatedDevice) {
+        Objects.requireNonNull(topic);
+        try {
+            final ResourceIdentifier topicResource = validateTopic(topic);
+            return new CommandSubscription(topicResource, authenticatedDevice, null);
+        } catch (final IllegalArgumentException e) {
+            LOG.debug(e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Creates a command subscription object for the given topic. When the authenticated device is given
+     * it is used to either check given tenant and device-id from topic or fill this
+     * fields if not given.
+     *
+     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if mqttTopicSub is {@code null}.
+     */
+    public static CommandSubscription fromTopic(
+            final MqttTopicSubscription mqttTopicSub,
+            final Device authenticatedDevice) {
+
+        Objects.requireNonNull(mqttTopicSub);
+        try {
+            final ResourceIdentifier topicResource = validateTopic(mqttTopicSub.topicName());
+            return new CommandSubscription(
+                    topicResource,
+                    authenticatedDevice,
+                    mqttTopicSub.qualityOfService());
+        } catch (final IllegalArgumentException e) {
+            LOG.debug(e.getMessage());
+            return null;
+        }
+    }
+
+    private static ResourceIdentifier validateTopic(final String topic) {
+        Objects.requireNonNull(topic);
         if (topic.isEmpty()) {
             throw new IllegalArgumentException("topic filter must not be empty");
         }
         final ResourceIdentifier resource = ResourceIdentifier.fromString(topic);
-
         if (resource.length() != 5 || !"#".equals(resource.elementAt(4))) {
             throw new IllegalArgumentException(
                     "topic filter does not match pattern: " + CommandConstants.COMMAND_ENDPOINT + "|"
@@ -79,154 +125,20 @@ public final class CommandSubscription {
                     "the request part needs to be '" + CommandConstants.COMMAND_RESPONSE_REQUEST_PART + "' or '"
                             + CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT + "'");
         }
-        this.endpoint = resource.getEndpoint();
-        final String resourceTenant = "+".equals(resource.getTenantId()) ? null : resource.getTenantId();
-        this.containsTenantId = !Strings.isNullOrEmpty(resourceTenant);
-        final String resourceDeviceId = "+".equals(resource.getResourceId()) ? null : resource.getResourceId();
-        this.containsDeviceId = !Strings.isNullOrEmpty(resourceDeviceId);
-        this.req = resource.elementAt(3);
-
-        this.authenticated = authenticatedDevice != null;
-
-        if (isAuthenticated()) {
-            if (resourceTenant != null && !authenticatedDevice.getTenantId().equals(resourceTenant)) {
-                throw new IllegalArgumentException(
-                        "tenant in topic filter does not match authenticated device");
-            }
-            this.tenant = authenticatedDevice.getTenantId();
-            this.authenticatedDeviceId = authenticatedDevice.getDeviceId();
-            this.deviceId = Strings.isNullOrEmpty(resourceDeviceId) ? authenticatedDevice.getDeviceId() : resourceDeviceId;
-        } else {
-            if (Strings.isNullOrEmpty(resourceTenant)) {
-                throw new IllegalArgumentException(
-                        "for unauthenticated devices the tenant needs to be given in the subscription");
-            }
-            if (Strings.isNullOrEmpty(resourceDeviceId)) {
-                throw new IllegalArgumentException(
-                        "for unauthenticated devices the device-id needs to be given in the subscription");
-            }
-            this.tenant = resourceTenant;
-            this.authenticatedDeviceId = null;
-            this.deviceId = resourceDeviceId;
-        }
-        key = new Key(tenant, deviceId);
-    }
-
-    private CommandSubscription(final String topic, final Device authenticatedDevice, final MqttQoS qos, final String clientId) {
-        this(topic, authenticatedDevice);
-        this.qos = qos;
-        this.clientId = clientId;
+        return resource;
     }
 
     /**
-     * Creates a command subscription object for the given topic. When the authenticated device is given
-     * it is used to either check given tenant and device-id from topic or fill this
-     * fields if not given.
+     * Gets the key to identify a subscription in the list of subscriptions of an MQTT Endpoint.
+     * An MQTT Endpoint can't have multiple subscriptions with the same key, meaning with
+     * respect to command subscriptions that there can only be one command subscription
+     * per device.
      *
-     * @param topic The topic to subscribe for commands.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if topic is {@code null}.
+     * @return The key.
      */
-    public static CommandSubscription fromTopic(final String topic, final Device authenticatedDevice) {
-        try {
-            return new CommandSubscription(topic, authenticatedDevice);
-        } catch (final IllegalArgumentException e) {
-            LOG.debug(e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Creates a command subscription object for the given topic. When the authenticated device is given
-     * it is used to either check given tenant and device-id from topic or fill this
-     * fields if not given.
-     *
-     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param clientId The client identifier as provided by the remote MQTT client.
-     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if mqttTopicSub is {@code null}.
-     */
-    public static CommandSubscription fromTopic(
-            final MqttTopicSubscription mqttTopicSub,
-            final Device authenticatedDevice,
-            final String clientId) {
-
-        Objects.requireNonNull(mqttTopicSub);
-        try {
-            return new CommandSubscription(
-                    mqttTopicSub.topicName(),
-                    authenticatedDevice,
-                    mqttTopicSub.qualityOfService(),
-                    clientId);
-        } catch (final IllegalArgumentException e) {
-            LOG.debug(e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Gets the tenant from topic or authentication.
-     *
-     * @return The tenant.
-     */
-    public String getTenant() {
-        return tenant;
-    }
-
-    /**
-     * Gets the device id from topic or authentication.
-     *
-     * @return The device id.
-     */
-    public String getDeviceId() {
-        return deviceId;
-    }
-
-    /**
-     * Gets the device id from authentication.
-     *
-     * @return The device id or {@code null}.
-     */
-    public String getAuthenticatedDeviceId() {
-        return authenticatedDeviceId;
-    }
-
-    /**
-     * Gets the endpoint of the subscription.
-     *
-     * @return The endpoint.
-     */
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    /**
-     * Gets the QoS of the subscription.
-     *
-     * @return The QoS value.
-     */
-    public MqttQoS getQos() {
-        return qos;
-    }
-
-    /**
-     * Gets the clientId of the Mqtt subscription.
-     *
-     * @return The clientId.
-     */
-    public String getClientId() {
-        return clientId;
-    }
-
-    /**
-     * Gets the subscription topic.
-     *
-     * @return The topic.
-     */
-    public String getTopic() {
-        return topic;
+    @Override
+    public Key getKey() {
+        return key;
     }
 
     /**
@@ -236,26 +148,6 @@ public final class CommandSubscription {
      */
     public String getRequestPart() {
         return req;
-    }
-
-    /**
-     * Gets the authentication status, which indicates the need to publish on tenant/device-id for unauthenticated
-     * devices.
-     *
-     * @return {@code true} if created with an authenticated device.
-     */
-    public boolean isAuthenticated() {
-        return authenticated;
-    }
-
-    /**
-     * Checks whether this subscription represents the case of a gateway subscribing for commands
-     * of a specific device that it acts on behalf of.
-     *
-     * @return {@code true} if a gateway is subscribing for commands of a specific device.
-     */
-    public boolean isGatewaySubscriptionForSpecificDevice() {
-        return authenticatedDeviceId != null && !authenticatedDeviceId.equals(deviceId);
     }
 
     /**
@@ -269,9 +161,9 @@ public final class CommandSubscription {
 
         Objects.requireNonNull(command);
 
-        final String topicTenantId = containsTenantId ? getTenant() : "";
+        final String topicTenantId = containsTenantId() ? getTenant() : "";
         final String topicDeviceId = command.isTargetedAtGateway() ? command.getDeviceId()
-                : containsDeviceId ? getDeviceId() : "";
+                : containsDeviceId() ? getDeviceId() : "";
         final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
 
         return String.format(
@@ -282,18 +174,6 @@ public final class CommandSubscription {
                 getRequestPart(),
                 topicCommandRequestId,
                 command.getName());
-    }
-
-    /**
-     * Gets the key to identify a subscription in the list of subscriptions of an MQTT Endpoint.
-     * An MQTT Endpoint can't have multiple subscriptions with the same key, meaning with
-     * respect to command subscriptions that there can only be one command subscription
-     * per device.
-     *
-     * @return The key.
-     */
-    public Key getKey() {
-        return key;
     }
 
     /**
