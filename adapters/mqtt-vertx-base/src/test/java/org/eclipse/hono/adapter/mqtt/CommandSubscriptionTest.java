@@ -70,7 +70,7 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionRequiresCorrectEndpoint() {
-        final CommandSubscription subscription = CommandSubscription.fromTopic("cx/tenant/device/req/#", null);
+        final CommandSubscription subscription = CommandSubscription.fromTopic("cx/tenant/device/req/#", MqttQoS.AT_MOST_ONCE, null);
         assertThat(subscription).isNull();
     }
 
@@ -88,10 +88,10 @@ public class CommandSubscriptionTest {
             final String reqPartName) {
 
         String topic = String.format("%s///%s/#", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, null)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
 
         topic = String.format("%s/+/+/%s/#", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, null)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
     }
 
     /**
@@ -105,13 +105,13 @@ public class CommandSubscriptionTest {
     public void testSubscriptionRequiresValidReqPart(final String endpointName) {
 
         String topic = String.format("%s/tenant/device/notReqNorQ/#", endpointName);
-        assertThat(CommandSubscription.fromTopic(topic, null)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
 
         topic = String.format("%s///notReqNorQ/#", endpointName);
-        assertThat(CommandSubscription.fromTopic(topic, device)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
 
         topic = String.format("%s/+/+/notReqNorQ/#", endpointName);
-        assertThat(CommandSubscription.fromTopic(topic, device)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
     }
 
     /**
@@ -128,13 +128,13 @@ public class CommandSubscriptionTest {
             final String reqPartName) {
 
         String topic = String.format("%s/tenant/device/%s/not#", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, null)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
 
         topic = String.format("%s///%s/not#", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, device)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
 
         topic = String.format("%s/+/+/%s/not#", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, device)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
     }
 
     /**
@@ -151,10 +151,10 @@ public class CommandSubscriptionTest {
             final String reqPartName) {
 
         String topic = String.format("%s/tenant/device/%s/#/additionalSegment", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, null)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
 
         topic = String.format("%s/tenant/device/%s", endpointName, reqPartName);
-        assertThat(CommandSubscription.fromTopic(topic, null)).isNull();
+        assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
     }
 
 

@@ -24,8 +24,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
@@ -1040,7 +1041,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         private final Device authenticatedDevice;
         private final OptionalInt traceSamplingPriority;
-        private final CommandSubscriptionsManager<T> cmdSubscriptionsManager;
+        private final Map<Subscription.Key, Pair<CommandSubscription, CommandConsumer>> commandSubscriptions = new ConcurrentHashMap<>();
+        private final PendingPubAcks pendingAcks = new PendingPubAcks(vertx);
 
         /**
          * Creates a new MqttDeviceEndpoint.
@@ -1055,8 +1057,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             this.endpoint = Objects.requireNonNull(endpoint);
             this.authenticatedDevice = authenticatedDevice;
             this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
-
-            cmdSubscriptionsManager = new CommandSubscriptionsManager<>(vertx, getConfig());
         }
 
         /**
@@ -1159,9 +1159,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          * @param msgId The message/packet id.
          * @throws NullPointerException if msgId is {@code null}.
          */
-        public void handlePubAck(final Integer msgId) {
+        public final void handlePubAck(final Integer msgId) {
             Objects.requireNonNull(msgId);
-            cmdSubscriptionsManager.handlePubAck(msgId);
+            pendingAcks.handlePubAck(msgId);
         }
 
         /**
@@ -1234,7 +1234,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             .map(subFuture -> ((CommandSubscription) subFuture.result()).getKey())
                             .distinct()
                             .forEach(cmdSubKey -> {
-                                sendConnectedTtdEvent(cmdSubKey.getTenantId(), cmdSubKey.getDeviceId(), authenticatedDevice, span.context());
+                                sendConnectedTtdEvent(cmdSubKey.getTenant(), cmdSubKey.getDeviceId(), authenticatedDevice, span.context());
                             });
                 } else {
                     TracingHelper.logError(span, "skipped sending command subscription notification - endpoint not connected anymore");
@@ -1257,14 +1257,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         cmdSub.logSubscribeSuccess(span);
                         log.debug("created subscription [tenant: {}, device: {}, filter: {}, QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos());
-                        final CommandSubscription existingCmdSub = cmdSubscriptionsManager.getSubscription(cmdSub.getKey());
+                        final Pair<CommandSubscription, CommandConsumer> existingCmdSub = commandSubscriptions.get(cmdSub.getKey());
                         if (existingCmdSub != null) {
                             span.log(String.format("subscription replaces previous subscription [QoS %s, filter %s]",
-                                    existingCmdSub.getQos(), existingCmdSub.getTopic()));
+                                    existingCmdSub.one().getQos(), existingCmdSub.one().getTopic()));
                             log.debug("previous subscription [QoS {}, filter {}] is getting replaced",
-                                    existingCmdSub.getQos(), existingCmdSub.getTopic());
+                                    existingCmdSub.one().getQos(), existingCmdSub.one().getTopic());
                         }
-                        cmdSubscriptionsManager.addSubscription(cmdSub, consumer);
+                        commandSubscriptions.put(cmdSub.getKey(), Pair.of(cmdSub, consumer));
                         return (Subscription) cmdSub;
                     }).recover(t -> {
                         cmdSub.logSubscribeFailure(span, t);
@@ -1385,7 +1385,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             subscription.getQos(), publishTopic);
                     commandContext.getTracingSpan().log(subscription.getQos().value() > 0 ? "published command, packet-id: " + msgId
                             : "published command");
-                    afterCommandPublished(msgId, commandContext, tenantObject, subscription, cmdSubscriptionsManager);
+                    afterCommandPublished(msgId, commandContext, tenantObject, subscription);
 
                 } else {
                     log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
@@ -1406,8 +1406,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final Integer publishedMsgId,
                 final CommandContext commandContext,
                 final TenantObject tenantObject,
-                final CommandSubscription subscription,
-                final CommandSubscriptionsManager<T> cmdSubscriptionsManager) {
+                final CommandSubscription subscription) {
 
             final boolean requiresPuback = MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos());
 
@@ -1427,7 +1426,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     commandContext.release();
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 };
-                cmdSubscriptionsManager.addToWaitingForAcknowledgement(publishedMsgId, onAckHandler, onAckTimeoutHandler);
+                pendingAcks.add(publishedMsgId, onAckHandler, onAckTimeoutHandler, getConfig().getEffectiveSendMessageToDeviceTimeout());
             } else {
                 reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
                 commandContext.accept();
@@ -1467,20 +1466,25 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             @SuppressWarnings("rawtypes")
             final List<Future> removalDoneFutures = new ArrayList<>(unsubscribeMsg.topics().size());
             unsubscribeMsg.topics().forEach(topic -> {
-                final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
-                if (cmdSub == null) {
-                    TracingHelper.logError(span, String.format("unsupported topic filter [%s]", topic));
-                    log.debug("ignoring unsubscribe request for unsupported topic filter [{}]", topic);
+
+                final AtomicReference<Subscription> removedSubscription = new AtomicReference<>();
+                if (CommandSubscription.hasCommandEndpointPrefix(topic)) {
+                    Optional.ofNullable(CommandSubscription.getKey(topic, authenticatedDevice))
+                            .map(commandSubscriptions::remove)
+                            .ifPresent(subscriptionCommandConsumerPair -> {
+                                final CommandSubscription subscription = subscriptionCommandConsumerPair.one();
+                                removedSubscription.set(subscription);
+                                subscription.logUnsubscribe(span);
+                                removalDoneFutures.add(
+                                        onCommandSubscriptionRemoved(subscriptionCommandConsumerPair, span));
+                            });
+                }
+                if (removedSubscription.get() != null) {
+                    log.debug("removed subscription with topic [{}] for device [tenant-id: {}, device-id: {}]",
+                            topic, removedSubscription.get().getTenant(), removedSubscription.get().getDeviceId());
                 } else {
-                    final Map<String, Object> items = new HashMap<>(2);
-                    items.put(Fields.EVENT, "unsubscribing device from topic");
-                    items.put(LOG_FIELD_TOPIC_FILTER, topic);
-                    span.log(items);
-                    log.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
-                            cmdSub.getTenant(), cmdSub.getDeviceId(), topic);
-                    final Future<Void> removalDone = cmdSubscriptionsManager.removeSubscription(cmdSub.getKey(), span)
-                            .compose(getOnSubscriptionRemovedFunction(span));
-                    removalDoneFutures.add(removalDone);
+                    TracingHelper.logError(span, String.format("no subscription found for topic filter [%s]", topic));
+                    log.debug("cannot unsubscribe - no subscription found for topic filter [{}]", topic);
                 }
             });
             if (endpoint.isConnected()) {
@@ -1489,25 +1493,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
         }
 
-        private Function<Pair<CommandSubscription, CommandConsumer>, Future<Void>> getOnSubscriptionRemovedFunction(final Span span) {
-
-            return subscriptionConsumerPair -> {
-                final CommandSubscription subscription = subscriptionConsumerPair.one();
-                final CommandConsumer commandConsumer = subscriptionConsumerPair.two();
-                return commandConsumer.close(span.context())
-                        .recover(thr -> {
-                            TracingHelper.logError(span, thr);
-                            // ignore all but precon-failed errors
-                            if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
-                                log.debug("command consumer wasn't active anymore - skip sending disconnected event [tenant: {}, device-id: {}]",
-                                        subscription.getTenant(), subscription.getDeviceId());
-                                span.log("command consumer wasn't active anymore - skip sending disconnected event");
-                                return Future.failedFuture(thr);
-                            }
-                            return Future.succeededFuture();
-                        })
-                        .compose(v -> sendDisconnectedTtdEvent(subscription.getTenant(), subscription.getDeviceId(), span));
-            };
+        private Future<Void> onCommandSubscriptionRemoved(
+                final Pair<CommandSubscription, CommandConsumer> subscriptionConsumerPair, final Span span) {
+            final CommandSubscription subscription = subscriptionConsumerPair.one();
+            final CommandConsumer commandConsumer = subscriptionConsumerPair.two();
+            return commandConsumer.close(span.context())
+                    .recover(thr -> {
+                        TracingHelper.logError(span, thr);
+                        // ignore all but precon-failed errors
+                        if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
+                            log.debug("command consumer wasn't active anymore - skip sending disconnected event [tenant: {}, device-id: {}]",
+                                    subscription.getTenant(), subscription.getDeviceId());
+                            span.log("command consumer wasn't active anymore - skip sending disconnected event");
+                            return Future.failedFuture(thr);
+                        }
+                        return Future.succeededFuture();
+                    })
+                    .compose(v -> sendDisconnectedTtdEvent(subscription.getTenant(), subscription.getDeviceId(), span));
         }
 
         private Future<Void> sendDisconnectedTtdEvent(final String tenant, final String device, final Span span) {
@@ -1522,8 +1524,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         protected final void onClose() {
             final Span span = newSpan("CLOSE");
             AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
-            final CompositeFuture removalDoneFuture = cmdSubscriptionsManager.removeAllSubscriptions(
-                    getOnSubscriptionRemovedFunction(span), span);
+            final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span);
             sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
             if (authenticatedDevice == null) {
                 log.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
@@ -1540,6 +1541,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 log.trace("connection to client is already closed");
             }
             removalDoneFuture.onComplete(r -> span.finish());
+        }
+
+        private CompositeFuture removeAllCommandSubscriptions(final Span span) {
+            @SuppressWarnings("rawtypes")
+            final List<Future> removalFutures = new ArrayList<>(commandSubscriptions.size());
+            commandSubscriptions.values().removeIf(pair -> {
+                pair.one().logUnsubscribe(span);
+                return removalFutures.add(onCommandSubscriptionRemoved(pair, span));
+            });
+            return CompositeFuture.join(removalFutures);
         }
 
         private Span newSpan(final String operationName) {
