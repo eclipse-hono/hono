@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;

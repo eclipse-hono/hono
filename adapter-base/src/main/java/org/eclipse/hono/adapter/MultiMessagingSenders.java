@@ -16,7 +16,7 @@ package org.eclipse.hono.adapter;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.util.ServiceClient;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 

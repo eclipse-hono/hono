@@ -17,7 +17,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -29,6 +28,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory.CommandHandlingAdapterInfoAccess;
 import org.eclipse.hono.client.SendMessageSampler.Factory;
+import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.util.RegistrationAssertion;
 
 import io.opentracing.SpanContext;
