@@ -32,10 +32,11 @@
     <module>adapter-amqp</module>
     <module>adapter-kafka</module>
     <module>amqp-common</module>
-    <module>kafka-common</module>
     <module>application</module>
-    <module>application-kafka</module>
     <module>application-amqp</module>
+    <module>application-kafka</module>
+    <module>client-common</module>
+    <module>kafka-common</module>
   </modules>
 
   <dependencies>

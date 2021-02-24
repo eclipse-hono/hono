@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
-import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;

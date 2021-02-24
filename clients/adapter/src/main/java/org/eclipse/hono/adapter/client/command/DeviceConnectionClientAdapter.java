@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,7 @@ package org.eclipse.hono.adapter.client.command;
 import java.time.Duration;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.util.ServiceClient;
+import org.eclipse.hono.client.util.ServiceClient;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
