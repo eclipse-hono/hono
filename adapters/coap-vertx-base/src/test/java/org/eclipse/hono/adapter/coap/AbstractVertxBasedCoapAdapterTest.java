@@ -969,7 +969,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         adapter.setTenantClient(tenantClient);
         adapter.setAmqpEventSender(eventSender);
-        adapter.setTelemetrySender(telemetrySender);
+        adapter.setAmqpTelemetrySender(telemetrySender);
         adapter.setRegistrationClient(registrationClient);
         if (complete) {
             adapter.setCredentialsClient(credentialsClient);

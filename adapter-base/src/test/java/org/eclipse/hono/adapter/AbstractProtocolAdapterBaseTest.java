@@ -92,7 +92,8 @@ public class AbstractProtocolAdapterBaseTest {
     private TenantClient tenantClient;
     private DeviceRegistrationClient registrationClient;
     private CredentialsClient credentialsClient;
-    private TelemetrySender telemetrySender;
+    private TelemetrySender amqpTelemetrySender;
+    private TelemetrySender kafkaTelemetrySender;
     private EventSender amqpEventSender;
     private EventSender kafkaEventSender;
     private CommandConsumerFactory commandConsumerFactory;
@@ -114,8 +115,10 @@ public class AbstractProtocolAdapterBaseTest {
         credentialsClient = mock(CredentialsClient.class);
         when(credentialsClient.start()).thenReturn(Future.succeededFuture());
 
-        telemetrySender = mock(TelemetrySender.class);
-        when(telemetrySender.start()).thenReturn(Future.succeededFuture());
+        amqpTelemetrySender = mock(TelemetrySender.class);
+        when(amqpTelemetrySender.start()).thenReturn(Future.succeededFuture());
+        kafkaTelemetrySender = mock(TelemetrySender.class);
+        when(kafkaTelemetrySender.start()).thenReturn(Future.succeededFuture());
         amqpEventSender = mock(EventSender.class);
         when(amqpEventSender.start()).thenReturn(Future.succeededFuture());
         kafkaEventSender = mock(EventSender.class);
@@ -148,7 +151,8 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setAmqpEventSender(amqpEventSender);
         adapter.setKafkaEventSender(kafkaEventSender);
         adapter.setRegistrationClient(registrationClient);
-        adapter.setTelemetrySender(telemetrySender);
+        adapter.setAmqpTelemetrySender(amqpTelemetrySender);
+        adapter.setKafkaTelemetrySender(kafkaTelemetrySender);
         adapter.setTenantClient(tenantClient);
     }
 
@@ -201,7 +205,8 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN starting the adapter
         adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
             // THEN the service clients have connected
-            verify(telemetrySender).start();
+            verify(amqpTelemetrySender).start();
+            verify(kafkaTelemetrySender).start();
             verify(amqpEventSender).start();
             verify(kafkaEventSender).start();
             verify(tenantClient).start();
@@ -660,7 +665,7 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
-     * Verifies that when the messaging to be used is configured for a tenant, then this is used.
+     * Verifies that when the messaging to be used is configured for a tenant, then this is used for events.
      */
     @Test
     public void testGetEventSenderConfiguredOnTenant() {
@@ -677,37 +682,20 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
-     * Verifies that when no messaging type is configured for a tenant and only the Kafka event sender is set, then this
-     * one is used.
+     * Verifies that when the messaging to be used is configured for a tenant, then this is used for telemetry messages.
      */
     @Test
-    public void testGetEventSenderOnlyKafkaSenderSet() {
-        adapter = newProtocolAdapter(properties, ADAPTER_NAME);
-        adapter.setKafkaEventSender(kafkaEventSender);
-        assertEquals(kafkaEventSender, adapter.getEventSender(new TenantObject("tenant", true)));
-    }
+    public void testGetTelemetrySenderConfiguredOnTenant() {
+        final TenantObject tenant = new TenantObject("tenant", true);
+        tenant.setProperty(TenantConstants.FIELD_EXT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_AMQP));
 
-    /**
-     * Verifies that when no messaging type is configured for a tenant and only the AMQP event sender is set, then this
-     * one is used.
-     */
-    @Test
-    public void testGetEventSenderOnlyAmqpSenderSet() {
-        adapter = newProtocolAdapter(properties, ADAPTER_NAME);
-        adapter.setAmqpEventSender(amqpEventSender);
-        assertEquals(amqpEventSender, adapter.getEventSender(new TenantObject("tenant", true)));
-    }
+        assertEquals(amqpTelemetrySender, adapter.getTelemetrySender(tenant));
 
-    /**
-     * Verifies that when no messaging type is configured for a tenant and both event senders are set, then the AMQP
-     * event sender is used.
-     */
-    @Test
-    public void testGetEventSenderDefault() {
-        adapter = newProtocolAdapter(properties, ADAPTER_NAME);
-        adapter.setKafkaEventSender(kafkaEventSender);
-        adapter.setAmqpEventSender(amqpEventSender);
-        assertEquals(amqpEventSender, adapter.getEventSender(new TenantObject("tenant", true)));
+        tenant.setProperty(TenantConstants.FIELD_EXT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_KAFKA));
+
+        assertEquals(kafkaTelemetrySender, adapter.getTelemetrySender(tenant));
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(

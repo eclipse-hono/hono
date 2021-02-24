@@ -232,7 +232,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
         adapter.setResourceLimitChecks(resourceLimitChecks);
-        adapter.setTelemetrySender(downstreamSender());
+        adapter.setAmqpTelemetrySender(downstreamSender());
         adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
     }

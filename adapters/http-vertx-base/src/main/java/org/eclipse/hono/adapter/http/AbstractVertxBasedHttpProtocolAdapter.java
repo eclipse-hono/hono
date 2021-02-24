@@ -700,7 +700,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 // unsettled
                 return CompositeFuture.all(
-                        getTelemetrySender().sendTelemetry(
+                        getTelemetrySender(tenantValidationTracker.result()).sendTelemetry(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
                                 ctx.getRequestedQos(),

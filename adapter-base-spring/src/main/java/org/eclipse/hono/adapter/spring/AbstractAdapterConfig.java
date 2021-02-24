@@ -175,7 +175,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory();
             adapter.setKafkaEventSender(
                     downstreamEventKafkaSender(kafkaProducerFactory, kafkaProducerConfig, adapterProperties));
-            adapter.setTelemetrySender(
+            adapter.setKafkaTelemetrySender(
                     downstreamTelemetryKafkaSender(kafkaProducerFactory, kafkaProducerConfig, adapterProperties));
             //set the kafka based command response sender
             adapter.setCommandResponseSender(kafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig));
@@ -183,7 +183,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
 
         if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
             adapter.setAmqpEventSender(downstreamEventSender(samplerFactory, adapterProperties));
-            adapter.setTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
+            adapter.setAmqpTelemetrySender(downstreamTelemetrySender(samplerFactory, adapterProperties));
             //set the proton based command response sender
             adapter.setCommandResponseSender(protonBasedCommandResponseSender(samplerFactory, adapterProperties));
         }

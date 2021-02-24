@@ -867,7 +867,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         props,
                         currentSpan.context());
             } else {
-                return getTelemetrySender().sendTelemetry(
+                return getTelemetrySender(tenantObject).sendTelemetry(
                         tenantObject,
                         tokenTracker.result(),
                         ctx.getRequestedQos(),
