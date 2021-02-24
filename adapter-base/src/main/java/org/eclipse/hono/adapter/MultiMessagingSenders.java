@@ -88,8 +88,13 @@ class MultiMessagingSenders<T> {
      * @param tenant The tenant for which to send messages.
      * @return The sender that is configured at the tenant or, if this is missing and only one of the senders is set,
      *         that one, otherwise, the AMQP-based sender.
+     * @throws IllegalStateException if no no sender is set.
      */
     public final T getSenderForTenantOrDefault(final TenantObject tenant) {
+
+        if (isUnconfigured()) {
+            throw new IllegalStateException("No sender present");
+        }
 
         // check if configured on the tenant
         final T tenantConfiguredEventSender = getTenantConfiguredEventSender(tenant);
