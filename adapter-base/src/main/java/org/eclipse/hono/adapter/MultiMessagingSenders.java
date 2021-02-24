@@ -24,9 +24,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Encapsulates the Kafka-based and the AMQP-based sender for a message type.
  *
- * @param <T> The sender type (intended to be one of {@link org.eclipse.hono.adapter.client.telemetry.EventSender},
- *            {@link org.eclipse.hono.adapter.client.telemetry.TelemetrySender}, or
- *            {@link org.eclipse.hono.adapter.client.command.CommandResponseSender}).
+ * @param <T> The sender type.
  */
 class MultiMessagingSenders<T> {
 
@@ -82,6 +80,10 @@ class MultiMessagingSenders<T> {
 
     /**
      * Gets the client to be used for sending messages downstream.
+     * <p>
+     * The property to determine the messaging type is expected in the {@link TenantConstants#FIELD_EXT_MESSAGING_TYPE}
+     * inside of the {@link TenantConstants#FIELD_EXT} property of the tenant. Valid values are
+     * {@link TenantConstants#MESSAGING_TYPE_AMQP} or {@link TenantConstants#MESSAGING_TYPE_KAFKA}.
      *
      * @param tenant The tenant for which to send messages.
      * @return The sender that is configured at the tenant or, if this is missing and only one of the senders is set,
