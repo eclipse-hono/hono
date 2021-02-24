@@ -418,6 +418,11 @@
           <version>1.0.0</version>
         </plugin>
         <plugin>
+          <groupId>com.internetitem</groupId>
+          <artifactId>write-properties-file-maven-plugin</artifactId>
+          <version>1.0.1</version>
+        </plugin>
+        <plugin>
           <groupId>org.jboss.jandex</groupId>
           <artifactId>jandex-maven-plugin</artifactId>
           <version>1.0.8</version>

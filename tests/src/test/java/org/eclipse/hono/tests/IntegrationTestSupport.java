@@ -230,6 +230,10 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_DOWNSTREAM_PASSWORD = "downstream.password";
     /**
+     * The name of the system property to use for setting the address of Kafka.
+     */
+    public static final String PROPERTY_DOWNSTREAM_BOOTSTRAP_SERVERS = "downstream.bootstrap.servers";
+    /**
      * The name of the system property to use for setting the IP address of the CoAP protocol adapter.
      */
     public static final String PROPERTY_COAP_HOST = "adapter.coap.host";
@@ -366,6 +370,10 @@ public final class IntegrationTestSupport {
      * The password that applications use for authenticating to the AMQP Messaging Network.
      */
     public static final String DOWNSTREAM_PWD = System.getProperty(PROPERTY_DOWNSTREAM_PASSWORD);
+    /**
+     * The address of Kafka.
+     */
+    public static final String DOWNSTREAM_BOOTSTRAP_SERVERS = System.getProperty(PROPERTY_DOWNSTREAM_BOOTSTRAP_SERVERS);
 
     /**
      * The IP address of the CoAP protocol adapter.

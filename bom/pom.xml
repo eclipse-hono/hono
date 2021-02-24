@@ -52,6 +52,7 @@
     <jjwt.version>0.11.2</jjwt.version>
     <junit.jupiter.version>5.7.0</junit.jupiter.version>
     <kafka-clients.version>2.6.0</kafka-clients.version>
+    <kafka.image.name>confluentinc/cp-kafka:6.1.0</kafka.image.name>
     <log4j.version>2.12.1</log4j.version>
     <logback.version>1.2.3</logback.version>
     <mchange-commons.version>0.2.15</mchange-commons.version>
@@ -81,6 +82,7 @@
     <vertx.version>3.9.5</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
     <wildfly-elytron.version>1.10.4.Final</wildfly-elytron.version>
+    <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.0</zookeeper.image.name>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
