@@ -49,17 +49,18 @@ public abstract class AbstractSubscription implements Subscription {
      * Creates a new AbstractSubscription.
      *
      * @param topicResource The topic to subscribe for.
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @param qos The quality-of-service level for the subscription.
-     * @throws NullPointerException if topicResource is {@code null}.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @throws NullPointerException if topicResource or qos is {@code null}.
      * @throws IllegalArgumentException if the topic does not match the rules.
      */
     protected AbstractSubscription(
             final ResourceIdentifier topicResource,
-            final Device authenticatedDevice,
-            final MqttQoS qos) {
+            final MqttQoS qos,
+            final Device authenticatedDevice) {
 
         Objects.requireNonNull(topicResource);
+        Objects.requireNonNull(qos);
         this.topic = topicResource.toString();
         this.qos = qos;
 
@@ -71,7 +72,7 @@ public abstract class AbstractSubscription implements Subscription {
 
         this.authenticated = authenticatedDevice != null;
 
-        if (isAuthenticated()) {
+        if (authenticatedDevice != null) {
             if (resourceTenant != null && !authenticatedDevice.getTenantId().equals(resourceTenant)) {
                 throw new IllegalArgumentException("tenant in topic filter does not match authenticated device");
             }
@@ -164,5 +165,63 @@ public abstract class AbstractSubscription implements Subscription {
         items.put("requested QoS", getQos());
         items.put(Fields.MESSAGE, "rejecting subscription: " + error.getMessage());
         TracingHelper.logError(span, items);
+    }
+
+    @Override
+    public final void logUnsubscribe(final Span span) {
+        Objects.requireNonNull(span);
+        final Map<String, Object> items = new HashMap<>(2);
+        items.put(Fields.EVENT, "removing subscription");
+        items.put(LOG_FIELD_TOPIC_FILTER, getTopic());
+        span.log(items);
+    }
+
+    /**
+     * The key to identify a subscription.
+     * To be used for a kind of subscription where there can only be one subscription for a given device.
+     */
+    static final class DefaultKey implements Key {
+
+        private final String tenant;
+        private final String deviceId;
+
+        /**
+         * Creates a new Key.
+         *
+         * @param tenant The tenant identifier.
+         * @param deviceId The device identifier.
+         * @throws NullPointerException If any of the parameters is {@code null}.
+         */
+        DefaultKey(final String tenant, final String deviceId) {
+            this.tenant = Objects.requireNonNull(tenant);
+            this.deviceId = Objects.requireNonNull(deviceId);
+        }
+
+        @Override
+        public String getTenant() {
+            return tenant;
+        }
+
+        @Override
+        public String getDeviceId() {
+            return deviceId;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final DefaultKey that = (DefaultKey) o;
+            return tenant.equals(that.tenant) && deviceId.equals(that.deviceId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(tenant, deviceId);
+        }
     }
 }

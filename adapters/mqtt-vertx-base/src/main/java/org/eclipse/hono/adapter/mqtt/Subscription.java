@@ -22,11 +22,11 @@ import io.opentracing.Span;
 public interface Subscription {
 
     /**
-     * Gets the key to identify a subscription in the list of subscriptions of an MQTT Endpoint.
+     * Gets the key to identify a subscription in the list of (same-type) subscriptions of an MQTT Endpoint.
      *
      * @return The key.
      */
-    Object getKey();
+    Key getKey();
 
     /**
      * Gets the tenant from topic or authentication.
@@ -116,4 +116,31 @@ public interface Subscription {
      * @throws NullPointerException if span or error is {@code null}.
      */
     void logSubscribeFailure(Span span, Throwable error);
+
+    /**
+     * Logs the unsubscription to the given span.
+     *
+     * @param span The span to log to.
+     * @throws NullPointerException if span is {@code null}.
+     */
+    void logUnsubscribe(Span span);
+
+    /**
+     * The key to identify a subscription.
+     */
+    interface Key {
+        /**
+         * Gets the tenant from topic or authentication.
+         *
+         * @return The tenant (never {@code null}).
+         */
+        String getTenant();
+        /**
+         * Gets the device id from topic or authentication.
+         *
+         * @return The device id (never {@code null}).
+         */
+        String getDeviceId();
+    }
+
 }

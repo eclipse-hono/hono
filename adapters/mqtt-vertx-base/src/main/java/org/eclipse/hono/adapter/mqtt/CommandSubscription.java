@@ -48,9 +48,26 @@ public final class CommandSubscription extends AbstractSubscription {
             final ResourceIdentifier topicResource,
             final Device authenticatedDevice,
             final MqttQoS qos) {
-        super(topicResource, authenticatedDevice, qos);
+        super(topicResource, qos, authenticatedDevice);
         this.req = topicResource.elementAt(3);
-        this.key = new Key(getTenant(), getDeviceId());
+        this.key = new DefaultKey(getTenant(), getDeviceId());
+    }
+
+    /**
+     * Creates a command subscription object for the given topic.
+     * <p>
+     * If the authenticated device is given, it is used to either validate the tenant and device-id
+     * given via the topic or, if the topic doesn't contain these values, the authenticated device
+     * is used to provide tenant and device-id for the created command subscription object.
+     *
+     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if mqttTopicSub is {@code null}.
+     */
+    public static CommandSubscription fromTopic(final MqttTopicSubscription mqttTopicSub, final Device authenticatedDevice) {
+        Objects.requireNonNull(mqttTopicSub);
+        return fromTopic(mqttTopicSub.topicName(), mqttTopicSub.qualityOfService(), authenticatedDevice);
     }
 
     /**
@@ -61,42 +78,17 @@ public final class CommandSubscription extends AbstractSubscription {
      * is used to provide tenant and device-id for the created command subscription object.
      *
      * @param topic The topic to subscribe for commands.
+     * @param qos The quality-of-service level for the subscription.
      * @param authenticatedDevice The authenticated device or {@code null}.
      * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if topic is {@code null}.
+     * @throws NullPointerException if topic or qos is {@code null}.
      */
-    public static CommandSubscription fromTopic(final String topic, final Device authenticatedDevice) {
+    public static CommandSubscription fromTopic(final String topic, final MqttQoS qos, final Device authenticatedDevice) {
         Objects.requireNonNull(topic);
+        Objects.requireNonNull(qos);
         try {
             final ResourceIdentifier topicResource = validateTopic(topic);
-            return new CommandSubscription(topicResource, authenticatedDevice, null);
-        } catch (final IllegalArgumentException e) {
-            LOG.debug(e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Creates a command subscription object for the given topic. When the authenticated device is given
-     * it is used to either check given tenant and device-id from topic or fill this
-     * fields if not given.
-     *
-     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if mqttTopicSub is {@code null}.
-     */
-    public static CommandSubscription fromTopic(
-            final MqttTopicSubscription mqttTopicSub,
-            final Device authenticatedDevice) {
-
-        Objects.requireNonNull(mqttTopicSub);
-        try {
-            final ResourceIdentifier topicResource = validateTopic(mqttTopicSub.topicName());
-            return new CommandSubscription(
-                    topicResource,
-                    authenticatedDevice,
-                    mqttTopicSub.qualityOfService());
+            return new CommandSubscription(topicResource, authenticatedDevice, qos);
         } catch (final IllegalArgumentException e) {
             LOG.debug(e.getMessage());
             return null;
@@ -126,6 +118,39 @@ public final class CommandSubscription extends AbstractSubscription {
                             + CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT + "'");
         }
         return resource;
+    }
+
+    /**
+     * Checks whether the given topic name starts with the command endpoint identifier.
+     *
+     * @param topic The topic to check.
+     * @return {@code true} if the topic has the command endpoint prefix.
+     */
+    public static boolean hasCommandEndpointPrefix(final String topic) {
+        return topic != null && (topic.startsWith(CommandConstants.COMMAND_ENDPOINT + "/")
+                || topic.startsWith(CommandConstants.COMMAND_ENDPOINT_SHORT + "/"));
+    }
+
+    /**
+     * Get the key to identify a command subscription in the list of command subscriptions of an MQTT Endpoint.
+     * <p>
+     * Only returns a non-null key if the topic is valid.
+     *
+     * @param topic The topic of the subscription.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return The key or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if topic is {@code null}.
+     */
+    public static Key getKey(final String topic, final Device authenticatedDevice) {
+        Objects.requireNonNull(topic);
+        try {
+            final ResourceIdentifier topicResource = validateTopic(topic);
+            // using some non-null QoS value - will be ignored
+            return new CommandSubscription(topicResource, authenticatedDevice, MqttQoS.AT_MOST_ONCE).getKey();
+        } catch (final IllegalArgumentException e) {
+            LOG.debug(e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -174,52 +199,5 @@ public final class CommandSubscription extends AbstractSubscription {
                 getRequestPart(),
                 topicCommandRequestId,
                 command.getName());
-    }
-
-    /**
-     * The key to identify a command subscription of a particular device.
-     */
-    public static final class Key {
-
-        private final String deviceId;
-        private final String tenantId;
-
-        /**
-         * Creates a new Key.
-         *
-         * @param tenantId The tenant identifier.
-         * @param deviceId The device identifier.
-         * @throws NullPointerException If tenantId or deviceId is {@code null}.
-         */
-        public Key(final String tenantId, final String deviceId) {
-            this.tenantId = Objects.requireNonNull(tenantId);
-            this.deviceId = Objects.requireNonNull(deviceId);
-        }
-
-        public String getDeviceId() {
-            return deviceId;
-        }
-
-        public String getTenantId() {
-            return tenantId;
-        }
-
-        @Override
-        public boolean equals(final Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            final Key that = (Key) o;
-            return deviceId.equals(that.deviceId) &&
-                    tenantId.equals(that.tenantId);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(deviceId, tenantId);
-        }
     }
 }
