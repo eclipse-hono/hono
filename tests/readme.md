@@ -124,14 +124,20 @@ In order to stop and remove the Docker containers started by a test run, use:
 mvn verify -PstopContainers
 ```
 
-### Running the Tests with the Quarkus based Protocol Adapters
+### Running the Tests with the Quarkus based Components
 
-By default, the integration tests are run using the Spring Boot based protocol adapters. For some protocol adapters there are
-Quarkus based alternative implementations. The tests can be run using these Quarkus based adapters by means of activating
-the `protocol-adapters-quarkus-jvm` maven profile:
+By default, the integration tests are run using the Spring Boot based Hono components. For some components there are
+Quarkus based alternative implementations. The tests can be run using these Quarkus based components by means of activating
+the `components-quarkus-jvm` maven profile:
 
 ```sh
-mvn verify -Prun-tests,protocol-adapters-quarkus-jvm
+mvn verify -Prun-tests,components-quarkus-jvm
+```
+
+Note: the profile can also be activated by setting the Maven property *hono.components.type* to value `quarkus-jvm`.
+
+```sh
+mvn verify -Prun-tests -Dhono.components.type=quarkus-jvm
 ```
 
 ### Running the Tests with the Command Router component

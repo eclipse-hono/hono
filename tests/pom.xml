@@ -377,10 +377,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
-      <id>protocol-adapters-quarkus-jvm</id>
+      <id>components-quarkus-jvm</id>
       <activation>
         <property>
-          <name>hono.adapters.type</name>
+          <name>hono.components.type</name>
           <value>quarkus-jvm</value>
         </property>
       </activation>
@@ -397,10 +397,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
-      <id>protocol-adapters-quarkus-native</id>
+      <id>components-quarkus-native</id>
       <activation>
         <property>
-          <name>hono.adapters.type</name>
+          <name>hono.components.type</name>
           <value>quarkus-native</value>
         </property>
       </activation>

@@ -31,7 +31,7 @@ jobs:
             commandrouting-mode: commandrouter
           # let the mongodb test-run use the quarkus adapters
           - device-registry: mongodb
-            adapters-type: quarkus-jvm
+            component-type: quarkus-jvm
 
     name: Use ${{ matrix.device-registry }}-registry [${{ matrix.adapters-type }}${{ matrix.commandrouting-mode }}]
     steps:
@@ -48,4 +48,4 @@ jobs:
       with:
         java-version: '11'
     - name: Build all components (incl. unit tests) and run integration tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.adapters.type=${{ matrix.adapters-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.components.type=${{ matrix.component-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
