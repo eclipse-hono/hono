@@ -844,6 +844,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   </build>
                   <run>
                     <ports>
+                      <port>+qpid.ip:qpid.amqps.port:5671</port>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/qpid.port.properties</portPropertyFile>
@@ -1499,6 +1500,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <tenant.admin.password>http-secret</tenant.admin.password>
                 <downstream.host>${qpid.ip}</downstream.host>
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
+                <downstream.amqps.port>${qpid.amqps.port}</downstream.amqps.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
                 <downstream.bootstrap.servers>${docker.host.address}:${kafka.port}</downstream.bootstrap.servers>
@@ -1532,7 +1534,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <logging.profile>${logging.profile}</logging.profile>
                 <max.bcrypt.costFactor>${max.bcrypt.costFactor}</max.bcrypt.costFactor>
                 <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
-                <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
+<!--                 <javax.net.debug>ssl:handshake</javax.net.debug> -->
+                <javax.net.ssl.trustStore>${project.build.directory}/certs/trustStore.jks</javax.net.ssl.trustStore>
+                <javax.net.ssl.trustStorePassword>honotrust</javax.net.ssl.trustStorePassword>
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
             </configuration>

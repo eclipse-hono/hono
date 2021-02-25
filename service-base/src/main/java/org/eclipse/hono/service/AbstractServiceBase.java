@@ -12,7 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.service;
 
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -426,12 +428,14 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
                 log.info("using JDK's default SSL engine");
             }
 
-            serverOptions.getEnabledSecureTransportProtocols()
-                .forEach(protocol -> serverOptions.removeEnabledSecureTransportProtocol(protocol));
-            getConfig().getSecureProtocols().forEach(protocol -> {
-                log.info("enabling secure protocol [{}]", protocol);
-                serverOptions.addEnabledSecureTransportProtocol(protocol);
+            // it is important to use a sorted set here to maintain
+            // the list's order
+            final Set<String> protocols = new LinkedHashSet<>(getConfig().getSecureProtocols().size());
+            getConfig().getSecureProtocols().forEach(p -> {
+                log.info("enabling secure protocol [{}]", p);
+                protocols.add(p);
             });
+            serverOptions.setEnabledSecureTransportProtocols(protocols);
 
             serverOptions.setSni(getConfig().isSni());
             log.info("Service supports TLS ServerNameIndication: {}", getConfig().isSni());

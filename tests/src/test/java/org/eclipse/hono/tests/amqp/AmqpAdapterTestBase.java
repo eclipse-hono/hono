@@ -15,6 +15,7 @@ package org.eclipse.hono.tests.amqp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -200,18 +201,30 @@ public abstract class AmqpAdapterTestBase {
     /**
      * Connects to the AMQP protocol adapter using a username and password.
      *
-     *
      * @param username The username to use for authentication.
      * @param password The password to use for authentication.
      * @return A succeeded future containing the established connection.
      */
     protected Future<ProtonConnection> connectToAdapter(final String username, final String password) {
+        return connectToAdapter("TLSv1.2", username, password);
+    }
+
+    /**
+     * Connects to the AMQP protocol adapter using a username and password.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param username The username to use for authentication.
+     * @param password The password to use for authentication.
+     * @return A succeeded future containing the established connection.
+     */
+    protected Future<ProtonConnection> connectToAdapter(final String tlsVersion, final String username, final String password) {
 
         final Promise<ProtonConnection> result = Promise.promise();
         final ProtonClient client = ProtonClient.create(vertx);
 
         final ProtonClientOptions options = new ProtonClientOptions(defaultOptions);
         options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+        options.setEnabledSecureTransportProtocols(Set.of(tlsVersion));
         client.connect(
                 options,
                 IntegrationTestSupport.AMQP_HOST,
@@ -259,13 +272,13 @@ public abstract class AmqpAdapterTestBase {
                     assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
                     this.context = Vertx.currentContext();
                     this.connection = unopenedConnection;
-                    log.info("connected to AMQP adapter [{}:{}]",
-                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT);
+                    log.info("AMQPS connection to adapter [{}:{}] established",
+                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQPS_PORT);
                     return con;
                 })
                 .recover(t -> {
-                    log.info("failed to connect to AMQP adapter [{}:{}]",
-                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT);
+                    log.info("failed to establish AMQPS connection to adapter [{}:{}]",
+                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQPS_PORT);
 
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
                             .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.fromAttachError(condition)))

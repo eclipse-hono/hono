@@ -14,12 +14,14 @@
 package org.eclipse.hono.tests.mqtt;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
@@ -43,6 +45,11 @@ import io.vertx.mqtt.messages.MqttConnAckMessage;
 public abstract class MqttTestBase {
 
     /**
+     * Default options for connecting to the MQTT adapter.
+     */
+    protected static MqttClientOptions defaultOptions;
+
+    /**
      * A logger to be used by subclasses.
      */
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
@@ -64,6 +71,19 @@ public abstract class MqttTestBase {
      * The vert.x {@code Context} that the MQTT client runs on.
      */
     protected Context context;
+
+    /**
+     * Creates default AMQP client options.
+     */
+    @BeforeAll
+    public static void init() {
+
+        defaultOptions = new MqttClientOptions();
+        defaultOptions.setSsl(true)
+            .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
+            .setHostnameVerificationAlgorithm("")
+            .setEnabledSecureTransportProtocols(Set.of("TLSv1.2"));
+    }
 
     /**
      * Sets up the fixture.
@@ -169,19 +189,37 @@ public abstract class MqttTestBase {
     protected final Future<MqttConnAckMessage> connectToAdapter(
             final String username,
             final String password) {
+        return connectToAdapter("TLSv1.2", username, password);
+    }
+
+    /**
+     * Opens a connection to the MQTT adapter using given credentials.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param username The username to use for authentication.
+     * @param password The password to use for authentication.
+     * @return A future that will be completed with the CONNACK packet received
+     *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
+     *         if the connection could not be established.
+     */
+    protected final Future<MqttConnAckMessage> connectToAdapter(
+            final String tlsVersion,
+            final String username,
+            final String password) {
 
         final Promise<MqttConnAckMessage> result = Promise.promise();
         vertx.runOnContext(connect -> {
-            final MqttClientOptions options = new MqttClientOptions()
+            final MqttClientOptions options = new MqttClientOptions(defaultOptions)
                     .setUsername(username)
                     .setPassword(password);
+            options.setEnabledSecureTransportProtocols(Set.of(tlsVersion));
             mqttClient = MqttClient.create(vertx, options);
-            mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
+            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.future().map(conAck -> {
             LOGGER.info(
-                    "MQTT connection to adapter [host: {}, port: {}] established",
-                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
+                    "MQTTS connection to adapter [host: {}, port: {}] established",
+                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT);
             this.context = Vertx.currentContext();
             return conAck;
         });
@@ -200,11 +238,9 @@ public abstract class MqttTestBase {
 
         final Promise<MqttConnAckMessage> result = Promise.promise();
         vertx.runOnContext(connect -> {
-            final MqttClientOptions options = new MqttClientOptions()
-                    .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
-                    .setKeyCertOptions(cert.keyCertOptions())
-                    .setSsl(true);
-            options.setHostnameVerificationAlgorithm("");
+            final MqttClientOptions options = new MqttClientOptions(defaultOptions);
+            options.setKeyCertOptions(cert.keyCertOptions());
+
             mqttClient = MqttClient.create(vertx, options);
             mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });

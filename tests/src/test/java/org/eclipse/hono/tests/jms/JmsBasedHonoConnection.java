@@ -55,7 +55,7 @@ import io.vertx.core.buffer.Buffer;
  */
 public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoConnection> {
 
-    private static final String AMQP_URI_PATTERN = "amqp://%s:%d?%s";
+    private static final String URI_PATTERN = "%s://%s:%d?%s";
     private static final Logger LOG = LoggerFactory.getLogger(JmsBasedHonoConnection.class);
 
     private final ClientConfigProperties clientConfig;
@@ -242,9 +242,18 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     private void createContext() throws NamingException {
 
-        final String params = String.format("jms.prefetchPolicy.queuePrefetch=%d&amqp.maxFrameSize=16384", clientConfig.getInitialCredits());
+        // we do not explicitly configure trust store and trust store password in the URI
+        // but instead rely on system properties
+        // javax.net.ssl.trustStore
+        // javax.net.ssl.trustStorePassword
+        // being set accordingly. Their values will be picked up by the JMS provider.
+        final String params = String.format(
+                "jms.prefetchPolicy.queuePrefetch=%d&amqp.maxFrameSize=16384&transport.verifyHost=false&transport.enabledProtocols=%s",
+                clientConfig.getInitialCredits(), clientConfig.getSecureProtocols().get(0));
+
         final String serverUri = String.format(
-                AMQP_URI_PATTERN,
+                URI_PATTERN,
+                clientConfig.isTlsEnabled() ? "amqps" : "amqp",
                 clientConfig.getHost(),
                 clientConfig.getPort(),
                 params);

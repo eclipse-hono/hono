@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -157,7 +158,8 @@ public abstract class HttpTestBase {
                 .setDefaultPort(IntegrationTestSupport.HTTPS_PORT)
                 .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
                 .setVerifyHost(false)
-                .setSsl(true);
+                .setSsl(true)
+                .setEnabledSecureTransportProtocols(Set.of("TLSv1.2"));
 
     }
 
@@ -291,9 +293,12 @@ public abstract class HttpTestBase {
             return;
         }
 
+        final var clientOptions = new HttpClientOptions(defaultOptions)
+            .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
+        final var tls13BasedClient = new CrudHttpClient(vertx, new HttpClientOptions(clientOptions));
         testUploadMessages(ctx, tenantId,
                 count -> {
-                    return httpClient.create(
+                    return tls13BasedClient.create(
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             count % 2 == 0 ? requestHeaders : requestHeadersWithEncodedCredentials,
