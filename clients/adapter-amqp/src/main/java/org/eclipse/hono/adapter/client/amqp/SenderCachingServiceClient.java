@@ -91,8 +91,9 @@ public abstract class SenderCachingServiceClient extends AbstractServiceClient {
     }
 
     /**
-     * {@inheritDoc}
-     *
+     * Invoked when the underlying connection to the Hono server
+     * is lost unexpectedly.
+     * <p>
      * Clears the state of the client factory.
      */
     @Override

@@ -126,8 +126,9 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     }
 
     /**
-     * {@inheritDoc}
-     *
+     * Invoked when the underlying connection to the Hono server
+     * is lost unexpectedly.
+     * <p>
      * Clears the state of the client factory.
      */
     @Override

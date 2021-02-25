@@ -35,7 +35,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests for {@link MongoDbBasedRegistrationService#searchDevices(String, int, int, List, List, Span)}.
+ * Tests for {@link MongoDbBasedRegistrationService#searchDevices(String, int, int, java.util.List, java.util.List, io.opentracing.Span)}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

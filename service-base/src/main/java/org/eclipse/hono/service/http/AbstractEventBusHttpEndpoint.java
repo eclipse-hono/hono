@@ -53,7 +53,7 @@ public abstract class AbstractEventBusHttpEndpoint<T extends ServiceConfigProper
     }
 
     /**
-     * Get the event bus address used for the HTTP endpoint. Each HTTP endpoint should have it's own, unique address that
+     * Get the event bus address used for the HTTP endpoint. Each HTTP endpoint should have its own, unique address that
      * is returned by implementing this method.
      *
      * @return The event bus address for processing HTTP requests.

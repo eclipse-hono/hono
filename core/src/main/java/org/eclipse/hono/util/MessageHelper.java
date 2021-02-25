@@ -1393,7 +1393,8 @@ public final class MessageHelper {
      * Adds default properties to an AMQP message.
      * <p>
      * This method also sets the message's <em>time-to-live</em> (TTL) property
-     * as described in
+     * if a {@link MessageHelper#SYS_HEADER_PROPERTY_TTL} property is given.
+     * The set value is limited to the given maximum time-to-live.
      *
      * @param message The message to add the properties to.
      * @param target The target address of the message or {@code null} if the message's
