@@ -336,12 +336,43 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     /**
+     * Verifies that if the properties contain a <em>ttl</em> property but no <em>creation-time</em> then the later is
+     * added.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatCreationTimeIsAddedWhenNotPresentAndTtlIsSet(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
+
+        // GIVEN properties that contain a TTL
+        final long ttl = 99L;
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put("ttl", ttl);
+
+        // WHEN sending the message
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the producer record contains a creation time
+                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
+                        assertThat(record.headers())
+                                .containsOnlyOnce(new RecordHeader("ttl", Json.encode(ttl).getBytes()));
+                        assertThat(record.headers().headers("creation-time")).isNotNull();
+                    });
+                    ctx.completeNow();
+                }));
+
+    }
+
+    /**
      * Verifies that if the properties contain a <em>creation-time</em> property then it is preserved.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testThatCreationTimeIsNotChangedWhenPresentAndTtdIsSet(final VertxTestContext ctx) {
+    public void testThatCreationTimeIsNotChanged(final VertxTestContext ctx) {
         final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
         final AbstractKafkaBasedDownstreamSender sender = newSender(TestHelper.newProducerFactory(mockProducer));
 
@@ -349,6 +380,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final long creationTime = 12345L;
         final Map<String, Object> properties = new HashMap<>();
         properties.put("ttd", 99L);
+        properties.put("ttl", 2L);
         properties.put("creation-time", creationTime);
 
         // WHEN sending the message

@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.common.errors.TimeoutException;
+import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +86,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
     private final Map<TopicPartition, OffsetAndMetadata> offsetsToBeCommitted = new HashMap<>();
+    private boolean respectTtl = true;
 
     /**
      * Creates a new consumer.
@@ -230,6 +232,18 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
         return tryCommitAndClose();
     }
 
+    /**
+     * Sets if messages that contain a <em>ttl</em> header where the time-to-live elapsed should be ignored.
+     * <p>
+     * The default is true.
+     *
+     * @param respectTtl The intended behaviour: if true, messages with elapsed ttl are silently dropped and the message
+     *            handler not invoked.
+     */
+    public void setRespectTtl(final boolean respectTtl) {
+        this.respectTtl = respectTtl;
+    }
+
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
         try {
             LOG.debug("Polled {} records", records.size());
@@ -240,14 +254,20 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                 }
 
                 final KafkaConsumerRecord<String, Buffer> record = records.recordAt(i);
-                final T message = createMessage(record);
-                try {
-                    messageHandler.handle(message);
-                    addToCurrentOffsets(record);
-                } catch (final RuntimeException messageHandlingError) {
-                    LOG.debug("Message handler failed", messageHandlingError);
-                    // resume with committing the current offsets and then polling (failed record will be polled again)
-                    break;
+
+                if (respectTtl && KafkaMessageHelper.isTtlElapsed(record.headers())) {
+                    addToCurrentOffsets(record); // ttl elapsed -> add offset and resume with the next record
+                } else {
+                    final T message = createMessage(record);
+                    try {
+                        messageHandler.handle(message);
+                        addToCurrentOffsets(record);
+                    } catch (final RuntimeException messageHandlingError) {
+                        LOG.debug("Message handler failed", messageHandlingError);
+                        // resume with committing the current offsets and then polling (the failed record will be polled
+                        // again)
+                        break;
+                    }
                 }
             }
             commit(true).compose(ok -> poll()).onSuccess(this::handleBatch);

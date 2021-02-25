@@ -15,6 +15,7 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +30,10 @@ import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.AuthenticationException;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.common.record.TimestampType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +43,9 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -264,6 +271,79 @@ public class AbstractAtLeastOnceKafkaConsumerKafkaMockConsumerTest {
                     scheduleBatch(failingMessageOffset, recordsPerBatch); // start from failed message
 
                 }));
+    }
+
+    /**
+     * Verifies that when a record contains a TTL which is elapsed, then the message handler is not invoked but the
+     * offset is committed.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatTtlIsRespected(final VertxTestContext ctx) {
+        final ConsumerRecord<String, Buffer> recordWithElapsedTtl = createRecordWithElapsedTtl();
+
+        final Handler<JsonObject> messageHandler = msg -> {
+            ctx.verify(() -> {
+
+                // THEN the message handler is not invoked for the elapsed record
+                assertThat(msg.getLong(TestConsumer.RECORD_OFFSET)).isNotEqualTo(0);
+                // ... AND the offsets have been committed
+                assertThat(getCommittedOffset(topicPartition)).isEqualTo(1);
+            });
+            ctx.completeNow();
+        };
+
+        // GIVEN a started consumer
+        TestConsumer.createWithMessageHandler(vertxKafkaConsumer, TOPIC, messageHandler).start()
+                .onComplete(ctx.succeeding(v -> {
+                    mockConsumer.updateBeginningOffsets(Map.of(topicPartition, ((long) 0))); // define start offset
+                    mockConsumer.rebalance(Collections.singletonList(topicPartition)); // trigger partition assignment
+
+                    // WHEN a record with elapsed TLL is polled
+                    mockConsumer.schedulePollTask(() -> mockConsumer.addRecord(recordWithElapsedTtl));
+                    scheduleBatch(1, 1);
+                }));
+    }
+
+    /**
+     * Verifies that when a record contains a TTL which is elapsed but the consumer is configured to not respect the
+     * TTL, then the message handler for the record is still invoked.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatTtlCanBeIgnored(final VertxTestContext ctx) {
+        final Checkpoint messageHandlerInvocations = ctx.checkpoint(2);
+
+        final ConsumerRecord<String, Buffer> recordWithElapsedTtl = createRecordWithElapsedTtl();
+
+        // THEN the message handler is still invoked for the elapsed record
+        final Handler<JsonObject> messageHandler = msg -> ctx.verify(messageHandlerInvocations::flag);
+
+        // GIVEN a started consumer
+        final TestConsumer consumer = TestConsumer.createWithMessageHandler(vertxKafkaConsumer, TOPIC, messageHandler);
+
+        // WHEN the consumer is configured to not respect the TTL
+        consumer.setRespectTtl(false);
+        consumer.start().onComplete(ctx.succeeding(v -> {
+            mockConsumer.updateBeginningOffsets(Map.of(topicPartition, ((long) 0))); // define start offset
+            mockConsumer.rebalance(Collections.singletonList(topicPartition)); // trigger partition assignment
+
+            mockConsumer.schedulePollTask(() -> mockConsumer.addRecord(recordWithElapsedTtl));
+            scheduleBatch(1, 1);
+        }));
+    }
+
+    private ConsumerRecord<String, Buffer> createRecordWithElapsedTtl() {
+        final byte[] ttl1Second = "1".getBytes();
+        final RecordHeader ttl = new RecordHeader("ttl", ttl1Second);
+
+        final byte[] timestamp2SecondsAgo = Json.encode(Instant.now().minusSeconds(2).toEpochMilli()).getBytes();
+        final RecordHeader creationTime = new RecordHeader("creation-time", timestamp2SecondsAgo);
+
+        return new ConsumerRecord<>(TOPIC, PARTITION, 0, -1L, TimestampType.NO_TIMESTAMP_TYPE, -1L, -1, -1, null,
+                Buffer.buffer(), new RecordHeaders(new Header[] { ttl, creationTime }));
     }
 
     private long getCommittedOffset(final TopicPartition topicPartition) {

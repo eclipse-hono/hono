@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.kafka;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -86,6 +88,37 @@ public final class KafkaMessageHelper {
     public static Optional<QoS> getQoS(final List<KafkaHeader> headers) {
         return getHeaderValue(headers, MessageHelper.APP_PROPERTY_QOS, Integer.class)
                 .map(integer -> Integer.valueOf(0).equals(integer) ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE);
+    }
+
+    /**
+     * Gets the {@link MessageHelper#SYS_HEADER_PROPERTY_TTL ttl} header from the given list of Kafka headers.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the ttl from.
+     * @return The time-to-live (may be empty).
+     */
+    public static boolean isTtlElapsed(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.SYS_HEADER_PROPERTY_TTL, Long.class)
+                .map(ttl -> {
+                    final Instant now = Instant.now();
+                    final Instant elapseTime = getCreationTime(headers).orElse(now).plus(Duration.ofSeconds(ttl));
+                    return elapseTime.isBefore(now);
+                })
+                .orElse(Boolean.FALSE);
+    }
+
+    /**
+     * Gets the {@link MessageHelper#SYS_PROPERTY_CREATION_TIME creation-time} header from the given list of Kafka
+     * headers.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the creation time from.
+     * @return The creation-time (may be empty).
+     */
+    public static Optional<Instant> getCreationTime(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class).map(Instant::ofEpochMilli);
     }
 
     /**
