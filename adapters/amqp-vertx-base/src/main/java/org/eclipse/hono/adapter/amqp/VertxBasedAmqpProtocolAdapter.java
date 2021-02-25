@@ -31,6 +31,7 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -38,6 +39,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AdapterDisabledException;
+import org.eclipse.hono.adapter.AuthorizationException;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
@@ -55,6 +57,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -425,7 +428,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return null;
             })
             .otherwise(t -> {
-                con.setCondition(AbstractProtocolAdapterBase.getErrorCondition(t));
+                con.setCondition(getErrorCondition(t));
                 con.close();
                 TracingHelper.logError(span, t);
                 metrics.reportConnectionAttempt(
@@ -683,8 +686,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return d;
             }).recover(t -> {
                 if (t instanceof ClientErrorException) {
-                    final ErrorCondition condition = AbstractProtocolAdapterBase.getErrorCondition(t);
-                    MessageHelper.rejected(ctx.delivery(), condition);
+                    MessageHelper.rejected(ctx.delivery(), getErrorCondition(t));
                 } else {
                     ProtonHelper.released(ctx.delivery(), true);
                 }
@@ -1330,6 +1332,35 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
         } else {
             return Future.succeededFuture(ResourceIdentifier.fromString(source.getAddress()));
+        }
+    }
+
+    /**
+     * Creates an AMQP error condition for a throwable.
+     * <p>
+     * Unknown error types are mapped to {@link AmqpError#PRECONDITION_FAILED}.
+     *
+     * @param t The throwable to map to an error condition.
+     * @return The error condition.
+     */
+    protected static ErrorCondition getErrorCondition(final Throwable t) {
+        final String errorMessage = getClientFacingErrorMessage(t);
+        if (t instanceof AuthorizationException) {
+            return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
+        } else if (ServiceInvocationException.class.isInstance(t)) {
+            final ServiceInvocationException error = (ServiceInvocationException) t;
+            switch (error.getErrorCode()) {
+            case HttpURLConnection.HTTP_BAD_REQUEST:
+                return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, errorMessage);
+            case HttpURLConnection.HTTP_FORBIDDEN:
+                return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
+            case HttpUtils.HTTP_TOO_MANY_REQUESTS:
+                return ProtonHelper.condition(AmqpError.RESOURCE_LIMIT_EXCEEDED, errorMessage);
+            default:
+                return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, errorMessage);
+            }
+        } else {
+            return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, errorMessage);
         }
     }
 
