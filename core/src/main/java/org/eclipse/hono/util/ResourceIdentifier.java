@@ -12,10 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A unique identifier for a resource within Hono.
@@ -24,14 +23,8 @@ import java.util.Objects;
  * The first segment always contains the name of the <em>endpoint</em> that the
  * resource belongs to.
  * <p>
- * Within the <em>telemetry</em> and <em>registration</em> endpoints the remaining two
- * segments have the following semantics:
- * <ol>
- * <li>the <em>tenant ID</em></li>
- * <li>an (optional) <em>device ID</em></li>
- * </ol>
- * <p>
- * The basic scheme is {@code <endpoint>/[tenant]/[device-id]}
+ * The basic scheme is {@code <endpoint>/[tenant]/[resource-id]}. The resource-id
+ * usually represents a device identifier.
  * <p>
  * Examples:
  * <ol>
@@ -50,46 +43,13 @@ public final class ResourceIdentifier {
     private static final int IDX_ENDPOINT = 0;
     private static final int IDX_TENANT_ID = 1;
     private static final int IDX_RESOURCE_ID = 2;
-    private String[] resourcePath;
-    private String resource;
-    private String basePath;
 
-    private ResourceIdentifier(final String resource) {
-        final String[] path = resource.split("\\/");
-        final List<String> pathSegments = new ArrayList<>(Arrays.asList(path));
-        setResourcePath(pathSegments.toArray(new String[pathSegments.size()]));
-    }
-
-    private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
-        if (tenantId == null) {
-            if (resourceId == null) {
-                setResourcePath(new String[] {endpoint});
-            } else {
-                setResourcePath(new String[] {endpoint, null, resourceId});
-            }
-        } else if (resourceId == null) {
-            setResourcePath(new String[] {endpoint, tenantId});
-        } else {
-            setResourcePath(new String[]{endpoint, tenantId, resourceId});
-        }
-    }
-
-    private ResourceIdentifier(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
-        String[] path = resourceIdentifier.getResourcePath();
-        if (path.length < 3) {
-            path = new String[3];
-            path[IDX_ENDPOINT] = resourceIdentifier.getEndpoint();
-        }
-        path[IDX_TENANT_ID] = tenantId;
-        path[IDX_RESOURCE_ID] = resourceId;
-        setResourcePath(path);
-    }
+    private final String[] resourcePath;
+    private final String resource;
+    private final String basePath;
 
     private ResourceIdentifier(final String[] path) {
-        setResourcePath(path);
-    }
-
-    private void setResourcePath(final String[] path) {
+        Objects.requireNonNull(path);
         if (path.length == 0) {
             throw new IllegalArgumentException("path must have at least one segment");
         } else if (Strings.isNullOrEmpty(path[0])) {
@@ -98,9 +58,116 @@ public final class ResourceIdentifier {
         resourcePath = new String[path.length];
         for (int i = 0; i < path.length; i++) {
             final String segment = path[i];
-            resourcePath[i] = "".equals(segment) ? null : segment;
+            resourcePath[i] = Strings.isNullOrEmpty(segment) ? null : segment;
         }
-        createStringRepresentation();
+        resource = createStringRepresentation(0);
+        basePath = Optional.ofNullable(getTenantId())
+                .map(tenant -> getEndpoint() + "/" + tenant)
+                .orElseGet(this::getEndpoint);
+    }
+
+    private String createStringRepresentation(final int startIdx) {
+
+        final StringBuilder b = new StringBuilder();
+        for (int i = startIdx; i < resourcePath.length; i++) {
+            if (resourcePath[i] != null) {
+                b.append(resourcePath[i]);
+            }
+            if (i < resourcePath.length - 1) {
+                b.append("/");
+            }
+        }
+        return b.toString();
+    }
+
+    /**
+     * Checks whether the given string is a valid resource identifier string representation.
+     *
+     * @param resource the resource string to parse.
+     * @return {@code true} if the given string is a valid resource identifier string.
+     */
+    public static boolean isValid(final String resource) {
+        return !Strings.isNullOrEmpty(resource) && !resource.startsWith("/");
+    }
+
+    /**
+     * Creates a resource identifier from its string representation.
+     * <p>
+     * The given string is split up into segments using a forward slash as the separator. The first segment is used as
+     * the endpoint, the second segment is used as the tenant ID and the third segment (if present) is used as the
+     * resourceId part.
+     * </p>
+     *
+     * @param resource the resource string to parse.
+     * @return the resource identifier.
+     * @throws NullPointerException if the given string is {@code null}.
+     * @throws IllegalArgumentException if the given string is empty or contains an empty first segment.
+     */
+    public static ResourceIdentifier fromString(final String resource) {
+        Objects.requireNonNull(resource);
+        return new ResourceIdentifier(resource.split("/"));
+    }
+
+    /**
+     * Creates a resource identifier for an endpoint, a tenantId and a resourceId.
+     *
+     * @param endpoint the endpoint of the resource.
+     * @param tenantId the tenant identifier (may be {@code null}).
+     * @param resourceId the resourceId part (may be {@code null}).
+     * @return the resource identifier.
+     * @throws NullPointerException if endpoint is {@code null}.
+     * @throws IllegalArgumentException if endpoint is empty.
+     */
+    public static ResourceIdentifier from(final String endpoint, final String tenantId, final String resourceId) {
+        Objects.requireNonNull(endpoint);
+        if (endpoint.isEmpty()) {
+            throw new IllegalArgumentException("endpoint must not be empty");
+        }
+        final String[] path;
+        if (resourceId == null) {
+            if (tenantId == null) {
+                path = new String[] { endpoint };
+            } else {
+                path = new String[] { endpoint, tenantId };
+            }
+        } else {
+            path = new String[] { endpoint, tenantId, resourceId };
+        }
+        return new ResourceIdentifier(path);
+    }
+
+    /**
+     * Creates a resource identifier for an endpoint from an other resource identifier. It uses all data from
+     * the original resource identifier but sets the new tenantId and resourceId.
+     *
+     * @param resourceIdentifier original resource identifier to copy values from.
+     * @param tenantId the tenant identifier (may be {@code null}).
+     * @param resourceId the resourceId part (may be {@code null}).
+     * @return the resource identifier.
+     * @throws NullPointerException if resourceIdentifier is {@code null}.
+     */
+    public static ResourceIdentifier from(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
+        Objects.requireNonNull(resourceIdentifier);
+        String[] path = resourceIdentifier.getResourcePath();
+        if (path.length < 3) {
+            path = new String[3];
+            path[IDX_ENDPOINT] = resourceIdentifier.getEndpoint();
+        }
+        path[IDX_TENANT_ID] = tenantId;
+        path[IDX_RESOURCE_ID] = resourceId;
+        return new ResourceIdentifier(path);
+    }
+
+    /**
+     * Creates a resource identifier from path segments.
+     *
+     * @param path the segments of the resource path.
+     * @return the resource identifier.
+     * @throws NullPointerException if path is {@code null}.
+     * @throws IllegalArgumentException if the path contains no segments or starts with an empty segment.
+     */
+    public static ResourceIdentifier fromPath(final String[] path) {
+        return new ResourceIdentifier(path);
     }
 
     /**
@@ -132,109 +199,18 @@ public final class ResourceIdentifier {
         return resourcePath.length;
     }
 
-    private String createStringRepresentation(final int startIdx) {
-
-        final StringBuilder b = new StringBuilder();
-        for (int i = startIdx; i < resourcePath.length; i++) {
-            if (resourcePath[i] != null) {
-                b.append(resourcePath[i]);
-            }
-            if (i < resourcePath.length - 1) {
-                b.append("/");
-            }
-        }
-        return b.toString();
-    }
-
-    private void createStringRepresentation() {
-        resource = createStringRepresentation(0);
-
-        final StringBuilder b = new StringBuilder(getEndpoint());
-        if (getTenantId() != null) {
-            b.append("/").append(getTenantId());
-        }
-        basePath = b.toString();
-    }
-
     /**
-     * Checks whether the given string is a valid resource identifier string representation.
+     * Gets the endpoint part of this identifier.
      *
-     * @param resource the resource string to parse.
-     * @return {@code true} if the given string is a valid resource identifier string.
-     */
-    public static boolean isValid(final String resource) {
-        return !Strings.isNullOrEmpty(resource) && !resource.startsWith("/");
-    }
-
-    /**
-     * Creates a resource identifier from its string representation.
-     * <p>
-     * The given string is split up into segments using a forward slash as the separator. The first segment is used as
-     * the endpoint, the second segment is used as the tenant ID and the third segment (if present) is used as the
-     * device ID.
-     * </p>
-     *
-     * @param resource the resource string to parse.
-     * @return the resource identifier.
-     * @throws NullPointerException if the given string is {@code null}.
-     * @throws IllegalArgumentException if the given string is empty or contains an empty first segment.
-     */
-    public static ResourceIdentifier fromString(final String resource) {
-        Objects.requireNonNull(resource);
-        return new ResourceIdentifier(resource);
-    }
-
-    /**
-     * Creates a resource identifier for an endpoint, a tenantId and a resourceId.
-     *
-     * @param endpoint the endpoint of the resource.
-     * @param tenantId the tenant identifier (may be {@code null}).
-     * @param resourceId the resource identifier (may be {@code null}).
-     * @return the resource identifier.
-     * @throws NullPointerException if endpoint is {@code null}.
-     * @throws IllegalArgumentException if endpoint is empty.
-     */
-    public static ResourceIdentifier from(final String endpoint, final String tenantId, final String resourceId) {
-        Objects.requireNonNull(endpoint);
-        return new ResourceIdentifier(endpoint, tenantId, resourceId);
-    }
-
-    /**
-     * Creates a resource identifier for an endpoint from an other resource identifier. It uses all data from
-     * the original resource identifier but sets the new tenantId and resourceId.
-     *
-     * @param resourceIdentifier original resource identifier to copy values from.
-     * @param tenantId the tenant identifier (may be {@code null}).
-     * @param resourceId the resource identifier (may be {@code null}).
-     * @return the resource identifier.
-     * @throws NullPointerException if resourceIdentifier is {@code null}.
-     */
-    public static ResourceIdentifier from(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
-        Objects.requireNonNull(resourceIdentifier);
-        return new ResourceIdentifier(resourceIdentifier, tenantId, resourceId);
-    }
-
-    /**
-     * Creates a resource identifier from path segments.
-     *
-     * @param path the segments of the resource path.
-     * @return the resource identifier.
-     * @throws NullPointerException if path is {@code null}.
-     * @throws IllegalArgumentException if the path contains no segments or starts with an empty segment.
-     */
-    public static ResourceIdentifier fromPath(final String[] path) {
-        Objects.requireNonNull(path);
-        return new ResourceIdentifier(path);
-    }
-
-    /**
-     * @return the endpoint
+     * @return the endpoint (not {@code null} or empty).
      */
     public String getEndpoint() {
         return resourcePath[IDX_ENDPOINT];
     }
 
     /**
+     * Gets the tenant part of this identifier.
+     *
      * @return the tenantId or {@code null} if not set.
      */
     public String getTenantId() {
@@ -276,7 +252,7 @@ public final class ResourceIdentifier {
      * forward slash ("/").
      * </p>
      *
-     * @return the resource id.
+     * @return the string representation.
      */
     @Override
     public String toString() {
