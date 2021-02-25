@@ -19,10 +19,10 @@ import java.util.function.BiConsumer;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.application.client.ApplicationClientFactory;
+import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
-import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -61,13 +61,13 @@ public class Receiver extends AbstractApplicationClient {
      */
     private BiConsumer<String, DownstreamMessage<? extends MessageContext>> messageHandler = this::handleMessage;
 
-    // TODO remove the client factory from here and use the one from parent once
-    //  org.eclipse.hono.application.client.ApplicationClientFactory supports C&C
-    private ApplicationClientFactory<? extends MessageContext> clientFactory;
+    // TODO remove the client from here and use the one from parent once
+    //  org.eclipse.hono.application.client.ApplicationClient supports C&C
+    private ApplicationClient<? extends MessageContext> client;
 
     @Autowired
-    public final void setApplicationClientFactory(final ApplicationClientFactory<? extends MessageContext> factory) {
-        this.clientFactory = Objects.requireNonNull(factory);
+    public final void setApplicationClient(final ApplicationClient<? extends MessageContext> client) {
+        this.client = Objects.requireNonNull(client);
     }
 
     /**
@@ -90,10 +90,10 @@ public class Receiver extends AbstractApplicationClient {
     Future<CompositeFuture> start() {
 
         final Future<Void> startFuture;
-        if (clientFactory instanceof AmqpApplicationClientFactory) {
-            final AmqpApplicationClientFactory amqpClientFactory = (AmqpApplicationClientFactory) clientFactory;
-            startFuture = amqpClientFactory.connect()
-                    .onComplete(con -> amqpClientFactory.addReconnectListener(client -> createConsumer()))
+        if (client instanceof AmqpApplicationClient) {
+            final AmqpApplicationClient amqpClient = (AmqpApplicationClient) client;
+            startFuture = amqpClient.connect()
+                    .onComplete(con -> amqpClient.addReconnectListener(client -> createConsumer()))
                     .mapEmpty();
         } else {
             startFuture = Future.succeededFuture();
@@ -118,14 +118,14 @@ public class Receiver extends AbstractApplicationClient {
         final List<Future> consumerFutures = new ArrayList<>();
         if (messageType.equals(TYPE_EVENT) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createEventConsumer(tenantId, msg -> {
+                    client.createEventConsumer(tenantId, msg -> {
                         messageHandler.accept(TYPE_EVENT, msg);
                     }, closeHandler));
         }
 
         if (messageType.equals(TYPE_TELEMETRY) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createTelemetryConsumer(tenantId, msg -> {
+                    client.createTelemetryConsumer(tenantId, msg -> {
                         messageHandler.accept(TYPE_TELEMETRY, msg);
                     }, closeHandler));
         }

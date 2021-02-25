@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
-import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
-import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
+import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -487,7 +487,7 @@ public final class IntegrationTestSupport {
      * A client for connecting to Hono's north bound APIs
      * via the AMQP Messaging Network using the new client.
      */
-    public AmqpApplicationClientFactory amqpApplicationClient;
+    public AmqpApplicationClient amqpApplicationClient;
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
@@ -686,7 +686,7 @@ public final class IntegrationTestSupport {
 
         initRegistryClient();
         applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
-        amqpApplicationClient = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));
+        amqpApplicationClient = new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, downstreamProps));
 
         return CompositeFuture.all(
                 applicationClientFactory.connect()

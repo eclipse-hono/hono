@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.application.client.kafka;
 
-import org.eclipse.hono.application.client.ApplicationClientFactory;
+import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerCommitException;
@@ -23,9 +23,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
- * A factory for creating clients for Hono's Kafka-based northbound APIs.
+ * A Kafka based client that supports Hono's north bound operations to send commands and receive telemetry,
+ * event and command response messages.
  */
-public interface KafkaApplicationClientFactory extends ApplicationClientFactory<KafkaMessageContext> {
+public interface KafkaApplicationClient extends ApplicationClient<KafkaMessageContext> {
 
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.

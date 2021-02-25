@@ -18,8 +18,8 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
-import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClientFactory;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
+import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -41,7 +41,7 @@ public class HonoClientImplIT {
 
     private static Vertx vertx;
 
-    private AmqpApplicationClientFactory clientFactory;
+    private AmqpApplicationClient client;
 
     /**
      * Sets up vert.x.
@@ -66,9 +66,9 @@ public class HonoClientImplIT {
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setReconnectAttempts(2);
 
-        clientFactory = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));
+        client = new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
-        clientFactory.connect().onComplete(ctx.failing(t -> {
+        client.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
                 assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
@@ -96,9 +96,9 @@ public class HonoClientImplIT {
         downstreamProps.setSecureProtocols(List.of("TLSv1.1"));
         downstreamProps.setReconnectAttempts(2);
 
-        clientFactory = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));
+        client = new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
-        clientFactory.connect().onComplete(ctx.failing(t -> {
+        client.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
                 assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,

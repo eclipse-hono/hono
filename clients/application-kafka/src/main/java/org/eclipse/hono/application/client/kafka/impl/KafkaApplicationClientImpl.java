@@ -17,7 +17,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.kafka.KafkaApplicationClientFactory;
+import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.util.EventConstants;
@@ -30,22 +30,23 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 
 /**
- * A factory for creating clients for Hono's Kafka-based northbound APIs.
+ * A Kafka based client that supports Hono's north bound operations to send commands and receive telemetry,
+ * event and command response messages.
  */
-public class KafkaApplicationClientFactoryImpl implements KafkaApplicationClientFactory {
+public class KafkaApplicationClientImpl implements KafkaApplicationClient {
 
     private final Vertx vertx;
     private final KafkaConsumerConfigProperties config;
 
     /**
-     * Creates a new factory.
+     * Creates a new Kafka based application client.
      *
      * @param vertx The Vert.x instance to use.
      * @param config The Kafka consumer configuration properties to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws IllegalArgumentException if config does not contain Kafka configuration properties.
      */
-    public KafkaApplicationClientFactoryImpl(final Vertx vertx, final KafkaConsumerConfigProperties config) {
+    public KafkaApplicationClientImpl(final Vertx vertx, final KafkaConsumerConfigProperties config) {
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(config);
 

@@ -59,16 +59,15 @@ import io.vertx.proton.ProtonReceiver;
 
 
 /**
- * Tests verifying behavior of {@link ProtonBasedApplicationClientFactory}.
+ * Tests verifying behavior of {@link ProtonBasedApplicationClient}.
  *
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class ProtonBasedApplicationClientFactoryTest {
 
-    private ProtonReceiver receiver;
     private HonoConnection connection;
-    private ProtonBasedApplicationClientFactory client;
+    private ProtonBasedApplicationClient client;
 
     /**
      * Sets up the fixture.
@@ -77,7 +76,7 @@ class ProtonBasedApplicationClientFactoryTest {
     void setUp() {
         final var vertx = mock(Vertx.class);
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx);
-        receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
+        final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         when(connection.createReceiver(
                 anyString(),
                 any(ProtonQoS.class),
@@ -85,7 +84,7 @@ class ProtonBasedApplicationClientFactoryTest {
                 anyInt(),
                 anyBoolean(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(receiver));
-        client = new ProtonBasedApplicationClientFactory(connection);
+        client = new ProtonBasedApplicationClient(connection);
     }
 
     /**
