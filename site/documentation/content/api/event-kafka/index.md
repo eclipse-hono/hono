@@ -11,7 +11,7 @@ The *Event* API is used by *Protocol Adapters* to send event messages downstream
 *Business Applications* and other consumers use the API to receive messages published by devices belonging to a particular tenant.
 
 The Event API for Kafka is an alternative to the [Event API for AMQP]({{< relref "/api/event" >}}).
-With this API clients publish event messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
+With this API, clients publish event messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.
@@ -45,7 +45,7 @@ The following sequence diagram illustrates the flow of messages involved in the 
 {{< figure src="produce_kafka.svg" title="Produce event flow" >}}
 
 1. *Device* `4711` publishes an event using MQTT QoS 1.
-   1. *MQTT Adapter* produces an event message to *Kafka Cluster*.
+   1. *MQTT Adapter* produces an event message to the *Kafka Cluster*.
    1. *Kafka cluster* acknowledges reception of the message.
    1. *MQTT Adapter* acknowledges the reception of the message to the *Device*.
 

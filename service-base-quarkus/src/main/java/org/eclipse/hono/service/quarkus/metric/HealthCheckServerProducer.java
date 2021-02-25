@@ -61,7 +61,7 @@ public class HealthCheckServerProducer {
      * Creates a new Health Check server.
      *
      * @param vertx The vert.x instance to use.
-     * @param healthCheckkServerConfig The configuration properties for the health check server.
+     * @param healthCheckServerConfig The configuration properties for the health check server.
      * @param additionalResources Additional resources that the server should expose.
      * @return The server.
      */
@@ -70,9 +70,9 @@ public class HealthCheckServerProducer {
     HealthCheckServer healthCheckServer(
             final Vertx vertx,
             @ConfigPrefix("hono.healthCheck")
-            final ServerConfig healthCheckkServerConfig,
+            final ServerConfig healthCheckServerConfig,
             final List<Handler<Router>> additionalResources) {
-        final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, healthCheckkServerConfig);
+        final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, healthCheckServerConfig);
         server.setAdditionalResources(additionalResources);
         return server;
     }

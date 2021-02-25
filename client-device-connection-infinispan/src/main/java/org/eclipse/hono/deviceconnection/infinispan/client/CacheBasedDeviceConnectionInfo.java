@@ -240,7 +240,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             final Set<String> viaGateways,
             final Span span) {
 
-        LOG.debug("using optimzed query, retrieving {} via-gateways in one go", viaGateways.size());
+        LOG.debug("using optimized query, retrieving {} via-gateways in one go", viaGateways.size());
         // get the command handling adapter instances for the device and *all* via-gateways in one call first
         // (this saves the extra lastKnownGateway check if only one adapter instance is returned)
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))

@@ -1004,7 +1004,7 @@ components:
             "mode":
                type: string
                description: |
-                 The accounting period's' mode of recurrence. The following modes are defined:
+                 The accounting period's mode of recurrence. The following modes are defined:
                  * `monthly`: Accounting periods start at midnight (start of day) UTC on the 1st day of each month.
                  * `days`: Accounting periods start at the time of the initial accounting period every *N* days where
                            *N* is the value of the *no-of-days* property.

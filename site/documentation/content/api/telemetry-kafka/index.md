@@ -12,7 +12,7 @@ The *Telemetry* API is used by *Protocol Adapters* to send telemetry data downst
 *Business Applications* and other consumers use the API to receive data published by devices belonging to a particular tenant.
 
 The Telemetry API for Kafka is an alternative to the [Telemetry API for AMQP]({{< relref "/api/telemetry" >}}).
-With this API clients publish telemetry data to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
+With this API, clients publish telemetry data to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.
@@ -49,7 +49,7 @@ The following sequence diagram illustrates the flow of messages involved in the 
 {{< figure src="produce_kafka_qos0.svg" title="Produce telemetry data flow (AT MOST ONCE)" >}}
 
 1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*
-   1. *HTTP Adapter* produces telemetry data to *Kafka Cluster*.
+   1. *HTTP Adapter* produces telemetry data to the *Kafka Cluster*.
    1. *HTTP Adapter* acknowledges the reception of the data to the *Device*.
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* producing a telemetry data message to the Kafka cluster implementing *AT LEAST ONCE* delivery semantics.
@@ -57,7 +57,7 @@ The following sequence diagram illustrates the flow of messages involved in the 
 {{< figure src="produce_kafka_qos1.svg" title="Produce telemetry data flow (AT LEAST ONCE)" >}}
 
 1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*, indicating *QoS Level* 1.
-   1. *HTTP Adapter* produces telemetry data to *Kafka Cluster*.
+   1. *HTTP Adapter* produces telemetry data to the *Kafka Cluster*.
    1. *Kafka Cluster* acknowledges reception of the message.
    1. *HTTP Adapter* acknowledges the reception of the data to the *Device*.
 
