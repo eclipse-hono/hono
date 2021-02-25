@@ -32,6 +32,8 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
@@ -49,10 +51,12 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     /**
      * Verifies that the adapter opens a connection to registered devices with credentials.
      *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
      * @param ctx The test context
      */
-    @Test
-    public void testConnectSucceedsForRegisteredDevice(final VertxTestContext ctx) {
+    @ParameterizedTest
+    @ValueSource(strings = { "TLSv1.2", "TLSv1.3" })
+    public void testConnectSucceedsForRegisteredDevice(final String tlsVersion, final VertxTestContext ctx) {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
@@ -60,7 +64,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
-        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .compose(ok -> connectToAdapter(tlsVersion, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .onComplete(ctx.completing());
     }
 

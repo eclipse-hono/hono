@@ -12,9 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.amqp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
+import java.util.List;
 
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.engine.Record;
@@ -84,6 +87,27 @@ public class AmqpServiceBaseTest {
         }
         server.init(vertx, mock(Context.class));
         return server;
+    }
+
+    /**
+     * Verifies that the secure server uses the configured TLS protocols only.
+     */
+    @Test
+    public void testSecureServerUsesConfiguredProtocols() {
+
+        // GIVEN a server with an endpoint
+        final AmqpEndpoint endpoint = mock(AmqpEndpoint.class);
+        when(endpoint.getName()).thenReturn(ENDPOINT);
+        final AmqpServiceBase<ServiceConfigProperties> server = createServer(endpoint);
+
+        final var config = new ServiceConfigProperties();
+        config.setKeyPath("target/certs/amqp-adapter-key.pem");
+        config.setCertPath("target/certs/amqp-adapter-cert.pem");
+        config.setSecureProtocols(List.of("TLSv1.1"));
+        server.setConfig(config);
+
+        final var serverOptions = server.createServerOptions();
+        assertThat(serverOptions.getEnabledSecureTransportProtocols()).containsExactly("TLSv1.1");
     }
 
     /**

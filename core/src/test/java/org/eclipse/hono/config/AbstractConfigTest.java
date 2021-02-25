@@ -150,6 +150,14 @@ public class AbstractConfigTest {
     }
 
     /**
+     * Verifies that by default, TLS 1.3 and 1.2. are supported, in that order.
+     */
+    @Test
+    public void testDefaultTlsVersions() {
+        assertThat(cfg.getSecureProtocols()).containsExactly("TLSv1.3", "TLSv1.2");
+    }
+
+    /**
      * Verifies that the constructor copies all properties.
      */
     @Test

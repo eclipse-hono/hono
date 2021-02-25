@@ -218,7 +218,7 @@ public final class IntegrationTestSupport {
      * The name of the system property to use for setting the port number that the AMQP Messaging
      * Network should listen on for connections.
      */
-    public static final String PROPERTY_DOWNSTREAM_PORT = "downstream.amqp.port";
+    public static final String PROPERTY_DOWNSTREAM_PORT = "downstream.amqps.port";
     /**
      * The name of the system property to use for setting the username for authenticating to
      * the AMQP Messaging Network.
@@ -525,21 +525,25 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Creates properties for connecting to the AMQP Messaging Network.
+     * Creates properties for connecting to the AMQP Messaging Network's secure port.
      *
      * @return The properties.
      */
     public static ClientConfigProperties getMessagingNetworkProperties() {
 
-        return getClientConfigProperties(
+        final var props = getClientConfigProperties(
                 IntegrationTestSupport.DOWNSTREAM_HOST,
                 IntegrationTestSupport.DOWNSTREAM_PORT,
                 IntegrationTestSupport.DOWNSTREAM_USER,
                 IntegrationTestSupport.DOWNSTREAM_PWD);
+        props.setTrustStorePath(TRUST_STORE_PATH);
+        props.setHostnameVerificationRequired(false);
+        props.setSecureProtocols(List.of("TLSv1.3"));
+        return props;
     }
 
     /**
-     * Creates properties for connecting to the AMQP protocol adapter.
+     * Creates properties for connecting to the AMQP protocol adapter's secure port.
      *
      * @param username The username to use for authenticating to the adapter.
      * @param password The password to use for authenticating to the adapter.
@@ -547,11 +551,15 @@ public final class IntegrationTestSupport {
      */
     public static ClientConfigProperties getAmqpAdapterProperties(final String username, final String password) {
 
-        return getClientConfigProperties(
+        final var props = getClientConfigProperties(
                 IntegrationTestSupport.AMQP_HOST,
-                IntegrationTestSupport.AMQP_PORT,
+                IntegrationTestSupport.AMQPS_PORT,
                 username,
                 password);
+        props.setTrustStorePath(TRUST_STORE_PATH);
+        props.setHostnameVerificationRequired(false);
+        props.setSecureProtocols(List.of("TLSv1.3"));
+        return props;
     }
 
     /**

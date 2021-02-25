@@ -14,6 +14,7 @@
 
   ["sslProfile", {
     "name": "external",
+    "protocols": "TLSv1.3 TLSv1.2",
     "caCertFile": "/etc/hono/trusted-certs.pem",
     "certFile": "/etc/hono/qdrouter-cert.pem",
     "privateKeyFile": "/etc/hono/qdrouter-key.pem"
@@ -21,6 +22,7 @@
 
   ["sslProfile", {
     "name": "internal",
+    "protocols": "TLSv1.3 TLSv1.2",
     "caCertFile": "/etc/hono/trusted-certs.pem",
     "certFile": "/etc/hono/qdrouter-cert.pem",
     "privateKeyFile": "/etc/hono/qdrouter-key.pem",

@@ -15,6 +15,7 @@ package org.eclipse.hono.config;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -55,12 +56,16 @@ public abstract class AbstractConfig {
     private KeyCertOptions keyCertOptions = null;
     private FileFormat trustStoreFormat = null;
     private FileFormat keyFormat = null;
-    private List<String> secureProtocols = Collections.singletonList("TLSv1.2");
+    private List<String> secureProtocols;
 
     /**
      * Creates a new empty instance.
      */
     public AbstractConfig() {
+        final List<String> initialProtocols = new ArrayList<>();
+        initialProtocols.add("TLSv1.3");
+        initialProtocols.add("TLSv1.2");
+        this.secureProtocols = Collections.unmodifiableList(initialProtocols);
     }
 
     /**
@@ -70,6 +75,7 @@ public abstract class AbstractConfig {
      *              are copied to the newly created instance.
      */
     public AbstractConfig(final AbstractConfig other) {
+        this();
         this.certPath = other.certPath;
         this.keyFormat = other.keyFormat;
         this.keyPath = other.keyPath;
@@ -427,20 +433,22 @@ public abstract class AbstractConfig {
     /**
      * Gets the secure protocols that are enabled for TLS connections.
      * <p>
-     * By default, only <em>TLSv1.2</em> is enabled. Please refer to the
+     * By default, only <em>TLSv1.2</em> and <em>TLSv1.3</em> are enabled.
+     * Please refer to the
      * <a href="https://vertx.io/docs/vertx-core/java/#ssl">vert.x
      * documentation</a> for a list of supported values.
      *
      * @return The enabled protocols.
      */
     public final List<String> getSecureProtocols() {
-        return Collections.unmodifiableList(secureProtocols);
+        return secureProtocols;
     }
 
     /**
      * Sets the secure protocols that are enabled for TLS connections.
      * <p>
-     * By default, only <em>TLSv1.2</em> is enabled. Please refer to the
+     * By default, only <em>TLSv1.2</em> and <em>TLSv1.3</em> are enabled.
+     * Please refer to the
      * <a href="https://vertx.io/docs/vertx-core/java/#ssl">vert.x
      * documentation</a> for a list of supported values.
      * <p>
@@ -452,7 +460,7 @@ public abstract class AbstractConfig {
      */
     public final void setSecureProtocols(final List<String> enabledProtocols) {
         Objects.requireNonNull(enabledProtocols);
-        this.secureProtocols = enabledProtocols;
+        this.secureProtocols = Collections.unmodifiableList(enabledProtocols);
     }
 
 }

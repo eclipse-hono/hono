@@ -15,6 +15,7 @@ package org.eclipse.hono.tests.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
@@ -87,11 +88,12 @@ public class HonoClientImplIT {
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
     public void testConnectFailsWithClientErrorIfTlsHandshakeFails(final VertxTestContext ctx) {
 
-        // GIVEN a client that is configured to try to connect using TLS to a port that does not support TLS
+        // GIVEN a client that is configured to try to connect using an unsupported TLS version
         final ClientConfigProperties downstreamProps = new ClientConfigProperties();
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setTlsEnabled(true);
+        downstreamProps.setSecureProtocols(List.of("TLSv1.1"));
         downstreamProps.setReconnectAttempts(2);
 
         clientFactory = new ProtonBasedApplicationClientFactory(HonoConnection.newConnection(vertx, downstreamProps));

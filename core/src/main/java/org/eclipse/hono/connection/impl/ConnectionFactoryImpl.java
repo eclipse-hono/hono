@@ -13,7 +13,9 @@
 
 package org.eclipse.hono.connection.impl;
 
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -379,12 +381,14 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             } else {
                 clientOptions.setHostnameVerificationAlgorithm("");
             }
-            clientOptions.getEnabledSecureTransportProtocols()
-                .forEach(protocol -> clientOptions.removeEnabledSecureTransportProtocol(protocol));
-            config.getSecureProtocols().forEach(protocol -> {
-                logger.debug("enabling secure protocol [{}]", protocol);
-                clientOptions.addEnabledSecureTransportProtocol(protocol);
+            // it is important to use a sorted set here to maintain
+            // the list's order
+            final Set<String> protocols = new LinkedHashSet<>(config.getSecureProtocols().size());
+            config.getSecureProtocols().forEach(p -> {
+                logger.debug("enabling secure protocol [{}]", p);
+                protocols.add(p);
             });
+            clientOptions.setEnabledSecureTransportProtocols(protocols);
         }
     }
 

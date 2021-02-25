@@ -246,7 +246,7 @@ public class AbstractServiceBaseTest {
     }
 
     /**
-     * Verifies that only TLSv1.2 is enabled by default.
+     * Verifies that only TLSv1.2 and TLSv1.3 are enabled by default.
      *
      */
     @Test
@@ -261,10 +261,9 @@ public class AbstractServiceBaseTest {
         final NetServerOptions options = new NetServerOptions();
         service.addTlsKeyCertOptions(options);
 
-        // THEN SSL is enabled and only TLSv1.2 is enabled
+        // THEN TLS 1.3 and 1.2 are enabled
         assertTrue(options.isSsl());
-        assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1.2"));
-        assertTrue(options.getEnabledSecureTransportProtocols().size() == 1);
+        assertThat(options.getEnabledSecureTransportProtocols()).containsExactly("TLSv1.3", "TLSv1.2");
     }
 
     /**
