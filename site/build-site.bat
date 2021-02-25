@@ -27,8 +27,6 @@ IF NOT EXIST themes\hugo-universal-theme (
 )
 cd themes\hugo-universal-theme
 git checkout 1.1.1
-ECHO Remove images from theme
-DEL /Q static\img\*
 cd ..\..
 
 IF NOT "%~1"==""  (
