@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -86,13 +86,15 @@ public final class ResourceIdentifier {
     }
 
     private ResourceIdentifier(final String[] path) {
-        if (path[0] == null) {
-            throw new IllegalArgumentException("path must not start with a null segment");
-        }
         setResourcePath(path);
     }
 
     private void setResourcePath(final String[] path) {
+        if (path.length == 0) {
+            throw new IllegalArgumentException("path must have at least one segment");
+        } else if (Strings.isNullOrEmpty(path[0])) {
+            throw new IllegalArgumentException("path must not start with an empty segment");
+        }
         resourcePath = new String[path.length];
         for (int i = 0; i < path.length; i++) {
             final String segment = path[i];
@@ -155,6 +157,16 @@ public final class ResourceIdentifier {
     }
 
     /**
+     * Checks whether the given string is a valid resource identifier string representation.
+     *
+     * @param resource the resource string to parse.
+     * @return {@code true} if the given string is a valid resource identifier string.
+     */
+    public static boolean isValid(final String resource) {
+        return !Strings.isNullOrEmpty(resource) && !resource.startsWith("/");
+    }
+
+    /**
      * Creates a resource identifier from its string representation.
      * <p>
      * The given string is split up into segments using a forward slash as the separator. The first segment is used as
@@ -165,13 +177,10 @@ public final class ResourceIdentifier {
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
-     * @throws IllegalArgumentException if the given string is empty.
+     * @throws IllegalArgumentException if the given string is empty or contains an empty first segment.
      */
     public static ResourceIdentifier fromString(final String resource) {
         Objects.requireNonNull(resource);
-        if (resource.isEmpty()) {
-            throw new IllegalArgumentException("resource must not be empty");
-        }
         return new ResourceIdentifier(resource);
     }
 
@@ -183,6 +192,7 @@ public final class ResourceIdentifier {
      * @param resourceId the resource identifier (may be {@code null}).
      * @return the resource identifier.
      * @throws NullPointerException if endpoint is {@code null}.
+     * @throws IllegalArgumentException if endpoint is empty.
      */
     public static ResourceIdentifier from(final String endpoint, final String tenantId, final String resourceId) {
         Objects.requireNonNull(endpoint);
@@ -197,7 +207,7 @@ public final class ResourceIdentifier {
      * @param tenantId the tenant identifier (may be {@code null}).
      * @param resourceId the resource identifier (may be {@code null}).
      * @return the resource identifier.
-     * @throws NullPointerException if endpoint is {@code null}.
+     * @throws NullPointerException if resourceIdentifier is {@code null}.
      */
     public static ResourceIdentifier from(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
         Objects.requireNonNull(resourceIdentifier);
@@ -210,16 +220,11 @@ public final class ResourceIdentifier {
      * @param path the segments of the resource path.
      * @return the resource identifier.
      * @throws NullPointerException if path is {@code null}.
-     * @throws IllegalArgumentException if the path contains no segments or starts with a
-     *                                  {@code null} segment.
+     * @throws IllegalArgumentException if the path contains no segments or starts with an empty segment.
      */
     public static ResourceIdentifier fromPath(final String[] path) {
         Objects.requireNonNull(path);
-        if (path.length == 0) {
-            throw new IllegalArgumentException("path must have at least one segment");
-        } else {
-            return new ResourceIdentifier(path);
-        }
+        return new ResourceIdentifier(path);
     }
 
     /**
