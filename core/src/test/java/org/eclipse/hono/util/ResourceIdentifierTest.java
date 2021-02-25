@@ -129,11 +129,11 @@ public class ResourceIdentifierTest {
     }
 
     /**
-     * Verifies that a resource identifier can be created from string containing
-     * a trailing {@code null} segment.
+     * Verifies that a resource identifier can be created from string segments
+     * containing {@code null} as resourceId part.
      */
     @Test
-    public void testFromAllowsMissingDeviceId() {
+    public void testFromParametersAllowsNullResourceId() {
         final ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", null);
         assertThat(resourceId).isNotNull();
         assertThat(resourceId.getEndpoint()).isEqualTo("telemetry");
@@ -142,6 +142,22 @@ public class ResourceIdentifierTest {
         assertThat(resourceId.getBasePath()).isEqualTo("telemetry/myTenant");
         assertThat(resourceId.getPathWithoutBase()).isEqualTo("");
         assertThat(resourceId.toString()).isEqualTo("telemetry/myTenant");
+    }
+
+    /**
+     * Verifies that a resource identifier can be created from string segments
+     * containing {@code null} as tenantId part.
+     */
+    @Test
+    public void testFromParametersAllowsNullTenantId() {
+        final ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", null, "myDevice");
+        assertThat(resourceId).isNotNull();
+        assertThat(resourceId.getEndpoint()).isEqualTo("telemetry");
+        assertThat(resourceId.getTenantId()).isNull();
+        assertThat(resourceId.getResourceId()).isEqualTo("myDevice");
+        assertThat(resourceId.getBasePath()).isEqualTo("telemetry");
+        assertThat(resourceId.getPathWithoutBase()).isEqualTo("myDevice");
+        assertThat(resourceId.toString()).isEqualTo("telemetry//myDevice");
     }
 
     /**
@@ -189,7 +205,7 @@ public class ResourceIdentifierTest {
     }
 
     /**
-     * Verifies that a resource identifier cannot be created from
+     * Verifies that a resource identifier can be created from
      * a path that contains non-trailing {@code null} segments.
      */
     @Test
@@ -203,13 +219,82 @@ public class ResourceIdentifierTest {
     }
 
     /**
+     * Verifies that a resource identifier can be created from another
+     * resource identifier.
+     */
+    @Test
+    public void testFromOtherResourceIdentifier() {
+        ResourceIdentifier otherResourceId = ResourceIdentifier.fromString("telemetry/otherTenant/otherDeviceId/what/ever");
+        ResourceIdentifier resourceId = ResourceIdentifier.from(otherResourceId, "myTenant", "myDevice");
+        assertThat(resourceId).isNotNull();
+        assertThat(resourceId.getEndpoint()).isEqualTo("telemetry");
+        assertThat(resourceId.getTenantId()).isEqualTo("myTenant");
+        assertThat(resourceId.getResourceId()).isEqualTo("myDevice");
+        assertThat(resourceId.getBasePath()).isEqualTo("telemetry/myTenant");
+        assertThat(resourceId.getPathWithoutBase()).isEqualTo("myDevice/what/ever");
+        assertThat(resourceId.toString()).isEqualTo("telemetry/myTenant/myDevice/what/ever");
+        assertThat(resourceId.getResourcePath()[3]).isEqualTo("what");
+        assertThat(resourceId.getResourcePath()[4]).isEqualTo("ever");
+
+        otherResourceId = ResourceIdentifier.fromString("telemetry/otherTenant");
+        resourceId = ResourceIdentifier.from(otherResourceId, "myTenant", "myDevice");
+        assertThat(resourceId).isNotNull();
+        assertThat(resourceId.getEndpoint()).isEqualTo("telemetry");
+        assertThat(resourceId.getTenantId()).isEqualTo("myTenant");
+        assertThat(resourceId.getResourceId()).isEqualTo("myDevice");
+        assertThat(resourceId.getBasePath()).isEqualTo("telemetry/myTenant");
+        assertThat(resourceId.getPathWithoutBase()).isEqualTo("myDevice");
+        assertThat(resourceId.toString()).isEqualTo("telemetry/myTenant/myDevice");
+
+        otherResourceId = ResourceIdentifier.fromString("telemetry");
+        resourceId = ResourceIdentifier.from(otherResourceId, "myTenant", "myDevice");
+        assertThat(resourceId).isNotNull();
+        assertThat(resourceId.getEndpoint()).isEqualTo("telemetry");
+        assertThat(resourceId.getTenantId()).isEqualTo("myTenant");
+        assertThat(resourceId.getResourceId()).isEqualTo("myDevice");
+        assertThat(resourceId.getBasePath()).isEqualTo("telemetry/myTenant");
+        assertThat(resourceId.getPathWithoutBase()).isEqualTo("myDevice");
+        assertThat(resourceId.toString()).isEqualTo("telemetry/myTenant/myDevice");
+    }
+
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * a path array that is empty.
+     */
+    @Test
+    public void testFromPathFailsForEmptyPathArray() {
+        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[] {}))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
      * Verifies that a resource identifier cannot be created from
      * a path that starts with a {@code null} segment.
      */
     @Test
     public void testFromPathFailsForPathStartingWithNullSegment() {
-        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[]{null, "second", "last"}))
+        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[] { null, "second", "last" }))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * a path that starts with an empty segment.
+     */
+    @Test
+    public void testFromPathFailsForPathStartingWithEmptySegment() {
+        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[] { "", "second", "last" }))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * string segments where the first segment is empty.
+     */
+    @Test
+    public void testFromIndividualParametersFailsForEmptyEndpoint() {
+        assertThatThrownBy(() -> ResourceIdentifier.from("", "myTenant", "myDevice"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
@@ -218,7 +303,23 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromStringFailsForEmptyString() {
+        assertThat(ResourceIdentifier.isValid("")).isFalse();
         assertThatThrownBy(() -> ResourceIdentifier.fromString(""))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that a resource identifier cannot be created from
+     * a string with an empty first segment.
+     */
+    @Test
+    public void testFromStringFailsForStringWithEmptyFirstSegment() {
+        assertThat(ResourceIdentifier.isValid("/")).isFalse();
+        assertThatThrownBy(() -> ResourceIdentifier.fromString("/"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(ResourceIdentifier.isValid("/test")).isFalse();
+        assertThatThrownBy(() -> ResourceIdentifier.fromString("/test"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
