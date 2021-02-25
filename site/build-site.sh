@@ -34,8 +34,6 @@ fi
 cd themes/hugo-universal-theme
 git fetch
 git checkout 1.1.1
-echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
-rm static/img/*
 cd ../..
 
 echo "Going to build homepage in directory: $TARGET"
