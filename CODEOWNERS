@@ -1,20 +1,54 @@
 *                                     @sophokles73
 
-/cli/                                 @calohmn
-/client/                              @calohmn
+/adapter-base/                        @dejanb @sophokles73
+/adapter-base-quarkus/                @dejanb @sophokles73
+/adapter-base-spring/                 @dejanb @sophokles73
 
-/deploy/                              @dejanb
-/deploy/src/main/deploy/openshift/    @ctron
-
+/adapters/                            @calohmn @kaniyan
 /adapters/amqp-vertx/                 @calohmn
-/adapters/http-vertx/                 @ctron
-/adapters/http-vertx-base/            @ctron
+/adapters/amqp-vertx-base/            @calohmn
+/adapters/amqp-vertx-quarkus/         @calohmn
+
+/adapters/coap-vertx/                 @sophokles73
+/adapters/coap-vertx-base/            @sophokles73
+
+/adapters/http-vertx/                 @ctron @calohmn
+/adapters/http-vertx-base/            @ctron @calohmn
+/adapters/http-vertx-quarkus/         @ctron @calohmn
+
 /adapters/lora-vertx/                 @calohmn
-/adapters/mqtt-vertx/                 @ctron
-/adapters/mqtt-vertx-base/            @ctron
+
+/adapters/mqtt-vertx/                 @ctron @kaniyan
+/adapters/mqtt-vertx-base/            @ctron @kaniyan
+/adapters/mqtt-vertx-quarkus/         @ctron @kaniyan
+
 /adapters/sigfox-vertx/               @ctron
 
-/service-base/                        @dejanb
-/services/                            @dejanb
-/services/device-registry/            @ctron
-/services/device-connection/          @sophokles73
+/cli/                                 @calohmn
+/client/                              @calohmn
+/client-device-connection-infinispan/ @calohmn @sophokles73
+
+/clients/                             @calohmn
+
+/deploy/                              @dejanb
+/deploy/src/main/deploy/openshift/    @ctron 
+/deploy/src/main/sandbox/             @sophokles73
+
+/examples/                            @kaniyan
+
+/service-base/                        @dejanb @sophokles73
+/service-base-quarkus/                @dejanb @sophokles73
+/service-base-spring/                 @dejanb @sophokles73
+
+/services/                            @dejanb @kaniyan
+/services/base-jdbc/                  @ctron
+/services/command-router/             @calohmn
+/services/device-connection/          @calohmn
+/services/device-registry-base/       @kaniyan
+/services/device-registry-file/       @sophokles73
+/services/device-registry-jdbc/       @ctron
+/services/device-registry-mongodb/    @kaniyan
+
+/site/                                @kaniyan @sophokles73
+/test-utils/                          @calohmn
+
