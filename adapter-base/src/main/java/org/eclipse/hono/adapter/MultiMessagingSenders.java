@@ -16,10 +16,12 @@ package org.eclipse.hono.adapter;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.util.ServiceClient;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
  * Encapsulates the Kafka-based and the AMQP-based sender for a message type.
@@ -133,4 +135,24 @@ class MultiMessagingSenders<T> {
         }
         return null;
     }
+
+    /**
+     * Registers liveness checks for the AMQP sender.
+     */
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
+        if (amqpSender instanceof ServiceClient) {
+            ((ServiceClient) amqpSender).registerLivenessChecks(handler);
+        }
+    }
+
+    /**
+     * Registers readiness checks for the AMQP sender.
+     */
+    public void registerReadinessChecks(final HealthCheckHandler handler) {
+        if (amqpSender instanceof ServiceClient) {
+            ((ServiceClient) amqpSender).registerReadinessChecks(handler);
+        }
+        // TODO come up with ideas for readiness checks for the Kafka producers
+    }
+
 }

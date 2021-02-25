@@ -1050,13 +1050,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerReadinessChecks(handler);
         }
-        if (telemetrySenders.getAmqpSender() instanceof ServiceClient) {
-            ((ServiceClient) telemetrySenders.getAmqpSender()).registerReadinessChecks(handler);
-        }
-        if (eventSenders.getAmqpSender() instanceof ServiceClient) {
-            ((ServiceClient) eventSenders.getAmqpSender()).registerReadinessChecks(handler);
-        }
-        // TODO come up with ideas for readiness checks for the Kafka producers
+        telemetrySenders.registerReadinessChecks(handler);
+        eventSenders.registerReadinessChecks(handler);
     }
 
     /**
@@ -1087,12 +1082,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerLivenessChecks(handler);
         }
-        if (telemetrySenders.getAmqpSender() instanceof ServiceClient) {
-            ((ServiceClient) telemetrySenders.getAmqpSender()).registerLivenessChecks(handler);
-        }
-        if (eventSenders.getAmqpSender() instanceof ServiceClient) {
-            ((ServiceClient) eventSenders.getAmqpSender()).registerLivenessChecks(handler);
-        }
+        telemetrySenders.registerLivenessChecks(handler);
+        eventSenders.registerLivenessChecks(handler);
     }
 
     /**
