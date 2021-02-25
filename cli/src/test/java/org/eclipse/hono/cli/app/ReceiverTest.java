@@ -21,11 +21,11 @@ import static org.mockito.Mockito.when;
 
 import java.util.stream.Stream;
 
-import org.eclipse.hono.application.client.ApplicationClientFactory;
+import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
-import org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory;
-import org.eclipse.hono.application.client.kafka.KafkaApplicationClientFactory;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
+import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,14 +67,14 @@ public class ReceiverTest {
     /**
      * Verifies that the receiver is started successfully with message.type=telemetry.
      *
-     * @param applicationClientFactory The application client factory to use.
+     * @param applicationClient The application client to use.
      * @param context The vert.x test context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("clientFactoryVariants")
-    public void testTelemetryStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
+    public void testTelemetryStart(final ApplicationClient<? extends MessageContext> applicationClient,
             final VertxTestContext context) {
-        receiver.setApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClient(applicationClient);
         receiver.messageType = "telemetry";
 
         receiver.start().onComplete(
@@ -90,14 +90,14 @@ public class ReceiverTest {
     /**
      * Verifies that the receiver is started successfully with message.type=event.
      *
-     * @param applicationClientFactory The application client factory to use.
+     * @param applicationClient The application client to use.
      * @param context The vert.x test context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("clientFactoryVariants")
-    public void testEventStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
+    public void testEventStart(final ApplicationClient<? extends MessageContext> applicationClient,
             final VertxTestContext context) {
-        receiver.setApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClient(applicationClient);
         receiver.messageType = "event";
         receiver.start().onComplete(
                 context.succeeding(result -> {
@@ -112,14 +112,14 @@ public class ReceiverTest {
     /**
      * Verifies that the receiver is started successfully with message.type=all.
      *
-     * @param applicationClientFactory The application client factory to use.
+     * @param applicationClient The application client to use.
      * @param context The vert.x test context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("clientFactoryVariants")
-    public void testDefaultStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
+    public void testDefaultStart(final ApplicationClient<? extends MessageContext> applicationClient,
             final VertxTestContext context) {
-        receiver.setApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClient(applicationClient);
         receiver.messageType = "all";
 
         receiver.start().onComplete(
@@ -135,29 +135,29 @@ public class ReceiverTest {
     /**
      * Verifies that the receiver fails to start when invalid value is passed to message.type.
      *
-     * @param applicationClientFactory The application client factory to use.
+     * @param applicationClient The application client to use.
      * @param context The vert.x test context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("clientFactoryVariants")
-    public void testInvalidTypeStart(final ApplicationClientFactory<? extends MessageContext> applicationClientFactory,
+    public void testInvalidTypeStart(final ApplicationClient<? extends MessageContext> applicationClient,
             final VertxTestContext context) {
-        receiver.setApplicationClientFactory(applicationClientFactory);
+        receiver.setApplicationClient(applicationClient);
         receiver.messageType = "xxxxx";
         receiver.start().onComplete(
                 context.failing(result -> context.completeNow()));
     }
 
-    private static Stream<ApplicationClientFactory<? extends MessageContext>> clientFactoryVariants() {
+    private static Stream<ApplicationClient<? extends MessageContext>> clientFactoryVariants() {
 
-        final AmqpApplicationClientFactory amqpApplicationClientFactory = mock(AmqpApplicationClientFactory.class);
+        final AmqpApplicationClient amqpApplicationClientFactory = mock(AmqpApplicationClient.class);
         when(amqpApplicationClientFactory.connect()).thenReturn(Future.succeededFuture());
         when(amqpApplicationClientFactory.createTelemetryConsumer(anyString(), VertxMockSupport.anyHandler(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         when(amqpApplicationClientFactory.createEventConsumer(anyString(), VertxMockSupport.anyHandler(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
 
-        final KafkaApplicationClientFactory kafkaApplicationClientFactory = mock(KafkaApplicationClientFactory.class);
+        final KafkaApplicationClient kafkaApplicationClientFactory = mock(KafkaApplicationClient.class);
         when(kafkaApplicationClientFactory.createTelemetryConsumer(anyString(), VertxMockSupport.anyHandler(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         when(kafkaApplicationClientFactory.createEventConsumer(anyString(), VertxMockSupport.anyHandler(),

@@ -43,21 +43,24 @@ import io.vertx.proton.ProtonHelper;
 
 
 /**
- * A vertx-proton based factory for creating clients to Hono's north bound APIs.
+ * A vertx-proton based client that supports Hono's north bound operations to send commands and receive telemetry,
+ * event and command response messages.
  *
  */
-public class ProtonBasedApplicationClientFactory implements AmqpApplicationClientFactory {
+public class ProtonBasedApplicationClient implements AmqpApplicationClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedApplicationClientFactory.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedApplicationClient.class);
 
     private final HonoConnection connection;
 
     /**
+     * Creates a new vertx-proton based based application client.
+     *
      * @param connection The connection to use for accessing Hono's north bound (AMQP 1.0 based)
      *                   API endpoints.
      * @throws NullPointerException if connection is {@code null}.
      */
-    public ProtonBasedApplicationClientFactory(final HonoConnection connection) {
+    public ProtonBasedApplicationClient(final HonoConnection connection) {
         this.connection = Objects.requireNonNull(connection);
     }
 

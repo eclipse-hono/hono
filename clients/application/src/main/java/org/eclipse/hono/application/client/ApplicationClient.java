@@ -17,11 +17,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
- * A factory for creating clients for Hono's north bound APIs.
+ * A client that supports Hono's north bound operations to send commands and receive telemetry,
+ * event and command response messages.
  *
  * @param <T> The type of context that messages are being received in.
  */
-public interface ApplicationClientFactory<T extends MessageContext> {
+public interface ApplicationClient<T extends MessageContext> {
 
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
@@ -76,7 +77,5 @@ public interface ApplicationClientFactory<T extends MessageContext> {
             String tenantId,
             Handler<DownstreamMessage<T>> messageHandler,
             Handler<Throwable> closeHandler);
-
-    // TODO add methods for command & control
 
 }
