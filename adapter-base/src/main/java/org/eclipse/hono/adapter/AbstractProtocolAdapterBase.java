@@ -20,8 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -40,14 +38,13 @@ import org.eclipse.hono.adapter.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
-import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
@@ -74,7 +71,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonHelper;
 
 /**
  * A base class for implementing protocol adapters.
@@ -1286,32 +1282,25 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Creates an AMQP error condition for an throwable.
-     * <p>
-     * Unknown error types are mapped to {@link AmqpError#PRECONDITION_FAILED}.
+     * Gets the error message suitable to be propagated to an external client.
      *
-     * @param t The throwable to map to an error condition.
-     * @return The error condition.
+     * @param t The exception to extract the message from.
+     * @return The message.
      */
-    public static ErrorCondition getErrorCondition(final Throwable t) {
-
-        if (t instanceof AuthorizationException) {
-            return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, t.getMessage());
-        } else if (ServiceInvocationException.class.isInstance(t)) {
-            final ServiceInvocationException error = (ServiceInvocationException) t;
-            switch (error.getErrorCode()) {
-            case HttpURLConnection.HTTP_BAD_REQUEST:
-                return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, error.getMessage());
-            case HttpURLConnection.HTTP_FORBIDDEN:
-                return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, error.getMessage());
-            case HttpUtils.HTTP_TOO_MANY_REQUESTS:
-                return ProtonHelper.condition(AmqpError.RESOURCE_LIMIT_EXCEEDED, error.getMessage());
-            default:
-                return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, error.getMessage());
+    public static String getClientFacingErrorMessage(final Throwable t) {
+        if (t instanceof ServerErrorException) {
+            final String clientFacingMessage = ((ServerErrorException) t).getClientFacingMessage();
+            if (clientFacingMessage != null) {
+                return clientFacingMessage;
             }
-        } else {
-            return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, t.getMessage());
+            switch (((ServerErrorException) t).getErrorCode()) {
+            case HttpURLConnection.HTTP_INTERNAL_ERROR:
+                return "Internal server error";
+            case HttpURLConnection.HTTP_UNAVAILABLE:
+                return "Temporarily unavailable";
+            }
         }
+        return t.getMessage();
     }
 
     /**
