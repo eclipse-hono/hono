@@ -240,7 +240,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      * @param respectTtl The intended behaviour: if true, messages with elapsed ttl are silently dropped and the message
      *            handler not invoked.
      */
-    public void setRespectTtl(final boolean respectTtl) {
+    public final void setRespectTtl(final boolean respectTtl) {
         this.respectTtl = respectTtl;
     }
 

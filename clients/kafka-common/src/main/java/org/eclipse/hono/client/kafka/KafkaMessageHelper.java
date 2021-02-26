@@ -91,12 +91,11 @@ public final class KafkaMessageHelper {
     }
 
     /**
-     * Gets the {@link MessageHelper#SYS_HEADER_PROPERTY_TTL ttl} header from the given list of Kafka headers.
-     * <p>
-     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     * Checks if a {@link MessageHelper#SYS_HEADER_PROPERTY_TTL ttl} header is present and the time already elapsed.
      *
-     * @param headers The headers to get the ttl from.
-     * @return The time-to-live (may be empty).
+     * @param headers The headers to be checked.
+     * @return {@code true} if <em>ttl</em> and <em>creation-time</em> headers are present and the time-to-live is
+     *         already elapsed, {@code false}.
      */
     public static boolean isTtlElapsed(final List<KafkaHeader> headers) {
         return getHeaderValue(headers, MessageHelper.SYS_HEADER_PROPERTY_TTL, Long.class)
