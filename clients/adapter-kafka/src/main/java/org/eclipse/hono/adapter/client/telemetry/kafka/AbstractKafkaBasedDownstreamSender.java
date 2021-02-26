@@ -137,13 +137,16 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
         headerProperties.putIfAbsent(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM);
 
         if (headerProperties.containsKey(MessageHelper.APP_PROPERTY_DEVICE_TTD)
-                && !headerProperties.containsKey(MessageHelper.SYS_PROPERTY_CREATION_TIME)) {
-            // TODO set this as creation time in the KafkaRecord?
+                || headerProperties.containsKey(MessageHelper.SYS_HEADER_PROPERTY_TTL)) {
 
-            // must match http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#type-timestamp
-            // as defined in https://www.eclipse.org/hono/docs/api/telemetry/#forward-telemetry-data
-            final long timestamp = Instant.now().toEpochMilli();
-            headerProperties.put(MessageHelper.SYS_PROPERTY_CREATION_TIME, timestamp);
+            if (!headerProperties.containsKey(MessageHelper.SYS_PROPERTY_CREATION_TIME)) {
+                // TODO set this as creation time in the KafkaRecord?
+
+                // must match http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#type-timestamp
+                // as defined in https://www.eclipse.org/hono/docs/api/telemetry/#forward-telemetry-data
+                final long timestamp = Instant.now().toEpochMilli();
+                headerProperties.put(MessageHelper.SYS_PROPERTY_CREATION_TIME, timestamp);
+            }
         }
 
         return headerProperties;

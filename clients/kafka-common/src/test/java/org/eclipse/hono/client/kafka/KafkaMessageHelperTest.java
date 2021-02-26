@@ -15,11 +15,11 @@ package org.eclipse.hono.client.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.eclipse.hono.client.kafka.KafkaMessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -146,4 +146,32 @@ public class KafkaMessageHelperTest {
 
         assertThat(KafkaMessageHelper.getQoS(headers)).isEqualTo(Optional.of(qos));
     }
+
+    /**
+     * Verifies that {@link KafkaMessageHelper#isTtlElapsed(List)} returns {@code false} if the TTL is still in the
+     * future.
+     */
+    @Test
+    public void testThatTtlIsNotElapsed() {
+        final long createTime = Instant.now().toEpochMilli();
+
+        headers.add(KafkaMessageHelper.createKafkaHeader("ttl", 5));
+        headers.add(KafkaMessageHelper.createKafkaHeader("creation-time", createTime));
+
+        assertThat(KafkaMessageHelper.isTtlElapsed(headers)).isFalse();
+    }
+
+    /**
+     * Verifies that {@link KafkaMessageHelper#isTtlElapsed(List)} returns {@code true} if the TTL is in the past.
+     */
+    @Test
+    public void testIsTtlElapsed() {
+        final long createTime = Instant.now().minusSeconds(6).toEpochMilli();
+
+        headers.add(KafkaMessageHelper.createKafkaHeader("ttl", 5));
+        headers.add(KafkaMessageHelper.createKafkaHeader("creation-time", createTime));
+
+        assertThat(KafkaMessageHelper.isTtlElapsed(headers)).isTrue();
+    }
+
 }
