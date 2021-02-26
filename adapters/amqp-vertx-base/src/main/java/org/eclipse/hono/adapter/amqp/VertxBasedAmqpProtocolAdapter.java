@@ -1144,7 +1144,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     final Map<String, Object> props = getDownstreamMessageProperties(context);
 
                     if (context.getEndpoint() == EndpointType.TELEMETRY) {
-                        return getTelemetrySender().sendTelemetry(
+                        return getTelemetrySender(tenantValidationTracker.result()).sendTelemetry(
                                 tenantValidationTracker.result(),
                                 tokenFuture.result(),
                                 context.getRequestedQos(),
@@ -1153,7 +1153,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 props,
                                 currentSpan.context());
                     } else {
-                        return getEventSender().sendEvent(
+                        return getEventSender(tenantValidationTracker.result()).sendEvent(
                                 tenantValidationTracker.result(),
                                 tokenFuture.result(),
                                 context.getMessageContentType(),

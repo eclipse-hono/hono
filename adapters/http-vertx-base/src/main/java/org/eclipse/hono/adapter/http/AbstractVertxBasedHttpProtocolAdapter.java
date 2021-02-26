@@ -688,7 +688,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 ctx.getTimeToLive()
                     .ifPresent(ttl -> props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, ttl.toSeconds()));
                 return CompositeFuture.all(
-                        getEventSender().sendEvent(
+                        getEventSender(tenantValidationTracker.result()).sendEvent(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
                                 contentType,
@@ -700,7 +700,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 // unsettled
                 return CompositeFuture.all(
-                        getTelemetrySender().sendTelemetry(
+                        getTelemetrySender(tenantValidationTracker.result()).sendTelemetry(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
                                 ctx.getRequestedQos(),

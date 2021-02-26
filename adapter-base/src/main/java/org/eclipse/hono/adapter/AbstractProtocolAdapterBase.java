@@ -91,20 +91,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
-    private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
-
-        @Override
-        public EventSender getMessageSenderClient() {
-            return AbstractProtocolAdapterBase.this.getEventSender();
-        }
-
-        @Override
-        public TenantClient getTenantClient() {
-            return AbstractProtocolAdapterBase.this.getTenantClient();
-        }
-
-    };
-
     private CommandConsumerFactory commandConsumerFactory;
     private CommandResponseSender commandResponseSender;
     private CommandRouterClient commandRouterClient;
@@ -112,9 +98,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private ConnectionEventProducer connectionEventProducer;
     private CredentialsClient credentialsClient;
     private DeviceRegistrationClient registrationClient;
-    private EventSender eventSender;
+    private final MultiMessagingSenders<EventSender> eventSenders = new MultiMessagingSenders<>();
     private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
-    private TelemetrySender telemetrySender;
+    private final MultiMessagingSenders<TelemetrySender> telemetrySenders = new MultiMessagingSenders<>();
     private TenantClient tenantClient;
 
     /**
@@ -184,43 +170,71 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for sending telemetry messages downstream.
+     * Sets the client to use for sending telemetry messages downstream with AMQP.
      *
-     * @param sender The sender.
+     * @param amqpTelemetrySender The AMQP sender.
      * @throws NullPointerException if the sender is {@code null}.
      */
-    public final void setTelemetrySender(final TelemetrySender sender) {
-        this.telemetrySender = Objects.requireNonNull(sender);
-        log.info("using TelemetrySender implementation [{}]", sender.getClass().getName());
+    public final void setAmqpTelemetrySender(final TelemetrySender amqpTelemetrySender) {
+        Objects.requireNonNull(amqpTelemetrySender);
+        telemetrySenders.setAmqpSender(amqpTelemetrySender);
+        log.info("setting AMQP-based TelemetrySender");
+    }
+
+    /**
+     * Sets the client to use for sending telemetry messages downstream with Kafka.
+     *
+     * @param kafkaTelemetrySender The Kafka sender.
+     * @throws NullPointerException if the sender is {@code null}.
+     */
+    public final void setKafkaTelemetrySender(final TelemetrySender kafkaTelemetrySender) {
+        Objects.requireNonNull(kafkaTelemetrySender);
+        telemetrySenders.setKafkaSender(kafkaTelemetrySender);
+        log.info("setting Kafka-based TelemetrySender");
     }
 
     /**
      * Gets the client being used for sending telemetry messages downstream.
      *
+     * @param tenant The tenant for which to send telemetry messages.
      * @return The sender.
      */
-    public final TelemetrySender getTelemetrySender() {
-        return telemetrySender;
+    public final TelemetrySender getTelemetrySender(final TenantObject tenant) {
+        return telemetrySenders.getSenderForTenantOrDefault(tenant);
     }
 
     /**
-     * Sets the client to use for sending events downstream.
+     * Sets the client to use for sending events downstream with AMQP.
      *
-     * @param sender The sender.
+     * @param amqpEventSender The AMQP sender.
      * @throws NullPointerException if the sender is {@code null}.
      */
-    public final void setEventSender(final EventSender sender) {
-        this.eventSender = Objects.requireNonNull(sender);
-        log.info("using EventSender implementation [{}]", sender.getClass().getName());
+    public final void setAmqpEventSender(final EventSender amqpEventSender) {
+        Objects.requireNonNull(amqpEventSender);
+        eventSenders.setAmqpSender(amqpEventSender);
+        log.info("setting AMQP-based EventSender");
+    }
+
+    /**
+     * Sets the client to use for sending events downstream with Kafka.
+     *
+     * @param kafkaEventSender The Kafka sender.
+     * @throws NullPointerException if the sender is {@code null}.
+     */
+    public final void setKafkaEventSender(final EventSender kafkaEventSender) {
+        Objects.requireNonNull(kafkaEventSender);
+        eventSenders.setKafkaSender(kafkaEventSender);
+        log.info("setting Kafka-based EventSender");
     }
 
     /**
      * Gets the client being used for sending events downstream.
      *
+     * @param tenant The tenant for which to send events.
      * @return The sender.
      */
-    public final EventSender getEventSender() {
-        return eventSender;
+    public final EventSender getEventSender(final TenantObject tenant) {
+        return eventSenders.getSenderForTenantOrDefault(tenant);
     }
 
     /**
@@ -410,10 +424,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
             result.fail(new IllegalStateException("Tenant client must be set"));
-        } else if (telemetrySender == null) {
-            result.fail(new IllegalStateException("Telemetry message sender must be set"));
-        } else if (eventSender == null) {
-            result.fail(new IllegalStateException("Event sender must be set"));
+        } else if (telemetrySenders.isUnconfigured()) {
+            result.fail(new IllegalStateException("A telemetry message sender must be set"));
+        } else if (eventSenders.isUnconfigured()) {
+            result.fail(new IllegalStateException("An event sender must be set"));
         } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsClient == null) {
@@ -428,8 +442,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
-            startServiceClient(telemetrySender, "Telemetry");
-            startServiceClient(eventSender, "Event");
+            startServiceClient(telemetrySenders.getAmqpSender(), "AMQP-Telemetry");
+            startServiceClient(telemetrySenders.getKafkaSender(), "Kafka-Telemetry");
+            startServiceClient(eventSenders.getAmqpSender(), "AMQP-Event");
+            startServiceClient(eventSenders.getKafkaSender(), "Kafka-Event");
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
             startServiceClient(credentialsClient, "Credentials service");
@@ -482,8 +498,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(stopServiceClient(commandConsumerFactory));
         results.add(stopServiceClient(commandResponseSender));
         results.add(stopServiceClient(commandRouterClient));
-        results.add(stopServiceClient(eventSender));
-        results.add(stopServiceClient(telemetrySender));
+        results.add(stopServiceClient(eventSenders.getAmqpSender()));
+        results.add(stopServiceClient(eventSenders.getKafkaSender()));
+        results.add(stopServiceClient(telemetrySenders.getAmqpSender()));
+        results.add(stopServiceClient(telemetrySenders.getKafkaSender()));
         return CompositeFuture.all(results);
     }
 
@@ -749,12 +767,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param serviceClient The client to start.
      * @param serviceName The name of the service that the client is for (used for logging).
-     * @return A future indicating the outcome of starting the client.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @return A future indicating the outcome of starting the client. If the given client is {@code null}, a succeeded
+     *         future will be returned.
+     * @throws NullPointerException if serviceName is {@code null} and serviceClient is not {@code null}.
      */
     protected final Future<Void> startServiceClient(final Lifecycle serviceClient, final String serviceName) {
 
-        Objects.requireNonNull(serviceClient);
+        if (serviceClient == null) {
+            return Future.succeededFuture();
+        }
+
         Objects.requireNonNull(serviceName);
 
         return serviceClient.start().map(c -> {
@@ -1024,12 +1046,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerReadinessChecks(handler);
         }
-        if (telemetrySender instanceof ServiceClient) {
-            ((ServiceClient) telemetrySender).registerReadinessChecks(handler);
-        }
-        if (eventSender instanceof ServiceClient) {
-            ((ServiceClient) eventSender).registerReadinessChecks(handler);
-        }
+        telemetrySenders.registerReadinessChecks(handler);
+        eventSenders.registerReadinessChecks(handler);
     }
 
     /**
@@ -1060,12 +1078,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerLivenessChecks(handler);
         }
-        if (telemetrySender instanceof ServiceClient) {
-            ((ServiceClient) telemetrySender).registerLivenessChecks(handler);
-        }
-        if (eventSender instanceof ServiceClient) {
-            ((ServiceClient) eventSender).registerLivenessChecks(handler);
-        }
+        telemetrySenders.registerLivenessChecks(handler);
+        eventSenders.registerLivenessChecks(handler);
     }
 
     /**
@@ -1079,8 +1093,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice) {
         if (this.connectionEventProducer != null) {
-            return this.connectionEventProducer.connected(connectionEventProducerContext, remoteId, getTypeName(),
-                    authenticatedDevice, null);
+            return getTenantClient().get(authenticatedDevice.getTenantId(),
+                    null)
+                    .map(this::getEventSender)
+                    .compose(es -> this.connectionEventProducer.connected(new ConnectionEventProducer.Context() {
+
+                        @Override
+                        public EventSender getMessageSenderClient() {
+                            return es;
+                        }
+
+                        @Override
+                        public TenantClient getTenantClient() {
+                            return AbstractProtocolAdapterBase.this.getTenantClient();
+                        }
+
+                    }, remoteId, getTypeName(),
+                            authenticatedDevice, null));
         } else {
             return Future.succeededFuture();
         }
@@ -1097,8 +1126,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice) {
         if (this.connectionEventProducer != null) {
-            return this.connectionEventProducer.disconnected(connectionEventProducerContext, remoteId, getTypeName(),
-                    authenticatedDevice, null);
+            return getTenantClient().get(authenticatedDevice.getTenantId(), null)
+                    .map(this::getEventSender)
+                    .compose(es -> this.connectionEventProducer.disconnected(new ConnectionEventProducer.Context() {
+
+                        @Override
+                        public EventSender getMessageSenderClient() {
+                            return es;
+                        }
+
+                        @Override
+                        public TenantClient getTenantClient() {
+                            return AbstractProtocolAdapterBase.this.getTenantClient();
+                        }
+
+                    }, remoteId, getTypeName(),
+                            authenticatedDevice, null));
         } else {
             return Future.succeededFuture();
         }
@@ -1195,7 +1238,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
                 props.put(MessageHelper.APP_PROPERTY_QOS, QoS.AT_LEAST_ONCE.ordinal());
                 props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd);
-                return getEventSender().sendEvent(
+                return getEventSender(tenantConfigTracker.result()).sendEvent(
                         tenantConfigTracker.result(),
                         tokenTracker.result(),
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,

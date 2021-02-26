@@ -870,6 +870,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAnAdapter(properties);
         adapter.setConnectionEventProducer(connectionEventProducer);
 
+        // with an enabled tenant
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
+
         // WHEN a device connects
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();

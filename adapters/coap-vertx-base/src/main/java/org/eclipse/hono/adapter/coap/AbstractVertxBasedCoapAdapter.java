@@ -740,7 +740,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     }
                     final Future<Void> sendResult;
                     if (endpoint == EndpointType.EVENT) {
-                        sendResult = getEventSender().sendEvent(
+                        sendResult = getEventSender(tenantValidationTracker.result()).sendEvent(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
                                 contentType,
@@ -748,7 +748,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 props,
                                 currentSpan.context());
                     } else {
-                        sendResult = getTelemetrySender().sendTelemetry(
+                        sendResult = getTelemetrySender(tenantValidationTracker.result()).sendTelemetry(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
                                 context.getRequestedQos(),

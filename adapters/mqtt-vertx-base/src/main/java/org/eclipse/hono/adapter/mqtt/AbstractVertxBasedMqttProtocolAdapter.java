@@ -860,7 +860,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             customizeDownstreamMessageProperties(props, ctx);
 
             if (endpoint == EndpointType.EVENT) {
-                return getEventSender().sendEvent(
+                return getEventSender(tenantObject).sendEvent(
                         tenantObject,
                         tokenTracker.result(),
                         ctx.contentType(),
@@ -868,7 +868,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         props,
                         currentSpan.context());
             } else {
-                return getTelemetrySender().sendTelemetry(
+                return getTelemetrySender(tenantObject).sendTelemetry(
                         tenantObject,
                         tokenTracker.result(),
                         ctx.getRequestedQos(),

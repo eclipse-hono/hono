@@ -228,11 +228,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
-        adapter.setEventSender(downstreamSender());
+        adapter.setAmqpEventSender(downstreamSender());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
         adapter.setResourceLimitChecks(resourceLimitChecks);
-        adapter.setTelemetrySender(downstreamSender());
+        adapter.setAmqpTelemetrySender(downstreamSender());
         adapter.setTenantClient(tenantClient());
         adapter.setTracer(tracer);
     }
