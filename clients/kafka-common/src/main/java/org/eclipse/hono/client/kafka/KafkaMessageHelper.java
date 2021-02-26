@@ -95,7 +95,7 @@ public final class KafkaMessageHelper {
      *
      * @param headers The headers to be checked.
      * @return {@code true} if <em>ttl</em> and <em>creation-time</em> headers are present and the time-to-live is
-     *         already elapsed, {@code false}.
+     *         already elapsed, {@code false} otherwise.
      */
     public static boolean isTtlElapsed(final List<KafkaHeader> headers) {
         return getHeaderValue(headers, MessageHelper.SYS_HEADER_PROPERTY_TTL, Long.class)
