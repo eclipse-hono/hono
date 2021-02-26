@@ -18,6 +18,17 @@ protocol adapters must have the configurations for both messaging networks.
 To configure a tenant to use Kafka, the [tenant configuration]({{< relref "/api/tenant#tenant-information-format" >}}) 
 must contain a field `ext`, which contains a field with the key `messaging-type` and the value `kafka` 
 (to use AMQP, the value must be `amqp`).
+The following example shows a tenant that is configured to use Kafka for messaging:
+
+~~~json
+{
+  "tenant-id": "TEST_TENANT",
+  "enabled": true,
+  "ext": {
+    "messaging-type": "kafka"
+  }
+}
+~~~
 
 If the configuration of a protocol adapter contains only the connection to one messaging system, this will be used.
 **NB**: If only one messaging network is configured at protocol adapters, make sure that tenants are not configured to use another. 
