@@ -40,6 +40,8 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
+    private static final String PARAM_ON_ERROR = "on-error";
+
     private final MqttPublishMessage message;
     private final MqttEndpoint deviceEndpoint;
     private final Device authenticatedDevice;
@@ -49,6 +51,53 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private MetricsTags.EndpointType endpoint;
     private PropertyBag propertyBag;
     private Optional<Duration> timeToLive = Optional.empty();
+    private ErrorHandlingMode errorHandlingMode = ErrorHandlingMode.DEFAULT;
+
+    /**
+     * Modes defining how to handle errors raised when a device publishes a message.
+     */
+    public enum ErrorHandlingMode {
+        /**
+         * Disconnect on error.
+         */
+        DISCONNECT("disconnect"),
+        /**
+         * Ignore errors, send PUB_ACK if QoS is 0.
+         */
+        IGNORE("ignore"),
+        /**
+         * Ignore errors and don't send PUB_ACK if QoS is 0.
+         */
+        SKIP_ACK("skip-ack"),
+        /**
+         * Use the default error handling mode: {@link ErrorHandlingMode#IGNORE} if the device is subscribed to the
+         * error topic or {@link ErrorHandlingMode#DISCONNECT} otherwise.
+         */
+        DEFAULT("default");
+
+        private final String parameterValue;
+
+        ErrorHandlingMode(final String parameterValue) {
+            this.parameterValue = parameterValue;
+        }
+
+        /**
+         * Construct an ErrorHandlingMode object from an MQTT topic property bag parameter value.
+         *
+         * @param paramValue The parameter value to parse.
+         * @return The parsed ErrorHandlingMode with {@link ErrorHandlingMode#DEFAULT} as default.
+         */
+        public static ErrorHandlingMode from(final String paramValue) {
+            if (paramValue != null) {
+                for (final ErrorHandlingMode mode : values()) {
+                    if (paramValue.equals(mode.parameterValue)) {
+                        return mode;
+                    }
+                }
+            }
+            return DEFAULT;
+        }
+    }
 
     private MqttContext(
             final MqttPublishMessage message,
@@ -125,6 +174,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
                 if (result.endpoint == EndpointType.EVENT) {
                     result.timeToLive = determineTimeToLive(bag);
                 }
+                result.errorHandlingMode = ErrorHandlingMode.from(bag.getProperty(PARAM_ON_ERROR));
             });
         return result;
     }
@@ -228,6 +278,47 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
+     * Gets the identifier of the device that the message originates from.
+     * <p>
+     * It is taken from the message topic or, if not set there, from
+     * the authenticated device.
+     * <p>
+     * In a scenario of a gateway sending a message on behalf of an edge
+     * device, the returned identifier is the edge device identifier.
+     *
+     * @return The device identifier or {@code null} if the topic of the message
+     *         does not contain a device identifier and the device is not
+     *         authenticated.
+     */
+    public String deviceId() {
+
+        if (topic != null && !Strings.isNullOrEmpty(topic.getResourceId())) {
+            return topic.getResourceId();
+        } else if (authenticatedDevice != null) {
+            return authenticatedDevice.getDeviceId();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the correlation identifier taken either from a corresponding
+     * property bag value or the message packet id.
+     *
+     * @return The correlation identifier or {@code null} in case of
+     *         a QoS 0 message with no corresponding property bag value.
+     */
+    public String correlationId() {
+        if (propertyBag != null) {
+            final String propertyBagValue = propertyBag.getProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+            if (propertyBagValue != null) {
+                return propertyBagValue;
+            }
+        }
+        return isAtLeastOnce() ? Integer.toString(message.messageId()) : null;
+    }
+
+    /**
      * Gets the property bag object from the <em>property-bag</em>
      * set in the message's topic.
      *
@@ -292,6 +383,19 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      */
     public Sample getTimer() {
         return timer;
+    }
+
+    /**
+     * Gets the mode defining how to handle errors raised when a device publishes a message.
+     *
+     * @param errorSubscriptionExists {@code true} if the device has an error topic subscription.
+     * @return the effective mode.
+     */
+    public ErrorHandlingMode getErrorHandlingMode(final boolean errorSubscriptionExists) {
+        if (errorHandlingMode == ErrorHandlingMode.DEFAULT) {
+            return errorSubscriptionExists ? ErrorHandlingMode.IGNORE : ErrorHandlingMode.DISCONNECT;
+        }
+        return errorHandlingMode;
     }
 
     /**

@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import java.util.Map;
+
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
@@ -44,29 +46,30 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
     }
 
     @Override
-    protected Future<Void> send(
+    protected Future<Integer> send(
             final String tenantId,
             final String deviceId,
             final Buffer payload,
-            final boolean useShortTopicName) {
+            final boolean useShortTopicName,
+            final Map<String, String> topicPropertyBag) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? TelemetryConstants.TELEMETRY_ENDPOINT_SHORT : TelemetryConstants.TELEMETRY_ENDPOINT,
                 tenantId,
                 deviceId);
-        final Promise<Void> result = Promise.promise();
+        final Promise<Integer> result = Promise.promise();
         // throttle sending to allow adapter to be replenished with credits from consumer
         vertx.setTimer(5, go -> {
             mqttClient.publish(
-                    topic,
+                    getTopicWithPropertyBag(topic, topicPropertyBag),
                     payload,
                     getQos(),
                     false, // is duplicate
                     false, // is retained
                     sendAttempt -> {
                         if (sendAttempt.succeeded()) {
-                            result.complete();
+                            result.complete(sendAttempt.result());
                         } else {
                             result.fail(sendAttempt.cause());
                         }

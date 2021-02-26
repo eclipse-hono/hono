@@ -18,13 +18,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -34,18 +38,23 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
+import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
+import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
  * Base class for integration tests verifying that devices can upload messages
@@ -63,6 +72,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * The number of messages to send as part of the test cases.
      */
     protected static final int MESSAGES_TO_SEND = IntegrationTestSupport.MSG_COUNT;
+    /**
+     * The maximum number of milliseconds to wait for the completion of a PUBLISH operation.
+     */
+    protected static final int DEFAULT_PUBLISH_COMPLETION_TIMEOUT = 1000; // milliseconds
     /**
      * The default password of devices.
      */
@@ -85,42 +98,77 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @param deviceId The identifier of the device.
      * @param payload The message to send.
      * @param useShortTopicName Whether to use short or standard topic names
+     * @param topicPropertyBag Property bag properties to add to the topic.
      * @return A future indicating the outcome of the attempt to publish the
-     *         message. The future will succeed if the message has been
-     *         published successfully.
+     *         message. The future will be succeeded if and when the message
+     *         has been published successfully. The future result will be the
+     *         message packet id.
      */
-    protected abstract Future<Void> send(
+    protected abstract Future<Integer> send(
             String tenantId,
             String deviceId,
             Buffer payload,
-            boolean useShortTopicName);
+            boolean useShortTopicName,
+            Map<String, String> topicPropertyBag);
 
     /**
      * Handles the outcome of an attempt to publish a message.
+     * <p>
+     * The given publish result will only get completed once a corresponding completion handler
+     * gets invoked (see {@link #customizeConnectedClient()}).
      *
      * @param attempt The outcome of the attempt to send a PUBLISH message.
      * @param publishResult The overall outcome of publishing the message.
+     * @param publishCompletionTimeout The timeout to wait for the completion of the publish attempt.
      */
-    protected void handlePublishAttempt(final AsyncResult<Integer> attempt, final Promise<?> publishResult) {
+    protected final void handlePublishAttempt(final AsyncResult<Integer> attempt, final Promise<Integer> publishResult,
+            final long publishCompletionTimeout) {
 
         if (attempt.failed()) {
             publishResult.fail(attempt.cause());
         } else {
             final Integer messageId = attempt.result();
-            final long timerId = vertx.setTimer(1000, tid -> {
+            final long timerId = vertx.setTimer(publishCompletionTimeout, tid -> {
                 pendingMessages.remove(messageId);
                 publishResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
             });
             pendingMessages.put(messageId, mid -> {
                 if (vertx.cancelTimer(timerId)) {
-                    publishResult.complete();
+                    publishResult.complete(messageId);
                 }
             });
         }
     }
 
     /**
-     * Asserts that the ration between messages that have been received and messages
+     * Handles the outcome of an attempt to publish a message. Uses the default PUBLISH completion timeout.
+     *
+     * @param attempt The outcome of the attempt to send a PUBLISH message.
+     * @param publishResult The overall outcome of publishing the message.
+     * @see #handlePublishAttempt(AsyncResult, Promise, long)
+     */
+    protected final void handlePublishAttempt(final AsyncResult<Integer> attempt, final Promise<Integer> publishResult) {
+        handlePublishAttempt(attempt, publishResult, DEFAULT_PUBLISH_COMPLETION_TIMEOUT);
+    }
+
+    /**
+     * Creates a topic String with contained property bag properties.
+     *
+     * @param topicWithoutPropertyBag The topic prefix.
+     * @param propertyBag The properties.
+     * @return The topic string.
+     */
+    protected static final String getTopicWithPropertyBag(final String topicWithoutPropertyBag, final Map<String, String> propertyBag) {
+        if (propertyBag == null || propertyBag.isEmpty()) {
+            return topicWithoutPropertyBag;
+        }
+        final QueryStringEncoder encoder = new QueryStringEncoder(topicWithoutPropertyBag + "/");
+        propertyBag.forEach(encoder::addParam);
+        return encoder.toString();
+    }
+
+    /**
+     * Asserts that the ratio between messages that have been received and messages
      * being sent is acceptable for the particular QoS used for publishing messages.
      * <p>
      * This default implementation asserts that received = sent.
@@ -215,7 +263,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password))
             .compose(ok -> {
                 customizeConnectedClient();
-                return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false);
+                return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false, null);
             })
             .onComplete(ctx.succeeding());
     }
@@ -286,6 +334,165 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             false);
     }
 
+    /**
+     * Verifies that sending a number of messages to Hono's MQTT adapter with an invalid content type causes
+     * corresponding error messages to be published to the client if it is subscribed on the error topic.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithWrongContentTypeSendsErrors(final VertxTestContext ctx) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenant = new Tenant();
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        testUploadMessageWithInvalidContentType(ctx, tenantId, deviceId, deviceId);
+    }
+
+    /**
+     * Verifies that sending a number of messages to Hono's MQTT adapter with an invalid content type on
+     * behalf of a gateway managed device causes corresponding error messages to be published to the client
+     * if it is subscribed on the error topic.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithWrongContentTypeForGatewayManagedDeviceSendsErrors(final VertxTestContext ctx) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenant = new Tenant();
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        final String gatewayManagedDevice = helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5);
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        testUploadMessageWithInvalidContentType(ctx, tenantId, deviceId, gatewayManagedDevice);
+    }
+
+    private void testUploadMessageWithInvalidContentType(final VertxTestContext ctx, final String tenantId,
+            final String deviceId, final String deviceToSendTo) throws InterruptedException {
+        doTestUploadMessages(
+                ctx,
+                tenantId,
+                connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
+                (payload) -> {
+                    // send message with empty-notification content type, will cause error since doTestUploadMessages() uses non-empty payload
+                    return sendWithCorrelationIdIfNeeded(tenantId, deviceToSendTo, payload, Map.of(
+                            MessageHelper.SYS_PROPERTY_CONTENT_TYPE, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+                },
+                (messageHandler) -> createConsumer(tenantId, messageHandler),
+                (msg) -> {
+                    final JsonObject payload = new JsonObject(msg.payload());
+                    final String correlationId = payload.getString(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+                    ctx.verify(() -> {
+                        assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                        // error message should be about the non-matching content type
+                        assertThat(payload.getString("message"))
+                                .contains(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+                        // validate topic segments; example: error//myDeviceId/telemetry/4/503
+                        final String[] topicSegments = msg.topicName().split("/");
+                        assertThat(topicSegments.length).isEqualTo(6);
+                        assertThat(topicSegments[0]).isEqualTo("error");
+                        assertThat(topicSegments[1]).isEmpty(); // tenant
+                        assertThat(topicSegments[2]).isEqualTo(deviceId.equals(deviceToSendTo) ? "" : deviceToSendTo);
+                        assertThat(topicSegments[3]).isNotEmpty(); // endpoint used when sending the message that caused the error (e.g. "telemetry")
+                        assertThat(topicSegments[4]).isEqualTo(correlationId);
+                        assertThat(topicSegments[5]).isEqualTo(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST));
+
+                    });
+                    return Future.succeededFuture(correlationId);
+                },
+                "error///#");
+    }
+
+    /**
+     * Verifies that sending a number of messages to Hono's MQTT adapter as a gateway on behalf of an
+     * unregistered device causes corresponding error messages to be published to the client if it is
+     * subscribed on the error topic.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithGatewayManagedDeviceNotFoundError(final VertxTestContext ctx) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenant = new Tenant();
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        final String deviceToSendTo = "nonExistingDevice";
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        doTestUploadMessages(
+                ctx,
+                tenantId,
+                connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
+                (payload) -> sendWithCorrelationIdIfNeeded(tenantId, deviceToSendTo, payload, null),
+                (messageHandler) -> createConsumer(tenantId, messageHandler),
+                (msg) -> {
+                    final JsonObject payload = new JsonObject(msg.payload());
+                    final String correlationId = payload.getString(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+                    ctx.verify(() -> {
+                        assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        // error message should be about the device being unknown or disabled
+                        assertThat(payload.getString("message")).contains("unknown");
+                        // validate topic segments; example: error//myDeviceId/telemetry/4/503
+                        final String[] topicSegments = msg.topicName().split("/");
+                        assertThat(topicSegments.length).isEqualTo(6);
+                        assertThat(topicSegments[0]).isEqualTo("error");
+                        assertThat(topicSegments[1]).isEmpty(); // tenant
+                        assertThat(topicSegments[2]).isEqualTo(deviceToSendTo);
+                        assertThat(topicSegments[3]).isNotEmpty(); // endpoint used when sending the message that caused the error (e.g. "telemetry")
+                        assertThat(topicSegments[4]).isEqualTo(correlationId);
+                        assertThat(topicSegments[5]).isEqualTo(Integer.toString(HttpURLConnection.HTTP_NOT_FOUND));
+
+                    });
+                    return Future.succeededFuture(correlationId);
+                },
+                "error///#");
+    }
+
+    private Future<String> sendWithCorrelationIdIfNeeded(final String tenantId, final String deviceId,
+            final Buffer payload, final Map<String, String> propertyBag) {
+        // QoS 0 messages won't have a packet-id, therefore add a correlation-id in the property bag in that case
+        final String correlationId = UUID.randomUUID().toString();
+        final Map<String, String> propertyBagToUse = propertyBag != null ? new HashMap<>(propertyBag) : new HashMap<>();
+        if (getQos().value() == 0) {
+            propertyBagToUse.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
+        }
+        return send(tenantId, deviceId, payload, false, propertyBagToUse)
+                .map(id -> getQos().value() == 0 ? correlationId : Integer.toString(id));
+    }
+
     private void doTestUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
@@ -293,13 +500,54 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             final Future<MqttConnAckMessage> connection,
             final boolean useShortTopicName)
             throws InterruptedException {
+        doTestUploadMessages(ctx,
+                tenantId,
+                connection,
+                (payload) -> send(tenantId, deviceId, payload, useShortTopicName, null).map(String::valueOf),
+                (messageHandler) -> createConsumer(tenantId, messageHandler),
+                null,
+                null);
+    }
 
+    /**
+     * Uploads a number of messages and verifies that they are either received via the northbound consumer or that
+     * corresponding error messages are published to the client on the error topic.
+     *
+     * @param ctx The test context.
+     * @param tenantId The tenant identifier.
+     * @param connection The MQTT connection future.
+     * @param sender The message sender. The Future result is the correlation/message id of the sent message.
+     * @param consumerSupplier The message consumer. The result may be succeeded with a {@code null} value in case
+     *                         error message handling for a non-existing consumer shall get tested.
+     * @param errorMsgHandler The handler to invoke with received error messages or {@code null} if no error messages
+     *            are expected. The future result is the error message correlation id.
+     * @param errorTopic The errorTopic to subscribe to. Will be ignored of errorMsgHandler is {@code null}.
+     * @throws InterruptedException if the test fails.
+     */
+    protected void doTestUploadMessages(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final Future<MqttConnAckMessage> connection,
+            final Function<Buffer, Future<String>> sender,
+            final Function<Handler<DownstreamMessage<AmqpMessageContext>>, Future<MessageConsumer>> consumerSupplier,
+            final Function<MqttPublishMessage, Future<String>> errorMsgHandler,
+            final String errorTopic)
+            throws InterruptedException {
+
+        final boolean errorMessagesExpected = errorMsgHandler != null;
         final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
         final AtomicInteger messageCount = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong(0);
+        // <correlation id of the sent telemetry/event message, errorMessageReceived promise>
+        final Map<String, Promise<Void>> pendingErrorMessages = new HashMap<>();
+        final AtomicBoolean consumerIsSet = new AtomicBoolean();
 
         final VertxTestContext setup = new VertxTestContext();
-        connection.compose(ok -> createConsumer(tenantId, msg -> {
+        connection.compose(ok -> consumerSupplier.apply(msg -> {
+            if (errorMessagesExpected) {
+                ctx.failNow(new IllegalStateException("consumer received message although sending was supposed to fail"));
+                return;
+            }
             LOGGER.trace("received {}", msg.getMessageContext().getRawMessage());
             ctx.verify(() -> {
                 IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
@@ -311,7 +559,24 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             if (received.getCount() % 50 == 0) {
                 LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
             }
-        })).onComplete(setup.completing());
+        })).compose(msgConsumer -> {
+            consumerIsSet.set(msgConsumer != null);
+            if (errorMsgHandler == null) {
+                return Future.succeededFuture();
+            }
+            mqttClient.publishHandler(msg -> {
+                LOGGER.trace("received error message [topic: {}]", msg.topicName());
+                errorMsgHandler.apply(msg).onSuccess(correlationId -> {
+                    // correlate the error message with the corresponding publish operation and complete the publish operation promise here
+                    pendingErrorMessages.compute(correlationId, (key, oldValue) -> {
+                        final Promise<Void> promise = Optional.ofNullable(oldValue).orElseGet(Promise::promise);
+                        promise.tryComplete();
+                        return oldValue != null ? null : promise; // remove mapping if oldValue is set
+                    });
+                }).onFailure(ctx::failNow);
+            });
+            return subscribeToErrorTopic(errorTopic);
+        }).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -323,25 +588,58 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final long start = System.currentTimeMillis();
         while (messageCount.get() < MESSAGES_TO_SEND) {
-            final CountDownLatch messageSent = new CountDownLatch(1);
+            final CountDownLatch messageHandlingCompleted = new CountDownLatch(errorMessagesExpected ? 2 : 1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
-                send(tenantId, deviceId, msg, useShortTopicName).onComplete(sendAttempt -> {
+                sender.apply(msg).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         LOGGER.error("error sending message {}", messageCount.get(), sendAttempt.cause());
                     }
                     if (messageCount.get() % 50 == 0) {
                         LOGGER.info("messages sent: " + messageCount.get());
                     }
-                    messageSent.countDown();
+                    messageHandlingCompleted.countDown();
+                    if (errorMessagesExpected) {
+                        if (sendAttempt.failed()) {
+                            messageHandlingCompleted.countDown();
+                        } else {
+                            // wait til error message has been received
+                            final String correlationId = sendAttempt.result();
+                            final long timerId = vertx.setTimer(1000, tid -> {
+                                Optional.ofNullable(pendingErrorMessages.remove(correlationId))
+                                        .ifPresent(promise -> promise.tryFail(new ServerErrorException(
+                                                HttpURLConnection.HTTP_UNAVAILABLE, "timeout waiting for error response")));
+                            });
+                            final Handler<AsyncResult<Void>> errorMessageReceivedOrTimeoutHandler = ar -> {
+                                vertx.cancelTimer(timerId);
+                                if (ar.succeeded()) {
+                                    received.countDown();
+                                    lastReceivedTimestamp.set(System.currentTimeMillis());
+                                    if (received.getCount() % 50 == 0) {
+                                        LOGGER.info("error messages received: {}", MESSAGES_TO_SEND - received.getCount());
+                                    }
+                                } else {
+                                    LOGGER.warn("failed to handle error message with correlation id [{}]", correlationId, ar.cause());
+                                }
+                                messageHandlingCompleted.countDown();
+                            };
+                            pendingErrorMessages.compute(correlationId, (key, oldValue) -> {
+                                final Promise<Void> promise = Optional.ofNullable(oldValue).orElseGet(Promise::promise);
+                                promise.future().onComplete(errorMessageReceivedOrTimeoutHandler);
+                                return oldValue != null ? null : promise; // remove mapping if oldValue is set
+                            });
+                        }
+                    }
                 });
             });
 
-            messageSent.await();
+            messageHandlingCompleted.await();
         }
 
-        if (!received.await(getTimeToWait(), TimeUnit.MILLISECONDS)) {
-            LOGGER.info("Timeout of {} milliseconds reached, stop waiting to receive messages.", getTimeToWait());
+        // in case no consumer is set, waiting time needs to be longer (adapter will wait for credit when creating the first downstream sender)
+        final long timeToWait = getTimeToWait() + (!consumerIsSet.get() ? 2000 : 0);
+        if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            LOGGER.info("Timeout of {} milliseconds reached, stop waiting to receive messages.", timeToWait);
         }
         if (lastReceivedTimestamp.get() == 0L) {
             // no message has been received at all
@@ -353,9 +651,33 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         assertMessageReceivedRatio(messagesReceived, messageCount.get(), ctx);
     }
 
+    private Future<Void> subscribeToErrorTopic(final String errorTopic) {
+        final Promise<Void> result = Promise.promise();
+        final AtomicReference<Integer> subMessageIdRef = new AtomicReference<>();
+        mqttClient.subscribeCompletionHandler(subAckMsg -> {
+            final List<Integer> ackQoSLevels = subAckMsg.grantedQoSLevels();
+            if (ackQoSLevels.size() == 1 && ackQoSLevels.get(0) == 0 && subAckMsg.messageId() == subMessageIdRef.get()) {
+                result.complete();
+            } else {
+                result.fail("could not subscribe to error topic");
+            }
+        });
+        mqttClient.subscribe(Optional.ofNullable(errorTopic).orElse("error///#"), 0, ar -> {
+            if (ar.succeeded()) {
+                subMessageIdRef.set(ar.result());
+            } else {
+                result.fail("could not subscribe to error topic: " + ar.cause().getMessage());
+            }
+        });
+        return result.future().onComplete(v -> mqttClient.subscribeCompletionHandler(null));
+    }
+
     /**
      * Invoked before messages are being published by test cases.
      * Provides a hook to e.g. further customize the MQTT client.
+     * <p>
+     * This default implementation makes sure that the result promise of {@link #handlePublishAttempt(AsyncResult, Promise)}
+     * gets completed when a publish completion handler gets called.
      */
     protected void customizeConnectedClient() {
         mqttClient.publishCompletionHandler(id -> {

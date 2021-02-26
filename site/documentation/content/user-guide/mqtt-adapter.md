@@ -95,7 +95,11 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
 * the messages published by the client comply with the format defined by the Telemetry API.
 
-The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the incoming telemetry message cannot be processed, the connection to the client is closed.
+The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. An exceeded message limit will cause an error.
+
+Any kind of error when processing an incoming telemetry message will be reported back to the client if the client has subscribed on a dedicated error topic. See [Error Reporting via Error Topic]({{< relref "#error-reporting-via-error-topic" >}}) for details.
+
+If such an error subscription by the client exists, the error will by default be ignored after it got published on the error topic, otherwise the connection to the client will be closed. The handling of errors can further be controlled by means of an *on-error* property bag parameter set on the telemetry message topic. Refer to [Error Handling]({{< relref "#error-handling" >}}) for details.
 
 The devices can optionally indicate the content type of the payload by setting the *content-type* property explicitly in the `property-bag`. The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by `&`. For example, a property bag containing two properties *seqNo* and *importance* looks like this: `/topic/name/?seqNo=10034&importance=high`.
 
@@ -174,7 +178,11 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process events for the client's tenant and
 * the events published by the client comply with the format defined by the Event API.
 
-The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded or the incoming event message cannot be processed, the connection to the client is closed.
+The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any event messages. An exceeded message limit will cause an error.
+
+Any kind of error when processing an incoming event message will be reported back to the client if the client has subscribed on a dedicated error topic. See [Error Reporting via Error Topic]({{< relref "#error-reporting-via-error-topic" >}}) for details.
+
+If such an error subscription by the client exists, the error will by default be ignored after it got published on the error topic, otherwise the connection to the client will be closed. The handling of errors can further be controlled by means of an *on-error* property bag parameter set on the event message topic. Refer to [Error Handling]({{< relref "#error-handling" >}}) for details.
 
 The devices can optionally indicate a *time-to-live* duration for event messages and the content type of the payload by setting the *hono-ttl* and *content-type* properties explicitly in the `property-bag`. The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by `&`. For example, a property bag containing two properties *seqNo* and *importance* looks like this: `/topic/name/?seqNo=10034&importance=high`.
 
@@ -250,7 +258,7 @@ mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t event/DEFAULT_TENANT/4712 -
 
 ## Command & Control
 
-The MQTT adapter enables devices to receive commands that have been sent by business applications by means of sending an MQTT *SUBSCRIBE* packet containing a device specific *topic filter* as described below. Devices can subscribe with QoS 1 or QoS 0. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The SUBACK packet will contain *Success - QoS 0* (`0x00`) or *Success - QoS 1* (`0x01`) for a command topic filter indicating QoS 0 or 1 and will contain the *Failure* (`0x80`) value for all other filters. When a device no longer wants to receive commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
+The MQTT adapter enables devices to receive commands that have been sent by business applications by means of sending an MQTT *SUBSCRIBE* packet containing a device specific *topic filter* as described below. Devices can subscribe with QoS 1 or QoS 0. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The SUBACK packet will contain *Success - QoS 0* (`0x00`) or *Success - QoS 1* (`0x01`) for a valid command topic filter indicating QoS 0 or 1 and will contain the *Failure* (`0x80`) value for an invalid or unsupported filter. When a device no longer wants to receive commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
 
 When a device has successfully subscribed, the adapter sends an [empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device unsubscribes from commands.
 
@@ -498,6 +506,141 @@ After a command has arrived as in the above example, the response is sent using 
 ```sh
 mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
+
+## Error Reporting via Error Topic
+
+The default behaviour when an error occurs while publishing telemetry, event or command response messages is for the MQTT adapter to close the network connection to the device, as mandated by the MQTT 3.1.1 spec.
+
+An alternative way of dealing with errors involves keeping the connection intact and letting the MQTT adapter publish a corresponding error message on a specific error topic to the device. To enable that behaviour, the device sends an MQTT *SUBSCRIBE* packet with a topic filter as described below on *the same MQTT connection* that is also used for publishing the telemetry, event or command response messages. Devices can subscribe with QoS 0 only. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The SUBACK packet will contain *Success - QoS 0* (`0x00`) for a valid error topic filter and will contain the *Failure* (`0x80`) value for an invalid or unsupported filter. In order to again activate the default error handling behaviour, the device can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
+
+The following sections define the topic filters to use for subscribing to error messages and the resulting error message topic. Instead of the `error` topic path segment, the shorthand version `e` is also supported.
+
+The following variables are used:
+
+* `${endpoint-type}`: The endpoint type of the device message that caused the error. Its value is either `telemetry`, `event` or the respective shorthand version. In case of a command response device message `command-response` or `c-s` is used.
+* `${correlation-id}`: The identifier that may be used to correlate the error message with the device message that caused the error. The identifier is either the value of a *correlation-id* property bag value contained in the device message topic, or the identifier is the *packet-id* of the device message if it was sent with QoS 1. Otherwise, a value of `-1` is used.
+* `${error-status}`: The HTTP status code of the error that was caused by the device message.
+
+{{% note title="Examples" %}}
+Since the subscription on the error topic needs to be done on the same MQTT connection that is also used for publishing the telemetry, event or command response messages, the Mosquitto MQTT Command Line Client cannot be used. The [MQTT CLI](https://hivemq.github.io/mqtt-cli/) tool with its [shell mode](https://hivemq.github.io/mqtt-cli/docs/shell.html) is an alternative that supports using one MQTT connection for both subscribing and publishing.
+{{% /note %}}
+
+### Receiving Error Messages (authenticated Device)
+
+An authenticated device MUST use the following topic filter for subscribing to error messages:
+
+`error/[${tenant-id}]/[${device-id}]/#`
+
+Both the tenant and the device ID are optional. If specified, they MUST match the authenticated device's tenant and/or device ID.
+Note that the *authentication identifier* used in the device's credentials is *not* necessarily the same as the device ID.
+
+The protocol adapter will publish error messages for the device to the following topic name
+
+`error/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
+
+The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
+in the topic filter used for subscribing to error messages.
+
+**Example**
+
+An example using the [MQTT CLI](https://hivemq.github.io/mqtt-cli/) that will produce an error output provided there is no downstream consumer for the device messages.
+
+```sh
+mqtt shell
+con -V 3 -h [MQTT_ADAPTER_IP] -u [DEVICE]@[TENANT] -pw [PWD]
+sub -t error///# --qos 0 --outputToConsole
+pub -t telemetry -m '{"temp": 5}' --qos 1
+```
+
+Using an explicit correlation id:
+```sh
+pub -t telemetry/?correlation-id=123 -m '{"temp": 5}' --qos 1
+```
+
+### Receiving Error Messages (unauthenticated Device)
+
+An unauthenticated device MUST use the following topic filter for subscribing to error messages:
+
+`error/${tenant-id}/${device-id}/#`
+
+The protocol adapter will publish error messages for the device to the following topic name
+
+`error/${tenant-id}/${device-id}/${endpoint-type}/${correlation-id}/${error-status}`
+
+### Receiving Error Messages (authenticated Gateway)
+
+An authenticated gateway MUST use one of the following topic filters for subscribing to error messages:
+
+| Topic Filter                                                    | Description |
+| :-------------------------------------------------------------- | :---------- |
+| `error//+/#`<br/>`error/${tenant-id}/+/#`                       | Subscribe to error messages for all devices that the gateway is authorized to act on behalf of. |
+| `error//${device-id}/#`<br/>`error/${tenant-id}/${device-id}/#` | Subscribe to error messages for a specific device that the gateway is authorized to act on behalf of. |
+
+The protocol adapter will publish error messages for the device to the following topic name
+
+`error/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
+
+The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
+in the topic filter used for subscribing to error messages.
+
+### Error Message Payload
+
+The MQTT adapter publishes error messages with a UTF-8 encoded JSON payload containing the following fields:
+
+| Name             | Mandatory | JSON Type     | Description |
+| :--------------- | :-------: | :------------ | :---------- |
+| *code*           | *yes*     | *number*      | The HTTP error status code. See the table below for possible values. |
+| *message*        | *yes*     | *string*      | The error detail message. |
+| *timestamp*      | *yes*     | *string*      | The date and time the error message was published by the MQTT adapter. The value is an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). |
+| *correlation-id* | *yes*     | *string*      | The identifier that may be used to correlate the error message with the device message that caused the error. The identifier is either the value of a *correlation-id* property bag value contained in the device message topic, or the identifier is the *packet-id* of the device message if it was sent with QoS 1. Otherwise a value of `-1` is used. |
+
+
+The error message's *code* field may contain the following HTTP status codes:
+
+| Code  | Description |
+| :---- | :---------- |
+| *400* | Bad Request, the request cannot be processed. A possible reason for this is an invalid *PUBLISH* topic. |
+| *403* | Forbidden, the device's registration status cannot be asserted. |
+| *404* | Not Found, the device is disabled or does not exist. |
+| *413* | Request Entity Too Large, the request body exceeds the maximum supported size. |
+| *429* | Too Many Requests, the tenant's message limit for the current period is exceeded. |
+| *503* | Service Unavailable, the request cannot be processed. Possible reasons for this include:<ul><li>There is no consumer of telemetry data for the given tenant connected to Hono, or the consumer has not indicated that it may receive further messages (not giving credits). </li><li>If the QoS level header is set to `1` (*at least once* semantics), the reason may be: <ul><li>The consumer has indicated that it didn't process the telemetry data.</li> <li>The consumer failed to indicate in time whether it has processed the telemetry data.</li></ul></li></ul>|
+
+Example payload:
+```json
+{
+"code": 400,
+"message": "malformed topic name",
+"timestamp": "2020-12-24T19:00:00+0100",
+"correlation-id": "5"
+}
+```
+
+## Error Handling
+
+When a device publishes a telemetry, event or command response message and there is an error processing the message, the handling of the error depends on whether there is a [error topic subscription]({{< relref "#error-reporting-via-error-topic" >}}) for the device and whether a *on-error* property bag parameter was set on the topic used for sending the message.
+
+If no error subscription is in place and no *on-error* parameter was set, the default error handling behaviour is to close the MQTT connection to the device.
+If the device has a subscription on the error topic (on the same MQTT connection the device uses for sending messages), the default behaviour is to keep the MQTT connection open. 
+
+The following table lists the different behaviours based on the value of the *on-error* property bag parameter and the existence of an error subscription:
+
+| *on-error* topic parameter  | Error subscription exists | Description |
+| :-------------------------- | :------------------------ | :---------- |
+| *default* or value not set  | no                        | The connection to the device will get closed (like with the *disconnect* option). |
+| *disconnect*                | no                        | The connection to the device will get closed. |
+| *ignore*                    | no                        | The error will be ignored and a *PUBACK* for the message that caused the error will get sent. |
+| *skip-ack*                  | no                        | The error will be ignored and no *PUBACK* for the message that caused the error will get sent. |
+| *default* or value not set  | yes                       | After having sent an error message on the error topic, the error will be ignored and a *PUBACK* for the message that caused the error will get sent (like with the *ignore* option). |
+| *disconnect*                | yes                       | After having sent an error message on the error topic, the connection to the device will get closed. |
+| *ignore*                    | yes                       | After having sent an error message on the error topic, the error will be ignored and a *PUBACK* for the message that caused the error will get sent. |
+| *skip-ack*                  | yes                       | After having sent an error message on the error topic, the error will be ignored and no *PUBACK* for the message that caused the error will get sent. |
+
+**Example**
+
+An authenticated device wanting to have errors always be ignored can for example publish telemetry messages on this topic:
+
+`telemetry/?on-error=ignore`
 
 ## Custom Message Mapping
 

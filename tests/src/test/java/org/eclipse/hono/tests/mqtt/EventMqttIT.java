@@ -56,29 +56,31 @@ public class EventMqttIT extends MqttPublishTestBase {
     }
 
     @Override
-    protected Future<Void> send(
-            final String tenantId,
-            final String deviceId,
-            final Buffer payload,
-            final boolean useShortTopicName) {
-        return send(tenantId, deviceId, payload, useShortTopicName, this::handlePublishAttempt);
-    }
-
-    private Future<Void> send(
+    protected Future<Integer> send(
             final String tenantId,
             final String deviceId,
             final Buffer payload,
             final boolean useShortTopicName,
-            final BiConsumer<AsyncResult<Integer>, Promise<Void>> sendAttemptHandler) {
+            final Map<String, String> topicPropertyBag) {
+        return send(tenantId, deviceId, payload, useShortTopicName, topicPropertyBag, this::handlePublishAttempt);
+    }
+
+    private Future<Integer> send(
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload,
+            final boolean useShortTopicName,
+            final Map<String, String> topicPropertyBag,
+            final BiConsumer<AsyncResult<Integer>, Promise<Integer>> sendAttemptHandler) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? EventConstants.EVENT_ENDPOINT_SHORT : EventConstants.EVENT_ENDPOINT,
                 tenantId,
                 deviceId);
-        final Promise<Void> result = Promise.promise();
+        final Promise<Integer> result = Promise.promise();
         mqttClient.publish(
-                topic,
+                getTopicWithPropertyBag(topic, topicPropertyBag),
                 payload,
                 getQos(),
                 false, // is duplicate
@@ -128,7 +130,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         // WHEN a device that belongs to the tenant publishes an event
         final AtomicInteger receivedMessageCount = new AtomicInteger(0);
         connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
-        .compose(connAck -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
+        .compose(connAck -> send(tenantId, deviceId, Buffer.buffer("hello"), false, null, (sendAttempt, result) -> {
             if (sendAttempt.succeeded()) {
                 LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}]", tenantId, deviceId);
                 result.complete();
@@ -186,7 +188,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        send(tenantId, deviceId, Buffer.buffer(messagePayload), false, (sendAttempt, result) -> {
+        send(tenantId, deviceId, Buffer.buffer(messagePayload), false, null, (sendAttempt, result) -> {
             if (sendAttempt.succeeded()) {
                 LOGGER.debug("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
                 // THEN create a consumer once the event message has been successfully sent
