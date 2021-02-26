@@ -11,6 +11,17 @@ The support of Kafka as a messaging system is currently a preview and not yet re
 The implementation as well as it's APIs may change with the next version. 
 {{% /note %}}
 
+## Configure for Kafka based Messaging
+
+The selection of whether to use AMQP or Kafka for the messaging can be configured on the tenant. This requires that
+protocol adapters must have the configurations for both messaging networks. 
+To configure a tenant to use Kafka, the [tenant configuration]({{< relref "/api/tenant#tenant-information-format" >}}) 
+must contain a field `ext`, which contains a field with the key `messaging-type` and the value `kafka` 
+(to use AMQP, the value must be `amqp`).
+
+If the configuration of a protocol adapter contains only the connection to one messaging system, this will be used.
+**NB**: If only one messaging network is configured at protocol adapters, make sure that tenants are not configured to use another. 
+
 ## Producer Configuration Properties
 
 The `org.eclipse.hono.client.kafka.CachingKafkaProducerFactory` factory can be used to create Kafka producers for Hono's Kafka based APIs. 
