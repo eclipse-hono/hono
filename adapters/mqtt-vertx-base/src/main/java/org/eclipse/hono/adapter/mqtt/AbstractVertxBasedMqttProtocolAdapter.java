@@ -14,6 +14,10 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -47,6 +51,7 @@ import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.limiting.ConnectionLimitManager;
 import org.eclipse.hono.adapter.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
+import org.eclipse.hono.adapter.mqtt.MqttContext.ErrorHandlingMode;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
@@ -79,6 +84,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
@@ -1043,6 +1049,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         private final Device authenticatedDevice;
         private final OptionalInt traceSamplingPriority;
         private final Map<Subscription.Key, Pair<CommandSubscription, CommandConsumer>> commandSubscriptions = new ConcurrentHashMap<>();
+        private final Map<Subscription.Key, ErrorSubscription> errorSubscriptions = new HashMap<>();
         private final PendingPubAcks pendingAcks = new PendingPubAcks(vertx);
 
         /**
@@ -1103,6 +1110,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         if (processing.succeeded()) {
                             Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
                             onMessageSent(context);
+                            span.finish();
                         } else {
                             Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(processing.cause()));
                             if (processing.cause() instanceof ClientErrorException) {
@@ -1111,12 +1119,32 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 onMessageUndeliverable(context);
                             }
                             TracingHelper.logError(span, processing.cause());
-                            if (context.deviceEndpoint().isConnected()) {
-                                span.log("closing connection to device");
-                                context.deviceEndpoint().close();
-                            }
+
+                            final ErrorSubscription errorSubscription = getErrorSubscription(context);
+                            final Future<Void> errorSentIfNeededFuture = Optional.ofNullable(errorSubscription)
+                                    .map(v -> publishError(errorSubscription, context, processing.cause(), span.context()))
+                                    .orElseGet(Future::succeededFuture);
+
+                            errorSentIfNeededFuture.onComplete(ar -> {
+                                final ErrorHandlingMode errorHandlingMode = context
+                                        .getErrorHandlingMode(errorSubscription != null);
+                                final boolean isTerminalError = false; // TODO implement detection of terminal error
+                                if (errorHandlingMode == ErrorHandlingMode.DISCONNECT || isTerminalError) {
+                                    if (context.deviceEndpoint().isConnected()) {
+                                        span.log("closing connection to device");
+                                        context.deviceEndpoint().close();
+                                    }
+                                } else if (context.isAtLeastOnce()) {
+                                    if (errorHandlingMode == ErrorHandlingMode.SKIP_ACK) {
+                                        span.log("skipped sending PUBACK");
+                                    } else if (context.deviceEndpoint().isConnected()) {
+                                        span.log("sending PUBACK");
+                                        context.acknowledge();
+                                    }
+                                }
+                                span.finish();
+                            });
                         }
-                        span.finish();
                     });
         }
 
@@ -1154,6 +1182,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
         }
 
+        private ErrorSubscription getErrorSubscription(final MqttContext context) {
+            ErrorSubscription result = null;
+            if (context.tenant() != null && context.deviceId() != null) {
+                // first check for a subscription with the device id taken from the topic or the authenticated device
+                // (handles case where a gateway is publishing for specific edge devices and has individual error subscriptions for them)
+                result = errorSubscriptions.get(ErrorSubscription.getKey(context.tenant(), context.deviceId()));
+            }
+            if (result == null && context.authenticatedDevice() != null) {
+                // otherwise check using the authenticated device (ie. potentially gateway) id
+                result = errorSubscriptions
+                        .get(ErrorSubscription.getKey(context.tenant(), context.authenticatedDevice().getDeviceId()));
+            }
+            return result;
+        }
+
         /**
          * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
          *
@@ -1168,8 +1211,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         /**
          * Invoked when a device sends an MQTT <em>SUBSCRIBE</em> packet.
          * <p>
-         * This method currently only supports topic filters for subscribing to
-         * commands as defined by Hono's
+         * This method supports topic filters for subscribing to commands
+         * and error messages as defined by Hono's
          * <a href="https://www.eclipse.org/hono/docs/user-guide/mqtt-adapter/#command-control">
          * MQTT adapter user guide</a>.
          * <p>
@@ -1195,24 +1238,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             topicSubscriptions.descendingIterator().forEachRemaining(mqttTopicSub -> {
 
                 final Future<Subscription> result;
-                // we currently only support subscriptions for receiving commands
-                final CommandSubscription cmdSub = CommandSubscription.fromTopic(mqttTopicSub, authenticatedDevice);
-                if (cmdSub == null) {
+                final Subscription sub = CommandSubscription.hasCommandEndpointPrefix(mqttTopicSub.topicName())
+                        ? CommandSubscription.fromTopic(mqttTopicSub, authenticatedDevice)
+                        : ErrorSubscription.fromTopic(mqttTopicSub, authenticatedDevice);
+
+                if (sub == null) {
                     TracingHelper.logError(span, String.format("unsupported topic filter [%s]", mqttTopicSub.topicName()));
                     log.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
                             mqttTopicSub.topicName(), mqttTopicSub.qualityOfService());
                     result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
                 } else {
-                    if (uniqueSubscriptions.containsKey(cmdSub.getKey())) {
+                    if (uniqueSubscriptions.containsKey(sub.getKey())) {
                         final Map<String, Object> items = new HashMap<>(3);
                         items.put(Fields.EVENT, "ignoring duplicate subscription");
-                        items.put(LOG_FIELD_TOPIC_FILTER, cmdSub.getTopic());
-                        items.put("requested QoS", cmdSub.getQos());
+                        items.put(LOG_FIELD_TOPIC_FILTER, sub.getTopic());
+                        items.put("requested QoS", sub.getQos());
                         span.log(items);
-                        result = uniqueSubscriptions.get(cmdSub.getKey());
+                        result = uniqueSubscriptions.get(sub.getKey());
                     } else {
-                        result = registerCommandSubscription(cmdSub, span);
-                        uniqueSubscriptions.put(cmdSub.getKey(), result);
+                        result = registerSubscription(sub, span);
+                        uniqueSubscriptions.put(sub.getKey(), result);
                     }
                 }
                 subscriptionOutcomes.addFirst(result); // add first to get the same order as in the SUBSCRIBE packet
@@ -1247,6 +1292,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             });
         }
 
+        private Future<Subscription> registerSubscription(final Subscription sub, final Span span) {
+            return (sub instanceof CommandSubscription)
+                    ? registerCommandSubscription((CommandSubscription) sub, span)
+                    : registerErrorSubscription((ErrorSubscription) sub, span);
+        }
+
         private Future<Subscription> registerCommandSubscription(final CommandSubscription cmdSub, final Span span) {
 
             if (MqttQoS.EXACTLY_ONCE.equals(cmdSub.getQos())) {
@@ -1273,6 +1324,102 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos(), t);
                         return Future.failedFuture(t);
                     });
+        }
+
+        private Future<Subscription> registerErrorSubscription(final ErrorSubscription errorSub, final Span span) {
+
+            if (!MqttQoS.AT_MOST_ONCE.equals(errorSub.getQos())) {
+                TracingHelper.logError(span, String.format("topic filter [%s] with unsupported QoS %d", errorSub.getTopic(), errorSub.getQos().value()));
+                return Future.failedFuture(new IllegalArgumentException(String.format("QoS %d not supported for error subscription", errorSub.getQos().value())));
+            }
+            return Future.succeededFuture()
+                    .compose(v -> {
+                        // in case of a gateway having subscribed for a specific device,
+                        // check the via-gateways, ensuring that the gateway may act on behalf of the device at this point in time
+                        if (errorSub.isGatewaySubscriptionForSpecificDevice()) {
+                            return getRegistrationAssertion(
+                                    authenticatedDevice.getTenantId(),
+                                    errorSub.getDeviceId(),
+                                    authenticatedDevice,
+                                    span.context());
+                        }
+                        return Future.succeededFuture();
+                    }).recover(t -> {
+                        errorSub.logSubscribeFailure(span, t);
+                        log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
+                                errorSub.getTenant(), errorSub.getDeviceId(), errorSub.getTopic(), errorSub.getQos(), t);
+                        return Future.failedFuture(t);
+                    }).compose(v -> {
+                        errorSubscriptions.put(errorSub.getKey(), errorSub);
+                        errorSub.logSubscribeSuccess(span);
+                        log.debug("created subscription [tenant: {}, device: {}, filter: {}, QoS: {}]",
+                                errorSub.getTenant(), errorSub.getDeviceId(), errorSub.getTopic(), errorSub.getQos());
+                        return Future.succeededFuture(errorSub);
+                    });
+        }
+
+        /**
+         * Publishes an error message to the device.
+         * <p>
+         * Used for an error that occurred in the context of the given MqttContext,
+         * while processing an MQTT message published by a device.
+         *
+         * @param subscription The device's command subscription.
+         * @param context The context in which the error occurred.
+         * @param error The error exception.
+         * @param spanContext The span context.
+         * @return A future indicating the outcome of the operation.
+         * @throws NullPointerException if any of the parameters except spanContext is {@code null}.
+         */
+        protected final Future<Void> publishError(
+                final ErrorSubscription subscription,
+                final MqttContext context,
+                final Throwable error,
+                final SpanContext spanContext) {
+
+            Objects.requireNonNull(subscription);
+            Objects.requireNonNull(context);
+            Objects.requireNonNull(error);
+
+            final Span span = newChildSpan(spanContext, "publish error to device");
+
+            final int errorCode = ServiceInvocationException.extractStatusCode(error);
+            final String clientFacingErrorMessage = error instanceof ServerErrorException
+                    ? ((ServerErrorException) error).getClientFacingMessage()
+                    : null;
+            final String errorMessage = Optional.ofNullable(clientFacingErrorMessage).orElse(error.getMessage());
+            final String correlationId = Optional.ofNullable(context.correlationId()).orElse("-1");
+            final String publishTopic = subscription.getErrorPublishTopic(context, errorCode);
+            Tags.MESSAGE_BUS_DESTINATION.set(span, publishTopic);
+            TracingHelper.TAG_QOS.set(span, subscription.getQos().name());
+
+            final JsonObject errorJson = new JsonObject();
+            errorJson.put("code", errorCode);
+            errorJson.put("message", errorMessage);
+            errorJson.put("timestamp", ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
+                    .format(DateTimeFormatter.ISO_INSTANT));
+            errorJson.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
+
+            final String targetInfo = authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(context.deviceId())
+                    ? String.format("gateway [%s], device [%s]", authenticatedDevice.getDeviceId(), context.deviceId())
+                    : String.format("device [%s]", context.deviceId());
+
+            final Promise<Integer> resultPromise = Promise.promise();
+            endpoint.publish(publishTopic, errorJson.toBuffer(), subscription.getQos(), false, false, resultPromise);
+            return resultPromise.future()
+                    .onSuccess(msgId -> {
+                        log.debug("published error message [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                                msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                                subscription.getQos(), publishTopic);
+                        span.log(subscription.getQos().value() > 0 ? "published error message, packet-id: " + msgId
+                                : "published error message");
+                    }).onFailure(thr -> {
+                        log.debug("error publishing error message to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                                targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                                subscription.getQos(), publishTopic, thr);
+                        TracingHelper.logError(span, "failed to publish error message", thr);
+                    }).map(msgId -> (Void) null)
+                    .onComplete(ar -> span.finish());
         }
 
         private Future<CommandConsumer> createCommandConsumer(final CommandSubscription subscription, final Span span) {
@@ -1478,6 +1625,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 subscription.logUnsubscribe(span);
                                 removalDoneFutures.add(
                                         onCommandSubscriptionRemoved(subscriptionCommandConsumerPair, span));
+                            });
+                } else if (ErrorSubscription.hasErrorEndpointPrefix(topic)) {
+                    Optional.ofNullable(ErrorSubscription.getKey(topic, authenticatedDevice))
+                            .map(errorSubscriptions::remove)
+                            .ifPresent(subscription -> {
+                                removedSubscription.set(subscription);
+                                subscription.logUnsubscribe(span);
                             });
                 }
                 if (removedSubscription.get() != null) {

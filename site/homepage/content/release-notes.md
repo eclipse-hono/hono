@@ -15,6 +15,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The LoraWAN protocol adapter has been extended with support for *The Things Stack* provider.
 * Added (experimental) Quarkus based variant of the Authentication service.
 * Added (experimental) Quarkus based variant of the CoAP protocol adapter.
+* The MQTT adapter now lets devices subscribe on a new error topic to get informed about errors during the processing
+  of telemetry, event or command response message. With such an error subscription in place, the default behaviour
+  on such errors is now to keep the MQTT connection open. Please refer to the
+  [MQTT Adapter User Guide] ({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
 
 ### Fixes & Enhancements
 
