@@ -49,7 +49,7 @@ public final class TimeUntilDisconnectNotification {
      * @param creationTime The Instant that points to when the notification message was created at the client (adapter).
      * @throws NullPointerException If readyUntil is null.
      */
-    private TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd,
+    public TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd,
                                             final Instant readyUntil, final Instant creationTime) {
         Objects.requireNonNull(readyUntil);
 
@@ -166,9 +166,20 @@ public final class TimeUntilDisconnectNotification {
         return Optional.empty();
     }
 
-    private static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
+    /**
+     * Calculates the instant until which the device is ready based on the given point of time.
+     *
+     * @param ttd The TTD of the device.
+     * @param startingFrom The point of time used as the start for the calculation. If {@code null}, the device is
+     *                     considered as never ready, meaning {@link Instant#MIN} is returned.
+     *
+     * @return The instant until the device is ready.
+     */
+    public static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
         if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
             return Instant.MAX;
+        } else if (startingFrom == null) {
+            return Instant.MIN;
         } else {
             return startingFrom.plusSeconds(ttd);
         }

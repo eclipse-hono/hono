@@ -803,15 +803,39 @@ public final class MessageHelper {
      * @throws NullPointerException If msg is {@code null}.
      */
     public static boolean isDeviceCurrentlyConnected(final Message msg) {
+        Objects.requireNonNull(msg);
 
-        return Optional.ofNullable(MessageHelper.getTimeUntilDisconnect(msg)).map(ttd -> {
-            if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
+        return isDeviceCurrentlyConnected(getTimeUntilDisconnect(msg), msg.getCreationTime());
+    }
+
+
+    /**
+     * Checks if a device is currently connected to a protocol adapter.
+     * <p>
+     * If this method returns {@code true} an attempt could be made to send a command to the device.
+     * <p>
+     * This method uses the message's creation time and TTD value to determine the point in time
+     * until which the device will remain connected.
+     *
+     * @param ttd The TTD value.
+     * @param creationTime The creation time of the message. If {@code null} the device is considered as disconnected.
+     * @return {@code true} if the TTD value contained in the message indicates that the device will
+     *         stay connected for some additional time.
+     */
+    public static boolean isDeviceCurrentlyConnected(final Integer ttd, final Long creationTime) {
+
+        return Optional.ofNullable(ttd).map(ttdValue -> {
+            if (ttdValue == MessageHelper.TTD_VALUE_UNLIMITED) {
                 return true;
-            } else if (ttd == 0) {
+            } else if (ttdValue == 0) {
                 return false;
             } else {
-                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
-                return Instant.now().isBefore(creationTime.plusSeconds(ttd));
+                if (creationTime == null) {
+                    return false;
+                }
+
+                final Instant creationTimeInstant = Instant.ofEpochMilli(creationTime);
+                return Instant.now().isBefore(creationTimeInstant.plusSeconds(ttdValue));
             }
         }).orElse(false);
     }
