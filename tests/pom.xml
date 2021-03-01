@@ -335,6 +335,76 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.kafka.disabled>false</hono.kafka.disabled>
         <messaging.profile>kafka,</messaging.profile>
       </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.0.0</version>
+            <executions>
+              <execution>
+                <id>reserve-network-port</id>
+                <goals>
+                  <goal>reserve-network-port</goal>
+                </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <randomPort>true</randomPort>
+                  <portNames>
+                    <!--
+                      The port on which Kafka's advertised listener for the Docker-external clients is set up
+                      must be the same on which Docker exposes the container port to the "outside".
+                      The docker-maven-plugin cannot be used since the advertised listener is defined as an
+                      environment variable of the container and the plugin chooses the random port after the definition
+                      of the container is made.
+                    -->
+                    <portName>kafka.port</portName>
+                  </portNames>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <!--
+              The standard Maven plugin for writing properties cannot be used as it is only capable of writing
+              all project properties to file but not specific ones only.
+            -->
+            <groupId>com.internetitem</groupId>
+            <artifactId>write-properties-file-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>post-integration-test</phase>
+                <goals>
+                  <goal>write-properties-file</goal>
+                </goals>
+                <configuration>
+                  <filename>kafka.port.properties</filename>
+                  <outputDirectory>${project.build.directory}/docker</outputDirectory>
+                  <properties>
+                    <property>
+                      <name>kafka.port</name>
+                      <value>${kafka.port}</value>
+                    </property>
+                    <property>
+                      <name>docker.host.address</name>
+                      <value>${docker.host.address}</value>
+                    </property>
+                  </properties>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <systemProperties>
+                <downstream.bootstrap.servers>${docker.host.address}:${kafka.port}</downstream.bootstrap.servers>
+              </systemProperties>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>device-registry-file</id>
@@ -446,63 +516,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <stripClassifier>true</stripClassifier>
                   <stripVersion>true</stripVersion>
                   <excludeTransitive>true</excludeTransitive>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <version>3.0.0</version>
-            <executions>
-              <execution>
-                <id>reserve-network-port</id>
-                <goals>
-                  <goal>reserve-network-port</goal>
-                </goals>
-                <phase>initialize</phase>
-                <configuration>
-                  <randomPort>true</randomPort>
-                  <portNames>
-                    <!--
-                      The port on which Kafka's advertised listener for the Docker-external clients is set up
-                      must be the same on which Docker exposes the container port to the "outside".
-                      The docker-maven-plugin cannot be used since the advertised listener is defined as an
-                      environment variable of the container and the plugin chooses the random port after the definition
-                      of the container is made.
-                    -->
-                    <portName>kafka.port</portName>
-                  </portNames>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <!--
-              The standard Maven plugin for writing properties cannot be used as it is only capable of writing
-              all project properties to file but not specific ones only.
-            -->
-            <groupId>com.internetitem</groupId>
-            <artifactId>write-properties-file-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>post-integration-test</phase>
-                <goals>
-                  <goal>write-properties-file</goal>
-                </goals>
-                <configuration>
-                  <filename>kafka.port.properties</filename>
-                  <outputDirectory>${project.build.directory}/docker</outputDirectory>
-                  <properties>
-                    <property>
-                      <name>kafka.port</name>
-                      <value>${kafka.port}</value>
-                    </property>
-                    <property>
-                      <name>docker.host.address</name>
-                      <value>${docker.host.address}</value>
-                    </property>
-                  </properties>
                 </configuration>
               </execution>
             </executions>
@@ -1503,7 +1516,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.amqps.port>${qpid.amqps.port}</downstream.amqps.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
-                <downstream.bootstrap.servers>${docker.host.address}:${kafka.port}</downstream.bootstrap.servers>
                 <deviceconnection.enabled>${hono.commandrouter.disabled}</deviceconnection.enabled>
                 <deviceconnection.host>${deviceconnection.ip}</deviceconnection.host>
                 <deviceconnection.amqp.port>${deviceconnection.amqp.port}</deviceconnection.amqp.port>
