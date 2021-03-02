@@ -59,12 +59,12 @@ public interface CommandSender extends Lifecycle {
      *                              network specific Command &amp; Control implementation requires it.
      */
     default Future<Void> sendAsyncCommand(
-            String tenantId,
-            String deviceId,
-            String command,
-            Buffer data,
-            String correlationId,
-            String replyId) {
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final Buffer data,
+            final String correlationId,
+            final String replyId) {
         return sendAsyncCommand(tenantId, deviceId, command, null, data, correlationId, replyId, null);
     }
 
@@ -98,14 +98,14 @@ public interface CommandSender extends Lifecycle {
      *                              network specific Command &amp; Control implementation requires it.
      */
     default Future<Void> sendAsyncCommand(
-            String tenantId,
-            String deviceId,
-            String command,
-            String contentType,
-            Buffer data,
-            String correlationId,
-            String replyId,
-            Map<String, Object> properties) {
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String correlationId,
+            final String replyId,
+            final Map<String, Object> properties) {
         return sendAsyncCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId, properties,
                 null);
     }

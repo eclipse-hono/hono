@@ -151,7 +151,7 @@ public class AppConfiguration {
     public ApplicationClient<KafkaMessageContext> kafkaApplicationClient(
             final Vertx vertx,
             final KafkaConsumerConfigProperties kafkaConsumerConfigProperties,
-            final KafkaProducerFactory producerFactory,
+            final KafkaProducerFactory<String, Buffer> producerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfigProperties) {
         return new KafkaApplicationClientImpl(vertx, kafkaConsumerConfigProperties, producerFactory,
                 kafkaProducerConfigProperties);

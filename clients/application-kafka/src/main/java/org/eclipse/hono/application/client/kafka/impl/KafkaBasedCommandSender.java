@@ -88,7 +88,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
             final String contentType, final String correlationId, final boolean responseRequired,
             final Map<String, Object> properties) {
         final Map<String, Object> props = Optional.ofNullable(properties)
-                .orElse(new HashMap<>());
+                .map(HashMap::new)
+                .orElseGet(HashMap::new);
 
         props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         props.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
