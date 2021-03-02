@@ -74,7 +74,7 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
                                     connection.getConfig());
                     final Message msg = createMessage(tenantId, deviceId, command, contentType, data, correlationId,
                             replyId, targetAddress, properties);
-                    return sender.sendAndWaitForOutcome(msg, newChildSpan(context, "send command " + command));
+                    return sender.sendAndWaitForOutcome(msg, newChildSpan(context, "send command"));
                 })
                 .mapEmpty();
     }

@@ -144,7 +144,7 @@ public class AppConfiguration {
      * @param kafkaConsumerConfigProperties The consumer configuration properties.
      * @param producerFactory The factory to use for creating Kafka producers.
      * @param kafkaProducerConfigProperties The producer configuration properties.
-     * @return The factory.
+     * @return The client.
      */
     @Profile("kafka")
     @Bean
