@@ -67,6 +67,21 @@ The first build might take several minutes because Docker will need to download 
 However, most of these will be cached by Docker so that subsequent builds will be running much faster.
 {{% /note %}}
 
+#### Gathering Code Coverage Information for Unit Tests
+
+Hono's unit tests can be configured to gather code coverage information during execution using the JaCoCo Maven plugin.
+The plugin is disabled by default and can be enabled by setting the *jacoco.skip* maven property to `false`:
+
+```sh
+# in the "hono" folder containing the source code
+mvn clean install -Djacoco.skip=false -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger
+```
+
+The plugin will produce a `target/jacoco.exec` file in each module which contains the (binary) coverage data.
+It will also produce XML data files under `target/site/jacoco` in each module.
+Tools like [SonarQube](https://docs.sonarqube.org/latest/analysis/coverage/) can be used to collect and properly format
+this data.
+
 #### Using custom Image Names
 
 The container images being created will have names based on the following pattern:
