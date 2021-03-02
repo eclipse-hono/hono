@@ -14,7 +14,6 @@
 package org.eclipse.hono.util;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
@@ -45,18 +44,15 @@ public final class TimeUntilDisconnectNotification {
      * @param tenantId The identifier of the tenant of the device the notification is constructed for.
      * @param deviceId The id of the device the notification is constructed for.
      * @param ttd The time until the device <em>disconnects</em> again.
-     * @param readyUntil The Instant that determines until when this notification is valid.
      * @param creationTime The Instant that points to when the notification message was created at the client (adapter).
      * @throws NullPointerException If readyUntil is null.
      */
     public TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd,
-                                            final Instant readyUntil, final Instant creationTime) {
-        Objects.requireNonNull(readyUntil);
-
+            final Instant creationTime) {
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.ttd = ttd;
-        this.readyUntil = readyUntil;
+        this.readyUntil = getReadyUntilInstantFromTtd(ttd, creationTime);
         this.creationTime = creationTime;
     }
 
@@ -144,7 +140,7 @@ public final class TimeUntilDisconnectNotification {
      *         application property or {@code null} otherwise.
      * @throws NullPointerException If msg is {@code null}.
      */
-    public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
+        public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
 
         final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
 
@@ -158,24 +154,14 @@ public final class TimeUntilDisconnectNotification {
                 final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
 
                 final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd,
-                                getReadyUntilInstantFromTtd(ttd, creationTime), creationTime);
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd, creationTime);
                 return Optional.of(notification);
             }
         }
         return Optional.empty();
     }
 
-    /**
-     * Calculates the instant until which the device is ready based on the given point of time.
-     *
-     * @param ttd The TTD of the device.
-     * @param startingFrom The point of time used as the start for the calculation. If {@code null}, the device is
-     *                     considered as never ready, meaning {@link Instant#MIN} is returned.
-     *
-     * @return The instant until the device is ready.
-     */
-    public static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
+    private static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
         if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
             return Instant.MAX;
         } else if (startingFrom == null) {

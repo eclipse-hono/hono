@@ -144,8 +144,7 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
 
             if (tenantId != null && deviceId != null) {
                 final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd,
-                                TimeUntilDisconnectNotification.getReadyUntilInstantFromTtd(ttd, creationTime), creationTime);
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd, creationTime);
                 return Optional.of(notification);
             }
         }
