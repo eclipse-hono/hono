@@ -79,7 +79,6 @@ class ProtonBasedApplicationClientTest {
         final var vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx);
-        when(connection.getVertx()).thenReturn(vertx);
         final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         when(connection.createReceiver(
                 anyString(),

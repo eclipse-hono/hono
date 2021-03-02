@@ -80,12 +80,13 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId);
         final Map<String, Object> headerProperties = getHeaderProperties(deviceId, command, contentType, correlationId,
-                properties);
+                true, properties);
         return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, data, headerProperties, context);
     }
 
     private Map<String, Object> getHeaderProperties(final String deviceId, final String subject,
-            final String contentType, final String correlationId, final Map<String, Object> properties) {
+            final String contentType, final String correlationId, final boolean responseRequired,
+            final Map<String, Object> properties) {
         final Map<String, Object> props = Optional.ofNullable(properties)
                 .orElse(new HashMap<>());
 
@@ -94,7 +95,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
         props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
                 Objects.nonNull(contentType) ? contentType : MessageHelper.CONTENT_TYPE_OCTET_STREAM);
         props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
-        props.put(KafkaMessageHelper.HEADER_RESPONSE_REQUIRED, true);
+        props.put(KafkaMessageHelper.HEADER_RESPONSE_REQUIRED, responseRequired);
 
         return props;
     }
