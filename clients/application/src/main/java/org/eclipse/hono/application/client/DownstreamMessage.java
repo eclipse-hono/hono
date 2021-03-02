@@ -16,7 +16,6 @@ package org.eclipse.hono.application.client;
 import java.time.Instant;
 import java.util.Optional;
 
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 
@@ -137,7 +136,7 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
 
         if (ttd == null) {
             return Optional.empty();
-        } else if (ttd == 0 || MessageHelper.isDeviceCurrentlyConnected(ttd,
+        } else if (ttd == 0 || TimeUntilDisconnectNotification.isDeviceCurrentlyConnected(ttd,
                 creationTime != null ? creationTime.toEpochMilli() : null)) {
             final String tenantId = getTenantId();
             final String deviceId = getDeviceId();
