@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 
 import io.vertx.core.buffer.Buffer;
 
@@ -121,6 +122,32 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
                 .map(now::isBefore)
                 .orElse(false);
         }
+    }
+
+    /**
+     * Returns the time until disconnection notification of this downstream message.
+     *
+     * @return A notification if the message contains a TTD value {@link Optional#empty()} otherwise.
+     */
+    default Optional<TimeUntilDisconnectNotification> getTimeUntilDisconnectNotification() {
+
+        final Integer ttd = getTimeTillDisconnect();
+        final Instant creationTime = getCreationTime();
+
+        if (ttd == null) {
+            return Optional.empty();
+        } else if (ttd == 0 || TimeUntilDisconnectNotification.isDeviceCurrentlyConnected(ttd,
+                creationTime != null ? creationTime.toEpochMilli() : null)) {
+            final String tenantId = getTenantId();
+            final String deviceId = getDeviceId();
+
+            if (tenantId != null && deviceId != null) {
+                final TimeUntilDisconnectNotification notification =
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd, creationTime);
+                return Optional.of(notification);
+            }
+        }
+        return Optional.empty();
     }
 
 }

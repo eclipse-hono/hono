@@ -790,33 +790,6 @@ public final class MessageHelper {
     }
 
     /**
-     * Checks if a device is currently connected to a protocol adapter.
-     * <p>
-     * If this method returns {@code true} an attempt could be made to send a command to the device.
-     * <p>
-     * This method uses the message's creation time and TTD value to determine the point in time
-     * until which the device will remain connected.
-     *
-     * @param msg The message that is checked for a TTD value.
-     * @return {@code true} if the TTD value contained in the message indicates that the device will
-     *         stay connected for some additional time.
-     * @throws NullPointerException If msg is {@code null}.
-     */
-    public static boolean isDeviceCurrentlyConnected(final Message msg) {
-
-        return Optional.ofNullable(MessageHelper.getTimeUntilDisconnect(msg)).map(ttd -> {
-            if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
-                return true;
-            } else if (ttd == 0) {
-                return false;
-            } else {
-                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
-                return Instant.now().isBefore(creationTime.plusSeconds(ttd));
-            }
-        }).orElse(false);
-    }
-
-    /**
      * Sets the payload of an AMQP message using a <em>Data</em> section.
      * <p>
      * The message's <em>content-type</em> will be set to {@link #CONTENT_TYPE_APPLICATION_JSON}.

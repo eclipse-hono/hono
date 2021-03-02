@@ -45,18 +45,15 @@ public final class TimeUntilDisconnectNotification {
      * @param tenantId The identifier of the tenant of the device the notification is constructed for.
      * @param deviceId The id of the device the notification is constructed for.
      * @param ttd The time until the device <em>disconnects</em> again.
-     * @param readyUntil The Instant that determines until when this notification is valid.
      * @param creationTime The Instant that points to when the notification message was created at the client (adapter).
      * @throws NullPointerException If readyUntil is null.
      */
-    private TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd,
-                                            final Instant readyUntil, final Instant creationTime) {
-        Objects.requireNonNull(readyUntil);
-
+    public TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd,
+            final Instant creationTime) {
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.ttd = ttd;
-        this.readyUntil = readyUntil;
+        this.readyUntil = getReadyUntilInstantFromTtd(ttd, creationTime);
         this.creationTime = creationTime;
     }
 
@@ -144,13 +141,13 @@ public final class TimeUntilDisconnectNotification {
      *         application property or {@code null} otherwise.
      * @throws NullPointerException If msg is {@code null}.
      */
-    public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
+        public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
 
         final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
 
         if (ttd == null) {
             return Optional.empty();
-        } else if (ttd == 0 || MessageHelper.isDeviceCurrentlyConnected(msg)) {
+        } else if (ttd == 0 || isDeviceCurrentlyConnected(msg)) {
             final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
             final String deviceId = MessageHelper.getDeviceId(msg);
 
@@ -158,8 +155,7 @@ public final class TimeUntilDisconnectNotification {
                 final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
 
                 final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd,
-                                getReadyUntilInstantFromTtd(ttd, creationTime), creationTime);
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd, creationTime);
                 return Optional.of(notification);
             }
         }
@@ -169,6 +165,8 @@ public final class TimeUntilDisconnectNotification {
     private static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
         if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
             return Instant.MAX;
+        } else if (startingFrom == null) {
+            return Instant.MIN;
         } else {
             return startingFrom.plusSeconds(ttd);
         }
@@ -186,5 +184,55 @@ public final class TimeUntilDisconnectNotification {
             final long milliseconds = getReadyUntil().minusMillis(Instant.now().toEpochMilli()).toEpochMilli();
             return (milliseconds > 0 ? milliseconds : 0);
         }
+    }
+
+    /**
+     * Checks if a device is currently connected to a protocol adapter.
+     * <p>
+     * If this method returns {@code true} an attempt could be made to send a command to the device.
+     * <p>
+     * This method uses the message's creation time and TTD value to determine the point in time
+     * until which the device will remain connected.
+     *
+     * @param ttd The TTD value.
+     * @param creationTime The creation time of the message. If {@code null} the device is considered as disconnected.
+     * @return {@code true} if the TTD value contained in the message indicates that the device will
+     *         stay connected for some additional time.
+     */
+    public static boolean isDeviceCurrentlyConnected(final Integer ttd, final Long creationTime) {
+
+        return Optional.ofNullable(ttd).map(ttdValue -> {
+            if (ttdValue == MessageHelper.TTD_VALUE_UNLIMITED) {
+                return true;
+            } else if (ttdValue == 0) {
+                return false;
+            } else {
+                if (creationTime == null) {
+                    return false;
+                }
+
+                final Instant creationTimeInstant = Instant.ofEpochMilli(creationTime);
+                return Instant.now().isBefore(creationTimeInstant.plusSeconds(ttdValue));
+            }
+        }).orElse(false);
+    }
+
+    /**
+     * Checks if a device is currently connected to a protocol adapter.
+     * <p>
+     * If this method returns {@code true} an attempt could be made to send a command to the device.
+     * <p>
+     * This method uses the message's creation time and TTD value to determine the point in time
+     * until which the device will remain connected.
+     *
+     * @param msg The message that is checked for a TTD value.
+     * @return {@code true} if the TTD value contained in the message indicates that the device will
+     *         stay connected for some additional time.
+     * @throws NullPointerException If msg is {@code null}.
+     */
+    public static boolean isDeviceCurrentlyConnected(final Message msg) {
+        Objects.requireNonNull(msg);
+
+        return isDeviceCurrentlyConnected(MessageHelper.getTimeUntilDisconnect(msg), msg.getCreationTime());
     }
 }
