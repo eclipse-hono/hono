@@ -255,7 +255,8 @@ public class TableAdapterStore extends AbstractDeviceStore {
         // to convert the CSV string to an array
         // vertx jdbc doesn't support arrays, see https://stackoverflow.com/a/42295098
         // TODO: introduce a better way to configure the way array values get passed
-        if (dialect.equals(SQL.DIALECT_POSTGRESQL)) {
+        if (dialect.equals(SQL.DIALECT_POSTGRESQL) ||
+            dialect.equals(SQL.DIALECT_SQLSERVER)) {
             return String.join(",", values);
         }
         return values.toArray(String[]::new);

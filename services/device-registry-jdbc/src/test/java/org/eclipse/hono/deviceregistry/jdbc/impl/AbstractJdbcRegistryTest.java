@@ -45,6 +45,7 @@ import org.h2.tools.RunScript;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.containers.JdbcDatabaseContainer;
+import org.testcontainers.containers.MSSQLServerContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import io.opentracing.Span;
@@ -58,6 +59,7 @@ import io.vertx.junit5.VertxExtension;
 abstract class AbstractJdbcRegistryTest {
     enum DatabaseType {
         H2,
+        SQLSERVER,
         POSTGRESQL
     }
     protected static final Span SPAN = NoopSpan.INSTANCE;
@@ -66,10 +68,13 @@ abstract class AbstractJdbcRegistryTest {
     private static final DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
             + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
     private static final Map<DatabaseType, JdbcDatabaseContainer<?>> DATABASE_CONTAINER_CACHE = new ConcurrentHashMap<>();
+    private static final String SQLSERVER_IMAGE_NAME = System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
+            + ".sqlserverImageName", "mcr.microsoft.com/mssql/server:2017-CU12");
     private static final String POSTGRESQL_IMAGE_NAME = System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
             + ".postgresqlImageName", "postgres:12-alpine");
 
     private static final AtomicLong UNIQUE_ID_GENERATOR = new AtomicLong(System.currentTimeMillis());
+
 
     private static final Tracer TRACER = NoopTracerFactory.create();
     private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "sql", DATABASE_TYPE.name().toLowerCase());
@@ -133,6 +138,10 @@ abstract class AbstractJdbcRegistryTest {
                 jdbc.setDriverClass(Driver.class.getName());
                 jdbc.setUrl("jdbc:h2:" + BASE_DIR.resolve(UUID.randomUUID().toString()).toAbsolutePath());
                 break;
+            case SQLSERVER:
+                jdbc.setUrl(jdbc.getUrl() + ";SelectMethod=Cursor");
+                createNewPerTestSchemaAndUserForSQLServer(jdbc);
+                break;
             case POSTGRESQL:
                 createNewPerTestSchemaForPostgres(jdbc);
                 break;
@@ -152,6 +161,9 @@ abstract class AbstractJdbcRegistryTest {
                 __ -> {
                     final JdbcDatabaseContainer<?> container;
                     switch (DATABASE_TYPE) {
+                        case SQLSERVER:
+                            container = new MSSQLServerContainer<>(SQLSERVER_IMAGE_NAME).acceptLicense();
+                            break;
                         case POSTGRESQL:
                             container = new PostgreSQLContainer<>(POSTGRESQL_IMAGE_NAME);
                             final List<String> commandLine = new ArrayList<>(Arrays.asList(container.getCommandParts()));
@@ -166,6 +178,17 @@ abstract class AbstractJdbcRegistryTest {
                     container.start();
                     return container;
                 });
+    }
+
+    void createNewPerTestSchemaAndUserForSQLServer(final JdbcProperties jdbc) {
+        final var schemaName = "test" + UNIQUE_ID_GENERATOR.incrementAndGet();
+        final var userName = "user" + UNIQUE_ID_GENERATOR.incrementAndGet();
+        final var sql = "create login " + userName + " with password='" + jdbc.getPassword() + "';\n" +
+                "create schema " + schemaName + ";\n" +
+                "create user " + userName + " for login " + userName + " with default_schema = " + schemaName + ";\n" +
+                "exec sp_addrolemember 'db_owner', '" + userName + "';\n";
+        executeSQLScript(jdbc, sql);
+        jdbc.setUsername(userName);
     }
 
     private void executeSQLScript(final JdbcProperties jdbc, final String sql) {
