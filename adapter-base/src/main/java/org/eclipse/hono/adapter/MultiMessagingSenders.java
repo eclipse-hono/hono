@@ -99,9 +99,9 @@ class MultiMessagingSenders<T> {
         }
 
         // check if configured on the tenant
-        final T tenantConfiguredEventSender = getTenantConfiguredEventSender(tenant);
-        if (tenantConfiguredEventSender != null) {
-            return tenantConfiguredEventSender;
+        final T tenantConfiguredSender = getTenantConfiguredSender(tenant);
+        if (tenantConfiguredSender != null) {
+            return tenantConfiguredSender;
         }
 
         // TODO add adapter config property to determine which should be used as the default?
@@ -117,7 +117,7 @@ class MultiMessagingSenders<T> {
         return amqpSender;
     }
 
-    private T getTenantConfiguredEventSender(final TenantObject tenant) {
+    private T getTenantConfiguredSender(final TenantObject tenant) {
         final JsonObject ext = Optional.ofNullable(tenant.getProperty(TenantConstants.FIELD_EXT, JsonObject.class))
                 .orElse(new JsonObject());
         final String tenantConfig = ext.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE);
