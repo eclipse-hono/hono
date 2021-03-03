@@ -22,10 +22,10 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
-import org.eclipse.hono.adapter.client.telemetry.kafka.TestHelper;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
+import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,8 +72,8 @@ public class KafkaBasedCommandResponseSenderTest {
                 Buffer.buffer(payload),
                 contentType,
                 status);
-        final MockProducer<String, Buffer> mockProducer = TestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = TestHelper.newProducerFactory(mockProducer);
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
         final KafkaBasedCommandResponseSender sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig,
                 tracer);
 

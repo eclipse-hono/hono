@@ -31,6 +31,7 @@
     <module>adapter-base-test-utils</module>
     <module>client-test-utils</module>
     <module>core-test-utils</module>
+    <module>kafka-test-utils</module>
   </modules>
 
   <properties>

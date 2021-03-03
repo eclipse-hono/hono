@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.adapter.client.telemetry.kafka;
+package org.eclipse.hono.kafka.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,9 +42,9 @@ import io.vertx.kafka.client.serialization.BufferSerializer;
 /**
  * A helper class for writing tests with the Kafka client.
  */
-public class TestHelper {
+public class KafkaClientUnitTestHelper {
 
-    private TestHelper() {
+    private KafkaClientUnitTestHelper() {
     }
 
     /**
