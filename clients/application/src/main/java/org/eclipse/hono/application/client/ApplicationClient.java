@@ -78,4 +78,36 @@ public interface ApplicationClient<T extends MessageContext> extends CommandSend
             Handler<DownstreamMessage<T>> messageHandler,
             Handler<Throwable> closeHandler);
 
+    /**
+     * Creates a client for consuming command responses from Hono's north bound <em>Command and Control API</em>.
+     *
+     * @param tenantId The tenant to consume data for.
+     * @param replyId An arbitrary string which will be used to create the reply-to address and included in commands
+     *                sent to devices of the tenant. If the messaging network specific Command &amp; Control 
+     *                implementation does not require a replyId, the specified value will be ignored.
+     * @param messageHandler The handler to invoke with every message received.
+     *                       The message passed in will be acknowledged automatically if the handler does not
+     *                       throw an exception.
+     *                       <p>
+     *                       Implementors are encouraged to specify in detail the types of exceptions that handler
+     *                       might throw, what kind of problem they indicate and what the consequences regarding
+     *                       the underlying messaging infrastructure will be.
+     * @param closeHandler An (optional) handler to be invoked when the consumer is being closed by the peer.
+     *                     The handler will be invoked with an exception indicating the cause of the consumer
+     *                     being closed or {@code null} if unknown.
+     *                     <p>
+     *                     Implementors are encouraged to specify in detail the types of exceptions that might
+     *                     be passed in, what kind of problem they indicate and what the consequences regarding the
+     *                     underlying messaging infrastructure will be.
+     * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
+     *         cannot be started.
+     * @throws NullPointerException if any of tenantId or message handler are {@code null}.
+     *                              Also if the replyId is {@code null} provided that the messaging
+     *                              network specific Command &amp; Control implementation requires it.
+     */
+    Future<MessageConsumer> createCommandResponseConsumer(
+            String tenantId,
+            String replyId,
+            Handler<DownstreamMessage<T>> messageHandler,
+            Handler<Throwable> closeHandler);
 }

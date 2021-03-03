@@ -160,4 +160,20 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     public Integer getTimeTillDisconnect() {
         return timeTillDisconnect;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getCorrelationId() {
+        return properties.getProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID, String.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Integer getStatus() {
+        return properties.getProperty(MessageHelper.APP_PROPERTY_STATUS, Integer.class);
+    }
 }
