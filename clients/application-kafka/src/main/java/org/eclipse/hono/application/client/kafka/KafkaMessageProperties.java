@@ -17,9 +17,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.application.client.Message;
 import org.eclipse.hono.application.client.MessageProperties;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -53,6 +55,20 @@ public class KafkaMessageProperties implements MessageProperties {
     @Override
     public final Map<String, Object> getPropertiesMap() {
         return Collections.unmodifiableMap(properties);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The values in the map are of type {@link Buffer}.
+     */
+    @Override
+    public final <T> T getProperty(final String name, final Class<T> type) {
+        return Optional.ofNullable(properties.get(name))
+                .filter(Buffer.class::isInstance)
+                .map(Buffer.class::cast)
+                .map(value -> KafkaRecordHelper.decode(value, type))
+                .orElse(null);
     }
 
 }

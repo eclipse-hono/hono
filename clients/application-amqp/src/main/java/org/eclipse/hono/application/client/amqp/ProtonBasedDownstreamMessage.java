@@ -58,6 +58,11 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
             public Map<String, Object> getPropertiesMap() {
                 return props;
             }
+
+            @Override
+            public <T> T getProperty(final String name, final Class<T> type) {
+                return MessageHelper.getApplicationProperty(msg.getApplicationProperties(), name, type);
+            }
         };
     }
 
@@ -154,5 +159,24 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
     @Override
     public Integer getTimeTillDisconnect() {
         return MessageHelper.getTimeUntilDisconnect(message);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getCorrelationId() {
+        return Optional.ofNullable(MessageHelper.getCorrelationId(message))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .orElse(null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Integer getStatus() {
+        return MessageHelper.getStatus(message);
     }
 }

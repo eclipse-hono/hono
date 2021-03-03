@@ -29,4 +29,14 @@ public interface MessageProperties {
      */
     Map<String, Object> getPropertiesMap();
 
+    /**
+     * Gets a property value.
+     *
+     * @param name The property name.
+     * @param type The expected value type.
+     * @param <T> The expected type of the property value.
+     * @return The property value or {@code null} if the property is not set or is of an unexpected type.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    <T> T getProperty(String name, Class<T> type);
 }

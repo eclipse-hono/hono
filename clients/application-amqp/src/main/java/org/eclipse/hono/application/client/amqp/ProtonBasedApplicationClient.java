@@ -27,6 +27,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.GenericReceiverLink;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -147,6 +148,37 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
         Objects.requireNonNull(messageHandler);
 
         final String sourceAddress = String.format("%s/%s", EventConstants.EVENT_ENDPOINT, tenantId);
+        return createConsumer(sourceAddress, messageHandler, closeHandler);
+    }
+
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@link DownstreamMessage#getMessageContext()} method of the message passed in to the
+     * provided handler will return an {@link AmqpMessageContext} instance.
+     * Its {@link AmqpMessageContext#getDelivery()} method can be used to manually update
+     * the underlying AMQP transfer's disposition.
+     * <p>
+     * Otherwise, the transfer will be settled
+     * <ul>
+     * <li>with the <em>rejected</em> outcome if the {@link Handler#handle(Object)} method throws
+     * a {@link ClientErrorException},</li>
+     * <li>with the <em>released</em> outcome if the {@link Handler#handle(Object)} method throws
+     * an exception other than {@link ClientErrorException} or</li>
+     * <li>with the <em>accepted</em> outcome otherwise.</li>
+     * </ul>
+     */
+    @Override
+    public Future<MessageConsumer> createCommandResponseConsumer(final String tenantId, final String replyId,
+            final Handler<DownstreamMessage<AmqpMessageContext>> messageHandler,
+            final Handler<Throwable> closeHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(replyId);
+        Objects.requireNonNull(messageHandler);
+
+        final String sourceAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId, replyId);
         return createConsumer(sourceAddress, messageHandler, closeHandler);
     }
 

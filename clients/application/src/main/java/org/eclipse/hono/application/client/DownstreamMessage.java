@@ -90,6 +90,21 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
     Integer getTimeTillDisconnect();
 
     /**
+     * Gets the identifier to use for correlating a response to it's command.
+     *
+     * @return The identifier or {@code null} if not set.
+     */
+    String getCorrelationId();
+
+    /**
+     * Gets the HTTP status code that indicates the outcome of
+     * executing a command.
+     *
+     * @return The status code or {@code null} if not set.
+     */
+    Integer getStatus();
+
+    /**
      * Checks if the sender of this message is still connected at the current moment.
      * <p>
      * This default implementation simply invokes {@link #isSenderConnected(Instant)} with

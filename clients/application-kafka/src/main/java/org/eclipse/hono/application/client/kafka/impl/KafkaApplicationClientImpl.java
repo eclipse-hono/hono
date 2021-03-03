@@ -23,8 +23,6 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
-import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.TelemetryConstants;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
@@ -95,29 +93,53 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
     public Future<MessageConsumer> createTelemetryConsumer(final String tenantId,
             final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(messageHandler);
 
-        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx, consumerConfig.getConsumerConfig(
-                TelemetryConstants.TELEMETRY_ENDPOINT));
-        final Handler<Throwable> effectiveCloseHandler = closeHandler != null ? closeHandler : (t -> {});
-
-        return KafkaBasedDownstreamMessageConsumer.create(tenantId, HonoTopic.Type.TELEMETRY, kafkaConsumer, consumerConfig,
-                messageHandler, effectiveCloseHandler);
+        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.TELEMETRY, messageHandler,
+                closeHandler);
     }
 
     @Override
     public Future<MessageConsumer> createEventConsumer(final String tenantId,
             final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
+
+        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.EVENT, messageHandler,
+                closeHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * The replyId is not used in the Kafka based implementation. It can be set to {@code null}. 
+     * If set it will be ignored.
+     *
+     * @throws NullPointerException if tenantId, or messageHandler is {@code null}.
+     */
+    @Override
+    public Future<MessageConsumer> createCommandResponseConsumer(final String tenantId, final String replyId,
+            final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
+            final Handler<Throwable> closeHandler) {
+
+        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.COMMAND_RESPONSE, messageHandler,
+                closeHandler);
+    }
+
+    private Future<MessageConsumer> createKafkaBasedDownstreamMessageConsumer(
+            final String tenantId,
+            final HonoTopic.Type type,
+            final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
+            final Handler<Throwable> closeHandler) {
+
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(type);
         Objects.requireNonNull(messageHandler);
 
-        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx, consumerConfig.getConsumerConfig(
-                EventConstants.EVENT_ENDPOINT));
-        final Handler<Throwable> effectiveCloseHandler = closeHandler != null ? closeHandler : (t -> {});
+        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx,
+                consumerConfig.getConsumerConfig(type.toString()));
+        final Handler<Throwable> effectiveCloseHandler = Objects.nonNull(closeHandler) ? closeHandler : (t -> {});
 
-        return KafkaBasedDownstreamMessageConsumer.create(tenantId, HonoTopic.Type.EVENT, kafkaConsumer, consumerConfig,
-                messageHandler, effectiveCloseHandler);
+        return KafkaBasedDownstreamMessageConsumer.create(tenantId, type, kafkaConsumer, consumerConfig, messageHandler,
+                effectiveCloseHandler);
     }
 }
