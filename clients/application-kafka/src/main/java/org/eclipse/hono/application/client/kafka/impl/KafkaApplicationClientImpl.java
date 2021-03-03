@@ -19,6 +19,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
+import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -101,7 +102,8 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
                 TelemetryConstants.TELEMETRY_ENDPOINT));
         final Handler<Throwable> effectiveCloseHandler = closeHandler != null ? closeHandler : (t -> {});
 
-        return TelemetryConsumer.create(kafkaConsumer, consumerConfig, tenantId, messageHandler, effectiveCloseHandler);
+        return KafkaBasedDownstreamMessageConsumer.create(tenantId, HonoTopic.Type.TELEMETRY, kafkaConsumer, consumerConfig,
+                messageHandler, effectiveCloseHandler);
     }
 
     @Override
@@ -115,6 +117,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
                 EventConstants.EVENT_ENDPOINT));
         final Handler<Throwable> effectiveCloseHandler = closeHandler != null ? closeHandler : (t -> {});
 
-        return EventConsumer.create(kafkaConsumer, consumerConfig, tenantId, messageHandler, effectiveCloseHandler);
+        return KafkaBasedDownstreamMessageConsumer.create(tenantId, HonoTopic.Type.EVENT, kafkaConsumer, consumerConfig,
+                messageHandler, effectiveCloseHandler);
     }
 }
