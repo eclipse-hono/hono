@@ -33,7 +33,6 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -54,7 +53,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -319,9 +317,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     }
                 },
                 null);
-        final Future<AsyncCommandClient> asyncCommandClient = helper.applicationClientFactory.getOrCreateAsyncCommandClient(tenantId);
 
-        CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).onComplete(setup.completing());
+        asyncResponseConsumer.onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -336,14 +333,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             context.runOnContext(go -> {
                 final String correlationId = String.valueOf(commandsSent.getAndIncrement());
                 final Buffer msg = Buffer.buffer("value: " + correlationId);
-                asyncCommandClient.result().sendAsyncCommand(
+                helper.amqpApplicationClient.sendAsyncCommand(
+                        tenantId,
                         commandTargetDeviceId,
                         "setValue",
                         "text/plain",
                         msg,
                         correlationId,
-                        replyId,
-                        null)
+                        replyId, null)
                 .onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         log.debug("error sending command {}", correlationId, sendAttempt.cause());

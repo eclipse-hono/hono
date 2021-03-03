@@ -24,9 +24,8 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ReconnectListener;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.GenericReceiverLink;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -47,7 +46,7 @@ import io.vertx.proton.ProtonHelper;
  * event and command response messages.
  *
  */
-public class ProtonBasedApplicationClient implements AmqpApplicationClient {
+public class ProtonBasedApplicationClient extends ProtonBasedCommandSender implements AmqpApplicationClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedApplicationClient.class);
 
@@ -61,7 +60,8 @@ public class ProtonBasedApplicationClient implements AmqpApplicationClient {
      * @throws NullPointerException if connection is {@code null}.
      */
     public ProtonBasedApplicationClient(final HonoConnection connection) {
-        this.connection = Objects.requireNonNull(connection);
+        super(connection, SendMessageSampler.Factory.noop());
+        this.connection = connection;
     }
 
     /**
@@ -88,38 +88,6 @@ public class ProtonBasedApplicationClient implements AmqpApplicationClient {
     public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         LOG.info("disconnecting from Hono endpoint");
         connection.disconnect(completionHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<Void> isConnected() {
-        return connection.isConnected();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
-        return connection.isConnected(waitForCurrentConnectAttemptTimeout);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
-        connection.addDisconnectListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
-        connection.addReconnectListener(listener);
     }
 
     /**

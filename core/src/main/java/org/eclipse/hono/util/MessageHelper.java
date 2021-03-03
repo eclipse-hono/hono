@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -1455,4 +1456,37 @@ public final class MessageHelper {
         return message;
     }
 
+    /**
+     * Set the application properties for a Proton Message but do a check for all properties first if they only contain
+     * values that the AMQP 1.0 spec allows.
+     *
+     * @param msg The Proton message.
+     * @param properties The map containing application properties.
+     * @throws NullPointerException if the message passed in is {@code null}.
+     * @throws IllegalArgumentException if the properties contain any value that AMQP 1.0 disallows.
+     */
+    public static void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
+        Objects.requireNonNull(msg);
+
+        if (properties != null) {
+            final Map<String, Object> propsToAdd = new HashMap<>();
+            // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
+            for (final Map.Entry<String, ?> entry : properties.entrySet()) {
+                if (entry.getValue() != null) {
+                    if (entry.getValue() instanceof List) {
+                        throw new IllegalArgumentException(
+                                String.format("Application property %s can't be a List", entry.getKey()));
+                    } else if (entry.getValue() instanceof Map) {
+                        throw new IllegalArgumentException(
+                                String.format("Application property %s can't be a Map", entry.getKey()));
+                    } else if (entry.getValue().getClass().isArray()) {
+                        throw new IllegalArgumentException(
+                                String.format("Application property %s can't be an Array", entry.getKey()));
+                    }
+                }
+                propsToAdd.put(entry.getKey(), entry.getValue());
+            }
+            msg.setApplicationProperties(new ApplicationProperties(propsToAdd));
+        }
+    }
 }

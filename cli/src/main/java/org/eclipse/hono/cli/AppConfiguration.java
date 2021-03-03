@@ -20,6 +20,8 @@ import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -29,6 +31,7 @@ import org.springframework.context.annotation.Profile;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.dns.AddressResolverOptions;
 
 /**
@@ -87,6 +90,29 @@ public class AppConfiguration {
     }
 
     /**
+     * Exposes Kafka producer configuration properties as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Profile("kafka")
+    @Bean
+    public KafkaProducerConfigProperties kafkaProducerConfig() {
+        return new KafkaProducerConfigProperties();
+    }
+
+    /**
+     * Exposes a factory for creating producers for sending messages via the Kafka cluster.
+     *
+     * @return The factory.
+     */
+    @Profile("kafka")
+    @Bean
+    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
+        return KafkaProducerFactory.sharedProducerFactory(vertx());
+    }
+
+    /**
      * Exposes a factory for creating clients for Hono's northbound APIs as a Spring bean.
      *
      * @return The factory.
@@ -116,13 +142,18 @@ public class AppConfiguration {
      *
      * @param vertx The vertx instance to be used.
      * @param kafkaConsumerConfigProperties The consumer configuration properties.
-     * @return The factory.
+     * @param producerFactory The factory to use for creating Kafka producers.
+     * @param kafkaProducerConfigProperties The producer configuration properties.
+     * @return The client.
      */
     @Profile("kafka")
     @Bean
     public ApplicationClient<KafkaMessageContext> kafkaApplicationClient(
             final Vertx vertx,
-            final KafkaConsumerConfigProperties kafkaConsumerConfigProperties) {
-        return new KafkaApplicationClientImpl(vertx, kafkaConsumerConfigProperties);
+            final KafkaConsumerConfigProperties kafkaConsumerConfigProperties,
+            final KafkaProducerFactory<String, Buffer> producerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfigProperties) {
+        return new KafkaApplicationClientImpl(vertx, kafkaConsumerConfigProperties, producerFactory,
+                kafkaProducerConfigProperties);
     }
 }
