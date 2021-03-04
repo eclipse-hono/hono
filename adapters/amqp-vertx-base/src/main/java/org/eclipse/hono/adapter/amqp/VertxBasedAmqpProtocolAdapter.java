@@ -35,6 +35,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
+import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
@@ -577,11 +578,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Span span = newSpan("attach device sender link", authenticatedDevice, traceSamplingPriority);
         span.log(Map.of("snd-settle-mode", receiver.getRemoteQoS()));
 
-        final String remoteTargetAddress = Optional.ofNullable(receiver.getRemoteTarget())
-                .map(target -> target.getAddress())
+        final String remoteTargetAddress = Optional.ofNullable(receiver.getRemoteTarget()).map(Target::getAddress)
                 .orElse(null);
         if (!Strings.isNullOrEmpty(remoteTargetAddress)) {
-            log.debug("client provided target address [{}] in open frame, closing link", remoteTargetAddress);
+            log.debug("client provided target address [{}] in open frame, closing link [container: {}, {}]",
+                    remoteTargetAddress, conn.getRemoteContainer(), authenticatedDevice);
             span.log(Map.of("target address", remoteTargetAddress));
             final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "container supports anonymous terminus only");
@@ -600,6 +601,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 try {
                     final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
                     final Span msgSpan = newSpan("upload message", authenticatedDevice, traceSamplingPriority, spanContext);
+                    HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery, d -> {
+                        log.debug("got unexpected disposition update for message received from device [remote state: {}, container: {}, {}]",
+                                delivery.getRemoteState(), conn.getRemoteContainer(), authenticatedDevice);
+                        msgSpan.log("got unexpected disposition from device [remote state: " + delivery.getRemoteState() + "]");
+                    });
                     msgSpan.log(Map.of(
                             Tags.MESSAGE_BUS_DESTINATION.getKey(), message.getAddress(),
                             "settled", delivery.remotelySettled()));
@@ -616,18 +622,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             .onComplete(r -> msgSpan.finish()));
 
                 } catch (final Exception ex) {
-                    log.warn("error handling message", ex);
+                    log.warn("error handling message [container: {}, {}]", conn.getRemoteContainer(), authenticatedDevice, ex);
                     ProtonHelper.released(delivery, true);
                 }
             });
             receiver.open();
-            if (authenticatedDevice == null) {
-                log.debug("established link for receiving messages from device [container: {}]",
-                        conn.getRemoteContainer());
-            } else {
-                log.debug("established link for receiving messages from device [tenant: {}, device-id: {}]]",
-                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-            }
+            log.debug("established link for receiving messages from device [container: {}, {}]",
+                    conn.getRemoteContainer(), authenticatedDevice);
             span.log("link established");
         }
         span.finish();

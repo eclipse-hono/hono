@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,8 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
-
 
 /**
  * A context for passing around parameters relevant for processing a {@code Command}.
@@ -104,11 +102,7 @@ public class CommandContext extends MapBasedExecutionContext {
      * {@link #getTracingSpan()}.
      */
     public void accept() {
-        final Span span = getTracingSpan();
-        LOG.trace("accepting command message [{}]", getCommand());
-        ProtonHelper.accepted(delivery, true);
-        span.log("accepted command for device");
-        span.finish();
+        disposition(Accepted.getInstance());
     }
 
     /**
@@ -118,10 +112,7 @@ public class CommandContext extends MapBasedExecutionContext {
      * {@link #getTracingSpan()}.
      */
     public void release() {
-        final Span span = getTracingSpan();
-        ProtonHelper.released(delivery, true);
-        TracingHelper.logError(span, "released command for device");
-        span.finish();
+        disposition(Released.getInstance());
     }
 
     /**
@@ -134,12 +125,10 @@ public class CommandContext extends MapBasedExecutionContext {
      * @param undeliverableHere Whether the delivery is considered undeliverable.
      */
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
-        final Span span = getTracingSpan();
-        ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
-        TracingHelper.logError(span, "modified command for device"
-                + (deliveryFailed ? "; delivery failed" : "")
-                + (undeliverableHere ? "; undeliverable here" : ""));
-        span.finish();
+        final Modified modified = new Modified();
+        modified.setDeliveryFailed(deliveryFailed);
+        modified.setUndeliverableHere(undeliverableHere);
+        disposition(modified);
     }
 
     /**
@@ -151,15 +140,11 @@ public class CommandContext extends MapBasedExecutionContext {
      * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
      */
     public void reject(final ErrorCondition errorCondition) {
-        final Span span = getTracingSpan();
         final Rejected rejected = new Rejected();
         if (errorCondition != null) {
             rejected.setError(errorCondition);
         }
-        delivery.disposition(rejected, true);
-        TracingHelper.logError(span, "rejected command for device"
-                + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
-        span.finish();
+        disposition(rejected);
     }
 
     /**
@@ -175,30 +160,46 @@ public class CommandContext extends MapBasedExecutionContext {
 
         Objects.requireNonNull(deliveryState);
         final Span span = getTracingSpan();
-        delivery.disposition(deliveryState, true);
-        if (Accepted.class.isInstance(deliveryState)) {
-            LOG.trace("accepted command message [{}]", getCommand());
-            span.log("accepted command for device");
-
-        } else if (Released.class.isInstance(deliveryState)) {
-            LOG.debug("released command message [{}]", getCommand());
-            TracingHelper.logError(span, "released command for device");
-
-        } else if (Modified.class.isInstance(deliveryState)) {
-            final Modified modified = (Modified) deliveryState;
-            LOG.debug("modified command message [{}]", getCommand());
-            TracingHelper.logError(span, "modified command for device"
-                    + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
-                    + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
-
-        } else if (Rejected.class.isInstance(deliveryState)) {
-            final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
-            LOG.debug("rejected command message [error: {}, command: {}]", errorCondition, getCommand());
-            TracingHelper.logError(span, "rejected command for device"
-                    + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
+        if (delivery.isSettled()) {
+            final String msg = String.format("cannot complete incoming delivery of command message with outcome '%s' - delivery already settled locally; local state: %s",
+                    deliveryState, delivery.getLocalState());
+            TracingHelper.logError(getTracingSpan(), msg);
+            LOG.info("{} [{}]", msg, getCommand());
         } else {
-            LOG.warn("unexpected delivery state [{}] when settling command message [{}]", deliveryState, getCommand());
-            TracingHelper.logError(span, "unexpected delivery state: " + deliveryState);
+            final boolean wasAlreadyRemotelySettled = delivery.remotelySettled();
+            // if delivery is already settled remotely call "disposition" anyway to update local state and settle locally
+            delivery.disposition(deliveryState, true);
+            if (wasAlreadyRemotelySettled) {
+                final String msg = String.format("cannot complete incoming delivery of command message with outcome '%s' - delivery already settled remotely; remote state: %s",
+                        deliveryState, delivery.getRemoteState());
+                TracingHelper.logError(getTracingSpan(), msg);
+                LOG.info("{} [{}]", msg, getCommand());
+            } else if (Accepted.class.isInstance(deliveryState)) {
+                LOG.trace("accepted command message [{}]", getCommand());
+                span.log("accepted command for device");
+
+            } else if (Released.class.isInstance(deliveryState)) {
+                LOG.debug("released command message [{}]", getCommand());
+                TracingHelper.logError(span, "released command for device");
+
+            } else if (Modified.class.isInstance(deliveryState)) {
+                final Modified modified = (Modified) deliveryState;
+                LOG.debug("modified command message [{}]", getCommand());
+                TracingHelper.logError(span, "modified command for device"
+                        + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
+                        + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
+
+            } else if (Rejected.class.isInstance(deliveryState)) {
+                final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
+                LOG.debug("rejected command message [error: {}, command: {}]", errorCondition, getCommand());
+                TracingHelper.logError(span, "rejected command for device"
+                        + ((errorCondition != null && errorCondition.getDescription() != null)
+                                ? "; error: " + errorCondition.getDescription()
+                                : ""));
+            } else {
+                LOG.warn("unexpected delivery state [{}] when settling command message [{}]", deliveryState, getCommand());
+                TracingHelper.logError(span, "unexpected delivery state: " + deliveryState);
+            }
         }
         span.finish();
     }

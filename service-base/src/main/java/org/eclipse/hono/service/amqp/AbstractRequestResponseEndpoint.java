@@ -161,6 +161,8 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
             // set up handlers
 
             receiver.handler((delivery, message) -> {
+                HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery,
+                        d -> logger.debug("got unexpected disposition update for received message [remote state: {}]", delivery.getRemoteState()));
                 try {
                     handleRequestMessage(con, receiver, targetAddress, delivery, message);
                 } catch (final Exception ex) {

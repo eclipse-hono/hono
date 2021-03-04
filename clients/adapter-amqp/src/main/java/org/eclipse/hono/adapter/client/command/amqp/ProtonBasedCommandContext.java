@@ -15,7 +15,11 @@ package org.eclipse.hono.adapter.client.command.amqp;
 
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -65,41 +69,74 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void accept() {
-        final Span span = getTracingSpan();
-        LOG.trace("accepting command message [{}]", getCommand());
-        ProtonHelper.accepted(delivery, true);
-        span.log("accepted command for device");
-        span.finish();
+        updateDelivery(Accepted.getInstance());
     }
 
     @Override
     public void release() {
-        final Span span = getTracingSpan();
-        ProtonHelper.released(delivery, true);
-        TracingHelper.logError(span, "released command for device");
-        span.finish();
+        updateDelivery(Released.getInstance());
     }
 
     @Override
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
-        final Span span = getTracingSpan();
-        ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
-        TracingHelper.logError(span, "modified command for device"
-                + (deliveryFailed ? "; delivery failed" : "")
-                + (undeliverableHere ? "; undeliverable here" : ""));
-        span.finish();
+        final Modified modified = new Modified();
+        modified.setDeliveryFailed(deliveryFailed);
+        modified.setUndeliverableHere(undeliverableHere);
+        updateDelivery(modified);
     }
 
     @Override
     public void reject(final String cause) {
         final ErrorCondition errorCondition = ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, cause);
-        final Span span = getTracingSpan();
         final Rejected rejected = new Rejected();
         rejected.setError(errorCondition);
-        delivery.disposition(rejected, true);
-        TracingHelper.logError(span, "rejected command for device"
-                + (errorCondition.getDescription() != null ? "; error: " + errorCondition.getDescription() : ""));
-        span.finish();
+        updateDelivery(rejected);
     }
 
+
+    private void updateDelivery(final DeliveryState deliveryState) {
+        final Span span = getTracingSpan();
+        if (delivery.isSettled()) {
+            final String msg = String.format("cannot complete incoming delivery of command message with outcome '%s' - delivery already settled locally; local state: %s",
+                    deliveryState, delivery.getLocalState());
+            TracingHelper.logError(getTracingSpan(), msg);
+            LOG.info("{} [{}]", msg, getCommand());
+        } else {
+            final boolean wasAlreadyRemotelySettled = delivery.remotelySettled();
+            // if delivery is already settled remotely call "disposition" anyway to update local state and settle locally
+            delivery.disposition(deliveryState, true);
+            if (wasAlreadyRemotelySettled) {
+                final String msg = String.format("cannot complete incoming delivery of command message with outcome '%s' - delivery already settled remotely; remote state: %s",
+                        deliveryState, delivery.getRemoteState());
+                TracingHelper.logError(getTracingSpan(), msg);
+                LOG.info("{} [{}]", msg, getCommand());
+            } else if (Accepted.class.isInstance(deliveryState)) {
+                LOG.trace("accepted command message [{}]", getCommand());
+                span.log("accepted command for device");
+
+            } else if (Released.class.isInstance(deliveryState)) {
+                LOG.debug("released command message [{}]", getCommand());
+                TracingHelper.logError(span, "released command for device");
+
+            } else if (Modified.class.isInstance(deliveryState)) {
+                final Modified modified = (Modified) deliveryState;
+                LOG.debug("modified command message [{}]", getCommand());
+                TracingHelper.logError(span, "modified command for device"
+                        + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
+                        + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
+
+            } else if (Rejected.class.isInstance(deliveryState)) {
+                final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
+                LOG.debug("rejected command message [error: {}, command: {}]", errorCondition, getCommand());
+                TracingHelper.logError(span, "rejected command for device"
+                        + ((errorCondition != null && errorCondition.getDescription() != null)
+                                ? "; error: " + errorCondition.getDescription()
+                                : ""));
+            } else {
+                LOG.warn("unexpected delivery state [{}] when settling command message [{}]", deliveryState, getCommand());
+                TracingHelper.logError(span, "unexpected delivery state: " + deliveryState);
+            }
+        }
+        span.finish();
+    }
 }

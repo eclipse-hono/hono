@@ -26,6 +26,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
@@ -109,6 +110,10 @@ public final class AdapterInstanceCommandHandler {
         CommandConsumer.logReceivedCommandToSpan(command, currentSpan);
 
         if (commandHandler != null) {
+            HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery, d -> {
+                LOG.debug("got unexpected disposition update for received command message [remote state: {}, {}]", delivery.getRemoteState(), command);
+                currentSpan.log("got unexpected disposition update for received command message [remote state: " + delivery.getRemoteState() + "]");
+            });
             LOG.trace("using [{}] for received command [{}]", commandHandler, command);
             // command.isValid() check not done here - it is to be done in the command handler
             commandHandler.handleCommand(CommandContext.from(command, delivery, currentSpan));
