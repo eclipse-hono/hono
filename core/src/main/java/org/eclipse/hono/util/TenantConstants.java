@@ -172,16 +172,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
 
     /**
-     * The messaging type AMQP.
-     */
-    public static final String MESSAGING_TYPE_AMQP = "amqp";
-
-    /**
-     * The messaging type Kafka.
-     */
-    public static final String MESSAGING_TYPE_KAFKA = "kafka";
-
-    /**
      * The name of the Tenant API endpoint.
      */
     public static final String TENANT_ENDPOINT = "tenant";

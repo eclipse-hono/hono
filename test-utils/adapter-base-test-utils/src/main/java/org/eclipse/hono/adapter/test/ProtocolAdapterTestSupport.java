@@ -29,6 +29,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.MessagingClient;
+import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -44,6 +46,7 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -74,6 +77,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected DeviceRegistrationClient registrationClient;
     protected TenantClient tenantClient;
     protected TelemetrySender telemetrySender;
+    protected MessagingClients messagingClients;
 
     private CommandConsumerFactory createCommandConsumerFactory() {
         final CommandConsumerFactory factory = mock(CommandConsumerFactory.class);
@@ -155,6 +159,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
         this.telemetrySender = createTelemetrySenderMock();
         this.eventSender = createEventSenderMock();
+        this.messagingClients = createMessagingClients();
+    }
+
+    private MessagingClients createMessagingClients() {
+
+        final MessagingClient client = new MessagingClient(MessagingType.amqp, eventSender, telemetrySender,
+                commandResponseSender);
+        return new MessagingClients().addClient(client);
     }
 
     /**
@@ -197,13 +209,11 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      */
     protected void setServiceClients(final T adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCredentialsClient(credentialsClient);
         adapter.setCommandRouterClient(commandRouterClient);
-        adapter.setAmqpEventSender(eventSender);
         adapter.setRegistrationClient(registrationClient);
-        adapter.setAmqpTelemetrySender(telemetrySender);
         adapter.setTenantClient(tenantClient);
+        adapter.setMessagingClients(messagingClients);
     }
 
     /**
@@ -320,7 +330,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());
-        this.adapter.setAmqpTelemetrySender(this.telemetrySender);
+        this.adapter.setMessagingClients(createMessagingClients());
         return this.telemetrySender;
     }
 
@@ -352,7 +362,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());
-        this.adapter.setAmqpEventSender(this.eventSender);
+        this.adapter.setMessagingClients(createMessagingClients());
         return this.eventSender;
     }
 

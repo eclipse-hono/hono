@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
+import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
@@ -54,6 +56,7 @@ import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -97,8 +100,10 @@ public class AbstractProtocolAdapterBaseTest {
     private EventSender amqpEventSender;
     private EventSender kafkaEventSender;
     private CommandConsumerFactory commandConsumerFactory;
-    private CommandResponseSender commandResponseSender;
+    private CommandResponseSender amqpCommandResponseSender;
+    private CommandResponseSender kafkaCommandResponseSender;
     private CommandRouterClient commandRouterClient;
+    private MessagingClients messagingClients;
 
     /**
      * Sets up the fixture.
@@ -127,8 +132,16 @@ public class AbstractProtocolAdapterBaseTest {
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
 
-        commandResponseSender = mock(CommandResponseSender.class);
-        when(commandResponseSender.start()).thenReturn(Future.succeededFuture());
+        amqpCommandResponseSender = mock(CommandResponseSender.class);
+        when(amqpCommandResponseSender.start()).thenReturn(Future.succeededFuture());
+        kafkaCommandResponseSender = mock(CommandResponseSender.class);
+        when(kafkaCommandResponseSender.start()).thenReturn(Future.succeededFuture());
+
+        messagingClients = new MessagingClients()
+                .addClient(new MessagingClient(MessagingType.amqp, amqpEventSender, amqpTelemetrySender,
+                        amqpCommandResponseSender))
+                .addClient(new MessagingClient(MessagingType.kafka, kafkaEventSender, kafkaTelemetrySender,
+                        kafkaCommandResponseSender));
 
         commandRouterClient = mock(CommandRouterClient.class);
         when(commandRouterClient.start()).thenReturn(Future.succeededFuture());
@@ -145,15 +158,11 @@ public class AbstractProtocolAdapterBaseTest {
 
     private void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCommandRouterClient(commandRouterClient);
         adapter.setCredentialsClient(credentialsClient);
-        adapter.setAmqpEventSender(amqpEventSender);
-        adapter.setKafkaEventSender(kafkaEventSender);
         adapter.setRegistrationClient(registrationClient);
-        adapter.setAmqpTelemetrySender(amqpTelemetrySender);
-        adapter.setKafkaTelemetrySender(kafkaTelemetrySender);
         adapter.setTenantClient(tenantClient);
+        adapter.setMessagingClients(messagingClients);
     }
 
     private void givenAnAdapterConfiguredWithServiceClients(
@@ -213,7 +222,8 @@ public class AbstractProtocolAdapterBaseTest {
             verify(registrationClient).start();
             verify(credentialsClient).start();
             verify(commandConsumerFactory).start();
-            verify(commandResponseSender).start();
+            verify(amqpCommandResponseSender).start();
+            verify(kafkaCommandResponseSender).start();
             verify(startupHandler).handle(null);
 
             ctx.completeNow();
@@ -645,7 +655,7 @@ public class AbstractProtocolAdapterBaseTest {
         final Device authenticatedDevice = new Device(Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.setProperty(TenantConstants.FIELD_EXT,
-                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_KAFKA));
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
         when(tenantClient.get(eq(Constants.DEFAULT_TENANT), any())).thenReturn(Future.succeededFuture(tenantObject));
 
         // THEN the adapter forwards the connection event message downstream
@@ -671,12 +681,12 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetEventSenderConfiguredOnTenant() {
         final TenantObject tenant = new TenantObject("tenant", true);
         tenant.setProperty(TenantConstants.FIELD_EXT,
-                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_AMQP));
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
 
         assertEquals(amqpEventSender, adapter.getEventSender(tenant));
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
-                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_KAFKA));
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
 
         assertEquals(kafkaEventSender, adapter.getEventSender(tenant));
     }
@@ -688,14 +698,35 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetTelemetrySenderConfiguredOnTenant() {
         final TenantObject tenant = new TenantObject("tenant", true);
         tenant.setProperty(TenantConstants.FIELD_EXT,
-                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_AMQP));
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
 
         assertEquals(amqpTelemetrySender, adapter.getTelemetrySender(tenant));
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
-                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, TenantConstants.MESSAGING_TYPE_KAFKA));
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
 
         assertEquals(kafkaTelemetrySender, adapter.getTelemetrySender(tenant));
+    }
+
+    /**
+     * Verifies that when the messaging to be used is configured for a tenant, then this is used for command response
+     * messages.
+     */
+    @Test
+    public void testGetCommandResponseSenderConfiguredOnTenant() {
+        final CommandResponse response = CommandResponse.fromCorrelationId("", "x/y/z/12", Buffer.buffer(), null, 200);
+        final TenantObject tenant = new TenantObject("tenant", true);
+
+        tenant.setProperty(TenantConstants.FIELD_EXT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
+        adapter.sendCommandResponse(response, tenant, null);
+        verify(amqpCommandResponseSender).sendCommandResponse(any(), any());
+        verify(kafkaCommandResponseSender, never()).sendCommandResponse(any(), any());
+
+        tenant.setProperty(TenantConstants.FIELD_EXT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
+        adapter.sendCommandResponse(response, tenant, null);
+        verify(kafkaCommandResponseSender).sendCommandResponse(any(), any());
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
