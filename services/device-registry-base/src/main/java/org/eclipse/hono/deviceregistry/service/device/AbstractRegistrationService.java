@@ -488,6 +488,11 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     if (defaults != null) {
                         result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
                     }
+                    final JsonObject commandEndpoint =
+                        registrationInfo.getJsonObject(RegistrationConstants.FIELD_COMMAND_ENDPOINT);
+                    if (defaults != null) {
+                        result.put(RegistrationConstants.FIELD_COMMAND_ENDPOINT, commandEndpoint);
+                    }
                     return Future.succeededFuture(result);
                 });
     }

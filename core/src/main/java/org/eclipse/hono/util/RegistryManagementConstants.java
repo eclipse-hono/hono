@@ -367,6 +367,11 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String AUTHORITY_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
 
+    /**
+     * The name of the property that contains command-endpoint of a device.
+     */
+    public static final String COMMAND_ENDPOINT = "command-endpoint";
+
     private RegistryManagementConstants() {
         // prevent instantiation
     }

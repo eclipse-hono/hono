@@ -19,14 +19,18 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
+import org.eclipse.hono.adapter.lora.LoraCommand;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
+import org.eclipse.hono.util.CommandEndpoint;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -35,6 +39,7 @@ import io.vertx.ext.web.RoutingContext;
  * @param <T> The type of provider to test.
  */
 public abstract class LoraProviderTestBase<T extends LoraProvider> {
+    static final String TEST_DEVICE_ID = "0102030405060708";
 
     /**
      * The provider under test.
@@ -114,5 +119,36 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
      */
     protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage uplinkMessage) {
         // do nothing
+    }
+
+    /**
+     * Verifies that command messages are formatted correctly.
+     */
+    @Test
+    public void testGenerateCommandMessage() {
+        final CommandEndpoint commandEndpoint = new CommandEndpoint();
+        commandEndpoint.setPayloadProperties(Map.of("py-property", "my-property-value"));
+        commandEndpoint.setUri("https://my-lns.io/{{deviceId}}/command");
+        final LoraCommand command = provider.getCommand(commandEndpoint, TEST_DEVICE_ID,
+            Buffer.buffer("bumlux".getBytes(StandardCharsets.UTF_8)));
+        assertThat(command.getUri().toString()).isEqualTo("https://my-lns.io/" + TEST_DEVICE_ID + "/command");
+        assertCommandFormat(command.getPayload());
+    }
+
+
+    /**
+     * Asserts format of a lora command.
+     * <p>
+     * This method is invoked as part of the {@link #testGenerateCommandMessage()} test.
+     * Subclasses should override this method in order to verify the format specified by the LNS.
+     * <p>
+     * This default implementation validates the default format.
+     *
+     * @param command The command to assert.
+     * @throws AssertionError if any property fails assertion.
+     */
+    protected void assertCommandFormat(final JsonObject command) {
+        assertThat(command.containsKey("payload")).isTrue();
+        assertThat(command.getValue("payload")).isEqualTo("62756D6C7578");
     }
 }

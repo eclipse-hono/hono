@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -22,9 +23,13 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
+import org.eclipse.hono.util.MessageHelper;
 import org.springframework.stereotype.Component;
 
+import com.google.common.io.BaseEncoding;
+
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -60,6 +65,10 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     private static final String FIELD_CHIRPSTACK_SPREADING_FACTOR = "spreadingFactor";
     private static final String FIELD_CHIRPSTACK_TX_INFO = "txInfo";
 
+    private static final String COMMAND_FIELD_CHIRPSTACK_CONFIRMED = "confirmed";
+    private static final String COMMAND_FIELD_CHIRPSTACK_DATA = "data";
+    private static final String COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM = "deviceQueueItem";
+
     @Override
     public String getProviderName() {
         return "chirpStack";
@@ -69,7 +78,6 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     public Set<String> pathPrefixes() {
         return Set.of("/chirpstack");
     }
-
 
     @Override
     protected String getDevEui(final JsonObject loraMessage) {
@@ -156,5 +164,24 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
             });
 
         return data;
+    }
+
+    @Override
+    public Map<String, String> getDefaultHeaders() {
+        return Map.of(
+            HttpHeaders.CONTENT_TYPE.toString(), MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
+            HttpHeaders.ACCEPT.toString(), MessageHelper.CONTENT_TYPE_APPLICATION_JSON
+        );
+    }
+
+    @Override
+    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+        final JsonObject deviceQueueItem = new JsonObject();
+        deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_CONFIRMED, false);
+        deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, BaseEncoding.base64().encode(payload.getBytes()));
+
+        final JsonObject json = new JsonObject();
+        json.put(COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM, deviceQueueItem);
+        return json;
     }
 }

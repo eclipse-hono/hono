@@ -13,12 +13,19 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.lora.LoraCommand;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
+import org.eclipse.hono.util.CommandEndpoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.io.BaseEncoding;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
@@ -31,6 +38,9 @@ import io.vertx.ext.web.RoutingContext;
  *
  */
 abstract class JsonBasedLoraProvider implements LoraProvider {
+    private static final Logger LOG = LoggerFactory.getLogger(JsonBasedLoraProvider.class);
+
+    private static final String FIELD_PAYLOAD = "payload";
 
     @Override
     public LoraMessage getMessage(final RoutingContext ctx) {
@@ -50,6 +60,29 @@ abstract class JsonBasedLoraProvider implements LoraProvider {
             // thrown by overridden methods
             throw new LoraProviderMalformedPayloadException("failed to decode request body", e);
         }
+    }
+
+    @Override
+    public LoraCommand getCommand(final CommandEndpoint commandEndpoint, final String deviceId, final Buffer payload) {
+        Objects.requireNonNull(commandEndpoint);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(payload);
+        final String uri = commandEndpoint.getFormattedUri(deviceId);
+
+        final JsonObject commandPayload = getCommandPayload(payload, deviceId);
+        commandEndpoint.getPayloadProperties().forEach(commandPayload::put);
+        return new LoraCommand(commandPayload, uri);
+    }
+
+    @Override
+    public Map<String, String> getDefaultHeaders() {
+        return Map.of();
+    }
+
+    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+        final JsonObject json = new JsonObject();
+        json.put(FIELD_PAYLOAD, BaseEncoding.base16().encode(payload.getBytes()));
+        return json;
     }
 
     /**

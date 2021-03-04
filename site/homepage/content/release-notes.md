@@ -19,6 +19,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   of telemetry, event or command response message. With such an error subscription in place, the default behaviour
   on such errors is now to keep the MQTT connection open. Please refer to the
   [MQTT Adapter User Guide] ({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
+* The LoraWAN protocol adapter now supports command and control for providers *Chirpstack*, *Firefly* and *Loriot*.
 
 ### Fixes & Enhancements
 

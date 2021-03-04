@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +23,7 @@ import java.util.regex.Pattern;
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -29,6 +31,7 @@ import org.springframework.stereotype.Component;
 import com.google.common.io.BaseEncoding;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -56,6 +59,12 @@ public class LoriotProvider extends JsonBasedLoraProvider {
     private static final String FIELD_LORIOT_PAYLOAD = "data";
     private static final String FIELD_LORIOT_RSSI = "rssi";
     private static final String FIELD_LORIOT_SNR = "snr";
+
+    private static final String COMMAND_FIELD_LORIOT_CMD = "cmd";
+    private static final String COMMAND_FIELD_LORIOT_CONFIRMED = "confirmed";
+    private static final String COMMAND_FIELD_LORIOT_data = "data";
+    private static final String COMMAND_FIELD_LORIOT_EUI = "EUI";
+    private static final String COMMAND_VALUE_LORIOT_TX = "tx";
 
     private static final String OBJECTS_LORIOT_GATEWAYS = "gws";
 
@@ -148,5 +157,23 @@ public class LoriotProvider extends JsonBasedLoraProvider {
             });
 
         return data;
+    }
+
+    @Override
+    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+        final JsonObject json = new JsonObject();
+        json.put(COMMAND_FIELD_LORIOT_CMD, COMMAND_VALUE_LORIOT_TX);
+        json.put(COMMAND_FIELD_LORIOT_CONFIRMED, false);
+        json.put(COMMAND_FIELD_LORIOT_data, BaseEncoding.base16().encode(payload.getBytes()));
+        json.put(COMMAND_FIELD_LORIOT_EUI, deviceId);
+        return json;
+    }
+
+    @Override
+    public Map<String, String> getDefaultHeaders() {
+        return Map.of(
+            HttpHeaders.CONTENT_TYPE.toString(), MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
+            HttpHeaders.ACCEPT.toString(), MessageHelper.CONTENT_TYPE_TEXT_PLAIN
+            );
     }
 }

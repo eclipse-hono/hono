@@ -1069,6 +1069,25 @@ components:
                $ref: '#/components/schemas/Extensions'
             "status":
                $ref: '#/components/schemas/Status'
+            "command-endpoint":
+               type: object
+               required:
+                  - uri
+               properties:
+                  "uri":
+                     type: string
+                     description: |
+                        Configures the uri to which the command should be sent. Placeholder {{deviceId}} is
+                        supported and will be replaced with the id of the device to which the command was initially
+                        sent.
+                  "headers":
+                     type: object
+                     additionalProperties: true
+                     description: Allows arbitrary headers which will be added to the command.
+                  "payload-properties":
+                     type: object
+                     additionalProperties: true
+                     description: Allows arbitrary properties which will be added to the command payload.
 
       DeviceWithId:
          type: object
