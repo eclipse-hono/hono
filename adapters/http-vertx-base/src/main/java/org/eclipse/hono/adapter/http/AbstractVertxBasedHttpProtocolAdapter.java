@@ -86,9 +86,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static final String KEY_TIMER_ID = "timerId";
 
+    protected HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
+
     private HttpServer server;
     private HttpServer insecureServer;
-    private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
 
     /**
      * Sets the metrics for this service.

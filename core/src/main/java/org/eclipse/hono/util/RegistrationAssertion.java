@@ -40,6 +40,7 @@ public final class RegistrationAssertion {
     private List<String> authorizedGateways = new ArrayList<>();
     private Map<String, Object> defaults = new HashMap<>();
     private String mapper;
+    private CommandEndpoint commandEndpoint;
 
     /**
      * Creates a new registration assertion for a device.
@@ -127,6 +128,27 @@ public final class RegistrationAssertion {
     public RegistrationAssertion setDefaults(final Map<String, Object> defaults) {
         this.defaults.clear();
         Optional.ofNullable(defaults).ifPresent(this.defaults::putAll);
+        return this;
+    }
+
+    /**
+     * Gets the endpoint to use when sending commands.
+     *
+     * @return The command endpoint or {@code null} if not set.
+     */
+    @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT)
+    public CommandEndpoint getCommandEndpoint() {
+        return commandEndpoint;
+    }
+
+    /**
+     * Sets the command endpoint to be used when sending commands.
+     *
+     * @param commandEndpoint The command endpoint to set or {@code null} if no command endpoint is available.
+     * @return A reference to this object for method chaining.
+     */
+    public RegistrationAssertion setCommandEndpoint(final CommandEndpoint commandEndpoint) {
+        this.commandEndpoint = commandEndpoint;
         return this;
     }
 }

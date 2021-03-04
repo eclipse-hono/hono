@@ -59,6 +59,11 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-adapter-amqp</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

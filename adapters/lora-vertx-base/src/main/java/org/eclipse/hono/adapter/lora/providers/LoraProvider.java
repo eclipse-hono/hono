@@ -13,11 +13,15 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.hono.adapter.lora.LoraCommand;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.util.CommandEndpoint;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 
@@ -69,4 +73,22 @@ public interface LoraProvider {
      * @throws LoraProviderMalformedPayloadException if the request body cannot be decoded.
      */
     LoraMessage getMessage(RoutingContext request);
+
+    /**
+     * Gets the json object to send to the lorawan network server.
+     *
+     * @param commandEndpoint The command endpoint configuration.
+     * @param deviceId The deviceId to which the lorawan network should forward the payload.
+     * @param payload The payload to be sent to the lorawan device.
+     * @return The json object.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    LoraCommand getCommand(CommandEndpoint commandEndpoint, String deviceId, Buffer payload);
+
+    /**
+     * Gets the default headers to be set for this provider.
+     *
+     * @return The default headers for this provider.
+     */
+    Map<String, String> getDefaultHeaders();
 }

@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -77,6 +78,9 @@ public class Device {
     @JsonInclude(value = Include.NON_EMPTY)
     private Set<String> authorities = new HashSet<>();
 
+    @JsonProperty(RegistryManagementConstants.COMMAND_ENDPOINT)
+    private CommandEndpoint commandEndpoint;
+
     /**
      * Creates a new Device instance.
      */
@@ -110,6 +114,10 @@ public class Device {
         if (other.authorities != null) {
             this.authorities = new HashSet<>(other.authorities);
         }
+        if (other.commandEndpoint != null) {
+            this.commandEndpoint = other.commandEndpoint;
+        }
+
         this.mapper = other.mapper;
         this.status = other.status;
     }

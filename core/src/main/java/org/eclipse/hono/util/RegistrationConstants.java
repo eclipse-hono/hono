@@ -47,6 +47,27 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      */
     public static final String REGISTRATION_ENDPOINT = "registration";
 
+
+    /**
+     * Top level property name of a command endpoint.
+     */
+    public static final String FIELD_COMMAND_ENDPOINT = "command-endpoint";
+
+    /**
+     * The name of the property containing the headers for a command endpoint.
+     */
+    public static final String FIELD_COMMAND_ENDPOINT_HEADERS = "headers";
+
+    /**
+     * The name of the property containing the uri format for a command endpoint.
+     */
+    public static final String FIELD_COMMAND_ENDPOINT_URI = "uri";
+
+    /**
+     * The name of the property containing the additional payload properties for a command endpoint.
+     */
+    public static final String FIELD_COMMAND_ENDPOINT_PAYLOAD_PROPERTIES = "payload-properties";
+
     private RegistrationConstants() {
         // prevent instantiation
     }

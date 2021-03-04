@@ -53,6 +53,10 @@ public class FireflyProvider extends JsonBasedLoraProvider {
     private static final String FIELD_FIREFLY_RSSI = "rssi";
     private static final String FIELD_FIREFLY_SPREADING_FACTOR = "spreading_factor";
 
+    private static final String COMMAND_FIELD_FIREFLY_PAYLOAD = "payload";
+    private static final String COMMAND_FIELD_FIREFLY_ENCODING = "encoding";
+    private static final String COMMAND_FIELD_FIREFLY_CONFIRMED = "confirmed";
+
     private static final String MESSAGE_TYPE_UPLINK = "confirmed_data_up";
 
     private static final String OBJECT_FIREFLY_DEVICE = "device";
@@ -154,5 +158,14 @@ public class FireflyProvider extends JsonBasedLoraProvider {
             });
 
         return data;
+    }
+
+    @Override
+    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+        final JsonObject json = new JsonObject();
+        json.put(COMMAND_FIELD_FIREFLY_PAYLOAD, BaseEncoding.base16().encode(payload.getBytes()));
+        json.put(COMMAND_FIELD_FIREFLY_ENCODING, "base16");
+        json.put(COMMAND_FIELD_FIREFLY_CONFIRMED, false);
+        return json;
     }
 }

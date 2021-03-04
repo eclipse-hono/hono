@@ -13,11 +13,14 @@
 
 package org.eclipse.hono.adapter.lora;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntPredicate;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
@@ -25,27 +28,49 @@ import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HonoChainAuthHandler;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
+import org.eclipse.hono.adapter.lora.LoraCommand;
+import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMessage;
+import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
+import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.SubscriptionKey;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tag;
+import io.opentracing.tag.Tags;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -70,6 +95,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
+    private final Map<SubscriptionKey, LoraProvider> commandSubscriptions = new ConcurrentHashMap<>();
+    private HttpClient httpClient = null;
 
     /**
      * Sets the LoRa providers that this adapter should support.
@@ -218,6 +245,13 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     }
 
                     uploadTelemetryMessage(ctx, gatewayDevice.getTenantId(), deviceId, payload, contentType);
+                    final SubscriptionKey key = new SubscriptionKey(gatewayDevice.getTenantId(),
+                        gatewayDevice.getDeviceId());
+                    if (!commandSubscriptions.containsKey(key)) {
+                        createCommandConsumer(gatewayDevice.getTenantId(), gatewayDevice.getDeviceId(),
+                            commandContext -> handleCommand(commandContext), currentSpan.context())
+                            .map(commandConsumer -> commandSubscriptions.put(key, provider));
+                    }
                     break;
                 default:
                     LOG.debug("discarding message of unsupported type [tenant: {}, device-id: {}, type: {}]",
@@ -235,6 +269,103 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             handleUnsupportedUserType(ctx.getRoutingContext(), currentSpan);
         }
         currentSpan.finish();
+    }
+
+    private void handleCommand(final CommandContext commandContext) {
+        Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
+        final Sample timer = metrics.startTimer();
+        final Command command = commandContext.getCommand();
+
+        if (command.getGatewayId() == null) {
+            LOG.debug("No gateway defined for this command");
+            commandContext.release();
+            return;
+        }
+
+        final SubscriptionKey subscriptionKey = new SubscriptionKey(command.getTenant(), command.getGatewayId());
+        if (!commandSubscriptions.containsKey(subscriptionKey)) {
+            LOG.debug("Received command for unknown gateway {} for tenant {}", subscriptionKey.getDeviceId(),
+                subscriptionKey.getTenant());
+            commandContext.release();
+            return;
+        }
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(subscriptionKey.getTenant(),
+            commandContext.getTracingContext());
+
+        tenantTracker.compose(tenantObject -> {
+            if (command.isValid()) {
+                return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
+            } else {
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
+            }
+        })
+            .compose(success ->
+                getRegistrationClient().assertRegistration(command.getTenant(), subscriptionKey.getDeviceId(), null,
+                    commandContext.getTracingContext()))
+            .compose(registrationAssertion -> sendCommandToDevice(command, subscriptionKey, registrationAssertion))
+            .onSuccess(aVoid -> {
+                addMicrometerSample(commandContext, timer);
+                commandContext.accept();
+                metrics.reportCommand(
+                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                    subscriptionKey.getTenant(),
+                    tenantTracker.result(),
+                    MetricsTags.ProcessingOutcome.FORWARDED,
+                    command.getPayloadSize(),
+                    timer);
+            })
+            .onFailure(t -> {
+                LOG.error("Exception when sending command", t);
+                commandContext.release();
+                metrics.reportCommand(
+                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                    subscriptionKey.getTenant(),
+                    tenantTracker.result(),
+                    MetricsTags.ProcessingOutcome.from(t),
+                    command.getPayloadSize(),
+                    timer);
+            });
+    }
+
+    private Future<Void> sendCommandToDevice(final Command command,
+                                                final SubscriptionKey subscriptionKey, final RegistrationAssertion registrationAssertion) {
+        final Promise<Void> sendPromise = Promise.promise();
+        final LoraProvider loraProvider = commandSubscriptions.get(subscriptionKey);
+        final CommandEndpoint commandEndpoint = registrationAssertion.getCommandEndpoint();
+        if (commandEndpoint == null) {
+            return Future.failedFuture("Device has no command endpoint defined");
+        } else if (!commandEndpoint.isUriValid()) {
+            return Future.failedFuture("Device has command endpoint with invalid uri");
+        }
+        final LoraCommand loraCommand = loraProvider.getCommand(commandEndpoint, command.getDeviceId(),
+            command.getPayload());
+        LOG.debug(String.format("Sending loraCommand to LNS (%s): %s", loraCommand.getUri(), loraCommand.getPayload()));
+        final HttpClientRequest post =
+            getHttpClient().postAbs(loraCommand.getUri())
+                .handler(httpClientResponse -> {
+                    final IntPredicate successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
+                    if (successfulStatus.test(httpClientResponse.statusCode())) {
+                        sendPromise.complete();
+                    } else {
+                        sendPromise.fail(httpClientResponse.statusMessage());
+                    }
+                }).exceptionHandler(t -> sendPromise.fail(t));
+        commandEndpoint.getHeaders().forEach(post::putHeader);
+        loraProvider.getDefaultHeaders().forEach(post::putHeader);
+        post.end(loraCommand.getPayload().encode(), response -> {
+            if (response.failed()) {
+                sendPromise.fail(response.cause());
+            }
+        });
+        return sendPromise.future();
+    }
+
+    private HttpClient getHttpClient() {
+        if (httpClient != null) {
+            return httpClient;
+        }
+        httpClient = vertx.createHttpClient();
+        return httpClient;
     }
 
     void handleOptionsRoute(final RoutingContext ctx) {
