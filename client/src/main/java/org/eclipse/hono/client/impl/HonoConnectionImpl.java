@@ -912,6 +912,8 @@ public class HonoConnectionImpl implements HonoConnection {
                 receiver.setQoS(qos);
                 receiver.setPrefetch(preFetchSize);
                 receiver.handler((delivery, message) -> {
+                    HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery,
+                            d -> log.debug("got unexpected disposition update for received message [remote state: {}]", delivery.getRemoteState()));
                     try {
                         messageHandler.handle(delivery, message);
                         if (log.isTraceEnabled()) {

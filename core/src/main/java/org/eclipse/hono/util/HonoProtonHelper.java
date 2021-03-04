@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,10 +23,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
+import io.vertx.proton.impl.ProtonDeliveryImpl;
 
 /**
  * Utility methods for working with Proton objects.
@@ -307,5 +309,24 @@ public final class HonoProtonHelper {
             closeHandler.handle(null);
             link.free();
         });
+    }
+
+    /**
+     * Sets a handler that will be invoked when the given message delivery of a received message gets updated from the
+     * remote peer before the local receiver updates the delivery.
+     * <p>
+     * A scenario where such a handler could be useful would be that the remote sender of the message only waits a
+     * limited time for the disposition update and afterwards aborts (i.e. releases) the delivery from the sender side.
+     * With the handler here, the receiver can get notified of such a delivery update.
+     *
+     * @param delivery The delivery to set the handler on. Must be a delivery provided by a <em>ProtonReceiver</em>
+     *            handler. Note that the delivery actually needs to be a {@link ProtonDeliveryImpl}, otherwise the
+     *            given handler won't get registered.
+     * @param handler The handler to invoke.
+     */
+    public static void onReceivedMessageDeliveryUpdatedFromRemote(final ProtonDelivery delivery, final Handler<ProtonDelivery> handler) {
+        if (delivery instanceof ProtonDeliveryImpl) {
+            ((ProtonDeliveryImpl) delivery).handler(handler);
+        }
     }
 }
