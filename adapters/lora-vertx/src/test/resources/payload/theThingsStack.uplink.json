@@ -1,0 +1,62 @@
+{
+  "end_device_ids": {
+    "device_id": "dev1",
+    "application_ids": {
+      "application_id": "app1"
+    },
+    "dev_eui": "0102030405060708",
+    "join_eui": "800000000000000C",
+    "dev_addr": "00BCB929"
+  },
+  "correlation_ids": [
+    "as:up:01..."
+  ],
+  "received_at": "2020-02-12T15:15...",
+  "uplink_message": {
+    "session_key_id": "AXA50...",
+    "f_cnt": 9,
+    "f_port": 1,
+    "frm_payload": "YnVtbHV4",
+    "decoded_payload": {
+      "temperature": 1.0,
+      "luminosity": 0.64
+    },
+    "rx_metadata": [
+      {
+        "gateway_ids": {
+          "gateway_id": "gtw1",
+          "eui": "0203040506070809"
+        },
+        "time": "2020-02-12T15:15:45.787Z",
+        "timestamp": 2463457000,
+        "rssi": -35,
+        "channel_rssi": -35,
+        "snr": 5,
+        "uplink_token": "ChIKEA...",
+        "channel_index": 2
+      }
+    ],
+    "settings": {
+      "data_rate": {
+        "lora": {
+          "bandwidth": 125000,
+          "spreading_factor": 7
+        }
+      },
+      "data_rate_index": 5,
+      "coding_rate": "4/6",
+      "frequency": "868300000"
+    },
+    "received_at": "2020-02-12T15:15...",
+    "consumed_airtime": "0.056576s",
+    "locations": {
+      "user": {
+        "latitude": 37.97155556731436,
+        "longitude": 23.72678801175413,
+        "altitude": 10,
+        "source": "SOURCE_REGISTRY"
+      }
+    }
+  },
+  "simulated": true
+}
