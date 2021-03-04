@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,8 +46,11 @@ import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
@@ -195,6 +198,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 traceItems.put(Fields.EVENT, "no connection limit configured");
                 result.complete(Boolean.FALSE);
             } else {
+                final Context originalContext = Vertx.currentContext();
                 final AtomicBoolean cacheHit = new AtomicBoolean(true);
                 connectionCountCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                     final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
@@ -204,11 +208,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             METRIC_NAME_CONNECTIONS,
                             tenantId);
                     executeQuery(queryParams, span)
-                        .onSuccess(currentConnections -> r.complete(new LimitedResource<Long>(maxConnections, currentConnections)))
-                        .onFailure(t -> r.completeExceptionally(t));
+                        .onSuccess(currentConnections -> r.complete(new LimitedResource<>(maxConnections, currentConnections)))
+                        .onFailure(r::completeExceptionally);
                     return r;
                 })
-                .whenComplete((value, error) -> {
+                .whenComplete((value, error) -> runOnContext(originalContext, v -> {
                     TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
                     if (error != null) {
                         TracingHelper.logError(span, error);
@@ -221,7 +225,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                                 isExceeded ? "" : "not ", tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit());
                         result.complete(isExceeded);
                     }
-                });
+                }));
             }
         }
 
@@ -322,6 +326,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             result.complete(Boolean.FALSE);
         } else {
 
+            final Context originalContext = Vertx.currentContext();
             final AtomicBoolean cacheHit = new AtomicBoolean(true);
             dataVolumeCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
@@ -338,7 +343,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         periodMode,
                         periodInDays);
                 if (dataUsagePeriod.toMinutes() <= 0) {
-                    r.complete(new LimitedResource<Long>(allowedMaxBytes, 0L));
+                    r.complete(new LimitedResource<>(allowedMaxBytes, 0L));
                 } else {
                     final String queryParams = String.format(
                             QUERY_TEMPLATE_MESSAGE_LIMIT,
@@ -346,12 +351,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             dataUsagePeriod.toMinutes(),
                             config.getCacheTimeout());
                     executeQuery(queryParams, span)
-                        .onSuccess(bytesConsumed -> r.complete(new LimitedResource<Long>(allowedMaxBytes, bytesConsumed)))
-                        .onFailure(t -> r.completeExceptionally(t));
+                        .onSuccess(bytesConsumed -> r.complete(new LimitedResource<>(allowedMaxBytes, bytesConsumed)))
+                        .onFailure(r::completeExceptionally);
                 }
                 return r;
             })
-            .whenComplete((value, error) -> {
+            .whenComplete((value, error) -> runOnContext(originalContext, v -> {
                 TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
                 if (error != null) {
                     TracingHelper.logError(span, error);
@@ -369,7 +374,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
                     result.complete(isExceeded);
                 }
-            });
+            }));
         }
     }
 
@@ -430,6 +435,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             result.complete(Boolean.FALSE);
         } else {
 
+            final Context originalContext = Vertx.currentContext();
             final AtomicBoolean cacheHit = new AtomicBoolean(true);
             connectionDurationCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Duration>> r = new CompletableFuture<>();
@@ -447,7 +453,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                                 periodInDays);
 
                 if (connectionDurationUsagePeriod.toMinutes() <= 0) {
-                    r.complete(new LimitedResource<Duration>(allowedMaxMinutes, Duration.ofMinutes(0)));
+                    r.complete(new LimitedResource<>(allowedMaxMinutes, Duration.ofMinutes(0)));
                 } else {
                     final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%dm:%ds])))",
                             METRIC_NAME_CONNECTIONS_DURATION,
@@ -455,12 +461,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             connectionDurationUsagePeriod.toMinutes(),
                             config.getCacheTimeout());
                     executeQuery(queryParams, span)
-                        .onSuccess(minutesConnected -> r.complete(new LimitedResource<Duration>(allowedMaxMinutes, Duration.ofMinutes(minutesConnected))))
-                        .onFailure(t -> r.completeExceptionally(t));
+                        .onSuccess(minutesConnected -> r.complete(new LimitedResource<>(allowedMaxMinutes, Duration.ofMinutes(minutesConnected))))
+                        .onFailure(r::completeExceptionally);
                 }
                 return r;
             })
-            .whenComplete((value, error) -> {
+            .whenComplete((value, error) -> runOnContext(originalContext, v -> {
                 TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
                 if (error != null) {
                     TracingHelper.logError(span, error);
@@ -478,7 +484,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
                     result.complete(isExceeded);
                 }
-            });
+            }));
         }
     }
 
@@ -733,6 +739,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             }
         default:
             return targetDateTime;
+        }
+    }
+
+    private void runOnContext(final Context context, final Handler<Void> action) {
+        if (context != null && context != Vertx.currentContext()) {
+            context.runOnContext(go -> action.handle(null));
+        } else {
+            action.handle(null);
         }
     }
 }
