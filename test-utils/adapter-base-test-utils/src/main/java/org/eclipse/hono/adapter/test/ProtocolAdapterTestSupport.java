@@ -30,7 +30,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.MessagingClient;
-import org.eclipse.hono.adapter.MessagingClients;
+import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -77,7 +77,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected DeviceRegistrationClient registrationClient;
     protected TenantClient tenantClient;
     protected TelemetrySender telemetrySender;
-    protected MessagingClients messagingClients;
+    protected MessagingClientSet messagingClientSet;
 
     private CommandConsumerFactory createCommandConsumerFactory() {
         final CommandConsumerFactory factory = mock(CommandConsumerFactory.class);
@@ -159,14 +159,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
         this.telemetrySender = createTelemetrySenderMock();
         this.eventSender = createEventSenderMock();
-        this.messagingClients = createMessagingClients();
+        this.messagingClientSet = createMessagingClients();
     }
 
-    private MessagingClients createMessagingClients() {
+    private MessagingClientSet createMessagingClients() {
 
         final MessagingClient client = new MessagingClient(MessagingType.amqp, eventSender, telemetrySender,
                 commandResponseSender);
-        return new MessagingClients().addClient(client);
+        return new MessagingClientSet().addClient(client);
     }
 
     /**
@@ -213,7 +213,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCommandRouterClient(commandRouterClient);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTenantClient(tenantClient);
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientSet(messagingClientSet);
     }
 
     /**
@@ -330,7 +330,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());
-        this.adapter.setMessagingClients(createMessagingClients());
+        this.adapter.setMessagingClientSet(createMessagingClients());
         return this.telemetrySender;
     }
 
@@ -362,7 +362,7 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
                 any(),
                 any(),
                 any())).thenReturn(outcome.future());
-        this.adapter.setMessagingClients(createMessagingClients());
+        this.adapter.setMessagingClientSet(createMessagingClients());
         return this.eventSender;
     }
 

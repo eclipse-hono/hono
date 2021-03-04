@@ -968,7 +968,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setResourceLimitChecks(resourceLimitChecks);
 
         adapter.setTenantClient(tenantClient);
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientSet(messagingClientSet);
         adapter.setRegistrationClient(registrationClient);
         if (complete) {
             adapter.setCredentialsClient(credentialsClient);

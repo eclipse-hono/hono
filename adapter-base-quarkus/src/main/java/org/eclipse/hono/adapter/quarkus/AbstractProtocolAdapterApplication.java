@@ -22,7 +22,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConfigurationSupport;
 import org.eclipse.hono.adapter.MessagingClient;
-import org.eclipse.hono.adapter.MessagingClients;
+import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
@@ -227,10 +227,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             adapter.setCommandConsumerFactory(commandConsumerFactory(deviceConnectionClient, registrationClient));
         }
 
-        final MessagingClients messagingClients = new MessagingClients();
-        messagingClients.addClient(amqpMessagingClient());
+        final MessagingClientSet messagingClientSet = new MessagingClientSet();
+        messagingClientSet.addClient(amqpMessagingClient());
 
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientSet(messagingClientSet);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());

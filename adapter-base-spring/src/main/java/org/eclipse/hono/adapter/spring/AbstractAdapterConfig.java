@@ -20,7 +20,7 @@ import java.util.Optional;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConfigurationSupport;
 import org.eclipse.hono.adapter.MessagingClient;
-import org.eclipse.hono.adapter.MessagingClients;
+import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
@@ -144,7 +144,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
 
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
-        final MessagingClients messagingClients = new MessagingClients();
+        final MessagingClientSet messagingClientSet = new MessagingClientSet();
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
             // on config properties
@@ -173,14 +173,14 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         }
 
         if (kafkaProducerConfig().isConfigured()) {
-            messagingClients.addClient(kafkaMessagingClient(adapterProperties));
+            messagingClientSet.addClient(kafkaMessagingClient(adapterProperties));
         }
 
         if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
-            messagingClients.addClient(amqpMessagingClient(samplerFactory, adapterProperties));
+            messagingClientSet.addClient(amqpMessagingClient(samplerFactory, adapterProperties));
         }
 
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientSet(messagingClientSet);
 
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
