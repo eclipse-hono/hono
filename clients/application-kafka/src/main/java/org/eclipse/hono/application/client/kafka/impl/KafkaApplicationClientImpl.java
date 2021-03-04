@@ -14,6 +14,8 @@
 package org.eclipse.hono.application.client.kafka.impl;
 
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -40,6 +42,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
 
     private final Vertx vertx;
     private final KafkaConsumerConfigProperties consumerConfig;
+    private Supplier<KafkaConsumer<String, Buffer>> kafkaConsumerSupplier;
 
     /**
      * Creates a new Kafka based application client.
@@ -125,6 +128,13 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
                 closeHandler);
     }
 
+    // visible for testing
+    void setKafkaConsumerFactory(final Supplier<KafkaConsumer<String, Buffer>> kafkaConsumerSupplier) {
+        Objects.requireNonNull(kafkaConsumerSupplier);
+        this.kafkaConsumerSupplier = kafkaConsumerSupplier;
+    }
+
+
     private Future<MessageConsumer> createKafkaBasedDownstreamMessageConsumer(
             final String tenantId,
             final HonoTopic.Type type,
@@ -135,8 +145,9 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         Objects.requireNonNull(type);
         Objects.requireNonNull(messageHandler);
 
-        final KafkaConsumer<String, Buffer> kafkaConsumer = KafkaConsumer.create(vertx,
-                consumerConfig.getConsumerConfig(type.toString()));
+        final KafkaConsumer<String, Buffer> kafkaConsumer = Optional.ofNullable(kafkaConsumerSupplier)
+                .map(Supplier::get)
+                .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig.getConsumerConfig(type.toString())));
         final Handler<Throwable> effectiveCloseHandler = Objects.nonNull(closeHandler) ? closeHandler : (t -> {});
 
         return KafkaBasedDownstreamMessageConsumer.create(tenantId, type, kafkaConsumer, consumerConfig, messageHandler,
