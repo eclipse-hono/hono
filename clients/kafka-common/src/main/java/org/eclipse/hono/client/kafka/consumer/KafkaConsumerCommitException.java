@@ -22,6 +22,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
  */
 public class KafkaConsumerCommitException extends KafkaConsumerException {
 
+    private static final long serialVersionUID = 4291210760664102924L;
+
     /**
      * Creates a new exception for a root cause.
      *

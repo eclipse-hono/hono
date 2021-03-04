@@ -24,6 +24,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
  */
 public class KafkaConsumerPollException extends KafkaConsumerException {
 
+    private static final long serialVersionUID = -4108091688068963911L;
+
     /**
      * Creates a new exception for a root cause.
      *

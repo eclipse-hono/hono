@@ -18,6 +18,8 @@ package org.eclipse.hono.client.kafka.consumer;
  */
 public class KafkaConsumerException extends RuntimeException {
 
+    private static final long serialVersionUID = 9110074538472592799L;
+
     /**
      * Creates a new exception for a root cause.
      *
