@@ -34,12 +34,12 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 /**
  * The set of messaging clients present in a protocol adapter.
  * <p>
- * It contains one client for each connected messaging system type and allows to get the messaging to be used for a
- * tenant based on the tenants configuration.
+ * It contains one client for each connected messaging system and allows to get the messaging to be used for a tenant
+ * based on the tenants configuration.
  */
-public final class MessagingClientSet implements Lifecycle {
+public final class MessagingClients implements Lifecycle {
 
-    private final Logger log = LoggerFactory.getLogger(MessagingClientSet.class);
+    private final Logger log = LoggerFactory.getLogger(MessagingClients.class);
     private final HashMap<MessagingType, MessagingClient> clients = new HashMap<>();
 
     /**
@@ -49,7 +49,7 @@ public final class MessagingClientSet implements Lifecycle {
      * @return a reference to this for fluent use.
      * @throws NullPointerException if the client is {@code null}
      */
-    public MessagingClientSet addClient(final MessagingClient client) {
+    public MessagingClients addClient(final MessagingClient client) {
         Objects.requireNonNull(client);
         log.info("adding messaging client of type {}", client.getType().name());
         clients.put(client.getType(), client);

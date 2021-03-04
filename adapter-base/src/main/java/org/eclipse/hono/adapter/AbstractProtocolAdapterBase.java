@@ -99,7 +99,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DeviceRegistrationClient registrationClient;
     private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
     private TenantClient tenantClient;
-    private MessagingClientSet messagingClientSet;
+    private MessagingClients messagingClients;
 
     /**
      * Adds a Micrometer sample to a command context.
@@ -168,14 +168,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the set of clients to use for messaging.
+     * Sets the clients to use for messaging .
      *
-     * @param messagingClientSet The set of messaging clients.
+     * @param messagingClients The messaging clients.
      * @throws NullPointerException if the messaging clients is {@code null}.
      */
-    public void setMessagingClientSet(final MessagingClientSet messagingClientSet) {
-        Objects.requireNonNull(messagingClientSet);
-        this.messagingClientSet = messagingClientSet;
+    public void setMessagingClients(final MessagingClients messagingClients) {
+        Objects.requireNonNull(messagingClients);
+        this.messagingClients = messagingClients;
     }
 
     /**
@@ -185,7 +185,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The sender.
      */
     public final TelemetrySender getTelemetrySender(final TenantObject tenant) {
-        final MessagingClient clientForTenant = messagingClientSet.getClientForTenant(tenant);
+        final MessagingClient clientForTenant = messagingClients.getClientForTenant(tenant);
         log.debug("getting TelemetrySender [{}] for tenant [{}]", clientForTenant.getType(), tenant.getTenantId());
         return clientForTenant.getTelemetrySender();
     }
@@ -197,7 +197,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The sender.
      */
     public final EventSender getEventSender(final TenantObject tenant) {
-        final MessagingClient clientForTenant = messagingClientSet.getClientForTenant(tenant);
+        final MessagingClient clientForTenant = messagingClients.getClientForTenant(tenant);
         log.debug("getting EventSender [{}] for tenant [{}]", clientForTenant.getType(), tenant.getTenantId());
         return clientForTenant.getEventSender();
     }
@@ -379,7 +379,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
             result.fail(new IllegalStateException("Tenant client must be set"));
-        } else if (messagingClientSet == null || messagingClientSet.isUnconfigured()) {
+        } else if (messagingClients == null || messagingClients.isUnconfigured()) {
             result.fail(new IllegalStateException("A messaging client must be set"));
         } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
@@ -393,7 +393,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
-            messagingClientSet.start();
+            messagingClients.start();
             startServiceClient(tenantClient, "Tenant service");
             startServiceClient(registrationClient, "Device Registration service");
             startServiceClient(credentialsClient, "Credentials service");
@@ -444,7 +444,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(stopServiceClient(credentialsClient));
         results.add(stopServiceClient(commandConsumerFactory));
         results.add(stopServiceClient(commandRouterClient));
-        results.add(messagingClientSet.stop());
+        results.add(messagingClients.stop());
         return CompositeFuture.all(results);
     }
 
@@ -781,7 +781,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(response);
         Objects.requireNonNull(tenant);
 
-        final CommandResponseSender sender = messagingClientSet.getClientForTenant(tenant).getCommandResponseSender();
+        final CommandResponseSender sender = messagingClients.getClientForTenant(tenant).getCommandResponseSender();
         return sender.sendCommandResponse(response, context);
     }
 
@@ -990,7 +990,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerReadinessChecks(handler);
         }
-        messagingClientSet.registerReadinessChecks(handler);
+        messagingClients.registerReadinessChecks(handler);
     }
 
     /**
@@ -1018,7 +1018,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerLivenessChecks(handler);
         }
-        messagingClientSet.registerLivenessChecks(handler);
+        messagingClients.registerLivenessChecks(handler);
     }
 
     /**

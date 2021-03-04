@@ -28,12 +28,12 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests verifying behavior of {@link MessagingClientSet}.
+ * Tests verifying behavior of {@link MessagingClients}.
  *
  */
-public class MessagingClientSetTest {
+public class MessagingClientsTest {
 
-    private final MessagingClientSet underTest = new MessagingClientSet();
+    private final MessagingClients underTest = new MessagingClients();
     private final String tenant = "tenant";
     private final MessagingClient amqpClient = new MessagingClient(MessagingType.amqp, mock(EventSender.class),
             mock(TelemetrySender.class), mock(CommandResponseSender.class));
@@ -45,7 +45,7 @@ public class MessagingClientSetTest {
             MessagingType.amqp.name());
 
     /**
-     * Verifies that {@link MessagingClientSet#isUnconfigured()} returns {@code true} if no client is set and
+     * Verifies that {@link MessagingClients#isUnconfigured()} returns {@code true} if no client is set and
      * {@code false} otherwise.
      */
     @Test
@@ -108,7 +108,7 @@ public class MessagingClientSetTest {
     }
 
     /**
-     * Verifies that the invocation of {@link MessagingClientSet#getClientForTenant(TenantObject)} throws an
+     * Verifies that the invocation of {@link MessagingClients#getClientForTenant(TenantObject)} throws an
      * {@link IllegalArgumentException} if no client has been set.
      */
     @Test
