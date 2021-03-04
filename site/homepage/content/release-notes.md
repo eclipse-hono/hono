@@ -7,6 +7,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 ## 1.7.0 (not yet released)
 
 ### New Features
+
 * The Device Registry Management API has been extended now to support an optional unique identifier 
   for trust anchors belonging to a tenant. The file, JDBC and MongoDB based device registries
   support this feature. Please refer to the
@@ -30,6 +31,19 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `org.eclipse.hono.service.AbstractApplication` and `org.eclipse.hono.service.AbstractBaseApplication` classes
   have been moved to `org.eclipse.hono.service.spring.AbstractApplication` and `org.eclipse.hono.service.spring.AbstractApplication`
   in the newly added `service-base-spring` module respectively.
+
+### End of Life
+
+* The `build-docker-image` build profile is no longer activated automatically if the *docker.host* Maven property
+  is set. This has been changed in order to prevent the `build-docker-image` and `build-native-image` profiles being
+  activated at the same time when running something like
+
+  ```sh
+  mvn clean install -Ddocker.host=tcp//host:port -Pbuild-native-image
+  ```
+
+  Activating the `build-docker-image` profile by default can easily be achieved by adding `-Pbuild-docker-image` to
+  the *MAVEN_OPTS* environment variable instead.
 
 ## 1.6.0
 

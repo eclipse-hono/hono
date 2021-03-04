@@ -35,11 +35,6 @@
   <profiles>
     <profile>
       <id>build-docker-image</id>
-      <activation>
-        <property>
-          <name>docker.host</name>
-        </property>
-      </activation>
       <build>
         <plugins>
           <plugin>

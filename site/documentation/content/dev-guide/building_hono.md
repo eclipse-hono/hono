@@ -11,7 +11,18 @@ This page provides step by step instructions for getting the source code and bui
 
 #### Docker
 
-Creating Hono's container images using the Hono build process requires a [Docker](http://www.docker.com) daemon running either locally or on another host you have access to. Please follow the instructions on the [Docker web site](http://www.docker.com) to install Docker on your platform.
+Creating Hono's container images using the Hono build process requires a [Docker](http://www.docker.com) daemon
+running either locally or on another host you have access to.
+Please follow the instructions on the [Docker web site](http://www.docker.com) to install Docker on your platform.
+
+In case the docker daemon is not running locally, the following environment variable needs to be set in order for
+the examples in the remainder of this page to run successfully:
+
+```sh
+export DOCKER_HOST=tcp://${host}:${port}
+```
+
+with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on.
 
 #### Java
 
@@ -33,7 +44,7 @@ Either
 
 * download the latest [release archive](https://github.com/eclipse/hono/releases) and extract the archive to a local folder or
 * clone the Hono source code repository from GitHub:
-  ```
+  ```sh
   git clone https://github.com/eclipse/hono.git
   ```
   This will create a `hono` folder in the current working directory and clone the whole repository into that folder.
@@ -44,16 +55,16 @@ Either
 Run the following from the source folder:
 
 ```sh
+export DOCKER_HOST
 # in the "hono" folder containing the source code
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger
+mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
 ```
 
-with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. This will build all libraries, Docker images and example code. If you are running on Linux and Docker is installed locally or you have set the `DOCKER_HOST` environment variable, you can omit the `-Ddocker.host` property definition.
-
-If you plan to build the Docker images more frequently, e.g. because you want to extend or improve the Hono code, then you should define the `docker.host` property in your Maven `settings.xml` file containing the very same value as you would use on the command line as indicated above. The file is usually located in the `.m2` folder in your user's home directory. This way you can simply do a `mvn clean install` later on and the Docker images will be built automatically as well because the `build-docker-image` profile is activated automatically if the Maven property `docker.host` is set.
+This will build all libraries, Docker images and example code.
 
 {{% note title="Be patient" %}}
-The first build might take several minutes because Docker will need to download all the base images that Hono is relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
+The first build might take several minutes because Docker will need to download all the base images that Hono is relying on.
+However, most of these will be cached by Docker so that subsequent builds will be running much faster.
 {{% /note %}}
 
 #### Using custom Image Names
@@ -66,7 +77,7 @@ The default value for *docker.image.org-name* is `eclipse`. The following build 
 and the `custom` repository name:
 
 ```sh
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
+mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
 ```
 
 #### Building native Images
@@ -76,13 +87,12 @@ In order to do so, the `build-native-image` Maven profile needs to be activated:
 
 ```sh
 # in the "hono" folder containing the source code
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-native-image,metrics-prometheus
+mvn clean install -Pbuild-native-image,metrics-prometheus,jaeger
 ```
 
 {{% note title="Experimental" %}}
 Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are mutually exclusive.
-Using Jaeger tracing with native images doesn't work yet, i.e. the `jaeger` Maven profile must not be activated when building
-native images.
+However, they can be built one after the other.
 {{% /note %}}
 
 #### Pushing Images
@@ -90,13 +100,13 @@ native images.
 The container images that are created as part of the build process can be automatically pushed to a container registry using the `docker-push-image` Maven profile:
 
 ```sh
-mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger,docker-push-image
+mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger,docker-push-image
 ```
 
 Note that the container registry might require authentication in order to push images. The build uses the Docker Maven Plugin for creating and pushing images.
 Please refer to the [plugin documentation](http://dmp.fabric8.io/#authentication) for details regarding how to configure credentials for the registry.
 
-## Perform the integration tests
+## Running the Integration Tests
 
 The source code for Hono comes with a test suite for integration testing. To trigger these tests, change to the `tests` folder and execute:
 
