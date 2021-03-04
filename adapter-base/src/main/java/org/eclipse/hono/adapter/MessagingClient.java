@@ -31,7 +31,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 /**
  * A client for messaging used by a protocol adapter.
  */
-public class MessagingClient implements Lifecycle {
+public final class MessagingClient implements Lifecycle {
 
     private final Logger log = LoggerFactory.getLogger(MessagingClient.class);
 

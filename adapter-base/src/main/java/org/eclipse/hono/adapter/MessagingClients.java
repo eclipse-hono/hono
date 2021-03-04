@@ -37,7 +37,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * It contains one client for each connected messaging system and allows to get the messaging to be used for a tenant
  * based on the tenants configuration.
  */
-public class MessagingClients implements Lifecycle {
+public final class MessagingClients implements Lifecycle {
 
     private final Logger log = LoggerFactory.getLogger(MessagingClients.class);
     private final HashMap<MessagingType, MessagingClient> clients = new HashMap<>();
@@ -113,6 +113,10 @@ public class MessagingClients implements Lifecycle {
     @SuppressWarnings("rawtypes")
     @Override
     public Future<Void> start() {
+        if (clients.isEmpty()) {
+            throw new IllegalStateException("No messaging client set");
+        }
+
         final List<Future> startFutures = new ArrayList<>();
         for (final MessagingClient client : clients.values()) {
             startFutures.add(client.start());
