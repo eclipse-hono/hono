@@ -41,8 +41,8 @@
     <hamcrest-core.version>2.2</hamcrest-core.version>
     <infinispan.version>10.1.8.Final</infinispan.version>
     <jackson.version>2.11.3</jackson.version>
-    <jaeger.image.name>jaegertracing/all-in-one:1.17</jaeger.image.name>
-    <jaeger.version>1.2.0</jaeger.version>
+    <jaeger.image.name>jaegertracing/all-in-one:1.22</jaeger.image.name>
+    <jaeger.version>1.5.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
     <javassist.version>3.24.1-GA</javassist.version>
     <jaxb.api.version>2.2.12</jaxb.api.version>
