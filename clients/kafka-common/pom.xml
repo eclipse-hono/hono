@@ -30,13 +30,13 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-core</artifactId>
       <exclusions>
-        <exclusion>
-          <groupId>io.vertx</groupId>
-          <artifactId>vertx-core</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>io.vertx</groupId>
           <artifactId>vertx-proton</artifactId>
@@ -67,10 +67,6 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
       <exclusions>
-        <exclusion>
-          <groupId>io.vertx</groupId>
-          <artifactId>vertx-core</artifactId>
-        </exclusion>
         <exclusion>
           <groupId>io.vertx</groupId>
           <artifactId>vertx-proton</artifactId>
