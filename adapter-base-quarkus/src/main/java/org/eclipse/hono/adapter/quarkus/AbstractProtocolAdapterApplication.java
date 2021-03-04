@@ -21,7 +21,7 @@ import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConfigurationSupport;
-import org.eclipse.hono.adapter.MessagingClient;
+import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
@@ -228,7 +228,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         }
 
         final MessagingClients messagingClients = new MessagingClients();
-        messagingClients.addClient(amqpMessagingClient());
+        messagingClients.addClientSet(amqpMessagingClientSet());
 
         adapter.setMessagingClients(messagingClients);
         Optional.ofNullable(connectionEventProducer())
@@ -404,17 +404,17 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     /**
-     * Creates a new AMQP messaging client.
+     * Creates a new messaging client set for AMQP.
      *
-     * @return The client.
+     * @return The client set.
      */
-    protected MessagingClient amqpMessagingClient() {
+    protected MessagingClientSet amqpMessagingClientSet() {
         final CommandResponseSender commandResponseSender = new ProtonBasedCommandResponseSender(
                 HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties);
 
-        return new MessagingClient(MessagingType.amqp,
+        return new MessagingClientSet(MessagingType.amqp,
                 downstreamSender(),
                 downstreamSender(),
                 commandResponseSender);

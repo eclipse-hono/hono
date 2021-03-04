@@ -19,7 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConfigurationSupport;
-import org.eclipse.hono.adapter.MessagingClient;
+import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
@@ -173,11 +173,11 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         }
 
         if (kafkaProducerConfig().isConfigured()) {
-            messagingClients.addClient(kafkaMessagingClient(adapterProperties));
+            messagingClients.addClientSet(kafkaMessagingClientSet(adapterProperties));
         }
 
         if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
-            messagingClients.addClient(amqpMessagingClient(samplerFactory, adapterProperties));
+            messagingClients.addClientSet(amqpMessagingClientSet(samplerFactory, adapterProperties));
         }
 
         adapter.setMessagingClients(messagingClients);
@@ -344,18 +344,18 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
-     * Exposes a client for messaging via the <em>AMQP Messaging Network</em> as a Spring bean.
+     * Exposes a messaging client set for <em>AMQP</em> as a Spring bean.
      * <p>
-     * The client is initialized with the connection provided by {@link #downstreamConnection()}.
+     * The clients are initialized with the connections provided by {@link #downstreamConnection()}.
      *
      * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
      *            {@link org.eclipse.hono.adapter.metric.MicrometerBasedMetrics} out of the box.
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The client.
+     * @return The client set.
      */
     @Bean
     @Scope("prototype")
-    public MessagingClient amqpMessagingClient(
+    public MessagingClientSet amqpMessagingClientSet(
             final SendMessageSampler.Factory samplerFactory,
             final ProtocolAdapterProperties adapterConfig) {
 
@@ -366,24 +366,24 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         final CommandResponseSender commandResponseSender = new ProtonBasedCommandResponseSender(
                 commandConsumerConnection(), samplerFactory, adapterConfig);
 
-        return new MessagingClient(MessagingType.amqp, eventSender, telemetrySender, commandResponseSender);
+        return new MessagingClientSet(MessagingType.amqp, eventSender, telemetrySender, commandResponseSender);
     }
 
     /**
-     * Exposes a client for messaging via <em>Kafka</em> as a Spring bean.
+     * Exposes a messaging client set for <em>Kafka</em> as a Spring bean.
      *
      * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The client.
+     * @return The client set.
      */
     @Bean
     @Scope("prototype")
-    public MessagingClient kafkaMessagingClient(final ProtocolAdapterProperties adapterConfig) {
+    public MessagingClientSet kafkaMessagingClientSet(final ProtocolAdapterProperties adapterConfig) {
 
         final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
         final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx());
         final Tracer tracer = getTracer();
 
-        return new MessagingClient(MessagingType.kafka,
+        return new MessagingClientSet(MessagingType.kafka,
                 new KafkaBasedEventSender(factory, producerConfig, adapterConfig, tracer),
                 new KafkaBasedTelemetrySender(factory, producerConfig, adapterConfig, tracer),
                 new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));

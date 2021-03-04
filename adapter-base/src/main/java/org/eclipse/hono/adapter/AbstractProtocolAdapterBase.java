@@ -168,7 +168,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the clients to use for messaging .
+     * Sets the clients to use for messaging.
      *
      * @param messagingClients The messaging clients.
      * @throws NullPointerException if the messaging clients is {@code null}.
@@ -185,9 +185,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The sender.
      */
     public final TelemetrySender getTelemetrySender(final TenantObject tenant) {
-        final MessagingClient clientForTenant = messagingClients.getClientForTenant(tenant);
-        log.debug("getting TelemetrySender [{}] for tenant [{}]", clientForTenant.getType(), tenant.getTenantId());
-        return clientForTenant.getTelemetrySender();
+        final MessagingClientSet clientSetForTenant = messagingClients.getClientSetForTenant(tenant);
+        log.debug("getting TelemetrySender [{}] for tenant [{}]", clientSetForTenant.getType(), tenant.getTenantId());
+        return clientSetForTenant.getTelemetrySender();
     }
 
     /**
@@ -197,9 +197,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The sender.
      */
     public final EventSender getEventSender(final TenantObject tenant) {
-        final MessagingClient clientForTenant = messagingClients.getClientForTenant(tenant);
-        log.debug("getting EventSender [{}] for tenant [{}]", clientForTenant.getType(), tenant.getTenantId());
-        return clientForTenant.getEventSender();
+        final MessagingClientSet clientSetForTenant = messagingClients.getClientSetForTenant(tenant);
+        log.debug("getting EventSender [{}] for tenant [{}]", clientSetForTenant.getType(), tenant.getTenantId());
+        return clientSetForTenant.getEventSender();
     }
 
     /**
@@ -781,7 +781,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(response);
         Objects.requireNonNull(tenant);
 
-        final CommandResponseSender sender = messagingClients.getClientForTenant(tenant).getCommandResponseSender();
+        final CommandResponseSender sender = messagingClients.getClientSetForTenant(tenant).getCommandResponseSender();
         return sender.sendCommandResponse(response, context);
     }
 

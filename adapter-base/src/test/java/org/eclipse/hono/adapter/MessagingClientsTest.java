@@ -35,24 +35,24 @@ public class MessagingClientsTest {
 
     private final MessagingClients underTest = new MessagingClients();
     private final String tenant = "tenant";
-    private final MessagingClient amqpClient = new MessagingClient(MessagingType.amqp, mock(EventSender.class),
+    private final MessagingClientSet amqpClientSet = new MessagingClientSet(MessagingType.amqp, mock(EventSender.class),
             mock(TelemetrySender.class), mock(CommandResponseSender.class));
-    private final MessagingClient kafkaClient = new MessagingClient(MessagingType.kafka, mock(EventSender.class),
-            mock(TelemetrySender.class), mock(CommandResponseSender.class));
+    private final MessagingClientSet kafkaClientSet = new MessagingClientSet(MessagingType.kafka,
+            mock(EventSender.class), mock(TelemetrySender.class), mock(CommandResponseSender.class));
     private final Map<String, String> extensionFieldKafka = Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE,
             MessagingType.kafka.name());
     private final Map<String, String> extensionFieldAmqp = Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE,
             MessagingType.amqp.name());
 
     /**
-     * Verifies that {@link MessagingClients#isUnconfigured()} returns {@code true} if no client is set and
+     * Verifies that {@link MessagingClients#isUnconfigured()} returns {@code true} if no client set has been added and
      * {@code false} otherwise.
      */
     @Test
     public void isUnconfigured() {
         assertThat(underTest.isUnconfigured()).isTrue();
 
-        underTest.addClient(amqpClient);
+        underTest.addClientSet(amqpClientSet);
         assertThat(underTest.isUnconfigured()).isFalse();
     }
 
@@ -62,58 +62,58 @@ public class MessagingClientsTest {
     @Test
     public void testGetClientConfiguredOnTenant() {
 
-        underTest.addClient(kafkaClient);
-        underTest.addClient(amqpClient);
+        underTest.addClientSet(kafkaClientSet);
+        underTest.addClientSet(amqpClientSet);
 
-        assertThat(underTest.getClientForTenant(TenantObject.from(tenant, true).setProperty(
-                TenantConstants.FIELD_EXT, extensionFieldKafka))).isEqualTo(kafkaClient);
+        assertThat(underTest.getClientSetForTenant(TenantObject.from(tenant, true).setProperty(
+                TenantConstants.FIELD_EXT, extensionFieldKafka))).isEqualTo(kafkaClientSet);
 
-        assertThat(underTest.getClientForTenant(TenantObject.from(tenant, true).setProperty(
-                TenantConstants.FIELD_EXT, extensionFieldAmqp))).isEqualTo(amqpClient);
+        assertThat(underTest.getClientSetForTenant(TenantObject.from(tenant, true).setProperty(
+                TenantConstants.FIELD_EXT, extensionFieldAmqp))).isEqualTo(amqpClientSet);
 
     }
 
     /**
-     * Verifies that when no messaging type is configured for a tenant and only the Kafka client is set, then this one
-     * is used.
+     * Verifies that when no messaging type is configured for a tenant and only the Kafka client set is present, then
+     * this one is used.
      */
     @Test
     public void testGetClientOnlyKafkaClientSet() {
-        underTest.addClient(kafkaClient);
+        underTest.addClientSet(kafkaClientSet);
 
-        assertThat(underTest.getClientForTenant(TenantObject.from(tenant, true))).isEqualTo(kafkaClient);
+        assertThat(underTest.getClientSetForTenant(TenantObject.from(tenant, true))).isEqualTo(kafkaClientSet);
     }
 
     /**
-     * Verifies that when no messaging type is configured for a tenant and only the AMQP client is set, then this one is
-     * used.
+     * Verifies that when no messaging type is configured for a tenant and only the AMQP client set is present, then
+     * this one is used.
      */
     @Test
     public void testGetClientOnlyAmqpClientSet() {
-        underTest.addClient(amqpClient);
+        underTest.addClientSet(amqpClientSet);
 
-        assertThat(underTest.getClientForTenant(TenantObject.from(tenant, true))).isEqualTo(amqpClient);
+        assertThat(underTest.getClientSetForTenant(TenantObject.from(tenant, true))).isEqualTo(amqpClientSet);
     }
 
     /**
-     * Verifies that when no messaging type is configured for a tenant and both clients are set, then the AMQP client is
-     * used.
+     * Verifies that when no messaging type is configured for a tenant and multiple client sets are present, then the
+     * default (i.e. the AMQP) client set is used.
      */
     @Test
     public void testGetClientDefault() {
-        underTest.addClient(kafkaClient);
-        underTest.addClient(amqpClient);
+        underTest.addClientSet(kafkaClientSet);
+        underTest.addClientSet(amqpClientSet);
 
-        assertThat(underTest.getClientForTenant(TenantObject.from(tenant, true))).isEqualTo(amqpClient);
+        assertThat(underTest.getClientSetForTenant(TenantObject.from(tenant, true))).isEqualTo(amqpClientSet);
     }
 
     /**
-     * Verifies that the invocation of {@link MessagingClients#getClientForTenant(TenantObject)} throws an
-     * {@link IllegalArgumentException} if no client has been set.
+     * Verifies that the invocation of {@link MessagingClients#getClientSetForTenant(TenantObject)} throws an
+     * {@link IllegalArgumentException} if no client set has been added.
      */
     @Test
-    public void testGetClientThrowsIfNoClientSet() {
+    public void testGetClientSetThrowsIfNoClientSetPresent() {
         Assertions.assertThatIllegalStateException()
-                .isThrownBy(() -> underTest.getClientForTenant(TenantObject.from(tenant, true)));
+                .isThrownBy(() -> underTest.getClientSetForTenant(TenantObject.from(tenant, true)));
     }
 }

@@ -29,7 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.MessagingClient;
+import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
@@ -164,9 +164,9 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
     private MessagingClients createMessagingClients() {
 
-        final MessagingClient client = new MessagingClient(MessagingType.amqp, eventSender, telemetrySender,
+        final MessagingClientSet clientSet = new MessagingClientSet(MessagingType.amqp, eventSender, telemetrySender,
                 commandResponseSender);
-        return new MessagingClients().addClient(client);
+        return new MessagingClients().addClientSet(clientSet);
     }
 
     /**

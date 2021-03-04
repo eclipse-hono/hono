@@ -29,11 +29,11 @@ import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
- * A client for messaging used by a protocol adapter.
+ * A set of clients of a specific type used by a protocol adapter for the messaging.
  */
-public final class MessagingClient implements Lifecycle {
+public final class MessagingClientSet implements Lifecycle {
 
-    private final Logger log = LoggerFactory.getLogger(MessagingClient.class);
+    private final Logger log = LoggerFactory.getLogger(MessagingClientSet.class);
 
     private final MessagingType type;
     private final EventSender eventSender;
@@ -42,15 +42,15 @@ public final class MessagingClient implements Lifecycle {
     // TODO add command consumer
 
     /**
-     * Creates a new messaging client.
+     * Creates a new messaging client set.
      *
-     * @param type The type of messaging of this client.
+     * @param type The messaging type of the clients.
      * @param eventSender The event sender to be used.
      * @param telemetrySender The telemetry sender to be used.
      * @param commandResponseSender The command response sender to be used.
      * @throws NullPointerException if any of the parameters is {@code null}
      */
-    public MessagingClient(final MessagingType type, final EventSender eventSender,
+    public MessagingClientSet(final MessagingType type, final EventSender eventSender,
             final TelemetrySender telemetrySender, final CommandResponseSender commandResponseSender) {
 
         this.type = Objects.requireNonNull(type);
@@ -60,7 +60,7 @@ public final class MessagingClient implements Lifecycle {
     }
 
     /**
-     * Gets the messaging type of the client.
+     * Gets the messaging type of the clients.
      *
      * @return The type.
      */
@@ -125,7 +125,7 @@ public final class MessagingClient implements Lifecycle {
     }
 
     /**
-     * Registers liveness checks for this client.
+     * Registers liveness checks for the clients.
      *
      * @param handler The handler to register the checks with.
      */
@@ -136,7 +136,7 @@ public final class MessagingClient implements Lifecycle {
     }
 
     /**
-     * Registers readiness checks for this client.
+     * Registers readiness checks for the clients.
      *
      * @param handler The handler to register the checks with.
      */

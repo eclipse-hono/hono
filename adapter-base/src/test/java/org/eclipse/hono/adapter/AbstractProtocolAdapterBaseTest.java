@@ -138,9 +138,9 @@ public class AbstractProtocolAdapterBaseTest {
         when(kafkaCommandResponseSender.start()).thenReturn(Future.succeededFuture());
 
         messagingClients = new MessagingClients()
-                .addClient(new MessagingClient(MessagingType.amqp, amqpEventSender, amqpTelemetrySender,
+                .addClientSet(new MessagingClientSet(MessagingType.amqp, amqpEventSender, amqpTelemetrySender,
                         amqpCommandResponseSender))
-                .addClient(new MessagingClient(MessagingType.kafka, kafkaEventSender, kafkaTelemetrySender,
+                .addClientSet(new MessagingClientSet(MessagingType.kafka, kafkaEventSender, kafkaTelemetrySender,
                         kafkaCommandResponseSender));
 
         commandRouterClient = mock(CommandRouterClient.class);
