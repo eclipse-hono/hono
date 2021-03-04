@@ -1,19 +1,24 @@
 {
-  "resources": [
-    {
-      "pattern": ".*\\.xml$"
-    },
-    {
-      "pattern": ".*\\.json$"
-    },
-    {
-      "pattern": ".*\\.yaml$"
-    },
-    {
-      "pattern": ".*\\.properties$"
-    },
-    {
-      "pattern": ".*\\.proto$"
-    }
+  "resources": {
+    "includes": [
+      {
+        "pattern": ".*\\.xml$"
+      },
+      {
+        "pattern": ".*\\.json$"
+      },
+      {
+        "pattern": ".*\\.yaml$"
+      },
+      {
+        "pattern": ".*\\.properties$"
+      },
+      {
+        "pattern": ".*\\.proto$"
+      },
+      {
+        "pattern": "META-INF/services/.*$"
+      }
   ]
+  }
 }

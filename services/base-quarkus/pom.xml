@@ -26,27 +26,6 @@
   <name>Hono Services (Quarkus)</name>
   <description>Defines common dependencies for Quarkus-based service implementations</description>
 
-  <properties>
-    <hono.skip-image-build>true</hono.skip-image-build>
-  </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-bom</artifactId>
-        <version>${quarkus.platform.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.logmanager</groupId>
-        <artifactId>jboss-logmanager-embedded</artifactId>
-        <version>1.0.6</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -145,62 +124,63 @@
         </dependency>
       </dependencies>
       <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-            <configuration>
-              <skip>${hono.skip-image-build}</skip>
-              <images>
-                <image>
-                  <name>${docker.repository}/%a:%v</name>
-                  <build>
-                    <env>
-                      <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
-                      <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
-                      <JAVA_LIB_DIR>/opt/hono/lib/*:/opt/hono/extensions/*</JAVA_LIB_DIR>
-                      <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
-                      <JAVA_APP_JAR>${project.artifactId}-${project.version}-runner.jar</JAVA_APP_JAR>
-                    </env>
-                    <entryPoint>
-                      <arg>/opt/hono/run-java.sh</arg>
-                    </entryPoint>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}/docker-extra/run-java</directory>
-                            <outputDirectory>opt/hono</outputDirectory>
-                            <includes>
-                              <include>run-java.sh</include>
-                            </includes>
-                            <fileMode>755</fileMode>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/lib</directory>
-                            <outputDirectory>opt/hono/lib</outputDirectory>
-                            <includes>
-                              <include>*.jar</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}</directory>
-                            <outputDirectory>opt/hono</outputDirectory>
-                            <includes>
-                              <include>${project.artifactId}-${project.version}-runner.jar</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-              </images>
-            </configuration>
-          </plugin>
-        </plugins>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <configuration>
+                <images>
+                  <image>
+                    <name>${docker.repository}/%a:%v</name>
+                    <build>
+                      <env>
+                        <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
+                        <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
+                        <JAVA_LIB_DIR>/opt/hono/lib/*:/opt/hono/extensions/*</JAVA_LIB_DIR>
+                        <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
+                        <JAVA_APP_JAR>${project.artifactId}-${project.version}-runner.jar</JAVA_APP_JAR>
+                      </env>
+                      <entryPoint>
+                        <arg>/opt/hono/run-java.sh</arg>
+                      </entryPoint>
+                      <assembly>
+                        <mode>dir</mode>
+                        <basedir>/</basedir>
+                        <inline>
+                          <fileSets>
+                            <fileSet>
+                              <directory>${project.build.directory}/docker-extra/run-java</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>run-java.sh</include>
+                              </includes>
+                              <fileMode>755</fileMode>
+                            </fileSet>
+                            <fileSet>
+                              <directory>${project.build.directory}/lib</directory>
+                              <outputDirectory>opt/hono/lib</outputDirectory>
+                              <includes>
+                                <include>*.jar</include>
+                              </includes>
+                            </fileSet>
+                            <fileSet>
+                              <directory>${project.build.directory}</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>${project.artifactId}-${project.version}-runner.jar</include>
+                              </includes>
+                            </fileSet>
+                          </fileSets>
+                        </inline>
+                      </assembly>
+                    </build>
+                  </image>
+                </images>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
       </build>
     </profile>
 
@@ -221,60 +201,56 @@
           <artifactId>netty-tcnative</artifactId>
         </dependency>
         <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-tcnative-boringssl-static</artifactId>
-        </dependency>
-        <dependency>
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-caffeine</artifactId>
         </dependency>
       </dependencies>
       <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-            <configuration>
-              <skip>${hono.skip-image-build}</skip>
-              <images>
-                <image>
-                  <name>${docker.repository}/%a-native:%v</name>
-                  <build>
-                    <maintainer>The Eclipse Hono project</maintainer>
-                    <labels>
-                      <project>Eclipse Hono</project>
-                    </labels>
-                    <tags>
-                      <tag>latest</tag>
-                      <tag>${docker.image.additional.tag}</tag>
-                    </tags>
-                    <imagePullPolicy>Always</imagePullPolicy>
-                    <from>registry.access.redhat.com/ubi8/ubi-minimal:8.1</from>
-                    <workdir>/opt/hono</workdir>
-                    <entryPoint>
-                      <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
-                    </entryPoint>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}</directory>
-                            <outputDirectory>opt/hono</outputDirectory>
-                            <includes>
-                              <include>${project.artifactId}-${project.version}-runner</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-              </images>
-            </configuration>
-          </plugin>
-        </plugins>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <configuration>
+                <images>
+                  <image>
+                    <name>${docker.repository}/%a-native:%v</name>
+                    <build>
+                      <maintainer>The Eclipse Hono project</maintainer>
+                      <labels>
+                        <project>Eclipse Hono</project>
+                      </labels>
+                      <tags>
+                        <tag>${docker.image.additional.tag}</tag>
+                      </tags>
+                      <imagePullPolicy>Always</imagePullPolicy>
+                      <from>registry.access.redhat.com/ubi8/ubi-minimal:8.1</from>
+                      <workdir>/opt/hono</workdir>
+                      <entryPoint>
+                        <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
+                      </entryPoint>
+                      <assembly>
+                        <mode>dir</mode>
+                        <basedir>/</basedir>
+                        <inline>
+                          <fileSets>
+                            <fileSet>
+                              <directory>${project.build.directory}</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>${project.artifactId}-${project.version}-runner</include>
+                              </includes>
+                            </fileSet>
+                          </fileSets>
+                        </inline>
+                      </assembly>
+                    </build>
+                  </image>
+                </images>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
       </build>
     </profile>
 
@@ -323,8 +299,14 @@
       </properties>
       <dependencies>
         <dependency>
-          <groupId>io.jaegertracing</groupId>
-          <artifactId>jaeger-client</artifactId>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-jaeger</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>io.quarkus</groupId>
+              <artifactId>quarkus-ide-launcher</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>

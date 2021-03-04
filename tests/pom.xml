@@ -148,6 +148,27 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-demo-certs</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative-boringssl-static</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <classifier>linux-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-kqueue</artifactId>
+      <classifier>osx-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
     </dependency>
@@ -215,20 +236,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>qpid-jms-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-demo-certs</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mqtt</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-tcnative-boringssl-static</artifactId>
-      <version>${netty.tcnative.version}</version>
-    </dependency>
-
     <dependency>
       <groupId>org.eclipse.californium</groupId>
       <artifactId>californium-core</artifactId>
@@ -243,18 +254,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-epoll</artifactId>
-      <classifier>linux-x86_64</classifier>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-kqueue</artifactId>
-      <classifier>osx-x86_64</classifier>
-      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -484,6 +483,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.amqp-adapter.config-dir>opt/hono/config</hono.amqp-adapter.config-dir>
         <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus-native</hono.amqp-adapter.image>
         <hono.amqp-adapter.useNativeTransport>false</hono.amqp-adapter.useNativeTransport>
+        <hono.auth-server.config-dir>opt/hono/config</hono.auth-server.config-dir>
+        <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>
       </properties>
     </profile>
     <profile>
@@ -655,8 +656,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       We can thus detect OOM problems when running locally as opposed to only
                       later on Travis.
                      -->
-                    <memorySwap>205520896</memorySwap>
-                    <memory>205520896</memory>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
                     <env>
                       <MEMORY_MAX_TRACES>2000</MEMORY_MAX_TRACES>
                     </env>

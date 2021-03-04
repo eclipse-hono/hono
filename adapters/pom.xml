@@ -167,16 +167,6 @@
       </dependencies>
     </profile>
 
-    <profile>
-      <id>jaeger</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.jaegertracing</groupId>
-          <artifactId>jaeger-client</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
   </profiles>
 
 </project>

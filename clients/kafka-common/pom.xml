@@ -104,6 +104,16 @@
       <artifactId>jaeger-client</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-thrift</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 </project>

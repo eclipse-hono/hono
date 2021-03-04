@@ -51,10 +51,12 @@ maven/mavencentral/org.jboss.logmanager/jboss-logmanager-embedded/1.0.6, Apache-
 maven/mavencentral/javax.annotation/javax.annotation-api/1.3.2, CDDL-1.1 OR GPL-2.0, approved, CQ16910
 maven/mavencentral/io.quarkus/quarkus-core/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.4.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib-common/1.4.20, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.spec.javax.transaction/jboss-transaction-api_1.2_spec/1.1.1.Final, GPL-2.0-only WITH Classpath-exception-2.0 OR CDDL-1.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-plain/1.10.4.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.mchange/c3p0/0.9.5.4, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.microprofile.config/microprofile-config-api/1.4, , approved, eclipse
+maven/mavencentral/jakarta.activation/jakarta.activation-api/1.2.1, , approved, eclipse
 maven/mavencentral/io.smallrye.common/smallrye-common-function/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.6.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-legal/1.7.0-SNAPSHOT, , approved, eclipse
@@ -65,6 +67,7 @@ maven/mavencentral/io.vertx/vertx-core/3.9.5, , approved, eclipse
 maven/mavencentral/com.h2database/h2/1.4.200, EPL-1.0, approved, CQ14966
 maven/mavencentral/io.vertx/vertx-web/3.9.5, , approved, eclipse
 maven/mavencentral/io.opentracing/opentracing-api/0.33.0, Apache-2.0, approved, CQ20944
+maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib/1.4.20, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-service-auth-base/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/org.eclipse.hono/hono-demo-certs/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/org.eclipse.hono/hono-client-application/1.7.0-SNAPSHOT, , approved, eclipse
@@ -79,7 +82,6 @@ maven/mavencentral/io.vertx/vertx-web-common/3.9.5, , approved, eclipse
 maven/mavencentral/io.micrometer/micrometer-core/1.6.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.objenesis/objenesis/3.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-netty/1.11.3.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib/1.4.10, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.config/smallrye-config-source-yaml/1.10.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.common/smallrye-common-classloader/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.microprofile.context-propagation/microprofile-context-propagation-api/1.0.1, , approved, eclipse
@@ -130,6 +132,7 @@ maven/mavencentral/io.netty/netty-codec-http2/4.1.49.Final, Apache-2.0 AND BSD-3
 maven/mavencentral/io.vertx/vertx-auth-jdbc/3.9.5, , approved, eclipse
 maven/mavencentral/org.yaml/snakeyaml/1.26, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-client-adapter/1.7.0-SNAPSHOT, , approved, eclipse
+maven/mavencentral/io.jaegertracing/jaeger-client/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-service-device-registry-base/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/org.eclipse.hono/hono-core/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-mongo-client/3.9.5, , approved, eclipse
@@ -154,16 +157,18 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism/1.10.4.Final, 
 maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.4.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-jackson/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-registry-graphite/1.6.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-jaeger/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.graalvm.sdk/graal-sdk/20.3.1, UPL-1.0, approved, clearlydefined
+maven/mavencentral/org.checkerframework/checker-qual/2.5.2, MIT, approved, clearlydefined
 maven/mavencentral/org.springframework/spring-context/5.3.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.vertx/vertx-web-client/3.9.5, , approved, eclipse
 maven/mavencentral/io.netty/netty-transport-native-kqueue/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.netty/netty-codec/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.jaegertracing/jaeger-tracerresolver/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, BSD-2-Clause, approved, CQ13192
 maven/mavencentral/org.mongodb/mongodb-driver-core/3.10.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jetbrains/annotations/13.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.reactive/mutiny-context-propagation/0.12.5, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.ow2.asm/asm/9.0, BSD-3-Clause, approved, CQ22703
 maven/mavencentral/org.junit.platform/junit-platform-commons/1.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/ch.qos.logback/logback-classic/1.2.3, EPL-1.0, approved, CQ13636
 maven/mavencentral/org.springframework/spring-expression/5.3.4, Apache-2.0, approved, clearlydefined
@@ -198,7 +203,6 @@ maven/mavencentral/org.eclipse.californium/californium-core/2.6.0, , approved, e
 maven/mavencentral/org.eclipse.hono/hono-client-common/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/io.dropwizard.metrics/metrics-graphite/4.1.14, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.netty/netty-buffer/4.1.49.Final, Apache-2.0, approved, CQ21842
-maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib-common/1.4.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.thrift/libthrift/0.13.0, Apache-2.0, approved, CQ22260
 maven/mavencentral/com.squareup.okhttp3/okhttp/4.9.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.netty/netty-tcnative-boringssl-static/2.0.30.Final, Apache-2.0 OR LicenseRef-Public-Domain OR BSD-2-Clause OR MIT, approved, CQ15280
@@ -209,7 +213,6 @@ maven/mavencentral/io.vertx/vertx-mqtt/3.9.5, , approved, eclipse
 maven/mavencentral/jakarta.annotation/jakarta.annotation-api/1.3.5, , approved, eclipse
 maven/mavencentral/org.jboss.logmanager/log4j2-jboss-logmanager/1.0.0.Beta1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.opentracing/opentracing-noop/0.33.0, Apache-2.0, approved, CQ20949
-maven/mavencentral/org.checkerframework/checker-qual/3.5.0, MIT, approved, clearlydefined
 maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, BSD-2-Clause, approved, CQ17408
 maven/mavencentral/com.google.protobuf/protobuf-java/3.6.1, BSD-3-Clause, approved, clearlydefined
 maven/mavencentral/com.fasterxml.jackson.core/jackson-core/2.11.3, Apache-2.0, approved, CQ22713
@@ -224,7 +227,6 @@ maven/mavencentral/org.mongodb/bson/3.10.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.junit.jupiter/junit-jupiter-api/5.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/io.quarkus/quarkus-vertx/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-client-amqp-common/1.7.0-SNAPSHOT, , approved, eclipse
-maven/mavencentral/jakarta.ejb/jakarta.ejb-api/3.2.6, , approved, eclipse
 maven/mavencentral/io.quarkus/quarkus-mutiny/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework/spring-beans/5.3.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.junit.platform/junit-platform-engine/1.7.0, EPL-2.0, approved, CQ22640

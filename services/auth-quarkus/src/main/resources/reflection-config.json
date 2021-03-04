@@ -10,5 +10,47 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
+  },
+  {
+    "name" : "io.jsonwebtoken.impl.DefaultJwtBuilder",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "io.jsonwebtoken.impl.DefaultJwtParserBuilder",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "io.jsonwebtoken.jackson.io.JacksonDeserializer",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "io.jsonwebtoken.jackson.io.JacksonSerializer",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "io.jsonwebtoken.impl.compression.DeflateCompressionCodec",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "io.jsonwebtoken.impl.compression.GzipCompressionCodec",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
   }
 ]

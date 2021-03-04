@@ -59,6 +59,7 @@
     <micrometer.version>1.6.2</micrometer.version>
     <mockito.version>3.6.28</mockito.version>
     <mongodb-image.name>mongo:4.2.11</mongodb-image.name>
+    <mongodb-driver.version>3.10.1</mongodb-driver.version>
     <netty.version>4.1.49.Final</netty.version>
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
@@ -95,6 +96,18 @@
 
   <dependencyManagement>
     <dependencies>
+
+      <!--
+        First we import managed dependencies defined by Quarkus
+        and then override with Hono specific versions further down below.
+      -->
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
 
       <!-- Hono components -->
       <dependency>
@@ -453,6 +466,26 @@
         <artifactId>vertx-mongo-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>
+      <!-- 
+        Explicitly set version of Mongo DB client to the
+        version used by vertx-mongo-client in order to
+        override the version defined by Quarkus BOM.
+       -->
+      <dependency>
+        <groupId>org.mongodb</groupId>
+        <artifactId>mongodb-driver-async</artifactId>
+        <version>${mongodb-driver.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mongodb</groupId>
+        <artifactId>mongodb-driver-core</artifactId>
+        <version>${mongodb-driver.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mongodb</groupId>
+        <artifactId>bson</artifactId>
+        <version>${mongodb-driver.version}</version>
+      </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-kafka-client</artifactId>
@@ -468,6 +501,12 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative</artifactId>
+        <version>${netty.tcnative.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${netty.tcnative.version}</version>
         <scope>runtime</scope>
       </dependency>
@@ -611,6 +650,12 @@
         <groupId>io.jaegertracing</groupId>
         <artifactId>jaeger-thrift</artifactId>
         <version>${jaeger.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okhttp3</groupId>
+        <artifactId>okhttp</artifactId>
+        <version>4.9.0</version>
         <scope>runtime</scope>
       </dependency>
 
