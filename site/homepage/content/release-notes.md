@@ -12,6 +12,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   for trust anchors belonging to a tenant. The file, JDBC and MongoDB based device registries
   support this feature. Please refer to the
   [Device registry management API]({{% doclink "/api/management#/tenants/" %}}) for details.
+* The LoraWAN protocol adapter has been extended with support for *The Things Stack* provider.
 
 ### Fixes & Enhancements
 
