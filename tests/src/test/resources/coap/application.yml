@@ -13,6 +13,7 @@ hono:
     port: 5684
     insecurePortBindAddress: 0.0.0.0
     insecurePort: 5683
+    maxConnections: 100
     maxPayloadSize: 2048
   messaging:
     name: 'Hono CoAP Adapter'

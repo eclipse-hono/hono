@@ -14,6 +14,7 @@ hono:
     insecurePortEnabled: true
     keyPath: /etc/hono/certs/mqtt-adapter-key.pem
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    maxConnections: 10
     sendMessageToDeviceTimeout: ${adapter.sendMessageToDeviceTimeout}
   messaging:
     name: 'Hono MQTT Adapter'

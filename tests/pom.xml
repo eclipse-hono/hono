@@ -119,19 +119,24 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
     <hono.amqp-adapter.image>hono-adapter-amqp-vertx</hono.amqp-adapter.image>
     <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
+    <hono.amqp-adapter.max-mem>314572800</hono.amqp-adapter.max-mem>
 
     <hono.coap-adapter.image>hono-adapter-coap-vertx</hono.coap-adapter.image>
     <hono.coap-adapter.config-dir>etc/hono</hono.coap-adapter.config-dir>
+    <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
 
     <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
     <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
+    <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
     <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
 
     <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
+    <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
 
     <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
+    <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
 
     <default.java.options>
       -XX:MinRAMPercentage=80
@@ -485,22 +490,27 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <properties>
         <hono.amqp-adapter.config-dir>opt/hono/config</hono.amqp-adapter.config-dir>
         <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus-native</hono.amqp-adapter.image>
+        <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
         <hono.amqp-adapter.useNativeTransport>false</hono.amqp-adapter.useNativeTransport>
 
         <hono.coap-adapter.config-dir>opt/hono/config</hono.coap-adapter.config-dir>
         <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus-native</hono.coap-adapter.image>
+        <hono.coap-adapter.max-mem>67108864</hono.coap-adapter.max-mem>
         <hono.coap-adapter.useNativeTransport>false</hono.coap-adapter.useNativeTransport>
 
         <hono.http-adapter.config-dir>opt/hono/config</hono.http-adapter.config-dir>
         <hono.http-adapter.image>hono-adapter-http-vertx-quarkus-native</hono.http-adapter.image>
+        <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
 
         <hono.mqtt-adapter.config-dir>opt/hono/config</hono.mqtt-adapter.config-dir>
         <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus-native</hono.mqtt-adapter.image>
+        <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
         <hono.mqtt-adapter.useNativeTransport>false</hono.mqtt-adapter.useNativeTransport>
 
         <hono.auth-server.config-dir>opt/hono/config</hono.auth-server.config-dir>
         <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>
+        <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
       </properties>
     </profile>
     <profile>
@@ -741,8 +751,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       We can thus detect OOM problems when running locally as opposed to only
                       later on Travis.
                      -->
-                    <memorySwap>205520896</memorySwap>
-                    <memory>205520896</memory>
+                    <memorySwap>${hono.auth-server.max-mem}</memorySwap>
+                    <memory>${hono.auth-server.max-mem}</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -1229,8 +1239,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-http-vertx.hono</alias>
                     </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
+                    <memorySwap>${hono.http-adapter.max-mem}</memorySwap>
+                    <memory>${hono.http-adapter.max-mem}</memory>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
@@ -1300,8 +1310,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-mqtt-vertx.hono</alias>
                     </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
+                    <memorySwap>${hono.mqtt-adapter.max-mem}</memorySwap>
+                    <memory>${hono.mqtt-adapter.max-mem}</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -1376,8 +1386,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-amqp-vertx.hono</alias>
                     </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
+                    <memorySwap>${hono.amqp-adapter.max-mem}</memorySwap>
+                    <memory>${hono.amqp-adapter.max-mem}</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -1447,8 +1457,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-coap-vertx.hono</alias>
                     </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
+                    <memorySwap>${hono.coap-adapter.max-mem}</memorySwap>
+                    <memory>${hono.coap-adapter.max-mem}</memory>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
