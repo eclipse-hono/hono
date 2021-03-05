@@ -2,7 +2,6 @@
 title: "Command & Control API for Kafka Specification"
 linkTitle: "Command & Control API for Kafka"
 weight: 419
-hidden: true
 ---
 
 The *Command & Control* API of Eclipse Hono&trade; is used by *Business Applications* to send commands to connected devices.
