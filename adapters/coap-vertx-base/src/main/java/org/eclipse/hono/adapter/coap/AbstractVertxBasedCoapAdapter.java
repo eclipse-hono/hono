@@ -1167,7 +1167,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker);
                 })
-                .compose(ok -> sendCommandResponse(commandResponseTracker.result(), currentSpan.context()))
+                .compose(ok -> sendCommandResponse(commandResponseTracker.result(), tenantTracker.result(),
+                        currentSpan.context()))
                 .map(delivery -> {
                     log.trace("delivered command response [command-request-id: {}] to application",
                             commandRequestId);

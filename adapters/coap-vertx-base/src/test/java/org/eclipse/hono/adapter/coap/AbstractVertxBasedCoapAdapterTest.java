@@ -968,14 +968,12 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setResourceLimitChecks(resourceLimitChecks);
 
         adapter.setTenantClient(tenantClient);
-        adapter.setAmqpEventSender(eventSender);
-        adapter.setAmqpTelemetrySender(telemetrySender);
+        adapter.setMessagingClients(messagingClients);
         adapter.setRegistrationClient(registrationClient);
         if (complete) {
             adapter.setCredentialsClient(credentialsClient);
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
-        adapter.setCommandResponseSender(commandResponseSender);
         adapter.setCommandRouterClient(commandRouterClient);
         adapter.init(vertx, mock(Context.class));
 
