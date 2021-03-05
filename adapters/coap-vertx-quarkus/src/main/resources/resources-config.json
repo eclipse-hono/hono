@@ -1,0 +1,19 @@
+{
+  "resources": [
+    {
+      "pattern": ".*\\.xml$"
+    },
+    {
+      "pattern": ".*\\.json$"
+    },
+    {
+      "pattern": ".*\\.yaml$"
+    },
+    {
+      "pattern": ".*\\.properties$"
+    },
+    {
+      "pattern": ".*\\.proto$"
+    }
+  ]
+}
