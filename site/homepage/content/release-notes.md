@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   support this feature. Please refer to the
   [Device registry management API]({{% doclink "/api/management#/tenants/" %}}) for details.
 * The LoraWAN protocol adapter has been extended with support for *The Things Stack* provider.
+* Added (experimental) Quarkus based variant of the Authentication service.
+* Added (experimental) Quarkus based variant of the CoAP protocol adapter.
 
 ### Fixes & Enhancements
 

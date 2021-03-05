@@ -76,6 +76,22 @@ hono:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
 
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.adapter":
+        level: INFO
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}
+    prefer-native-transport: true
+    resolver:
+      cache-max-time-to-live: 0
+
 spring:
   jmx:
     enabled: false
