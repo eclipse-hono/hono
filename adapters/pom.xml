@@ -36,6 +36,8 @@
     <module>http-vertx-base</module>
     <module>http-vertx-quarkus</module>
     <module>kura</module>
+    <module>lora-vertx-base</module>
+    <module>lora-vertx-quarkus</module>
     <module>lora-vertx</module>
     <module>mqtt-vertx</module>
     <module>mqtt-vertx-base</module>
