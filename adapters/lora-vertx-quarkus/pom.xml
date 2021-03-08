@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+
+    SPDX-License-Identifier: EPL-2.0
+ -->
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-adapters-quarkus</artifactId>
+    <relativePath>../base-quarkus</relativePath>
+    <version>1.7.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>hono-adapter-lora-vertx-quarkus</artifactId>
+  <name>Hono Lora Adapter (Quarkus)</name>
+
+  <description>A protocol adapter for connecting LoRa Backend Services like Kerlink or TTN.</description>
+  <url>https://www.eclipse.org/hono</url>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-lora-vertx-base</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <configuration>
+            <images>
+              <image>
+                <build>
+                  <ports>
+                    <port>8080</port>
+                    <port>8443</port>
+                    <port>${vertx.health.port}</port>
+                  </ports>
+                </build>
+              </image>
+            </images>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>build-native-image</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
