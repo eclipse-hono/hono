@@ -86,7 +86,7 @@ public interface CommandSender extends Lifecycle {
      * @param replyId An arbitrary string which will be used to create the reply-to address to be included in commands
      *            sent to devices of the tenant. If the messaging network specific Command &amp; Control implementation does
      *            not require a replyId, the specified value will be ignored.
-     * @param properties The headers to include in the command message as AMQP application properties.
+     * @param properties The headers to include in the command message.
      * @return A future indicating the result of the operation.
      *         <p>
      *         If the command was accepted, the future will succeed.
@@ -129,7 +129,7 @@ public interface CommandSender extends Lifecycle {
      * @param replyId An arbitrary string which will be used to create the reply-to address to be included in commands
      *            sent to devices of the tenant. If the messaging network specific Command &amp; Control implementation does
      *            not require a replyId, the specified value will be ignored.
-     * @param properties The headers to include in the command message as AMQP application properties.
+     * @param properties The headers to include in the command message.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation.
@@ -153,4 +153,62 @@ public interface CommandSender extends Lifecycle {
             Map<String, Object> properties,
             SpanContext context);
 
+    /**
+     * Sends a <em>one-way command</em> to a device, i.e. there is no response expected from the device.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected to a protocol adapter
+     * and needs to have indicated its intent to receive commands.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the command to.
+     * @param command The name of the command.
+     * @param data The input data to the command or {@code null} if the command has no input data.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         If the one-way command was accepted, the future will succeed.
+     *         <p>
+     *         The future will fail with a {@link ServiceInvocationException} if the one-way command could 
+     *         not be forwarded to the device.
+     * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     */
+    default Future<Void> sendOneWayCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final Buffer data) {
+        return sendOneWayCommand(tenantId, deviceId, command, null, data, null, null);
+    }
+
+    /**
+     * Sends a <em>one-way command</em> to a device, i.e. there is no response from the device expected.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected to a protocol adapter
+     * and needs to have indicated its intent to receive commands.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the command to.
+     * @param command The name of the command.
+     * @param contentType The type of the data submitted as part of the one-way command or {@code null} if unknown.
+     * @param data The input data to the command or {@code null} if the command has no input data.
+     * @param properties The headers to include in the one-way command message.
+     * @param context The currently active OpenTracing span context that is used to trace the execution of this
+     *            operation or {@code null} if no span is currently active.
+     * @return A future indicating the result of the operation:
+     *         <p>
+     *         If the one-way command was accepted, the future will succeed.
+     *         <p>
+     *         The future will fail with a {@link ServiceInvocationException} if the one-way command could 
+     *         not be forwarded to the device.
+     * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     */
+    Future<Void> sendOneWayCommand(
+            String tenantId,
+            String deviceId,
+            String command,
+            String contentType,
+            Buffer data,
+            Map<String, Object> properties,
+            SpanContext context);
 }

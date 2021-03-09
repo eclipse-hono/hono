@@ -14,6 +14,7 @@ package org.eclipse.hono.application.client.amqp;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.CommandSender;
@@ -25,6 +26,7 @@ import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -66,6 +68,34 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
         Objects.requireNonNull(correlationId);
         Objects.requireNonNull(replyId);
 
+        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId, properties,
+                newChildSpan(context, "send command"));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> sendOneWayCommand(
+            final String tenantId,
+            final String deviceId, 
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final Map<String, Object> properties,
+            final SpanContext context) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(command);
+
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, null, properties,
+                newChildSpan(context, "send one-way command"));
+    }
+
+    private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
+            final String contentType, final Buffer data, final String correlationId, final String replyId,
+            final Map<String, Object> properties, final Span span) {
+
         return getOrCreateSenderLink(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId)
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
@@ -74,7 +104,7 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
                                     connection.getConfig());
                     final Message msg = createMessage(tenantId, deviceId, command, contentType, data, correlationId,
                             replyId, targetAddress, properties);
-                    return sender.sendAndWaitForOutcome(msg, newChildSpan(context, "send command"));
+                    return sender.sendAndWaitForOutcome(msg, span);
                 })
                 .mapEmpty();
     }
@@ -86,10 +116,11 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
 
         MessageHelper.setCreationTime(msg);
         msg.setAddress(targetAddress);
-        msg.setReplyTo(
-                String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId));
+        Optional.ofNullable(replyId)
+                .ifPresent(id -> msg.setReplyTo(String.format("%s/%s/%s",
+                        CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, id)));
+        Optional.ofNullable(correlationId).ifPresent(msg::setCorrelationId);
         MessageHelper.setApplicationProperties(msg, properties);
-        msg.setCorrelationId(correlationId);
         msg.setSubject(command);
         MessageHelper.setPayload(msg, contentType, data);
         MessageHelper.addTenantId(msg, tenantId);

@@ -49,6 +49,7 @@ import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
@@ -66,6 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -1070,28 +1072,26 @@ public final class IntegrationTestSupport {
             final Map<String, Object> properties,
             final long requestTimeout) {
 
-        return applicationClientFactory.getOrCreateCommandClient(tenantId).compose(commandClient -> {
+        final Promise<Void> timeOutTracker = Promise.promise();
+        final long timerId = vertx.setTimer(requestTimeout, id -> timeOutTracker
+                .fail(new SendMessageTimeoutException("sending command timed out after " + requestTimeout + "ms")));
 
-            commandClient.setRequestTimeout(requestTimeout);
-            final Promise<Void> result = Promise.promise();
-            final Handler<Void> send = s -> {
-                // send the command upstream to the device
-                LOGGER.trace("sending one-way command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
-                commandClient.sendOneWayCommand(deviceId, command, contentType, payload, properties).map(ok -> {
-                    LOGGER.debug("successfully sent one-way command [name: {}, payload: {}]", command, payload);
-                    return (Void) null;
-                }).recover(t -> {
-                    LOGGER.debug("could not send one-way command: {}", t.getMessage());
-                    return Future.failedFuture(t);
-                }).onComplete(result);
-            };
-            if (commandClient.getCredit() == 0) {
-                commandClient.sendQueueDrainHandler(send);
-            } else {
-                send.handle(null);
-            }
-            return result.future();
-        });
+        // send the one way command upstream to the device
+        final Future<Void> sendOneWayCommandTracker = amqpApplicationClient
+                .sendOneWayCommand(tenantId, deviceId, command, contentType, payload, properties,
+                        NoopSpan.INSTANCE.context())
+                .onComplete(ar -> {
+                    vertx.cancelTimer(timerId);
+                    timeOutTracker.tryComplete();
+                    if (ar.succeeded()) {
+                        LOGGER.debug("successfully sent one-way command [name: {}, payload: {}]", command, payload);
+                    } else {
+                        LOGGER.debug("could not send one-way command: {}", ar.cause().getMessage());
+                    }
+                });
+
+        return CompositeFuture.all(sendOneWayCommandTracker, timeOutTracker.future())
+                .mapEmpty();
     }
 
     /**

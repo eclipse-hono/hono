@@ -25,10 +25,11 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
- * A client that supports Hono's north bound operations to send commands and receive telemetry,
+ * An AMQP 1.0 based client that supports Hono's north bound operations to send commands and receive telemetry,
  * event and command response messages.
  */
-public interface AmqpApplicationClient extends ApplicationClient<AmqpMessageContext>, ConnectionLifecycle<HonoConnection> {
+public interface AmqpApplicationClient
+        extends ApplicationClient<AmqpMessageContext>, ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a client for consuming messages from Hono's north bound <em>Telemetry API</em>.
