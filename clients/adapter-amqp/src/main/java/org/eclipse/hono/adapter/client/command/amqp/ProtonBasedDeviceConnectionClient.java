@@ -21,13 +21,13 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.eclipse.hono.adapter.client.amqp.AbstractRequestResponseServiceClient;
-import org.eclipse.hono.adapter.client.amqp.RequestResponseClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler.Factory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
+import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
