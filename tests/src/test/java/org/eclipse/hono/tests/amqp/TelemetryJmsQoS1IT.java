@@ -28,7 +28,9 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 import javax.naming.NamingException;
 
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -121,6 +123,7 @@ public class TelemetryJmsQoS1IT {
      * @throws Exception if the test fails.
      */
     @Test
+    @AssumeMessagingSystem(type = AmqpApplicationClient.class)
     public void testTelemetryUpload() throws Exception {
 
         final String tenantId = helper.getRandomTenantId();

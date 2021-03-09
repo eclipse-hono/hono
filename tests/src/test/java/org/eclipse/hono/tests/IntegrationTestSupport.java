@@ -42,10 +42,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
+import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -58,6 +60,7 @@ import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -522,6 +525,19 @@ public final class IntegrationTestSupport {
         props.setRequestTimeout(timeout);
         props.setFlowLatency(timeout);
         return props;
+    }
+
+    /**
+     * Get the application client type which is configured for the running integration test.
+     *
+     * @return The application client type.
+     */
+    public static Class<? extends ApplicationClient<?>> getConfiguredApplicationClientType() {
+        if (Strings.isNullOrEmpty(IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS)) {
+            return AmqpApplicationClient.class;
+        } else {
+            return KafkaApplicationClient.class;
+        }
     }
 
     /**

@@ -22,11 +22,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.QoS;
@@ -149,6 +151,7 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @param ctx The test context
      */
     @Test
+    @AssumeMessagingSystem(type = AmqpApplicationClient.class)
     public void testUploadMessageFailsForNoConsumer(final VertxTestContext ctx) {
 
         // GIVEN a device
@@ -190,6 +193,7 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
+    @AssumeMessagingSystem(type = AmqpApplicationClient.class)
     public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(
             final Vertx vertx,
             final VertxTestContext ctx)
