@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.amqp.test;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -171,6 +172,8 @@ public final class AmqpClientUnitTestHelper {
             handler.handle(result.future());
             return result.future();
         });
+        when(connection.isConnected()).thenReturn(Future.succeededFuture());
+        when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         return connection;
     }
 }

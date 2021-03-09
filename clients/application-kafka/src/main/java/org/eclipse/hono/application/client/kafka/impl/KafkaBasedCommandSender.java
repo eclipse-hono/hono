@@ -78,15 +78,43 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
 
+        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties, true, context);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> sendOneWayCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final Map<String, Object> properties,
+            final SpanContext context) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(command);
+
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, false, context);
+    }
+
+    private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
+            final String contentType, final Buffer data, final String correlationId,
+            final Map<String, Object> properties, final boolean responseRequired, final SpanContext context) {
+
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId);
         final Map<String, Object> headerProperties = getHeaderProperties(deviceId, command, contentType, correlationId,
-                true, properties);
+                responseRequired, properties);
+
         return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, data, headerProperties, context);
     }
 
     private Map<String, Object> getHeaderProperties(final String deviceId, final String subject,
             final String contentType, final String correlationId, final boolean responseRequired,
             final Map<String, Object> properties) {
+
         final Map<String, Object> props = Optional.ofNullable(properties)
                 .map(HashMap::new)
                 .orElseGet(HashMap::new);
@@ -95,7 +123,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
         props.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
         props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
                 Objects.nonNull(contentType) ? contentType : MessageHelper.CONTENT_TYPE_OCTET_STREAM);
-        props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
+        Optional.ofNullable(correlationId)
+                .ifPresent(id -> props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, id));
         props.put(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, responseRequired);
 
         return props;
