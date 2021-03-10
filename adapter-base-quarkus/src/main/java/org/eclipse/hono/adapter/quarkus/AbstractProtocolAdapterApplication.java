@@ -56,7 +56,7 @@ import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConne
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.DeviceConnectionCacheConfig;
+import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.util.CredentialsObject;
@@ -140,7 +140,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected RequestResponseClientConfigProperties deviceConnectionClientConfig;
 
     @Inject
-    protected DeviceConnectionCacheConfig deviceConnectionCacheConfig;
+    protected InfinispanRemoteConfigurationProperties deviceConnectionCacheConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;

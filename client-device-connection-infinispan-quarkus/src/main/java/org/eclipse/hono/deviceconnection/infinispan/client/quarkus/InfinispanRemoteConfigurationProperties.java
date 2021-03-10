@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.deviceconnection.infinispan.client.quarkus;
 
 import java.util.Optional;
 
-import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,9 +28,9 @@ import io.quarkus.arc.config.ConfigProperties.NamingStrategy;
  * Device Connection information.
  */
 @ConfigProperties(prefix = "hono.deviceConnection", namingStrategy = NamingStrategy.VERBATIM, failOnMismatchingMember = false)
-public class DeviceConnectionCacheConfig extends InfinispanRemoteConfigurationProperties {
+public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceConnectionCacheConfig.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InfinispanRemoteConfigurationProperties.class);
 
     // Defining these properties is necessary in order for
     // Quarkus to actually invoke the corresponding setter methods
