@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,8 +27,18 @@ import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
  */
 public class AuthenticationServerClientConfigProperties extends ClientConfigProperties {
 
-    private final SignatureSupportingConfigProperties validation = new SignatureSupportingConfigProperties();
+    private SignatureSupportingConfigProperties validation = new SignatureSupportingConfigProperties();
     private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
+
+    /**
+     * Sets the properties configuring key material for validating tokens.
+     *
+     * @param props The properties.
+     * @throws NullPointerException if props is {@code null}.
+     */
+    public final void setValidation(final SignatureSupportingConfigProperties props) {
+        validation = Objects.requireNonNull(props);
+    }
 
     /**
      * Gets the properties for determining key material for validating user tokens.

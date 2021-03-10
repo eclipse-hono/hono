@@ -19,32 +19,31 @@
     <version>1.7.0-SNAPSHOT</version>
     <relativePath>../base-quarkus</relativePath>
   </parent>
-  <artifactId>hono-service-auth-quarkus</artifactId>
-  <name>Hono Auth (Quarkus)</name>
-  <description>A default identity provider for authenticating Hono components and consumers based on Quarkus.</description>
-
-  <properties>
-    <!-- do not delegate verification of credentials to Authentication server -->
-    <hono.auth>implementation</hono.auth>
-  </properties>
+  <artifactId>hono-service-command-router-quarkus</artifactId>
+  <name>Hono Command Router (Quarkus)</name>
+  <description>A Quarkus based implementation of Hono's Command Router API that is using Infinispan for storing data.</description>
 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-auth-base</artifactId>
+      <artifactId>hono-service-base-quarkus</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-command-router-base</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-base</artifactId>
+      <artifactId>client-device-connection-infinispan-quarkus</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-base-quarkus</artifactId>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-kafka-client</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>com.github.ben-manes.caffeine</groupId>
-          <artifactId>caffeine</artifactId>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-ide-launcher</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -61,11 +60,12 @@
               <image>
                 <build>
                   <labels>
-                    <implemented.api.1>Authentication</implemented.api.1>
+                    <implemented.api.1>Command Router</implemented.api.1>
                   </labels>
                   <ports>
                     <port>5671</port>
                     <port>5672</port>
+                    <port>${vertx.health.port}</port>
                   </ports>
                 </build>
               </image>
@@ -91,6 +91,20 @@
 
     <profile>
       <id>build-native-image</id>
+      <dependencies>
+        <dependency>
+           <groupId>org.osgi</groupId>
+           <artifactId>org.osgi.core</artifactId>
+           <scope>runtime</scope>
+           <version>4.3.1</version>
+        </dependency>
+        <dependency>
+           <groupId>org.osgi</groupId>
+           <artifactId>org.osgi.compendium</artifactId>
+           <scope>runtime</scope>
+           <version>4.3.1</version>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <plugin>

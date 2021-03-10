@@ -11,11 +11,14 @@ hono:
     name: command-router
     trustStorePath: "/etc/hono/certs/trusted-certs.pem"
     validation:
-      certPath: /etc/hono/certs/auth-server-cert.pem
+      certPath: "/etc/hono/certs/auth-server-cert.pem"
   commandRouter:
     amqp:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
+    cache:
+      embedded:
+        configurationFile: "/${hono.command-router.config-dir}/cache-config.xml"
   registration:
     name: 'Hono Command Router'
     host: ${hono.registration.host}
@@ -39,6 +42,21 @@ hono:
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.commandrouter":
+        level: INFO
+      "org.eclipse.hono.authentication.impl":
+        level: INFO
+  vertx:
+    prefer-native-transport: true
 
 spring:
   jmx:

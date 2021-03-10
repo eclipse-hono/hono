@@ -37,6 +37,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -55,6 +57,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private DeviceConnectionInfo deviceConnectionInfo;
     private CommandConsumerFactory commandConsumerFactory;
     private CommandTargetMapper commandTargetMapper;
+    private Tracer tracer = NoopTracerFactory.create();
     /**
      * Vert.x context that this service has been started in.
      */
@@ -65,6 +68,21 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     @Autowired
     public void setConfig(final CommandRouterServiceConfigProperties configuration) {
         this.config = configuration;
+    }
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
+     * of messages published by devices across Hono's components.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
+     * be used.
+     *
+     * @param opentracingTracer The tracer.
+     */
+    @Autowired(required = false)
+    public final void setTracer(final Tracer opentracingTracer) {
+        LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     /**

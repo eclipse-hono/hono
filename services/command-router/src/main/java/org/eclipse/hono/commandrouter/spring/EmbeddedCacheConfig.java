@@ -11,13 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.commandrouter.infinispan;
+package org.eclipse.hono.commandrouter.spring;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.eclipse.hono.commandrouter.ApplicationConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;

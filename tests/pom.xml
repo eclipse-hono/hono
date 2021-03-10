@@ -81,7 +81,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
      -->
     <hono.command-related-service.configname>commandRouter</hono.command-related-service.configname>
     <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
-    <hono.commandrouter.disabled>false</hono.commandrouter.disabled>
+
+    <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
+    <hono.command-router.disabled>false</hono.command-router.disabled>
+    <hono.command-router.image>hono-service-command-router</hono.command-router.image>
+    <hono.command-router.max-mem>314572800</hono.command-router.max-mem>
+
     <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
     <!--
@@ -326,7 +331,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <properties>
         <hono.command-related-service.configname>deviceConnection</hono.command-related-service.configname>
         <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
-        <hono.commandrouter.disabled>true</hono.commandrouter.disabled>
+        <hono.command-router.disabled>true</hono.command-router.disabled>
         <hono.device-connection.disabled>false</hono.device-connection.disabled>
       </properties>
     </profile>
@@ -485,6 +490,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
         <hono.auth-server.config-dir>opt/hono/config</hono.auth-server.config-dir>
         <hono.auth-server.image>hono-service-auth-quarkus</hono.auth-server.image>
+
+        <hono.command-router.config-dir>opt/hono/config</hono.command-router.config-dir>
+        <hono.command-router.image>hono-service-command-router-quarkus</hono.command-router.image>
       </properties>
     </profile>
     <profile>
@@ -519,6 +527,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.auth-server.config-dir>opt/hono/config</hono.auth-server.config-dir>
         <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
+
+        <hono.command-router.config-dir>opt/hono/config</hono.command-router.config-dir>
+        <hono.command-router.image>hono-service-command-router-quarkus-native</hono.command-router.image>
+        <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
       </properties>
     </profile>
     <profile>
@@ -1126,9 +1138,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <image>
                   <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
                   <build>
-                    <skip>${hono.commandrouter.disabled}</skip>
+                    <skip>${hono.command-router.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-command-router:${project.version}</from>
+                    <from>${docker.repository}/${hono.command-router.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1137,7 +1149,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/commandrouter</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>${hono.command-router.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
@@ -1156,7 +1168,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </assembly>
                   </build>
                   <run>
-                    <skip>${hono.commandrouter.disabled}</skip>
+                    <skip>${hono.command-router.disabled}</skip>
                     <ports>
                       <port>+commandrouter.ip:commandrouter.amqp.port:5672</port>
                       <port>+commandrouter.ip:commandrouter.health.port:${vertx.health.port}</port>
@@ -1167,8 +1179,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-command-router.hono</alias>
                     </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
+                    <memorySwap>${hono.command-router.max-mem}</memorySwap>
+                    <memory>${hono.command-router.max-mem}</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -1180,6 +1192,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
                       <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
                       <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <QUARKUS_PROFILE>embedded-cache</QUARKUS_PROFILE>
                     </env>
                     <log>
                       <prefix>CMDROUTER</prefix>
@@ -1550,7 +1563,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.amqps.port>${qpid.amqps.port}</downstream.amqps.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
-                <deviceconnection.enabled>${hono.commandrouter.disabled}</deviceconnection.enabled>
+                <deviceconnection.enabled>${hono.command-router.disabled}</deviceconnection.enabled>
                 <deviceconnection.host>${deviceconnection.ip}</deviceconnection.host>
                 <deviceconnection.amqp.port>${deviceconnection.amqp.port}</deviceconnection.amqp.port>
                 <commandrouter.host>${commandrouter.ip}</commandrouter.host>

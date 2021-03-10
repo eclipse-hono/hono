@@ -33,6 +33,8 @@
     <module>base-quarkus</module>
     <module>base-spring</module>
     <module>command-router</module>
+    <module>command-router-base</module>
+    <module>command-router-quarkus</module>
     <module>device-connection</module>
     <module>device-registry-base</module>
     <module>device-registry-file</module>
