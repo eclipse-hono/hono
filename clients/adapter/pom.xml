@@ -37,24 +37,8 @@
           <artifactId>vertx-proton</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.springframework.security</groupId>
-          <artifactId>spring-security-crypto</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>io.opentracing</groupId>
           <artifactId>opentracing-noop</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-impl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-jackson</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.xml.bind</groupId>
-          <artifactId>jaxb-api</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -121,24 +105,8 @@
           <artifactId>vertx-proton</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.springframework.security</groupId>
-          <artifactId>spring-security-crypto</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>io.opentracing</groupId>
           <artifactId>opentracing-noop</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-impl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-jackson</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.xml.bind</groupId>
-          <artifactId>jaxb-api</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

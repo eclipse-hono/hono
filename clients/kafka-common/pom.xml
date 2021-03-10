@@ -41,26 +41,6 @@
           <groupId>io.vertx</groupId>
           <artifactId>vertx-proton</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-jackson</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.xml.bind</groupId>
-          <artifactId>jaxb-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-impl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.springframework.security</groupId>
-          <artifactId>spring-security-crypto</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -73,23 +53,7 @@
         </exclusion>
         <exclusion>
           <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-jackson</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.xml.bind</groupId>
-          <artifactId>jaxb-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
-          <artifactId>jjwt-impl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.jsonwebtoken</groupId>
           <artifactId>jjwt-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.springframework.security</groupId>
-          <artifactId>spring-security-crypto</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

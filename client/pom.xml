@@ -35,8 +35,16 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -47,8 +55,9 @@
       <artifactId>hono-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-legal</artifactId>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>io.opentracing</groupId>

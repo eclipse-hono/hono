@@ -32,12 +32,6 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-base</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.springframework.security</groupId>
-          <artifactId>spring-security-crypto</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

@@ -34,6 +34,12 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-adapter-amqp</artifactId>
+    </dependency>
+
+    <!-- testing -->
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-base</artifactId>
       <version>${project.version}</version>
       <classifier>tests</classifier>
