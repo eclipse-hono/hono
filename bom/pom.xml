@@ -39,16 +39,16 @@
     <gson.version>2.8.5</gson.version>
     <h2.version>1.4.200</h2.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
-    <infinispan.version>10.1.8.Final</infinispan.version>
+    <infinispan.version>11.0.9.Final</infinispan.version>
     <jackson.version>2.11.3</jackson.version>
     <jaeger.image.name>jaegertracing/all-in-one:1.22</jaeger.image.name>
     <jaeger.version>1.5.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
-    <javassist.version>3.24.1-GA</javassist.version>
+    <javassist.version>3.26.0-GA</javassist.version>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
     <jboss-logging.version>3.4.1.Final</jboss-logging.version>
-    <jgroups.version>4.1.9.Final</jgroups.version>
+    <jgroups.version>4.2.9.Final</jgroups.version>
     <jjwt.version>0.11.2</jjwt.version>
     <junit.jupiter.version>5.7.0</junit.jupiter.version>
     <kafka-clients.version>2.6.0</kafka-clients.version>
@@ -66,14 +66,14 @@
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
     <postgresql-jdbc.version>42.2.18</postgresql-jdbc.version>
-    <protobuf.version>3.6.1</protobuf.version>
+    <protobuf.version>3.12.2</protobuf.version>
     <protoparser.version>4.0.3</protoparser.version>
-    <protostream.version>4.3.2.Final</protostream.version>
+    <protostream.version>4.3.4.Final</protostream.version>
     <proton.version>0.33.8</proton.version>
     <qpid-jms.version>0.55.0</qpid-jms.version>
     <quarkus.platform.version>1.11.3.Final</quarkus.platform.version>
     <reactive-streams.version>1.0.3</reactive-streams.version>
-    <rxjava.version>2.2.12</rxjava.version>
+    <rxjava.version>3.0.4</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.26</snakeyaml.version>
     <spring.version>5.3.4</spring.version>
@@ -82,7 +82,7 @@
     <testcontainers.version>1.15.1</testcontainers.version>
     <vertx.version>3.9.5</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
-    <wildfly-elytron.version>1.10.4.Final</wildfly-elytron.version>
+    <wildfly-elytron.version>1.14.1.Final</wildfly-elytron.version>
     <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.0</zookeeper.image.name>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
@@ -617,6 +617,12 @@
         <version>${slf4j.version}</version>
         <scope>runtime</scope>
       </dependency>
+      <dependency>
+        <groupId>org.jboss.logging</groupId>
+        <artifactId>jboss-logging</artifactId>
+        <version>${jboss-logging.version}</version>
+        <scope>runtime</scope>
+      </dependency>
 
       <!-- Tracing -->
       <dependency>
@@ -687,36 +693,6 @@
         <scope>runtime</scope>
       </dependency>
       <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>${javassist.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>commons-cli</groupId>
-        <artifactId>commons-cli</artifactId>
-        <version>${commons-cli.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>${gson.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>${protobuf.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup</groupId>
-        <artifactId>protoparser</artifactId>
-        <version>${protoparser.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
         <groupId>io.reactivex.rxjava2</groupId>
         <artifactId>rxjava</artifactId>
         <version>${rxjava.version}</version>
@@ -736,70 +712,52 @@
         <scope>runtime</scope>
       </dependency>
       <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging</artifactId>
-        <version>${jboss-logging.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
         <groupId>org.wildfly.common</groupId>
         <artifactId>wildfly-common</artifactId>
         <version>${wildfly-common.version}</version>
         <scope>runtime</scope>
       </dependency>
+
+      <!-- 
+        The following artifacts have scope provided because they
+        are embedded in the org.infinispan.protostream:protostream
+        artifact and we do not want them to be included in the
+        container images as separate jars files.
+        However, we define them as managed dependencies and
+        also include them in the modules that use Infinispan
+        in order for them to show up in Hono's list of dependencies
+        that is generated by the create_dependencies_list.sh script
+        in the top level folder.
+      -->
       <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-auth-server</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
+        <groupId>org.javassist</groupId>
+        <artifactId>javassist</artifactId>
+        <version>${javassist.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-credential</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
+        <groupId>commons-cli</groupId>
+        <artifactId>commons-cli</artifactId>
+        <version>${commons-cli.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-password-impl</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>${gson.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-ssl</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${protobuf.version}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-plain</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-digest</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-external</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-oauth2</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.security</groupId>
-        <artifactId>wildfly-elytron-sasl-scram</artifactId>
-        <version>${wildfly-elytron.version}</version>
-        <scope>runtime</scope>
+        <groupId>com.squareup</groupId>
+        <artifactId>protoparser</artifactId>
+        <version>${protoparser.version}</version>
+        <scope>provided</scope>
       </dependency>
 
       <!-- JDBC -->
