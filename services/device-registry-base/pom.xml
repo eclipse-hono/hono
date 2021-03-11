@@ -45,7 +45,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter</artifactId>
+      <artifactId>hono-adapter-base-spring</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>

@@ -18,21 +18,15 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.AdapterConfigurationSupport;
-import org.eclipse.hono.adapter.MessagingClientSet;
-import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.CommandRouterCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -40,11 +34,6 @@ import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
-import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
-import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
@@ -56,11 +45,8 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
@@ -68,21 +54,16 @@ import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.metric.spring.PrometheusSupport;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -104,7 +85,6 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -113,9 +93,7 @@ import io.vertx.ext.web.client.WebClientOptions;
  */
 @Configuration
 @Import(PrometheusSupport.class)
-public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport {
-
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractAdapterConfig.class);
+public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfig {
 
     @Autowired
     private ApplicationContext context;
@@ -144,7 +122,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
         final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
 
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
-        final MessagingClients messagingClients = new MessagingClients();
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
             // on config properties
@@ -162,7 +139,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             adapter.setCommandRouterClient(commandRouterClient);
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
             commandConsumerFactory.registerInternalCommandConsumer(
-                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
 
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
                 commandConsumerFactory.registerInternalCommandConsumer(
@@ -172,15 +149,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         }
 
-        if (kafkaProducerConfig().isConfigured()) {
-            messagingClients.addClientSet(kafkaMessagingClientSet(adapterProperties));
-        }
-
-        if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
-            messagingClients.addClientSet(amqpMessagingClientSet(samplerFactory, adapterProperties));
-        }
-
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClients(messagingClients(samplerFactory, getTracer(), vertx(), adapterProperties));
 
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
@@ -252,55 +221,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
     }
 
     /**
-     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
-     * <p>
-     * A default set of properties, on top of which the configured properties will by loaded, can be set in subclasses
-     * by means of overriding the {@link #getDownstreamSenderConfigDefaults()} method.
-     *
-     * @return The properties.
-     */
-    @Qualifier(Constants.QUALIFIER_MESSAGING)
-    @ConfigurationProperties(prefix = "hono.messaging")
-    @Bean
-    public ClientConfigProperties downstreamSenderConfig() {
-        final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderConfigDefaults())
-                .orElseGet(ClientConfigProperties::new);
-        config.setServerRoleIfUnknown("AMQP Messaging Network");
-        config.setNameIfNotSet(getAdapterName());
-        return config;
-    }
-
-    /**
-     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
-     *
-     * @return The properties.
-     */
-    @ConfigurationProperties(prefix = "hono.kafka")
-    @Bean
-    public KafkaProducerConfigProperties kafkaProducerConfig() {
-        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
-        if (getAdapterName() != null) {
-            configProperties.setDefaultClientIdPrefix(getAdapterName());
-        }
-        return configProperties;
-    }
-
-    /**
-     * Exposes configuration properties for a consumer accessing the Kafka cluster as a Spring bean.
-     *
-     * @return The properties.
-     */
-    @ConfigurationProperties(prefix = "hono.kafka")
-    @Bean
-    public KafkaConsumerConfigProperties kafkaConsumerConfig() {
-        final KafkaConsumerConfigProperties configProperties = new KafkaConsumerConfigProperties();
-        if (getAdapterName() != null) {
-            configProperties.setDefaultClientIdPrefix(getAdapterName());
-        }
-        return configProperties;
-    }
-
-    /**
      * Exposes configuration properties for an admin client accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
@@ -313,80 +233,6 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
             configProperties.setDefaultClientIdPrefix(getAdapterName());
         }
         return configProperties;
-    }
-
-    /**
-     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
-     * via {@link #downstreamSenderConfig()}.
-     * <p>
-     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
-     * properties.
-     *
-     * @return The properties.
-     */
-    protected ClientConfigProperties getDownstreamSenderConfigDefaults() {
-        return new ClientConfigProperties();
-    }
-
-    /**
-     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
-     * <p>
-     * The connection is configured with the properties provided by {@link #downstreamSenderConfig()}
-     * and is already trying to establish the connection to the configured peer.
-     *
-     * @return The connection.
-     */
-    @Qualifier(Constants.QUALIFIER_MESSAGING)
-    @Bean
-    @Scope("prototype")
-    public HonoConnection downstreamConnection() {
-        return HonoConnection.newConnection(vertx(), downstreamSenderConfig());
-    }
-
-    /**
-     * Exposes a messaging client set for <em>AMQP</em> as a Spring bean.
-     * <p>
-     * The clients are initialized with the connections provided by {@link #downstreamConnection()}.
-     *
-     * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
-     *            {@link org.eclipse.hono.adapter.metric.MicrometerBasedMetrics} out of the box.
-     * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The client set.
-     */
-    @Bean
-    @Scope("prototype")
-    public MessagingClientSet amqpMessagingClientSet(
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
-
-        final EventSender eventSender = new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory,
-                adapterConfig.isDefaultsEnabled(), adapterConfig.isJmsVendorPropsEnabled());
-        final TelemetrySender telemetrySender = new ProtonBasedDownstreamSender(downstreamConnection(), samplerFactory,
-                adapterConfig.isDefaultsEnabled(), adapterConfig.isJmsVendorPropsEnabled());
-        final CommandResponseSender commandResponseSender = new ProtonBasedCommandResponseSender(
-                commandConsumerConnection(), samplerFactory, adapterConfig);
-
-        return new MessagingClientSet(MessagingType.amqp, eventSender, telemetrySender, commandResponseSender);
-    }
-
-    /**
-     * Exposes a messaging client set for <em>Kafka</em> as a Spring bean.
-     *
-     * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The client set.
-     */
-    @Bean
-    @Scope("prototype")
-    public MessagingClientSet kafkaMessagingClientSet(final ProtocolAdapterProperties adapterConfig) {
-
-        final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
-        final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx());
-        final Tracer tracer = getTracer();
-
-        return new MessagingClientSet(MessagingType.kafka,
-                new KafkaBasedEventSender(factory, producerConfig, adapterConfig, tracer),
-                new KafkaBasedTelemetrySender(factory, producerConfig, adapterConfig, tracer),
-                new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
     }
 
     /**
@@ -721,55 +567,15 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
                 samplerFactory);
     }
 
-    /**
-     * Exposes configuration properties for Command and Control.
-     *
-     * @return The Properties.
-     */
-    @Qualifier(CommandConstants.COMMAND_ENDPOINT)
-    @ConfigurationProperties(prefix = "hono.command")
-    @Bean
-    public ClientConfigProperties commandConsumerFactoryConfig() {
-        final ClientConfigProperties config = Optional.ofNullable(getCommandConsumerFactoryConfigDefaults())
-                .orElseGet(ClientConfigProperties::new);
-        config.setServerRoleIfUnknown("Command & Control");
-        config.setNameIfNotSet(getAdapterName());
-        return config;
-    }
-
-    /**
-     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
-     * via {@link #commandConsumerFactoryConfig()}.
-     * <p>
-     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
-     * properties.
-     *
-     * @return The properties.
-     */
-    protected ClientConfigProperties getCommandConsumerFactoryConfigDefaults() {
-        return new ClientConfigProperties();
-    }
-
-    /**
-     * Exposes the connection used for receiving upstream commands as a Spring bean.
-     *
-     * @return The connection.
-     */
-    @Bean
-    @Scope("prototype")
-    public HonoConnection commandConsumerConnection() {
-        return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
-    }
-
     CommandConsumerFactory commandConsumerFactory(
             final SendMessageSampler.Factory samplerFactory,
             final DeviceConnectionClient deviceConnectionClient,
             final DeviceRegistrationClient registrationClient) {
 
-        LOG.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
+        log.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
                 ProtonBasedDelegatingCommandConsumerFactory.class.getName());
         return new ProtonBasedDelegatingCommandConsumerFactory(
-                commandConsumerConnection(),
+                commandConsumerConnection(vertx()),
                 samplerFactory,
                 deviceConnectionClient,
                 registrationClient,
@@ -778,7 +584,7 @@ public abstract class AbstractAdapterConfig extends AdapterConfigurationSupport 
 
     CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
+        log.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
                 CommandRouterCommandConsumerFactory.class.getName());
         return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
     }

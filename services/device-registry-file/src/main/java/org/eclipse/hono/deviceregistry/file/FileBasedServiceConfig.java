@@ -14,20 +14,17 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.spring.AbstractMessagingClientConfig;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
-import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -47,7 +44,6 @@ import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
@@ -61,7 +57,7 @@ import io.vertx.core.Vertx;
  */
 @Configuration
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public class FileBasedServiceConfig {
+public class FileBasedServiceConfig extends AbstractMessagingClientConfig {
 
     @Autowired
     private Vertx vertx;
@@ -147,54 +143,6 @@ public class FileBasedServiceConfig {
         return new SpringBasedHonoPasswordEncoder(credentialsProperties().getMaxBcryptCostFactor());
     }
 
-
-    /**
-     * Creates a sender for publishing events via the <em>AMQP Messaging Network</em>.
-     * <p>
-     * The sender is initialized with the connection provided by {@link #downstreamConnection()}.
-     *
-     * @return The factory.
-     */
-    @Bean
-    @Scope("prototype")
-    public EventSender eventSender() {
-        final var sender = new ProtonBasedDownstreamSender(
-                downstreamConnection(),
-                SendMessageSampler.Factory.noop(),
-                true,
-                true);
-
-        healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(sender));
-        return sender;
-    }
-
-    /**
-     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
-     * <p>
-     * The connection is configured with the properties provided by {@link #downstreamSenderConfig()}.
-     *
-     * @return The connection.
-     */
-    @Bean
-    @Scope("prototype")
-    public HonoConnection downstreamConnection() {
-        return HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer);
-    }
-
-    /**
-     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
-     *
-     * @return The properties.
-     */
-    @ConfigurationProperties(prefix = "hono.messaging")
-    @Bean
-    public ClientConfigProperties downstreamSenderConfig() {
-        final ClientConfigProperties config = new ClientConfigProperties();
-        config.setNameIfNotSet("Device Registry");
-        config.setServerRoleIfUnknown("AMQP Messaging Network");
-        return config;
-    }
-
     /**
      * Gets properties for configuring gateway based auto-provisioning.
      *
@@ -204,6 +152,11 @@ public class FileBasedServiceConfig {
     @ConfigurationProperties(prefix = "hono.registry.autoprovisioning")
     public AutoProvisionerConfigProperties autoProvisionerConfigProperties() {
         return new AutoProvisionerConfigProperties();
+    }
+
+    @Override
+    protected String getAdapterName() {
+        return "device-registry";
     }
 
     /**
@@ -226,7 +179,7 @@ public class FileBasedServiceConfig {
         autoProvisioner.setVertx(vertx);
         autoProvisioner.setTracer(tracer);
         autoProvisioner.setTenantInformationService(tenantInformationService);
-        autoProvisioner.setEventSender(eventSender());
+        autoProvisioner.setMessagingClients(messagingClients(SendMessageSampler.Factory.noop(), tracer, vertx, new ProtocolAdapterProperties()));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         registrationService.setAutoProvisioner(autoProvisioner);
