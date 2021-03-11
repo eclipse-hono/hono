@@ -37,6 +37,9 @@ import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AdapterDisabledException;
 import org.eclipse.hono.adapter.AuthorizationException;
+import org.eclipse.hono.adapter.DeviceDisabledOrNotRegisteredException;
+import org.eclipse.hono.adapter.GatewayDisabledOrNotRegisteredException;
+import org.eclipse.hono.adapter.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.ChainAuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
@@ -536,13 +539,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return authAttempt
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
-                            .compose(tenantObj -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObj).recover(t -> Future.failedFuture(
-                                            new AdapterDisabledException(
-                                                    authenticatedDevice.getTenantId(),
-                                                    "adapter is disabled for tenant",
-                                                    t))),
-                                    checkConnectionLimit(tenantObj, currentSpan.context()))),
+                                .compose(tenantObj -> CompositeFuture.all(
+                                        isAdapterEnabled(tenantObj),
+                                        checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(authenticatedDevice))
                 .map(authenticatedDevice -> {
@@ -1106,46 +1105,73 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             spanPreparationFuture
                     .compose(v -> checkTopic(context))
                     .compose(ok -> onPublishedMessage(context))
-                    .onComplete(processing -> {
-                        if (processing.succeeded()) {
-                            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
-                            onMessageSent(context);
-                            span.finish();
-                        } else {
-                            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(processing.cause()));
-                            if (processing.cause() instanceof ClientErrorException) {
-                                // nothing to do
-                            } else {
-                                onMessageUndeliverable(context);
+                    .onSuccess(ok -> {
+                        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
+                        onMessageSent(context);
+                        span.finish();
+                    })
+                    .onFailure(error -> handlePublishedMessageError(context, error, span));
+        }
+
+        private void handlePublishedMessageError(final MqttContext context, final Throwable error, final Span span) {
+            final ErrorSubscription errorSubscription = getErrorSubscription(context);
+            final Future<Void> errorSentIfNeededFuture = Optional.ofNullable(errorSubscription)
+                    .map(v -> publishError(errorSubscription, context, error, span.context()))
+                    .orElseGet(Future::succeededFuture);
+
+            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(error));
+            TracingHelper.logError(span, error);
+
+            if (!(error instanceof ClientErrorException)) {
+                onMessageUndeliverable(context);
+            }
+
+            errorSentIfNeededFuture
+                    .compose(ok -> isTerminalError(error, context.tenant(), context.deviceId(),
+                            authenticatedDevice, span.context()))
+                    .onComplete(ar -> {
+                        final boolean isTerminalError = ar.succeeded() ? ar.result() : false;
+                        final ErrorHandlingMode errorHandlingMode = context
+                                .getErrorHandlingMode(errorSubscription != null);
+
+                        if (errorHandlingMode == ErrorHandlingMode.DISCONNECT || isTerminalError) {
+                            if (context.deviceEndpoint().isConnected()) {
+                                span.log("closing connection to device");
+                                context.deviceEndpoint().close();
                             }
-                            TracingHelper.logError(span, processing.cause());
-
-                            final ErrorSubscription errorSubscription = getErrorSubscription(context);
-                            final Future<Void> errorSentIfNeededFuture = Optional.ofNullable(errorSubscription)
-                                    .map(v -> publishError(errorSubscription, context, processing.cause(), span.context()))
-                                    .orElseGet(Future::succeededFuture);
-
-                            errorSentIfNeededFuture.onComplete(ar -> {
-                                final ErrorHandlingMode errorHandlingMode = context
-                                        .getErrorHandlingMode(errorSubscription != null);
-                                final boolean isTerminalError = false; // TODO implement detection of terminal error
-                                if (errorHandlingMode == ErrorHandlingMode.DISCONNECT || isTerminalError) {
-                                    if (context.deviceEndpoint().isConnected()) {
-                                        span.log("closing connection to device");
-                                        context.deviceEndpoint().close();
-                                    }
-                                } else if (context.isAtLeastOnce()) {
-                                    if (errorHandlingMode == ErrorHandlingMode.SKIP_ACK) {
-                                        span.log("skipped sending PUBACK");
-                                    } else if (context.deviceEndpoint().isConnected()) {
-                                        span.log("sending PUBACK");
-                                        context.acknowledge();
-                                    }
-                                }
-                                span.finish();
-                            });
+                        } else if (context.isAtLeastOnce()) {
+                            if (errorHandlingMode == ErrorHandlingMode.SKIP_ACK) {
+                                span.log("skipped sending PUBACK");
+                            } else if (context.deviceEndpoint().isConnected()) {
+                                span.log("sending PUBACK");
+                                context.acknowledge();
+                            }
                         }
+                        span.finish();
                     });
+        }
+
+        private Future<Boolean> isTerminalError(final Throwable error, final String tenantId, final String deviceId,
+                final Device authenticatedDevice, final SpanContext spanContext) {
+
+            // if the device is not registered or disabled
+            if (error instanceof DeviceDisabledOrNotRegisteredException) {
+                // and if the device is authenticated and connected via a gateway
+                if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(deviceId)) {
+                    return getRegistrationAssertion(tenantId, authenticatedDevice.getDeviceId(), null, spanContext)
+                            .map(ok -> false)
+                            .recover(e -> {
+                                // and if the gateway is not registered then it is a terminal error
+                                return Future.succeededFuture(e instanceof DeviceDisabledOrNotRegisteredException);
+                            });
+                }
+
+                return Future.succeededFuture(authenticatedDevice != null);
+            }
+
+            return Future.succeededFuture(error instanceof AdapterDisabledException
+                    || error instanceof GatewayDisabledOrNotRegisteredException
+                    || error instanceof TenantDisabledOrNotRegisteredException);
         }
 
         /**

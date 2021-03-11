@@ -621,7 +621,16 @@ Example payload:
 When a device publishes a telemetry, event or command response message and there is an error processing the message, the handling of the error depends on whether there is a [error topic subscription]({{< relref "#error-reporting-via-error-topic" >}}) for the device and whether a *on-error* property bag parameter was set on the topic used for sending the message.
 
 If no error subscription is in place and no *on-error* parameter was set, the default error handling behaviour is to close the MQTT connection to the device.
-If the device has a subscription on the error topic (on the same MQTT connection the device uses for sending messages), the default behaviour is to keep the MQTT connection open. 
+If the device has a subscription on the error topic (on the same MQTT connection the device uses for sending messages), the default behaviour is to keep the 
+MQTT connection open unless a terminal error happens. The errors that are classified as terminal are listed below.
+
+* The adapter is disabled for the tenant that the client belongs to.
+* The authenticated device or gateway is disabled or not registered.
+* The tenant is disabled or does not exist.
+
+{{% note %}}
+When a terminal error occurs, the connection will always be closed irrespective of any *on-error* parameter or error subscription.
+{{% /note %}}
 
 The following table lists the different behaviours based on the value of the *on-error* property bag parameter and the existence of an error subscription:
 
