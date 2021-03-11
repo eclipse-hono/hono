@@ -464,11 +464,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         checkDeviceRegistration(authenticatedDevice, span.context()),
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
                                 .compose(tenantConfig -> CompositeFuture.all(
-                                        isAdapterEnabled(tenantConfig).recover(t -> Future.failedFuture(
-                                                new AdapterDisabledException(
-                                                        authenticatedDevice.getTenantId(),
-                                                        "adapter is disabled for tenant",
-                                                        t))),
+                                        isAdapterEnabled(tenantConfig),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                     .map(ok -> {
                         log.debug("{} is registered and enabled", authenticatedDevice);
@@ -1347,7 +1343,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     protected static ErrorCondition getErrorCondition(final Throwable t) {
         final String errorMessage = getClientFacingErrorMessage(t);
-        if (t instanceof AuthorizationException) {
+        if (t instanceof AuthorizationException || t instanceof AdapterDisabledException) {
             return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
         } else if (ServiceInvocationException.class.isInstance(t)) {
             final ServiceInvocationException error = (ServiceInvocationException) t;

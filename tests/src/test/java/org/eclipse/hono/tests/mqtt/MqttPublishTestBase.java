@@ -34,6 +34,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -464,7 +465,9 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     ctx.verify(() -> {
                         assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                         // error message should be about the device being unknown or disabled
-                        assertThat(payload.getString("message")).contains("unknown");
+                        assertThat(payload.getString("message")).isEqualTo(
+                                ServiceInvocationException.getLocalizedMessage(
+                                        "CLIENT_ERROR_DEVICE_DISABLED_OR_NOT_REGISTERED"));
                         // validate topic segments; example: error//myDeviceId/telemetry/4/503
                         final String[] topicSegments = msg.topicName().split("/");
                         assertThat(topicSegments.length).isEqualTo(6);

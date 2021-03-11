@@ -496,13 +496,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return Future.succeededFuture(tenantConfig);
         } else if (!tenantConfig.isEnabled()) {
             log.debug("tenant [{}] is disabled", tenantConfig.getTenantId());
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                    "tenant is disabled"));
+            return Future.failedFuture(
+                    new TenantDisabledOrNotRegisteredException(tenantConfig.getTenantId(), HttpURLConnection.HTTP_FORBIDDEN));
         } else {
             log.debug("protocol adapter [{}] is disabled for tenant [{}]",
                     getTypeName(), tenantConfig.getTenantId());
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                    "adapter disabled for tenant"));
+            return Future.failedFuture(
+                    new AdapterDisabledException(tenantConfig.getTenantId(), HttpURLConnection.HTTP_FORBIDDEN));
         }
     }
 
@@ -825,6 +825,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                             .onFailure(t -> {
                                 log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
                             });
+                }).recover(error -> {
+                    final int errorCode = ServiceInvocationException.extractStatusCode(error);
+                    if (errorCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                        return Future.failedFuture(new DeviceDisabledOrNotRegisteredException(tenantId, errorCode));
+                    } else if (errorCode == HttpURLConnection.HTTP_FORBIDDEN) {
+                        return Future.failedFuture(new GatewayDisabledOrNotRegisteredException(tenantId, errorCode));
+                    } else {
+                        return Future.failedFuture(error);
+                    }
                 });
     }
 
@@ -950,7 +959,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<TenantObject> getTenantConfiguration(final String tenantId, final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
-        return getTenantClient().get(tenantId, context);
+
+        return getTenantClient().get(tenantId, context)
+                .recover(error -> Future.failedFuture(
+                        ServiceInvocationException.extractStatusCode(error) == HttpURLConnection.HTTP_NOT_FOUND
+                                ? new TenantDisabledOrNotRegisteredException(tenantId, HttpURLConnection.HTTP_NOT_FOUND)
+                                : error));
     }
 
     /**
@@ -1295,9 +1309,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     public static ConnectionAttemptOutcome getOutcome(final Throwable e) {
 
         if (e instanceof AuthorizationException) {
-            if (e instanceof AdapterDisabledException) {
-                return ConnectionAttemptOutcome.ADAPTER_DISABLED;
-            }
             if (e instanceof AdapterConnectionsExceededException) {
                 return ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED;
             }
@@ -1314,6 +1325,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 return ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED;
             }
             return ConnectionAttemptOutcome.UNAUTHORIZED;
+        } else if (e instanceof AdapterDisabledException) {
+            return ConnectionAttemptOutcome.ADAPTER_DISABLED;
         } else if (e instanceof ServiceInvocationException) {
             switch (((ServiceInvocationException) e).getErrorCode()) {
             case HttpURLConnection.HTTP_UNAUTHORIZED:

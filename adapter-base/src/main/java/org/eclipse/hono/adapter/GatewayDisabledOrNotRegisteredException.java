@@ -15,14 +15,14 @@ package org.eclipse.hono.adapter;
 import org.eclipse.hono.client.ClientErrorException;
 
 /**
- * An exception indicating that the adapter is not enabled.
+ * An exception indicating that the gateway is either not registered or disabled.
  */
-public class AdapterDisabledException extends ClientErrorException {
+public class GatewayDisabledOrNotRegisteredException extends ClientErrorException {
 
     /**
      * Resource key for the error message.
      */
-    public static final String MESSAGE_KEY = "CLIENT_ERROR_ADAPTER_DISABLED";
+    public static final String MESSAGE_KEY = "CLIENT_ERROR_GATEWAY_DISABLED_OR_NOT_REGISTERED";
 
     private static final long serialVersionUID = 1L;
 
@@ -32,7 +32,7 @@ public class AdapterDisabledException extends ClientErrorException {
      * @param tenant The tenant that the device belongs to or {@code null} if unknown.
      * @param errorCode The code representing the erroneous outcome.
      */
-    public AdapterDisabledException(final String tenant, final int errorCode) {
+    public GatewayDisabledOrNotRegisteredException(final String tenant, final int errorCode) {
         super(tenant, errorCode, getLocalizedMessage(MESSAGE_KEY));
     }
 }
