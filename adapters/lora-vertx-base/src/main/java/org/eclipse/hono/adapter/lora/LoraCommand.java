@@ -17,7 +17,7 @@ import java.util.Objects;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Contains command, modified by the lora provider, to send to the lorawan network server.
+ * Contains a command, modified by the lora provider, to send to the lorawan network server.
  *
  */
 public class LoraCommand {
@@ -27,19 +27,29 @@ public class LoraCommand {
     /**
      * Creates a new LoraCommand.
      *
-     * @param payload The actual payload json formatted.
-     * @param uri The full uri to which the command should be sent.
+     * @param payload The actual payload JSON, formatted according to the specific lora provider.
+     * @param uri The full URI to which the command should be sent.
      * @throws NullPointerException if payload or uri are {@code null}.
      */
     public LoraCommand(final JsonObject payload, final String uri) {
-        this.payload = Objects.requireNonNull(payload);;
+        this.payload = Objects.requireNonNull(payload);
         this.uri = Objects.requireNonNull(uri);
     }
 
+    /**
+     * Gets the payload JSON.
+     *
+     * @return The payload.
+     */
     public JsonObject getPayload() {
         return payload;
     }
 
+    /**
+     * Gets the URI to which the command should be sent.
+     *
+     * @return the URI.
+     */
     public String getUri() {
         return uri;
     }

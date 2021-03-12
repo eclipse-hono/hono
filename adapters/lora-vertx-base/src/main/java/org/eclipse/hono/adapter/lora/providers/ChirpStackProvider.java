@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -175,7 +175,7 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
         final JsonObject deviceQueueItem = new JsonObject();
         deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_CONFIRMED, false);
         deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, BaseEncoding.base64().encode(payload.getBytes()));

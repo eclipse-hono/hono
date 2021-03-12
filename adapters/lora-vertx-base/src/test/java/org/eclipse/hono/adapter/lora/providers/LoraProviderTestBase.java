@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -131,10 +131,9 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
         commandEndpoint.setUri("https://my-lns.io/{{deviceId}}/command");
         final LoraCommand command = provider.getCommand(commandEndpoint, TEST_DEVICE_ID,
             Buffer.buffer("bumlux".getBytes(StandardCharsets.UTF_8)));
-        assertThat(command.getUri().toString()).isEqualTo("https://my-lns.io/" + TEST_DEVICE_ID + "/command");
+        assertThat(command.getUri()).isEqualTo("https://my-lns.io/" + TEST_DEVICE_ID + "/command");
         assertCommandFormat(command.getPayload());
     }
-
 
     /**
      * Asserts format of a lora command.

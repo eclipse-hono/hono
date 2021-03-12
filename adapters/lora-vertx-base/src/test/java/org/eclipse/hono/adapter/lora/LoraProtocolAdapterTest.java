@@ -31,21 +31,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommand;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
-import org.eclipse.hono.adapter.lora.LoraCommand;
-import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.adapter.lora.LoraMessage;
-import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.eclipse.hono.adapter.lora.LoraMetaData;
-import org.eclipse.hono.adapter.lora.LoraProtocolAdapter;
-import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
-import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
@@ -239,14 +230,14 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
             eq(TEST_GATEWAY_ID), handlerArgumentCaptor.capture(), eq(null), any());
 
         final Handler<CommandContext> commandHandler = handlerArgumentCaptor.getValue();
-        final ProtonBasedCommand command = mock(ProtonBasedCommand.class);
+        final Command command = mock(Command.class);
         when(command.getTenant()).thenReturn(TEST_TENANT_ID);
         when(command.getDeviceId()).thenReturn(TEST_DEVICE_ID);
         when(command.getGatewayId()).thenReturn(TEST_GATEWAY_ID);
         when(command.getPayload()).thenReturn(Buffer.buffer("bumlux".getBytes(StandardCharsets.UTF_8)));
         when(command.isValid()).thenReturn(true);
 
-        final ProtonBasedCommandContext commandContext = mock(ProtonBasedCommandContext.class);
+        final CommandContext commandContext = mock(CommandContext.class);
         when(commandContext.getCommand()).thenReturn(command);
         when(commandContext.getTracingSpan()).thenReturn(currentSpan);
 

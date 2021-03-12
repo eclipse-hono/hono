@@ -1071,13 +1071,18 @@ components:
                $ref: '#/components/schemas/Status'
             "command-endpoint":
                type: object
+               additionalProperties: false
+               description: |
+                  The endpoint of the device that command messages should be sent to. Only relevant for devices
+                  that connect to a type of protocol adapter that actively connects to the device for sending commands,
+                  instead of using a connection initiated by the device.
                required:
                   - uri
                properties:
                   "uri":
                      type: string
                      description: |
-                        Configures the uri to which the command should be sent. Placeholder {{deviceId}} is
+                        Configures the URI to which the command should be sent. The placeholder `{{deviceId}}` is
                         supported and will be replaced with the id of the device to which the command was initially
                         sent.
                   "headers":

@@ -18,12 +18,13 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Encapsulates the command endpoint information for a gateway as defined by the
+ * Encapsulates the command endpoint information for a device as defined by the
  * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
  */
 public class CommandEndpoint {
@@ -32,9 +33,11 @@ public class CommandEndpoint {
     private Map<String, Object> payloadProperties = new HashMap<>();
 
     /**
-     * Gets the uri format to be used when sending a command to this endpoint.
+     * Gets the URI to be used when sending a command to this endpoint.
+     * <p>
+     * Note that the URI may contain the <em>{{deviceId}}</em> placeholder.
      *
-     * @return The uri format or {@code null} if not set.
+     * @return The URI or {@code null} if not set.
      */
     @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT_URI)
     public String getUri() {
@@ -42,9 +45,11 @@ public class CommandEndpoint {
     }
 
     /**
-     * Sets the uri format to be used when sending a command to this endpoint.
+     * Sets the URI to be used when sending a command to this endpoint.
+     * <p>
+     * The URI may contain the <em>{{deviceId}}</em> placeholder.
      *
-     * @param uri The uri format to set or {@code null}.
+     * @param uri The URI to set or {@code null}.
      * @return A reference to this object for method chaining.
      */
     public CommandEndpoint setUri(final String uri) {
@@ -108,7 +113,7 @@ public class CommandEndpoint {
         try {
             new URI(getFormattedUri("deviceId"));
             return true;
-        } catch (URISyntaxException e) {
+        } catch (final URISyntaxException e) {
             return false;
         }
     }
@@ -118,8 +123,10 @@ public class CommandEndpoint {
      *
      * @param deviceId The deviceId to replace the placeholder with in the configured uri.
      * @return the fully formatted uri.
+     * @throws NullPointerException If deviceId is {@code null}.
      */
     public String getFormattedUri(final String deviceId) {
-        return uri.replaceAll("\\{\\{deviceId\\}\\}", deviceId);
+        Objects.requireNonNull(deviceId);
+        return uri.replaceAll("\\{\\{deviceId}}", deviceId);
     }
 }

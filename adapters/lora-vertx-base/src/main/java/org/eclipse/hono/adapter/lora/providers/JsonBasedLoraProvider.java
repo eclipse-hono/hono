@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,8 +22,7 @@ import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.util.CommandEndpoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.hono.util.Strings;
 
 import com.google.common.io.BaseEncoding;
 
@@ -38,7 +37,6 @@ import io.vertx.ext.web.RoutingContext;
  *
  */
 abstract class JsonBasedLoraProvider implements LoraProvider {
-    private static final Logger LOG = LoggerFactory.getLogger(JsonBasedLoraProvider.class);
 
     private static final String FIELD_PAYLOAD = "payload";
 
@@ -67,19 +65,39 @@ abstract class JsonBasedLoraProvider implements LoraProvider {
         Objects.requireNonNull(commandEndpoint);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
-        final String uri = commandEndpoint.getFormattedUri(deviceId);
-
+        if (Strings.isNullOrEmpty(commandEndpoint.getUri())) {
+            throw new IllegalArgumentException("command endpoint uri is empty");
+        }
         final JsonObject commandPayload = getCommandPayload(payload, deviceId);
         commandEndpoint.getPayloadProperties().forEach(commandPayload::put);
-        return new LoraCommand(commandPayload, uri);
+        return new LoraCommand(commandPayload, commandEndpoint.getFormattedUri(deviceId));
     }
 
+    /**
+     * Gets the default headers to be set for this provider.
+     * <p>
+     * This default implementation returns an unmodifiable, empty Map.
+     * <p>
+     * Subclasses should override this method to provide the default headers.
+     *
+     * @return The default headers for this provider.
+     */
     @Override
     public Map<String, String> getDefaultHeaders() {
         return Map.of();
     }
 
-    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    /**
+     * Converts the given command payload into the command JSON structure needed for this provider.
+     * <p>
+     * The JSON returned by this default implementation contains a <em>payload</em> field with the
+     * Base 16 encoded command payload.
+     * <p>
+     * Subclasses should override this method to return an alternative JSON structure.
+     *
+     * @return The JSON payload.
+     */
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
         final JsonObject json = new JsonObject();
         json.put(FIELD_PAYLOAD, BaseEncoding.base16().encode(payload.getBytes()));
         return json;

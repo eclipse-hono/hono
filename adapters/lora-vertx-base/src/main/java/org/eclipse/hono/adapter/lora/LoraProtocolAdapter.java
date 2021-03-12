@@ -34,14 +34,6 @@ import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HonoChainAuthHandler;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
-import org.eclipse.hono.adapter.lora.LoraCommand;
-import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.adapter.lora.LoraMessage;
-import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.eclipse.hono.adapter.lora.LoraMetaData;
-import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
-import org.eclipse.hono.adapter.lora.SubscriptionKey;
-import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.auth.Device;
@@ -55,7 +47,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -248,9 +239,12 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     final SubscriptionKey key = new SubscriptionKey(gatewayDevice.getTenantId(),
                         gatewayDevice.getDeviceId());
                     if (!commandSubscriptions.containsKey(key)) {
-                        createCommandConsumer(gatewayDevice.getTenantId(), gatewayDevice.getDeviceId(),
-                            commandContext -> handleCommand(commandContext), currentSpan.context())
-                            .map(commandConsumer -> commandSubscriptions.put(key, provider));
+                        createCommandConsumer(
+                                gatewayDevice.getTenantId(),
+                                gatewayDevice.getDeviceId(),
+                                this::handleCommand,
+                                currentSpan.context())
+                                        .map(commandConsumer -> commandSubscriptions.put(key, provider));
                     }
                     break;
                 default:
@@ -277,84 +271,93 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final Command command = commandContext.getCommand();
 
         if (command.getGatewayId() == null) {
-            LOG.debug("No gateway defined for this command");
+            LOG.debug("no gateway defined for command [{}]", command);
+            TracingHelper.logError(commandContext.getTracingSpan(), "no gateway defined for command");
             commandContext.release();
             return;
         }
+        final String tenant = command.getTenant();
+        final String gatewayId = command.getGatewayId();
 
-        final SubscriptionKey subscriptionKey = new SubscriptionKey(command.getTenant(), command.getGatewayId());
-        if (!commandSubscriptions.containsKey(subscriptionKey)) {
-            LOG.debug("Received command for unknown gateway {} for tenant {}", subscriptionKey.getDeviceId(),
-                subscriptionKey.getTenant());
+        final LoraProvider loraProvider = commandSubscriptions.get(new SubscriptionKey(tenant, gatewayId));
+        if (loraProvider == null) {
+            LOG.debug("received command for unknown gateway [{}] for tenant [{}]", gatewayId, tenant);
+            TracingHelper.logError(commandContext.getTracingSpan(),
+                    String.format("received command for unknown gateway [%s]", gatewayId));
             commandContext.release();
             return;
         }
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(subscriptionKey.getTenant(),
-            commandContext.getTracingContext());
-
-        tenantTracker.compose(tenantObject -> {
-            if (command.isValid()) {
-                return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
-            } else {
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
-            }
-        })
-            .compose(success ->
-                getRegistrationClient().assertRegistration(command.getTenant(), subscriptionKey.getDeviceId(), null,
-                    commandContext.getTracingContext()))
-            .compose(registrationAssertion -> sendCommandToDevice(command, subscriptionKey, registrationAssertion))
-            .onSuccess(aVoid -> {
-                addMicrometerSample(commandContext, timer);
-                commandContext.accept();
-                metrics.reportCommand(
-                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                    subscriptionKey.getTenant(),
-                    tenantTracker.result(),
-                    MetricsTags.ProcessingOutcome.FORWARDED,
-                    command.getPayloadSize(),
-                    timer);
-            })
-            .onFailure(t -> {
-                LOG.error("Exception when sending command", t);
-                commandContext.release();
-                metrics.reportCommand(
-                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                    subscriptionKey.getTenant(),
-                    tenantTracker.result(),
-                    MetricsTags.ProcessingOutcome.from(t),
-                    command.getPayloadSize(),
-                    timer);
-            });
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, commandContext.getTracingContext());
+        tenantTracker
+                .compose(tenantObject -> {
+                    if (command.isValid()) {
+                        return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
+                    } else {
+                        return Future.failedFuture(
+                                new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
+                    }
+                })
+                .compose(success -> getRegistrationClient().assertRegistration(tenant, gatewayId, null,
+                        commandContext.getTracingContext()))
+                .compose(registrationAssertion -> sendCommandToGateway(commandContext, loraProvider,
+                        registrationAssertion.getCommandEndpoint()))
+                .onSuccess(aVoid -> {
+                    addMicrometerSample(commandContext, timer);
+                    commandContext.accept();
+                    metrics.reportCommand(
+                            command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                            tenant,
+                            tenantTracker.result(),
+                            MetricsTags.ProcessingOutcome.FORWARDED,
+                            command.getPayloadSize(),
+                            timer);
+                })
+                .onFailure(t -> {
+                    LOG.error("error sending command", t);
+                    TracingHelper.logError(commandContext.getTracingSpan(), t);
+                    commandContext.release();
+                    metrics.reportCommand(
+                            command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                            tenant,
+                            tenantTracker.result(),
+                            MetricsTags.ProcessingOutcome.from(t),
+                            command.getPayloadSize(),
+                            timer);
+                });
     }
 
-    private Future<Void> sendCommandToDevice(final Command command,
-                                                final SubscriptionKey subscriptionKey, final RegistrationAssertion registrationAssertion) {
-        final Promise<Void> sendPromise = Promise.promise();
-        final LoraProvider loraProvider = commandSubscriptions.get(subscriptionKey);
-        final CommandEndpoint commandEndpoint = registrationAssertion.getCommandEndpoint();
+    private Future<Void> sendCommandToGateway(final CommandContext commandContext, final LoraProvider loraProvider,
+            final CommandEndpoint commandEndpoint) {
+
         if (commandEndpoint == null) {
-            return Future.failedFuture("Device has no command endpoint defined");
+            return Future.failedFuture("gateway has no command endpoint defined");
         } else if (!commandEndpoint.isUriValid()) {
-            return Future.failedFuture("Device has command endpoint with invalid uri");
+            return Future.failedFuture(String.format("gateway has command endpoint with invalid uri [%s]", commandEndpoint.getUri()));
         }
+
+        final Command command = commandContext.getCommand();
+        final Promise<Void> sendPromise = Promise.promise();
         final LoraCommand loraCommand = loraProvider.getCommand(commandEndpoint, command.getDeviceId(),
             command.getPayload());
-        LOG.debug(String.format("Sending loraCommand to LNS (%s): %s", loraCommand.getUri(), loraCommand.getPayload()));
-        final HttpClientRequest post =
-            getHttpClient().postAbs(loraCommand.getUri())
+        commandContext.getTracingSpan().log(String.format("sending loraCommand to LNS [%s]", loraCommand.getUri()));
+        LOG.debug("sending loraCommand to LNS [{}]", loraCommand.getUri());
+        LOG.trace("command payload: {}", loraCommand.getPayload());
+        final HttpClientRequest request = getHttpClient().postAbs(loraCommand.getUri())
                 .handler(httpClientResponse -> {
+                    Tags.HTTP_STATUS.set(commandContext.getTracingSpan(), httpClientResponse.statusCode());
                     final IntPredicate successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
                     if (successfulStatus.test(httpClientResponse.statusCode())) {
-                        sendPromise.complete();
+                        sendPromise.tryComplete();
                     } else {
-                        sendPromise.fail(httpClientResponse.statusMessage());
+                        sendPromise.tryFail(httpClientResponse.statusMessage());
                     }
-                }).exceptionHandler(t -> sendPromise.fail(t));
-        commandEndpoint.getHeaders().forEach(post::putHeader);
-        loraProvider.getDefaultHeaders().forEach(post::putHeader);
-        post.end(loraCommand.getPayload().encode(), response -> {
+                })
+                .exceptionHandler(sendPromise::tryFail);
+        commandEndpoint.getHeaders().forEach(request::putHeader);
+        loraProvider.getDefaultHeaders().forEach(request::putHeader);
+        request.end(loraCommand.getPayload().encode(), response -> {
             if (response.failed()) {
-                sendPromise.fail(response.cause());
+                sendPromise.tryFail(response.cause());
             }
         });
         return sendPromise.future();

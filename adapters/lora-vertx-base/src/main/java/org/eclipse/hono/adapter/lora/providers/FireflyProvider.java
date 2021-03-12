@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -161,7 +161,7 @@ public class FireflyProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_FIREFLY_PAYLOAD, BaseEncoding.base16().encode(payload.getBytes()));
         json.put(COMMAND_FIELD_FIREFLY_ENCODING, "base16");

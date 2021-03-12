@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -160,7 +160,7 @@ public class LoriotProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_LORIOT_CMD, COMMAND_VALUE_LORIOT_TX);
         json.put(COMMAND_FIELD_LORIOT_CONFIRMED, false);

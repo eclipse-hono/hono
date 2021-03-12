@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -80,8 +80,9 @@ public interface LoraProvider {
      * @param commandEndpoint The command endpoint configuration.
      * @param deviceId The deviceId to which the lorawan network should forward the payload.
      * @param payload The payload to be sent to the lorawan device.
-     * @return The json object.
+     * @return The command object.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the commandEndpoint doesn't contain a URI.
      */
     LoraCommand getCommand(CommandEndpoint commandEndpoint, String deviceId, Buffer payload);
 
