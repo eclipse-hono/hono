@@ -23,6 +23,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
+import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.SpanContext;
@@ -98,6 +99,33 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
         Objects.requireNonNull(command);
 
         return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, false, context);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * The replyId is not used in the Kafka based implementation. It can be set to {@code null}.
+     * If set it will be ignored.
+     *
+     * @throws NullPointerException if tenantId, deviceId, or command is {@code null}.
+     */
+    @Override
+    public Future<BufferResult> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String replyId,
+            final Map<String, Object> properties,
+            final SpanContext context) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(command);
+
+        // TODO to implement.
+        return null;
     }
 
     private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,

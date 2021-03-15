@@ -78,7 +78,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -1045,7 +1044,7 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Sends a command to a device.
+     * Sends a command to a device and receives a response.
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
@@ -1066,29 +1065,28 @@ public final class IntegrationTestSupport {
             final Map<String, Object> properties,
             final long requestTimeout) {
 
-        return applicationClientFactory.getOrCreateCommandClient(tenantId).compose(commandClient -> {
+        final Promise<Void> timeOutTracker = Promise.promise();
+        final long timerId = vertx.setTimer(requestTimeout, id -> timeOutTracker
+                .fail(new SendMessageTimeoutException("sending command timed out after " + requestTimeout + "ms")));
 
-            commandClient.setRequestTimeout(requestTimeout);
-            final Promise<BufferResult> result = Promise.promise();
-            final Handler<Void> send = s -> {
-                // send the command upstream to the device
-                LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
-                commandClient.sendCommand(deviceId, command, contentType, payload, properties).map(responsePayload -> {
+        LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
+        // send the command upstream to the device and receive the command response
+        final Future<BufferResult> sendCommandTracker = applicationClient
+                .sendCommand(tenantId, deviceId, command, contentType, payload, properties)
+                .onComplete(ar -> {
+                    vertx.cancelTimer(timerId);
+                    timeOutTracker.tryComplete();
+                });
+
+        return CompositeFuture.all(sendCommandTracker, timeOutTracker.future())
+                .map(r -> sendCommandTracker.result())
+                .onSuccess(result -> {
                     LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
-                            command, payload, responsePayload);
-                    return responsePayload;
-                }).recover(t -> {
-                    LOGGER.debug("could not send command or did not receive a response: {}", t.getMessage());
-                    return Future.failedFuture(t);
-                }).onComplete(result);
-            };
-            if (commandClient.getCredit() == 0) {
-                commandClient.sendQueueDrainHandler(send);
-            } else {
-                send.handle(null);
-            }
-            return result.future();
-        });
+                            command, payload, result);
+                })
+                .onFailure(error -> {
+                    LOGGER.debug("could not send command or did not receive a response: {}", error.getMessage());
+                });
     }
 
     /**

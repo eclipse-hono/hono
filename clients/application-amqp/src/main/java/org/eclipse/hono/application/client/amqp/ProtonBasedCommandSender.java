@@ -23,6 +23,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.util.AddressHelper;
+import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -40,6 +41,8 @@ import io.vertx.proton.ProtonHelper;
  */
 public class ProtonBasedCommandSender extends SenderCachingServiceClient implements CommandSender {
 
+    private final ProtonBasedRequestResponseCommandClient requestResponseClient;
+
     /**
      * Creates a new vertx-proton based command sender.
      *
@@ -51,6 +54,7 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory) {
         super(connection, samplerFactory);
+        requestResponseClient = new ProtonBasedRequestResponseCommandClient(connection, samplerFactory);
     }
 
     /**
@@ -90,6 +94,18 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
 
         return sendCommand(tenantId, deviceId, command, contentType, data, null, null, properties,
                 newChildSpan(context, "send one-way command"));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<BufferResult> sendCommand(final String tenantId, final String deviceId, final String command,
+            final String contentType, final Buffer data, final String replyId, final Map<String, Object> properties,
+            final SpanContext context) {
+
+        return requestResponseClient.sendCommand(tenantId, deviceId, command, contentType, data, replyId, properties,
+                context);
     }
 
     private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,

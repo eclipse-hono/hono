@@ -324,16 +324,29 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
             TracingHelper.logError(currentSpan, t);
             return Future.failedFuture(t);
         }).map(resultValue -> {
-            if (resultValue != null) {
-                Tags.HTTP_STATUS.set(currentSpan, resultValue.getStatus());
-                if (resultValue.isError()) {
-                    Tags.ERROR.set(currentSpan, Boolean.TRUE);
-                }
-            } else {
-                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
-            }
+            setTagsForResult(currentSpan, resultValue);
             return resultMapper.apply(resultValue);
         }).onComplete(o -> currentSpan.finish());
+    }
+
+    /**
+     * Sets the necessary Opentracing tags for the given request response result.
+     *
+     * @param span The OpenTracing span.
+     * @param result The request response result.
+     * @throws NullPointerException if the span is {@code null}.
+     */
+    protected final void setTagsForResult(final Span span, final R result) {
+        Objects.requireNonNull(span);
+
+        if (result != null) {
+            Tags.HTTP_STATUS.set(span, result.getStatus());
+            if (result.isError()) {
+                Tags.ERROR.set(span, Boolean.TRUE);
+            }
+        } else {
+            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
+        }
     }
 
     /**

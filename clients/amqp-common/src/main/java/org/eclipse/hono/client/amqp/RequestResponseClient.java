@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
@@ -78,17 +79,18 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
     private final String replyToAddress;
     private final SendMessageSampler sampler;
     private final Map<Object, TriTuple<Promise<R>, Function<Message, R>, Span>> replyMap = new HashMap<>();
-    private final String endpointName;
+    private final String requestEndPointName;
+    private final String responseEndPointName;
     private final String tenantId;
+    private final Supplier<String> messageIdSupplier;
     private long requestTimeoutMillis;
 
     /**
      * Creates a request-response client.
      * <p>
      * The created instance's sender link's target address is set to
-     * <em>${endpointName}[/${tenantId}]</em> and the receiver link's source
-     * address is set to <em>${endpointName}[/${tenantId}]/${UUID}</em>
-     * (where ${UUID} is a generated UUID).
+     * <em>${requestEndPointName}[/${tenantId}]</em> and the receiver link's source
+     * address is set to <em>${responseEndPointName}[/${tenantId}]/${replyId}</em>.
      * <p>
      * The latter address is also used as the value of the <em>reply-to</em>
      * property of all request messages sent by this client.
@@ -97,60 +99,39 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      * {@link #createLinks(Handler, Handler)} only.
      *
      * @param connection The connection to the service.
-     * @param endpointName The name of the endpoint to send request messages to.
-     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
-     *                 client should not be scoped to a tenant.
-     * @param sampler The sampler to use.
-     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
-     */
-    private RequestResponseClient(
-            final HonoConnection connection,
-            final String endpointName,
-            final String tenantId,
-            final SendMessageSampler sampler) {
-
-        this(connection, endpointName, tenantId, UUID.randomUUID().toString(), sampler);
-    }
-
-    /**
-     * Creates a request-response client.
-     * <p>
-     * The created instance's sender link's target address is set to
-     * <em>${endpointName}[/${tenantId}]</em> and the receiver link's source
-     * address is set to <em>${endpointName}[/${tenantId}]/${replyId}</em>.
-     * <p>
-     * The latter address is also used as the value of the <em>reply-to</em>
-     * property of all request messages sent by this client.
-     * <p>
-     * The client will be ready to use after invoking {@link #createLinks()} or
-     * {@link #createLinks(Handler, Handler)} only.
-     *
-     * @param connection The connection to the service.
-     * @param endpointName The name of the endpoint to send request messages to.
+     * @param requestEndPointName The name of the endpoint to send request messages to.
+     * @param responseEndPointName The name of the endpoint to receive response messages from.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
      * @param replyId The replyId to use in the reply-to address.
+     * @param messageIdSupplier It supplies the message identifier. This supplier should create
+     *                          a new identifier on each invocation.
      * @param sampler The sampler to use.
-     * @throws NullPointerException if any of the parameters except tenantId is {@code null}.
+     * @throws NullPointerException if any of the parameters except tenantId or messageIdSupplier is {@code null}.
      */
     private RequestResponseClient(
             final HonoConnection connection,
-            final String endpointName,
+            final String requestEndPointName,
+            final String responseEndPointName,
             final String tenantId,
             final String replyId,
+            final Supplier<String> messageIdSupplier,
             final SendMessageSampler sampler) {
 
         super(connection);
-        this.endpointName = Objects.requireNonNull(endpointName);
+        this.requestEndPointName = Objects.requireNonNull(requestEndPointName);
+        this.responseEndPointName = Objects.requireNonNull(responseEndPointName);
         Objects.requireNonNull(replyId);
         this.sampler = Objects.requireNonNull(sampler);
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
+        this.messageIdSupplier = Optional.ofNullable(messageIdSupplier)
+                .orElse(this::createMessageId);        
         if (tenantId == null) {
-            this.linkTargetAddress = endpointName;
-            this.replyToAddress = String.format("%s/%s", endpointName, replyId);
+            this.linkTargetAddress = requestEndPointName;
+            this.replyToAddress = String.format("%s/%s", responseEndPointName, replyId);
         } else {
-            this.linkTargetAddress = String.format("%s/%s", endpointName, tenantId);
-            this.replyToAddress = String.format("%s/%s/%s", endpointName, tenantId, replyId);
+            this.linkTargetAddress = String.format("%s/%s", requestEndPointName, tenantId);
+            this.replyToAddress = String.format("%s/%s/%s", responseEndPointName, tenantId, replyId);
         }
         this.tenantId = tenantId;
     }
@@ -169,7 +150,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      *
      * @param <T> The type of response that the client expects the service to return.
      * @param connection The connection to the service.
-     * @param endpointName The name of the endpoint to send request messages to.
+     * @param endpointName The name of the endpoint to send request and receive response messages.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
      * @param sampler The sampler to use.
@@ -188,7 +169,52 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
-        final RequestResponseClient<T> result = new RequestResponseClient<>(connection, endpointName, tenantId, sampler);
+        return forEndpoint(connection, endpointName, endpointName, tenantId, UUID.randomUUID().toString(), null,
+                sampler, senderCloseHook, receiverCloseHook);
+    }
+
+    /**
+     * Creates a request-response client for an endpoint.
+     * <p>
+     * The client has a sender and a receiver link opened to the service
+     * endpoint. The sender link's target address is set to
+     * <em>${endpointName}[/${tenantId}]</em> and the receiver link's source
+     * address is set to <em>${endpointName}[/${tenantId}]/${UUID}</em>
+     * (where ${UUID} is a generated UUID).
+     * <p>
+     * The latter address is also used as the value of the <em>reply-to</em>
+     * property of all request messages sent by the client.
+     *
+     * @param <T> The type of response that the client expects the service to return.
+     * @param connection The connection to the service.
+     * @param requestEndPointName The name of the endpoint to send request messages to.
+     * @param responseEndPointName The name of the endpoint to receive response messages from.
+     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
+     *                 client should not be scoped to a tenant.
+     * @param replyId The replyId to use in the reply-to address.
+     * @param messageIdSupplier It supplies the message identifier. This supplier should create
+     *                          a new identifier on each invocation.
+     * @param sampler The sampler to use.
+     * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly (may be {@code null}).
+     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly (may be {@code null}).
+     * @return A future indicating the outcome of creating the client. The future will be failed
+     *         with a {@link org.eclipse.hono.client.ServiceInvocationException} if the links
+     *         cannot be opened.
+     * @throws NullPointerException if any of the parameters except tenantId or messageIdSupplier is {@code null}.
+     */
+    public static <T extends RequestResponseResult<?>> Future<RequestResponseClient<T>> forEndpoint(
+            final HonoConnection connection,
+            final String requestEndPointName,
+            final String responseEndPointName,
+            final String tenantId,
+            final String replyId,
+            final Supplier<String> messageIdSupplier,
+            final SendMessageSampler sampler,
+            final Handler<String> senderCloseHook,
+            final Handler<String> receiverCloseHook) {
+
+        final RequestResponseClient<T> result = new RequestResponseClient<>(connection, requestEndPointName,
+                responseEndPointName, tenantId, replyId, messageIdSupplier, sampler);
         return result.createLinks(senderCloseHook, receiverCloseHook).map(result);
     }
 
@@ -244,7 +270,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      * @return The unique messageId;
      */
     private String createMessageId() {
-        return String.format("%s-client-%s", endpointName, UUID.randomUUID());
+        return String.format("%s-client-%s", requestEndPointName, UUID.randomUUID());
     }
 
     /**
@@ -328,7 +354,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                 LOG.debug("discarding malformed response [reply-to: {}, correlation ID: {}]",
                         replyToAddress, message.getCorrelationId());
                 handler.one().handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        "cannot process response from service [" + endpointName + "]")));
+                        "cannot process response from service [" + responseEndPointName + "]")));
                 ProtonHelper.released(delivery, true);
             } else {
                 LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}, cache-directive: {}]",
@@ -393,7 +419,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
         AbstractHonoClient.setApplicationProperties(msg, appProperties);
         msg.setAddress(address);
         msg.setReplyTo(replyToAddress);
-        msg.setMessageId(createMessageId());
+        msg.setMessageId(messageIdSupplier.get());
         msg.setSubject(subject);
         return msg;
     }
@@ -468,7 +494,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
      */
-    private Future<R> createAndSendRequest(
+    public final Future<R> createAndSendRequest(
             final String action,
             final String address,
             final Map<String, Object> properties,
