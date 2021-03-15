@@ -31,6 +31,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   In order for the site module build to succeed with the `hugo` binary installed locally, the
   `site/homepage/themes/hugo-universal-theme` and `site/documentation/themes/hugo-theme-learn` folders need to be deleted.
   They will automatically be (re-)created as part of the build.
+* The Infinispan client used by the protocol adapters, the Device Connection and Command Router services has been
+  updated to version 11.0.9. The syntax of configuration file used for defining an embedded cache in the Device
+  Connection and/or Command Router service has changed as documented
+  [in the Infinispan version details](https://infinispan.org/docs/stable/titles/upgrading/upgrading.html#upgrading_from_10_1_to_11_0).
 
 ### API Changes
 
