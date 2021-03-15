@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -67,7 +68,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import io.jsonwebtoken.lang.Maps;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -543,6 +543,18 @@ public final class IntegrationTestSupport {
         }
     }
 
+    private MessagingType getConfiguredMessagingType() {
+        if (getConfiguredApplicationClientType().equals(KafkaApplicationClient.class)) {
+            return MessagingType.kafka;
+        }
+
+        if (getConfiguredApplicationClientType().equals(AmqpApplicationClient.class)) {
+            return MessagingType.amqp;
+        }
+
+        throw new IllegalArgumentException("Invalid messaging system configured!");
+    }
+
     /**
      * Creates properties for connecting to the AMQP Messaging Network's secure port.
      *
@@ -725,20 +737,13 @@ public final class IntegrationTestSupport {
      * Creates an HTTP client for accessing the Device Registry.
      */
     public void initRegistryClient() {
-        if (getConfiguredApplicationClientType().equals(KafkaApplicationClient.class)) {
-            registry = new DeviceRegistryHttpClient(
-                    vertx,
-                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
-                    Maps.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, (Object) MessagingType.kafka.name())
-                        .build()
-            );
-        } else {
-            registry = new DeviceRegistryHttpClient(
-                    vertx,
-                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
-        }
+
+        registry = new DeviceRegistryHttpClient(
+                vertx,
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
+                Collections.singletonMap(TenantConstants.FIELD_EXT_MESSAGING_TYPE, getConfiguredMessagingType().name())
+        );
     }
 
     /**
