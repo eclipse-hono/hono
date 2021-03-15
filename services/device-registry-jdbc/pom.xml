@@ -38,7 +38,13 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-amqp</artifactId>
+      <artifactId>hono-adapter-base-spring</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.hono</groupId>
+          <artifactId>client-device-connection-infinispan</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
