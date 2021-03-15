@@ -1018,7 +1018,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>

@@ -19,7 +19,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -95,6 +97,7 @@ public final class DeviceRegistryHttpClient {
 
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
     private final CrudHttpClient httpClient;
+    private final Map<String, Object> tenantExtensions;
 
     /**
      * Creates a new client for a host and port.
@@ -105,7 +108,22 @@ public final class DeviceRegistryHttpClient {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public DeviceRegistryHttpClient(final Vertx vertx, final String host, final int port) {
+        this(vertx, host, port, Collections.emptyMap());
+    }
+
+    /**
+     * Creates a new client for a host and port.
+     *
+     * @param vertx The vert.x instance to use.
+     * @param host The host to invoke the operations on.
+     * @param port The port that the service is bound to.
+     * @param tenantExtensions The value of the extensions field for all tenants to be created.
+     *
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public DeviceRegistryHttpClient(final Vertx vertx, final String host, final int port, final Map<String, Object> tenantExtensions) {
         this.httpClient = new CrudHttpClient(vertx, host, port);
+        this.tenantExtensions = Objects.requireNonNull(tenantExtensions);
     }
 
     private static String credentialsByDeviceUri(final String tenant, final String deviceId) {
@@ -244,10 +262,18 @@ public final class DeviceRegistryHttpClient {
     public Future<HttpResponse<Buffer>> addTenant(final String tenantId, final Tenant requestPayload, final String contentType,
             final int expectedStatusCode) {
 
+        final Tenant enrichedTenant = requestPayload != null ? new Tenant(requestPayload) : new Tenant().setEnabled(true);
+
+        if (tenantExtensions != null && !tenantExtensions.isEmpty()) {
+            final HashMap<String, Object> extensions = new HashMap<>(enrichedTenant.getExtensions());
+            extensions.putAll(tenantExtensions);
+            enrichedTenant.setExtensions(extensions);
+        }
+
         return addTenant(
                 tenantId,
-                JsonObject.mapFrom(requestPayload),
-                contentType,
+                JsonObject.mapFrom(enrichedTenant),
+                contentType != null ? contentType : "application/json",
                 expectedStatusCode);
     }
 

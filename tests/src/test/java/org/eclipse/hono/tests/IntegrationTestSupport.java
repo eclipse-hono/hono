@@ -61,11 +61,13 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.jsonwebtoken.lang.Maps;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -723,11 +725,20 @@ public final class IntegrationTestSupport {
      * Creates an HTTP client for accessing the Device Registry.
      */
     public void initRegistryClient() {
-
-        registry = new DeviceRegistryHttpClient(
-                vertx,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+        if (getConfiguredApplicationClientType().equals(KafkaApplicationClient.class)) {
+            registry = new DeviceRegistryHttpClient(
+                    vertx,
+                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
+                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
+                    Maps.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, (Object) MessagingType.kafka.name())
+                        .build()
+            );
+        } else {
+            registry = new DeviceRegistryHttpClient(
+                    vertx,
+                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
+                    IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+        }
     }
 
     /**

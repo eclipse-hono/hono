@@ -455,6 +455,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             .compose(ar -> getHelper().registry.getTenant(tenantId))
             .onComplete(context.succeeding(httpResponse -> {
                 final JsonObject json = httpResponse.bodyAsJsonObject();
+                // ignore messaging type extension as it is set dynamically by generic test logic
+                json.getJsonObject(TenantConstants.FIELD_EXT).remove(TenantConstants.FIELD_EXT_MESSAGING_TYPE);
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
                 context.verify(() -> {
                     assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, JsonObject.mapFrom(requestBody)));
