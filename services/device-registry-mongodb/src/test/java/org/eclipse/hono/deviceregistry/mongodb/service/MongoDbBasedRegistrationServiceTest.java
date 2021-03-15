@@ -12,12 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
@@ -34,7 +30,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -68,10 +63,6 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-devices-test");
 
-        final EventSender downstreamSender = mock(EventSender.class);
-        when(downstreamSender.start()).thenReturn(Future.succeededFuture());
-        when(downstreamSender.stop()).thenReturn(Future.succeededFuture());
-
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
@@ -80,7 +71,6 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
         autoProvisioner.setDeviceManagementService(registrationService);
-        autoProvisioner.setEventSender(downstreamSender);
 
         registrationService.setAutoProvisioner(autoProvisioner);
 

@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -61,7 +62,7 @@ public class AutoProvisioner implements Lifecycle {
     private Tracer tracer = NoopTracerFactory.create();
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
     private DeviceManagementService deviceManagementService;
-    private EventSender eventSender;
+    private MessagingClients messagingClients;
     private Vertx vertx;
 
     private AutoProvisionerConfigProperties config;
@@ -77,13 +78,13 @@ public class AutoProvisioner implements Lifecycle {
     }
 
     /**
-     * Sets the factory to use for creating a client for the AMQP Messaging Network.
+     * Sets the messaging client to use.
      *
-     * @param eventSender The factory.
-     * @throws NullPointerException if the factory is {@code null}.
+     * @param messagingClients The messaging client.
+     * @throws NullPointerException if the client is {@code null}.
      */
-    public final void setEventSender(final EventSender eventSender) {
-        this.eventSender = Objects.requireNonNull(eventSender);
+    public void setMessagingClients(final MessagingClients messagingClients) {
+        this.messagingClients = Objects.requireNonNull(messagingClients);
     }
 
     /**
@@ -146,8 +147,8 @@ public class AutoProvisioner implements Lifecycle {
         if (vertx == null) {
             throw new IllegalStateException("vert.x instance must be set");
         }
-        if (eventSender == null) {
-             throw new IllegalStateException("event sender must be set");
+        if (messagingClients == null) {
+             throw new IllegalStateException("messaging client must be set");
         }
         if (deviceManagementService == null) {
             throw new IllegalStateException("device management service is not set");
@@ -157,9 +158,9 @@ public class AutoProvisioner implements Lifecycle {
             // decouple establishment of the sender's downstream connection from this component's
             // start-up process and instead rely on the event sender's readiness check to succeed
             // once the connection has been established
-            eventSender.start()
-                .onSuccess(ok -> LOG.info("Event sender [{}] successfully connected", eventSender))
-                .onFailure((t -> LOG.warn("Event sender [{}] failed to connect", eventSender, t)));
+            messagingClients.start()
+                    .onSuccess(ok -> LOG.info("Messaging clients successfully connected"))
+                    .onFailure((t -> LOG.warn("Messaging clients failed to connect", t)));
         }
         return Future.succeededFuture();
     }
@@ -173,7 +174,7 @@ public class AutoProvisioner implements Lifecycle {
     public final Future<Void> stop() {
         if (started.compareAndSet(true, false)) {
             LOG.info("shutting down");
-            return eventSender.stop();
+            return messagingClients.stop();
         } else {
             return Future.succeededFuture();
         }
@@ -205,6 +206,9 @@ public class AutoProvisioner implements Lifecycle {
             props.put(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS, EventConstants.RegistrationStatus.NEW.name());
             props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY);
             props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, EventConstants.EVENT_ENDPOINT);
+
+            final EventSender eventSender = messagingClients.getClientSetForTenant(tenantTracker.result().getPayload())
+                    .getEventSender();
 
             return eventSender.sendEvent(
                     tenantTracker.result().getPayload(),

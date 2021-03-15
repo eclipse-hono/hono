@@ -15,14 +15,12 @@ package org.eclipse.hono.deviceregistry.mongodb;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.spring.AbstractMessagingClientConfig;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -39,7 +37,6 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
-import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -86,7 +83,7 @@ import io.vertx.ext.web.handler.BasicAuthHandler;
  */
 @Configuration
 @Import(PrometheusSupport.class)
-public class ApplicationConfig {
+public class ApplicationConfig extends AbstractMessagingClientConfig {
 
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
     private static final String BEAN_NAME_HTTP_SERVER = "httpServer";
@@ -298,53 +295,6 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a sender for publishing events via the <em>AMQP Messaging Network</em>.
-     * <p>
-     * The sender is initialized with the connection provided by {@link #downstreamConnection()}.
-     *
-     * @return The factory.
-     */
-    @Bean
-    @Scope("prototype")
-    public EventSender eventSender() {
-        final var sender = new ProtonBasedDownstreamSender(
-                downstreamConnection(),
-                SendMessageSampler.Factory.noop(),
-                true,
-                true);
-
-        healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(sender));
-        return sender;
-    }
-
-    /**
-     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
-     * <p>
-     * The connection is configured with the properties provided by {@link #downstreamSenderConfig()}.
-     *
-     * @return The connection.
-     */
-    @Bean
-    @Scope("prototype")
-    public HonoConnection downstreamConnection() {
-        return HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer());
-    }
-
-    /**
-     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
-     *
-     * @return The properties.
-     */
-    @ConfigurationProperties(prefix = "hono.messaging")
-    @Bean
-    public ClientConfigProperties downstreamSenderConfig() {
-        final ClientConfigProperties config = new ClientConfigProperties();
-        config.setNameIfNotSet("Device Registry");
-        config.setServerRoleIfUnknown("AMQP Messaging Network");
-        return config;
-    }
-
-    /**
      * Gets properties for configuring gateway based auto-provisioning.
      *
      * @return The properties.
@@ -353,6 +303,11 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.autoprovisioning")
     public AutoProvisionerConfigProperties autoProvisionerConfigProperties() {
         return new AutoProvisionerConfigProperties();
+    }
+
+    @Override
+    protected String getAdapterName() {
+        return "device-registry";
     }
 
     /**
@@ -373,10 +328,11 @@ public class ApplicationConfig {
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setVertx(vertx());
-        autoProvisioner.setTracer(tracer());
+        final Tracer tracer = tracer();
+        autoProvisioner.setTracer(tracer);
         autoProvisioner.setDeviceManagementService(service);
         autoProvisioner.setTenantInformationService(tenantInformationService);
-        autoProvisioner.setEventSender(eventSender());
+        autoProvisioner.setMessagingClients(messagingClients(SendMessageSampler.Factory.noop(), tracer, vertx(), new ProtocolAdapterProperties()));
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         service.setAutoProvisioner(autoProvisioner);
