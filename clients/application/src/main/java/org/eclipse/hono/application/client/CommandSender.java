@@ -15,6 +15,7 @@ package org.eclipse.hono.application.client;
 import java.util.Map;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Lifecycle;
 
 import io.opentracing.SpanContext;
@@ -209,6 +210,106 @@ public interface CommandSender extends Lifecycle {
             String command,
             String contentType,
             Buffer data,
+            Map<String, Object> properties,
+            SpanContext context);
+
+    /**
+     * Sends a command to a device and expects a response.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected to a protocol adapter
+     * and needs to have indicated its intent to receive commands.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the command to.
+     * @param command The name of the command.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 2xx has been received from the device.
+     *         If the response has no payload, the future will complete with {@code null}.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at
+     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     */
+    default Future<BufferResult> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final Buffer data) {
+        return sendCommand(tenantId, deviceId, command, null, data, null);
+    }
+
+    /**
+     * Sends a command to a device and expects a response.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected to a protocol adapter
+     * and needs to have indicated its intent to receive commands.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the command to.
+     * @param command The name of the command.
+     * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @param properties The headers to include in the command message.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 2xx has been received from the device.
+     *         If the response has no payload, the future will complete with {@code null}.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at 
+     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     */
+    default Future<BufferResult> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final Map<String, Object> properties) {
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, null);
+    }
+
+    /**
+     * Sends a command to a device and expects a response.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected to a protocol adapter
+     * and needs to have indicated its intent to receive commands.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the command to.
+     * @param command The name of the command.
+     * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @param replyId An arbitrary string which will be used to create the reply-to address to be included in commands
+     *                sent to devices of the tenant. If the messaging network specific Command &amp; Control 
+     *                implementation does not require a replyId, the specified value will be ignored.
+     * @param properties The headers to include in the command message.
+     * @param context The currently active OpenTracing span context that is used to trace the execution of this
+     *            operation or {@code null} if no span is currently active.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 2xx has been received from the device.
+     *         If the response has no payload, the future will complete with {@code null}.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at 
+     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     */
+    Future<BufferResult> sendCommand(
+            String tenantId,
+            String deviceId,
+            String command,
+            String contentType,
+            Buffer data,
+            String replyId,
             Map<String, Object> properties,
             SpanContext context);
 }
