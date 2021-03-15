@@ -74,7 +74,7 @@ The plugin is disabled by default and can be enabled by setting the *jacoco.skip
 
 ```sh
 # in the "hono" folder containing the source code
-mvn clean install -Djacoco.skip=false -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus,jaeger
+mvn clean install -Djacoco.skip=false -Pbuild-docker-image,metrics-prometheus,jaeger
 ```
 
 The plugin will produce a `target/jacoco.exec` file in each module which contains the (binary) coverage data.
