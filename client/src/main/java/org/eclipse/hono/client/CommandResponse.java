@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.util.function.Predicate;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,7 +126,7 @@ public final class CommandResponse {
         final String correlationId = message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null;
         final Integer status = MessageHelper.getStatus(message);
 
-        if (correlationId == null || Strings.isNullOrEmpty(message.getAddress()) || status == null) {
+        if (correlationId == null || !ResourceIdentifier.isValid(message.getAddress()) || status == null) {
             LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
                     correlationId, message.getAddress(), status);
             return null;

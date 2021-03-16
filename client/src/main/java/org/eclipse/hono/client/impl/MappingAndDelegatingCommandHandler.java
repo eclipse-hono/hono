@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,10 +127,10 @@ public class MappingAndDelegatingCommandHandler {
         Objects.requireNonNull(message);
 
         // this is the place where a command message on the "command/${tenant}" address arrives *first*
-        if (Strings.isNullOrEmpty(message.getAddress())) {
-            LOG.debug("command message has no address");
+        if (!ResourceIdentifier.isValid(message.getAddress())) {
+            LOG.debug("command message has no valid address");
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing command target address"));
+            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing or invalid command target address"));
             originalMessageDelivery.disposition(rejected, true);
             return;
         }

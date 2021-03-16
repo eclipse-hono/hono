@@ -95,8 +95,8 @@ public final class ProtonBasedCommand implements Command {
     public static ProtonBasedCommand from(final Message message) {
         Objects.requireNonNull(message);
 
-        if (Strings.isNullOrEmpty(message.getAddress())) {
-            throw new IllegalArgumentException("address is not set");
+        if (!ResourceIdentifier.isValid(message.getAddress())) {
+            throw new IllegalArgumentException("address is empty or invalid");
         }
         final ResourceIdentifier addressIdentifier = ResourceIdentifier.fromString(message.getAddress());
         if (Strings.isNullOrEmpty(addressIdentifier.getTenantId())) {

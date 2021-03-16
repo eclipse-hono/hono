@@ -18,7 +18,6 @@ import java.util.function.Predicate;
 
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +128,7 @@ public final class CommandResponse {
             final String contentType,
             final Integer status) {
 
-        if (correlationId == null || Strings.isNullOrEmpty(address) || status == null) {
+        if (correlationId == null || !ResourceIdentifier.isValid(address) || status == null) {
             LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
                     correlationId, address, status);
             return null;

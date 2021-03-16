@@ -22,7 +22,6 @@ import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,7 +117,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         final Source remoteSource = sender.getRemoteSource();
         LOG.debug("client [{}] wants to open a link for receiving messages [address: {}]",
                 con.getRemoteContainer(), remoteSource);
-        if (Strings.isNullOrEmpty(remoteSource.getAddress())) {
+        if (!ResourceIdentifier.isValid(remoteSource.getAddress())) {
             handleUnknownEndpoint(con, sender, remoteSource.getAddress());
             return;
         }

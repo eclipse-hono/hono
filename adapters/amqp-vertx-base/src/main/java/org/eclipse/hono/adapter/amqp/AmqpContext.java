@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -74,7 +73,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
         ctx.delivery = delivery;
         ctx.message = message;
         ctx.payload = MessageHelper.getPayload(message);
-        if (!Strings.isNullOrEmpty(message.getAddress())) {
+        if (ResourceIdentifier.isValid(message.getAddress())) {
             ctx.address = ResourceIdentifier.fromString(message.getAddress());
             ctx.endpoint = EndpointType.fromString(ctx.address.getEndpoint());
         }

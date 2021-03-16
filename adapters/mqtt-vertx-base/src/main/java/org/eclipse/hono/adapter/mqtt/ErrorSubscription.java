@@ -123,8 +123,8 @@ public final class ErrorSubscription extends AbstractSubscription {
 
     private static ResourceIdentifier validateTopic(final String topic) {
         Objects.requireNonNull(topic);
-        if (topic.isEmpty()) {
-            throw new IllegalArgumentException("topic filter must not be empty");
+        if (!ResourceIdentifier.isValid(topic)) {
+            throw new IllegalArgumentException("topic filter or its first segment must not be empty");
         }
         final ResourceIdentifier resource = ResourceIdentifier.fromString(topic);
         if (resource.length() != 4 || !"#".equals(resource.elementAt(resource.length() - 1))) {

@@ -84,6 +84,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
     @Override
     public String getTenantId() {
         return Optional.ofNullable(message.getAddress())
+                .map(address -> ResourceIdentifier.isValid(address) ? address : null)
                 .map(ResourceIdentifier::fromString)
                 .map(ResourceIdentifier::getTenantId)
                 .orElseThrow(() -> new IllegalStateException("message has no proper address"));

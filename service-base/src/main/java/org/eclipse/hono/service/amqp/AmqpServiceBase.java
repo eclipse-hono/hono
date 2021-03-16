@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -486,6 +486,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     con.getRemoteContainer());
             receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported"));
             receiver.close();
+        } else if (!ResourceIdentifier.isValid(receiver.getRemoteTarget().getAddress())) {
+            handleUnknownEndpoint(con, receiver, receiver.getRemoteTarget().getAddress());
         } else {
             log.debug("client [container: {}] wants to open a link [address: {}] for sending messages",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
@@ -521,7 +523,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final Source remoteSource = sender.getRemoteSource();
         log.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
                 con.getRemoteContainer(), remoteSource);
-        if (Strings.isNullOrEmpty(remoteSource.getAddress())) {
+        if (!ResourceIdentifier.isValid(remoteSource.getAddress())) {
             handleUnknownEndpoint(con, sender, remoteSource.getAddress());
             return;
         }

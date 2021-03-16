@@ -78,10 +78,10 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         Objects.requireNonNull(message);
 
         // this is the place where a command message on the "command/${tenant}" address arrives *first*
-        if (Strings.isNullOrEmpty(message.getAddress())) {
-            log.debug("command message has no address");
+        if (!ResourceIdentifier.isValid(message.getAddress())) {
+            log.debug("command message has no valid address");
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing command target address"));
+            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing or invalid command target address"));
             messageDelivery.disposition(rejected, true);
             return;
         }
