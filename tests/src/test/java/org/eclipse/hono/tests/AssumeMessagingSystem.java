@@ -15,7 +15,7 @@ package org.eclipse.hono.tests;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-import org.eclipse.hono.application.client.ApplicationClient;
+import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
@@ -28,8 +28,8 @@ public @interface AssumeMessagingSystem {
     /**
      * The type of the messaging system for which the test shall be run exclusively.
      *
-     * @return The type of the messaging system, represented by a sublass of {@link ApplicationClient}
+     * @return The type of the messaging system.
      */
-    Class<? extends ApplicationClient<?>> type();
+    MessagingType type();
 
 }

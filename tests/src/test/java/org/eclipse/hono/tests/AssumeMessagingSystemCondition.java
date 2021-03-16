@@ -14,7 +14,7 @@ package org.eclipse.hono.tests;
 
 import java.util.Optional;
 
-import org.eclipse.hono.application.client.ApplicationClient;
+import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -30,17 +30,17 @@ public class AssumeMessagingSystemCondition implements ExecutionCondition {
     public ConditionEvaluationResult evaluateExecutionCondition(final ExtensionContext context) {
         final Optional<AssumeMessagingSystem> annotation = AnnotationUtils.findAnnotation(context.getElement(), AssumeMessagingSystem.class);
         if (annotation.isPresent()) {
-            final Class<? extends ApplicationClient<?>> assumedApplicationClientType = annotation.get().type();
+            final MessagingType assumedMessagingType = annotation.get().type();
 
-            final Class<? extends ApplicationClient<?>> applicationClientClass = IntegrationTestSupport.getConfiguredApplicationClientType();
-            if (!applicationClientClass.equals(assumedApplicationClientType)) {
+            final MessagingType messagingType = IntegrationTestSupport.getConfiguredMessagingType();
+            if (messagingType != assumedMessagingType) {
                 return ConditionEvaluationResult.disabled(String.format("Test assumes to run on %s, but current test profile is %s. Skipping test!",
-                                assumedApplicationClientType.getSimpleName(),
-                                applicationClientClass.getSimpleName()));
+                        assumedMessagingType,
+                        messagingType));
             } else {
                 return ConditionEvaluationResult.enabled(String.format("Test assumes to run on %s, which matches current test profile is %s. Running test!",
-                        assumedApplicationClientType.getSimpleName(),
-                        applicationClientClass.getSimpleName()));
+                        assumedMessagingType,
+                        messagingType));
             }
         }
         return ConditionEvaluationResult.enabled("Test makes no assumptions of messaging systems. Running test.");
