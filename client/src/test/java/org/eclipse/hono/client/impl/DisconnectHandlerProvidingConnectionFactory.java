@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
@@ -34,6 +35,7 @@ import io.vertx.proton.ProtonConnection;
 public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
 
     private final ProtonConnection connectionToCreate;
+    private final AtomicInteger connectInvocations = new AtomicInteger(0);
 
     private Handler<ProtonConnection> disconnectHandler;
     private Handler<AsyncResult<ProtonConnection>> closeHandler;
@@ -78,6 +80,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
+        connectInvocations.incrementAndGet();
         this.closeHandler = closeHandler;
         this.disconnectHandler = disconnectHandler;
         if (expectedFailingConnectionAttempts.getCount() > 0) {
@@ -190,5 +193,14 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
             Thread.currentThread().interrupt();
             return false;
         }
+    }
+
+    /**
+     * Gets the number of times the <em>connect</em> method got invoked up to now.
+     *
+     * @return The number of connect invocations.
+     */
+    public int getConnectInvocations() {
+        return connectInvocations.get();
     }
 }
