@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.HashMap;
@@ -35,8 +34,8 @@ public class PropertyBagTest {
     @Test
     public void verifyPropertiesInPropertyBag() {
         final PropertyBag propertyBag = PropertyBag.fromTopic("event/tenant/device/?param1=30&param2=value2");
-        assertEquals("30", propertyBag.getProperty("param1"));
-        assertEquals("value2", propertyBag.getProperty("param2"));
+        assertThat(propertyBag.getProperty("param1")).isEqualTo("30");
+        assertThat(propertyBag.getProperty("param2")).isEqualTo("value2");
     }
 
     /**
@@ -69,9 +68,8 @@ public class PropertyBagTest {
      */
     @Test
     public void verifyTopicWithoutPropertyBag() {
-        assertEquals("event/tenant/device",
-                PropertyBag.fromTopic("event/tenant/device/?hono-ttl=30")
-                        .topicWithoutPropertyBag().toString());
+        final PropertyBag bag = PropertyBag.fromTopic("event/tenant/device/?hono-ttl=30");
+        assertThat(bag.topicWithoutPropertyBag().toString()).isEqualTo("event/tenant/device");
     }
 
     /**
@@ -84,9 +82,9 @@ public class PropertyBagTest {
         final Iterator<Map.Entry<String, String>> propertiesIterator = propertyBag.getPropertiesIterator();
         final Map<String, String> tmpMap = new HashMap<>();
         propertiesIterator.forEachRemaining((entry) -> tmpMap.put(entry.getKey(), entry.getValue()));
-        assertEquals(2, tmpMap.size());
-        assertEquals("30", tmpMap.get("param1"));
-        assertEquals("value2", tmpMap.get("param2"));
+        assertThat(tmpMap.size()).isEqualTo(2);
+        assertThat(tmpMap.get("param1")).isEqualTo("30");
+        assertThat(tmpMap.get("param2")).isEqualTo("value2");
     }
 
     /**
@@ -96,8 +94,54 @@ public class PropertyBagTest {
     public void testGetPropertyIsCaseInsensitive() {
         final PropertyBag propertyBag = PropertyBag.fromTopic("event/tenant/device/?cONteNT-TypE=text&pARam2=value2");
 
-        assertEquals("event/tenant/device", propertyBag.topicWithoutPropertyBag().toString());
-        assertEquals("text", propertyBag.getProperty("Content-Type"));
-        assertEquals("value2", propertyBag.getProperty("param2"));
+        assertThat(propertyBag.topicWithoutPropertyBag().toString()).isEqualTo("event/tenant/device");
+        assertThat(propertyBag.getProperty("Content-Type")).isEqualTo("text");
+        assertThat(propertyBag.getProperty("param2")).isEqualTo("value2");
+    }
+
+    /**
+     * Verifies that <em>getPropertiesIterator</em> returns an empty iterator for a topic that doesn't contain
+     * property bag entries.
+     */
+    @Test
+    public void testGetPropertiesIteratorForTopicWithoutPropertyBag() {
+        final PropertyBag propertyBag = PropertyBag.fromTopic("event/tenant/device/?");
+
+        assertThat(propertyBag.topicWithoutPropertyBag().toString()).isEqualTo("event/tenant/device");
+        assertThat(propertyBag.getPropertiesIterator().hasNext()).isFalse();
+    }
+
+    /**
+     * Verifies that a PropertyBag cannot be created from a topic that is empty or only contains a property bag.
+     */
+    @Test
+    public void testFromTopicWithEmptyTopicPath() {
+        PropertyBag propertyBag = PropertyBag.fromTopic("/?");
+        assertThat(propertyBag).isNull();
+
+        propertyBag = PropertyBag.fromTopic("/?test=1");
+        assertThat(propertyBag).isNull();
+    }
+
+    /**
+     * Verifies that a PropertyBag cannot be created from a topic that contains an empty first segment.
+     */
+    @Test
+    public void testFromTopicWithEmptyFirstTopicSegment() {
+        PropertyBag propertyBag = PropertyBag.fromTopic("/test");
+        assertThat(propertyBag).isNull();
+
+        propertyBag = PropertyBag.fromTopic("/");
+        assertThat(propertyBag).isNull();
+    }
+
+    /**
+     * Verifies that a PropertyBag cannot be created from a topic that contains an invalid property bag string.
+     */
+    @Test
+    public void testFromTopicWithInvalidPropertyBag() {
+        final PropertyBag propertyBag = PropertyBag.fromTopic("test/?%%");
+
+        assertThat(propertyBag).isNull();
     }
 }

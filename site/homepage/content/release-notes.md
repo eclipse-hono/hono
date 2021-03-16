@@ -14,6 +14,7 @@ title = "Release Notes"
   in the cache. This has been fixed.
 * A failed connection attempt in the default `org.eclipse.hono.connection.ConnectionFactory` implementation could
   have led to the AMQP connection not getting closed, occupying connection resources. This has been fixed.
+* Validation of MQTT topics containing property bags has been improved, preventing unhandled exceptions.
 
 ## 1.6.0
 
