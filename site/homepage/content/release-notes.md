@@ -12,6 +12,8 @@ title = "Release Notes"
   ISO-8601 Duration string instead of an integer.
 * The MQTT adapter failed to handle a command response message if the corresponding tenant object wasn't available
   in the cache. This has been fixed.
+* A failed connection attempt in the default `org.eclipse.hono.connection.ConnectionFactory` implementation could
+  have led to the AMQP connection not getting closed, occupying connection resources. This has been fixed.
 
 ## 1.6.0
 

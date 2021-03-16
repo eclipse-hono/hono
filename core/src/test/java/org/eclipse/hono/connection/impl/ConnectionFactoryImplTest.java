@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,11 +22,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectTimeoutException;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +66,7 @@ public class ConnectionFactoryImplTest {
      */
     @BeforeEach
     public void setup() {
-        vertx = Vertx.vertx();
+        vertx = mock(Vertx.class);
         props = new ClientConfigProperties();
         props.setHost(Constants.LOOPBACK_DEVICE_ADDRESS);
         props.setPort(25673); // no server running on port
@@ -81,6 +84,7 @@ public class ConnectionFactoryImplTest {
     public void testConnectInvokesHandlerOnFailureToConnect(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
+        vertx = Vertx.vertx();
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
 
         // WHEN trying to connect to the server
@@ -99,9 +103,16 @@ public class ConnectionFactoryImplTest {
     @Test
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectInvokesHandlerOnConnectTimeout(final VertxTestContext ctx) {
+        final long connectTimeout = 200L;
 
         // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
-        props.setConnectTimeout(200);
+        props.setConnectTimeout((int) connectTimeout);
+        final AtomicReference<Handler<Long>> timeoutHandlerRef = new AtomicReference<>();
+        when(vertx.setTimer(eq(connectTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            timeoutHandlerRef.set(invocation.getArgument(1));
+            return 1L;
+        });
+
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
         final ProtonClient protonClientMock = mock(ProtonClient.class);
         factory.setProtonClient(protonClientMock);
@@ -112,13 +123,103 @@ public class ConnectionFactoryImplTest {
             ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
             ctx.completeNow();
         }));
+        timeoutHandlerRef.get().handle(1L);
+    }
+
+    /**
+     * Verifies that a connection attempt is failed if there is a timeout opening the connection
+     * and verifies that a subsequently received 'open' frame is ignored.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    public void testConnectIgnoresSuccessfulOpenAfterTimeout(final VertxTestContext ctx) {
+        final long connectTimeout = 200L;
+
+        // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
+        props.setConnectTimeout((int) connectTimeout);
+        final AtomicReference<Handler<Long>> timeoutHandlerRef = new AtomicReference<>();
+        when(vertx.setTimer(eq(connectTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            timeoutHandlerRef.set(invocation.getArgument(1));
+            return 1L;
+        });
+
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
+        final ProtonClient protonClientMock = mock(ProtonClient.class);
+        final ProtonConnection protonConnectionMock = mock(ProtonConnection.class, Mockito.RETURNS_SELF);
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
+            resultHandler.handle(Future.succeededFuture(protonConnectionMock));
+            return null;
+        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        factory.setProtonClient(protonClientMock);
+
+        // WHEN trying to connect to the server
+        factory.connect(null, null, null, ctx.failing(t -> {
+            // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
+            ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
+            ctx.completeNow();
+        }));
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(protonConnectionMock).openHandler(openHandlerCaptor.capture());
+        // trigger timeout
+        timeoutHandlerRef.get().handle(1L);
+        // call openHandler - that will be too late for the connect invocation to succeed
+        openHandlerCaptor.getValue().handle(Future.succeededFuture(protonConnectionMock));
+        // and the connection will be disconnected
+        verify(protonConnectionMock).disconnect();
+    }
+
+    /**
+     * Verifies that a connection attempt is failed if there is a timeout opening the connection
+     * and verifies that a subsequently triggered failed open handler is ignored.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    public void testConnectIgnoresFailedOpenAfterTimeout(final VertxTestContext ctx) {
+        final long connectTimeout = 200L;
+
+        // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
+        props.setConnectTimeout((int) connectTimeout);
+        final AtomicReference<Handler<Long>> timeoutHandlerRef = new AtomicReference<>();
+        when(vertx.setTimer(eq(connectTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            timeoutHandlerRef.set(invocation.getArgument(1));
+            return 1L;
+        });
+
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
+        final ProtonClient protonClientMock = mock(ProtonClient.class);
+        final ProtonConnection protonConnectionMock = mock(ProtonConnection.class, Mockito.RETURNS_SELF);
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
+            resultHandler.handle(Future.succeededFuture(protonConnectionMock));
+            return null;
+        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        factory.setProtonClient(protonClientMock);
+
+        // WHEN trying to connect to the server
+        factory.connect(null, null, null, ctx.failing(t -> {
+            // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
+            ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
+            ctx.completeNow();
+        }));
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(protonConnectionMock).openHandler(openHandlerCaptor.capture());
+        // trigger timeout
+        timeoutHandlerRef.get().handle(1L);
+        // call openHandler - that will be too late for the connect invocation to succeed
+        openHandlerCaptor.getValue().handle(Future.failedFuture("amqp:resource-limit-exceeded -connection disallowed by local policy"));
+        // and the connection will be disconnected
+        verify(protonConnectionMock).disconnect();
     }
 
     /**
      * Verifies that the given result handler is invoked if a connection gets closed after SASL auth was successful and
      * AMQP open frame was sent by client, but no AMQP open frame from server was received yet.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectInvokesHandlerOnDisconnectAfterSendingOpenFrame() {
         // GIVEN a factory configured to connect to a server (with mocked connection)
@@ -129,7 +230,7 @@ public class ConnectionFactoryImplTest {
             final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
             resultHandler.handle(Future.succeededFuture(protonConnectionMock));
             return null;
-        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), any(Handler.class));
+        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), VertxMockSupport.anyHandler());
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
@@ -138,7 +239,7 @@ public class ConnectionFactoryImplTest {
         factory.connect(new ProtonClientOptions(), null, null, resultHandler);
 
         // THEN the disconnect handler gets called which calls the given result handler with a failure
-        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(protonConnectionMock).disconnectHandler(disconnectHandlerCaptor.capture());
         disconnectHandlerCaptor.getValue().handle(protonConnectionMock);
         // as we call handler ourselves handling is synchronous here
@@ -149,7 +250,6 @@ public class ConnectionFactoryImplTest {
      * Verifies that the factory does not enable SASL_PLAIN if the username and password are empty
      * strings.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectDoesNotUseSaslPlainForEmptyUsernameAndPassword() {
 
@@ -165,7 +265,7 @@ public class ConnectionFactoryImplTest {
         // THEN the factory does not enable the SASL_PLAIN mechanism when establishing
         // the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq(""), eq(""), any(Handler.class));
+        verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq(""), eq(""), VertxMockSupport.anyHandler());
         assertFalse(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
     }
 
@@ -173,7 +273,6 @@ public class ConnectionFactoryImplTest {
      * Verifies that the factory enables SASL_PLAIN if the username and password are non-empty
      * strings.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectAddsSaslPlainForNonEmptyUsernameAndPassword() {
 
@@ -188,7 +287,7 @@ public class ConnectionFactoryImplTest {
 
         // THEN the factory uses SASL_PLAIN when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq("user"), eq("pw"), any(Handler.class));
+        verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq("user"), eq("pw"), VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
     }
 
@@ -196,7 +295,6 @@ public class ConnectionFactoryImplTest {
      * Verifies that the factory uses TLS when connecting to the peer if no trust store
      * is configured but TLS has been enabled explicitly.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectEnablesSslIfExplicitlyConfigured() {
 
@@ -213,7 +311,7 @@ public class ConnectionFactoryImplTest {
 
         // THEN the factory uses TLS when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().isSsl());
     }
 
@@ -221,7 +319,6 @@ public class ConnectionFactoryImplTest {
      * Verifies that the factory uses TLS when connecting to the peer if a trust store
      * is configured but TLS has not been enabled explicitly.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectEnablesSslIfTrustStoreIsConfigured() {
 
@@ -238,14 +335,13 @@ public class ConnectionFactoryImplTest {
 
         // THEN the factory uses TLS when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().isSsl());
     }
 
     /**
      * Verifies that the factory sets the maximum frame size on the connection to the value from the client configuration.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectSetsMaxFrameSize() {
 
@@ -262,7 +358,7 @@ public class ConnectionFactoryImplTest {
 
         // THEN the factory sets the max-message-size when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), any(Handler.class));
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
         assertThat(optionsCaptor.getValue().getMaxFrameSize()).isEqualTo(64 * 1024);
     }
 }
