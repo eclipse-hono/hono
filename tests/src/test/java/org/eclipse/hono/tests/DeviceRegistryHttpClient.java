@@ -105,18 +105,6 @@ public final class DeviceRegistryHttpClient {
      * @param vertx The vert.x instance to use.
      * @param host The host to invoke the operations on.
      * @param port The port that the service is bound to.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public DeviceRegistryHttpClient(final Vertx vertx, final String host, final int port) {
-        this(vertx, host, port, Collections.emptyMap());
-    }
-
-    /**
-     * Creates a new client for a host and port.
-     *
-     * @param vertx The vert.x instance to use.
-     * @param host The host to invoke the operations on.
-     * @param port The port that the service is bound to.
      * @param tenantExtensions The value of the extensions field for all tenants to be created.
      *
      * @throws NullPointerException if any of the parameters is {@code null}.

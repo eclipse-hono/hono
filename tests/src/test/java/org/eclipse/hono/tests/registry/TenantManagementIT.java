@@ -455,8 +455,6 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             .compose(ar -> getHelper().registry.getTenant(tenantId))
             .onComplete(context.succeeding(httpResponse -> {
                 final JsonObject json = httpResponse.bodyAsJsonObject();
-                // ignore messaging type extension as it is set dynamically by generic test logic
-                json.getJsonObject(TenantConstants.FIELD_EXT).remove(TenantConstants.FIELD_EXT_MESSAGING_TYPE);
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
                 context.verify(() -> {
                     assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, JsonObject.mapFrom(requestBody)));
@@ -837,6 +835,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     private static Tenant buildTenantPayload() {
         final Tenant tenant = new Tenant();
         tenant.putExtension("plan", "unlimited");
+        // explicitly (add the messaging-type extension (implicitly added by DeviceRegistryHttpClient)
+        // here so that it is also part of the expected output and hence verified
+        tenant.putExtension(TenantConstants.FIELD_EXT_MESSAGING_TYPE,
+                IntegrationTestSupport.getConfiguredMessagingType().name());
         tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .setEnabled(true)
                 .setDeviceAuthenticationRequired(true));

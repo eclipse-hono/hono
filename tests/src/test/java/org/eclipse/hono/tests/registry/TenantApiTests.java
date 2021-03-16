@@ -29,12 +29,14 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
@@ -133,7 +135,11 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                         expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getMode());
                 assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays())
                         .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays());
-                assertThat(tenantObject.getProperty("ext", JsonObject.class).getString("customer")).isEqualTo("ACME Inc.");
+                final JsonObject extensions = tenantObject.getProperty("ext", JsonObject.class);
+                assertThat(extensions.getString("customer")).isEqualTo("ACME Inc.");
+                // implicitly added by DeviceRegistryHttpClient
+                assertThat(extensions.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE)).isEqualTo(
+                        IntegrationTestSupport.getConfiguredMessagingType().name());
             });
             ctx.completeNow();
         }));
