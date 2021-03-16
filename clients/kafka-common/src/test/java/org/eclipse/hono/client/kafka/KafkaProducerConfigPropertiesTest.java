@@ -14,10 +14,8 @@
 package org.eclipse.hono.client.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -27,80 +25,19 @@ import org.junit.jupiter.api.Test;
  */
 public class KafkaProducerConfigPropertiesTest {
 
-    /**
-     * Verifies that trying to set a {@code null} config throws a {@link NullPointerException}.
-     */
-    @Test
-    public void testThatConfigCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaProducerConfigProperties().setProducerConfig(null));
-    }
+    static final String PROPERTY_FILE_CLIENT_ID = "target/test-classes/clientid.properties";
+    static final String PROPERTY_FILE_COMMON = "target/test-classes/common.properties";
+    static final String PROPERTY_FILE_PRODUCER = "target/test-classes/producer.properties";
 
     /**
-     * Verifies that trying to set a {@code null} client ID throws a {@link NullPointerException}.
-     */
-    @Test
-    public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaProducerConfigProperties().setDefaultClientIdPrefix(null));
-    }
-
-    /**
-     * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} are returned
-     * in {@link KafkaProducerConfigProperties#getProducerConfig(String)}.
-     */
-    @Test
-    public void testThatGetProducerConfigReturnsGivenProperties() {
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
-
-        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
-        assertThat(producerConfig.get("foo")).isEqualTo("bar");
-    }
-
-    /**
-     * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} and
-     * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaProducerConfigProperties#getProducerConfig(String)}, with the producer config properties having
-     * precedence.
-     */
-    @Test
-    public void testThatGetProducerConfigReturnsGivenPropertiesWithCommonProperties() {
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
-        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
-
-        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
-        assertThat(producerConfig.get("foo")).isEqualTo("bar");
-        assertThat(producerConfig.get("common")).isEqualTo("commonValue");
-    }
-
-    /**
-     * Verifies that {@link KafkaProducerConfigProperties#isConfigured()} returns false if no configuration has been
-     * set, and true otherwise.
-     */
-    @Test
-    public void testIsConfiguredMethod() {
-
-        assertThat(new KafkaProducerConfigProperties().isConfigured()).isFalse();
-
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
-        assertThat(config.isConfigured()).isTrue();
-    }
-
-    /**
-     * Verifies that properties returned in {@link KafkaProducerConfigProperties#getProducerConfig(String)} contain
-     * the predefined entries, overriding any corresponding properties given in {@link KafkaProducerConfigProperties#setProducerConfig(Map)}.
+     * Verifies that properties returned by {@link KafkaProducerConfigProperties#getProducerConfig(String)} contain
+     * the predefined entries, overriding any corresponding properties defined in property files.
      */
     @Test
     public void testThatGetProducerConfigReturnsAdaptedConfig() {
 
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("key.serializer", "foo");
-        properties.put("value.serializer", "bar");
-        properties.put("enable.idempotence", "baz");
-
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(properties);
+        config.setPropertyFiles(List.of(PROPERTY_FILE_PRODUCER));
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
 
@@ -112,7 +49,7 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is applied when it
+     * Verifies that the client ID set with {@link KafkaAdminClientConfigProperties#setDefaultClientIdPrefix(String)} is applied when it
      * is NOT present in the configuration.
      */
     @Test
@@ -120,7 +57,6 @@ public class KafkaProducerConfigPropertiesTest {
         final String clientId = "the-client";
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.emptyMap());
         config.setDefaultClientIdPrefix(clientId);
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
@@ -128,19 +64,17 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied
+     * Verifies that the client ID set with {@link KafkaAdminClientConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied
      * when it is present in the configuration.
      */
     @Test
     public void testThatClientIdIsNotAppliedIfAlreadyPresent() {
-        final String userProvidedClientId = "custom-client";
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.singletonMap("client.id", userProvidedClientId));
+        config.setPropertyFiles(List.of(PROPERTY_FILE_CLIENT_ID));
         config.setDefaultClientIdPrefix("other-client");
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
-        assertThat(producerConfig.get("client.id")).startsWith(userProvidedClientId + "-producerName-");
+        assertThat(producerConfig.get("client.id")).startsWith("configured-id-producerName-");
     }
-
 }

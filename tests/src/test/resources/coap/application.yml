@@ -109,6 +109,5 @@ spring:
   profiles: kafka
 hono:
   kafka:
-    producerConfig:
-      bootstrap:
-        servers: ${hono.kafka.bootstrap.servers}
+    propertyFiles:
+    - "/${hono.coap-adapter.config-dir}/kafka.properties"

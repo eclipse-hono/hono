@@ -34,6 +34,8 @@ import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClie
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
+import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandResponseSender;
+import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -41,6 +43,8 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClien
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
@@ -48,6 +52,10 @@ import org.eclipse.hono.adapter.monitoring.quarkus.ConnectionEventProducerConfig
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.quarkus.KafkaAdminClientConfigProperties;
+import org.eclipse.hono.client.kafka.quarkus.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.quarkus.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -78,6 +86,7 @@ import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
 
 /**
@@ -117,10 +126,19 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected ApplicationConfigProperties appConfig;
 
     @ConfigPrefix("hono.messaging")
-    protected RequestResponseClientConfigProperties downstreamSenderConfig;
+    protected RequestResponseClientConfigProperties amqpDownstreamSenderConfig;
 
     @ConfigPrefix("hono.command")
-    protected RequestResponseClientConfigProperties commandConfig;
+    protected RequestResponseClientConfigProperties amqpCommandConfig;
+
+    @ConfigPrefix("hono.kafka")
+    protected KafkaConsumerConfigProperties kafkaConsumerConfig;
+
+    @ConfigPrefix("hono.kafka")
+    protected KafkaProducerConfigProperties kafkaProducerConfig;
+
+    @ConfigPrefix("hono.kafka")
+    protected KafkaAdminClientConfigProperties kafkaAdminClientConfig;
 
     @ConfigPrefix("hono.tenant")
     protected RequestResponseClientConfigProperties tenantClientConfig;
@@ -215,22 +233,35 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final DeviceRegistrationClient registrationClient = registrationClient();
 
         if (commandRouterConfig.isHostConfigured()) {
+
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
+
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            commandConsumerFactory.registerInternalCommandConsumer(
-                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+
+            final KafkaAdminClientConfigProperties adminClientConfig = kafkaAdminClientConfig();
+            final KafkaConsumerConfigProperties consumerConfig = kafkaConsumerConfig();
+
+            if (adminClientConfig.isConfigured() && consumerConfig.isConfigured()) {
+                // use Kafka based command consumer
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, adminClientConfig,
+                                consumerConfig, id, handlers, tracer));
+            } else {
+                // use AMQP based command consumer
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+            }
             adapter.setCommandConsumerFactory(commandConsumerFactory);
+
         } else {
+
             final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient();
             adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
             adapter.setCommandConsumerFactory(commandConsumerFactory(deviceConnectionClient, registrationClient));
         }
 
-        final MessagingClients messagingClients = new MessagingClients();
-        messagingClients.addClientSet(amqpMessagingClientSet());
-
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClients(messagingClients());
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
@@ -384,20 +415,20 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         }
     }
 
-    private ClientConfigProperties downstreamSenderConfig() {
-        downstreamSenderConfig.setServerRoleIfUnknown("Downstream");
-        downstreamSenderConfig.setNameIfNotSet(getAdapterName());
-        return downstreamSenderConfig;
+    private ClientConfigProperties amqpDownstreamSenderConfig() {
+        amqpDownstreamSenderConfig.setServerRoleIfUnknown("Downstream");
+        amqpDownstreamSenderConfig.setNameIfNotSet(getAdapterName());
+        return amqpDownstreamSenderConfig;
     }
 
     /**
-     * Creates a new downstream sender for telemetry and event messages.
+     * Creates a new AMQP 1.0 based downstream sender for telemetry and event messages.
      *
      * @return The sender.
      */
-    protected ProtonBasedDownstreamSender downstreamSender() {
+    protected ProtonBasedDownstreamSender amqpDownstreamSender() {
         return new ProtonBasedDownstreamSender(
-                HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
+                HonoConnection.newConnection(vertx, amqpDownstreamSenderConfig(), tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties.isDefaultsEnabled(),
                 protocolAdapterProperties.isJmsVendorPropsEnabled());
@@ -414,14 +445,74 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 messageSamplerFactory,
                 protocolAdapterProperties);
 
-        return new MessagingClientSet(MessagingType.amqp,
-                downstreamSender(),
-                downstreamSender(),
+        return new MessagingClientSet(
+                MessagingType.amqp,
+                amqpDownstreamSender(),
+                amqpDownstreamSender(),
                 commandResponseSender);
     }
 
+    private KafkaProducerConfigProperties kafkaProducerConfig() {
+        if (getAdapterName() != null) {
+            kafkaProducerConfig.setDefaultClientIdPrefix(getAdapterName());
+        }
+        return kafkaProducerConfig;
+    }
+
+    /**
+     * Creates a new messaging client set for Kafka.
+     *
+     * @return The client set.
+     */
+    private MessagingClientSet kafkaMessagingClientSet() {
+
+        final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
+        final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
+
+        return new MessagingClientSet(MessagingType.kafka,
+                new KafkaBasedEventSender(factory, producerConfig, protocolAdapterProperties, tracer),
+                new KafkaBasedTelemetrySender(factory, producerConfig, protocolAdapterProperties, tracer),
+                new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
+    }
+
+    /**
+     * Creates new messaging clients according to the configuration in use.
+     *
+     * @return The created messaging clients.
+     */
+    protected MessagingClients messagingClients() {
+
+        final var clients = new MessagingClients();
+
+        if (kafkaProducerConfig().isConfigured()) {
+            LOG.info("Kafka Producer is configured, adding Kafka messaging client");
+            clients.addClientSet(kafkaMessagingClientSet());
+        }
+
+        if (amqpDownstreamSenderConfig().isHostConfigured()) {
+            LOG.info("AMQP 1.0 Downstream Sender is configured, adding AMQP 1.0 messaging client");
+            clients.addClientSet(amqpMessagingClientSet());
+        }
+        return clients;
+    }
+
+    private KafkaConsumerConfigProperties kafkaConsumerConfig() {
+        if (getAdapterName() != null) {
+            kafkaConsumerConfig.setDefaultClientIdPrefix(getAdapterName());
+        }
+        return kafkaConsumerConfig;
+    }
+
+    private KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
+        if (getAdapterName() != null) {
+            kafkaAdminClientConfig.setDefaultClientIdPrefix(getAdapterName());
+        }
+        return kafkaAdminClientConfig;
+    }
+
+
     private ClientConfigProperties commandConsumerFactoryConfig() {
-        final ClientConfigProperties props = new ClientConfigProperties(commandConfig);
+        final ClientConfigProperties props = new ClientConfigProperties(amqpCommandConfig);
         props.setServerRoleIfUnknown("Command & Control");
         props.setNameIfNotSet(getAdapterName());
         return props;
@@ -476,7 +567,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {
-        final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
+        final ClientConfigProperties props = new ClientConfigProperties(amqpDownstreamSenderConfig);
         props.setServerRoleIfUnknown("Command Response");
         props.setNameIfNotSet(getAdapterName());
         return props;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -50,9 +51,10 @@ import io.vertx.kafka.client.serialization.BufferSerializer;
  */
 public class CachingKafkaProducerFactoryTest {
 
+    private static final String PROPERTY_FILE_PRODUCER = "target/test-classes/producer.properties";
     private static final String PRODUCER_NAME = "test-producer";
 
-    private final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+    private KafkaProducerConfigProperties configProperties;
 
     private CachingKafkaProducerFactory<String, Buffer> factory;
 
@@ -78,7 +80,8 @@ public class CachingKafkaProducerFactoryTest {
 
         factory = new CachingKafkaProducerFactory<>(instanceSupplier);
 
-        configProperties.setProducerConfig(Map.of("bootstrap.servers", "localhost:9092"));
+        configProperties = new KafkaProducerConfigProperties();
+        configProperties.setPropertyFiles(List.of(PROPERTY_FILE_PRODUCER));
     }
 
     /**

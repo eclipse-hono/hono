@@ -1,4 +1,4 @@
-/*
+/*******************************************************************************
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.client.kafka.consumer;
 
@@ -53,7 +53,6 @@ import io.vertx.kafka.client.consumer.OffsetAndMetadata;
  * The consumer starts consuming when {@link #start()} is invoked. It needs to be closed by invoking {@link #stop()} to
  * release the resources. A stopped instance cannot be started again.
  * <p>
- * </p>
  * ERROR CASES:
  * <p>
  * Errors can happen when polling, in message processing, and when committing the offset to Kafka.

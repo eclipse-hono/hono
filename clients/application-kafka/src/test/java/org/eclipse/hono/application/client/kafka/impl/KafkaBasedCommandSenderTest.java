@@ -60,7 +60,6 @@ public class KafkaBasedCommandSenderTest {
         final CachingKafkaProducerFactory<String, Buffer> producerFactory;
 
         producerConfig = new KafkaProducerConfigProperties();
-        producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         producerFactory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
 

@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter.client.command.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.HashMap;
 import java.util.UUID;
 
 import org.apache.kafka.clients.producer.MockProducer;
@@ -54,7 +53,6 @@ public class KafkaBasedCommandResponseSenderTest {
     @BeforeEach
     public void setUp() {
         kafkaProducerConfig = new KafkaProducerConfigProperties();
-        kafkaProducerConfig.setProducerConfig(new HashMap<>());
     }
 
     @Test

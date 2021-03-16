@@ -84,6 +84,5 @@ spring:
   profiles: kafka
 hono:
   kafka:
-    producerConfig:
-      bootstrap:
-        servers: ${hono.kafka.bootstrap.servers}
+    propertyFiles:
+    - "/etc/hono/kafka.properties"

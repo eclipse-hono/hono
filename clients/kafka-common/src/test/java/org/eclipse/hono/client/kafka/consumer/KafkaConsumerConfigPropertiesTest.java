@@ -16,8 +16,7 @@ package org.eclipse.hono.client.kafka.consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -27,21 +26,9 @@ import org.junit.jupiter.api.Test;
  */
 public class KafkaConsumerConfigPropertiesTest {
 
-    /**
-     * Verifies that trying to set a {@code null} config throws a {@link NullPointerException}.
-     */
-    @Test
-    public void testThatConfigCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaConsumerConfigProperties().setConsumerConfig(null));
-    }
-
-    /**
-     * Verifies that trying to set a {@code null} client ID throws a {@link NullPointerException}.
-     */
-    @Test
-    public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaConsumerConfigProperties().setDefaultClientIdPrefix(null));
-    }
+    static final String PROPERTY_FILE_CLIENT_ID = "target/test-classes/clientid.properties";
+    static final String PROPERTY_FILE_COMMON = "target/test-classes/common.properties";
+    static final String PROPERTY_FILE_CONSUMER = "target/test-classes/consumer.properties";
 
     /**
      * Verifies that trying to set a negative poll timeout throws an {@link IllegalArgumentException}.
@@ -52,63 +39,14 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} are returned
-     * in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)}.
-     */
-    @Test
-    public void testThatGetConsumerConfigReturnsGivenProperties() {
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
-
-        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
-        assertThat(consumerConfig.get("foo")).isEqualTo("bar");
-    }
-
-    /**
-     * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} and
-     * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)}, with the consumer config properties having
-     * precedence.
-     */
-    @Test
-    public void testThatGetConsumerConfigReturnsGivenPropertiesWithCommonProperties() {
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
-        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
-
-        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
-        assertThat(consumerConfig.get("foo")).isEqualTo("bar");
-        assertThat(consumerConfig.get("common")).isEqualTo("commonValue");
-    }
-
-    /**
-     * Verifies that {@link KafkaConsumerConfigProperties#isConfigured()} returns false if no configuration has been
-     * set, and true otherwise.
-     */
-    @Test
-    public void testIsConfiguredMethod() {
-
-        assertThat(new KafkaConsumerConfigProperties().isConfigured()).isFalse();
-
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
-        assertThat(config.isConfigured()).isTrue();
-    }
-
-    /**
-     * Verifies that properties returned in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)} ()} contain
-     * the predefined entries, overriding any corresponding properties given in {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)}.
+     * Verifies that properties returned by {@link KafkaConsumerConfigProperties#getProducerConfig(String)} contain
+     * the predefined entries, overriding any corresponding properties defined in property files.
      */
     @Test
     public void testThatGetConsumerConfigReturnsAdaptedConfig() {
 
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("key.deserializer", "foo");
-        properties.put("value.deserializer", "bar");
-        properties.put("enable.idempotence", "baz");
-
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(properties);
+        final var config = new KafkaConsumerConfigProperties();
+        config.setPropertyFiles(List.of(PROPERTY_FILE_CONSUMER));
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
 
@@ -126,8 +64,7 @@ public class KafkaConsumerConfigPropertiesTest {
     public void testThatClientIdIsApplied() {
         final String clientId = "the-client";
 
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.emptyMap());
+        final var config = new KafkaConsumerConfigProperties();
         config.setDefaultClientIdPrefix(clientId);
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
@@ -140,14 +77,12 @@ public class KafkaConsumerConfigPropertiesTest {
      */
     @Test
     public void testThatClientIdIsNotAppliedIfAlreadyPresent() {
-        final String userProvidedClientId = "custom-client";
 
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.singletonMap("client.id", userProvidedClientId));
+        final var config = new KafkaConsumerConfigProperties();
+        config.setPropertyFiles(List.of(PROPERTY_FILE_CLIENT_ID));
         config.setDefaultClientIdPrefix("other-client");
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
-        assertThat(consumerConfig.get("client.id")).startsWith(userProvidedClientId + "-consumerName-");
+        assertThat(consumerConfig.get("client.id")).startsWith("configured-id-consumerName-");
     }
-
 }

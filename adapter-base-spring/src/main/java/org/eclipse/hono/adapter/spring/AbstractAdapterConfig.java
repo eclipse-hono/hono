@@ -118,16 +118,13 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         Objects.requireNonNull(adapterProperties);
         Objects.requireNonNull(samplerFactory);
 
-        final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
-        final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
-
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
             // on config properties
             final DeviceConnectionClient deviceConnectionClient = context.getBean(DeviceConnectionClient.class);
             adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
-            adapter.setCommandConsumerFactory(commandConsumerFactory(
+            adapter.setCommandConsumerFactory(amqpCommandConsumerFactory(
                     samplerFactory,
                     deviceConnectionClient,
                     registrationClient));
@@ -137,14 +134,21 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
             // Device Connection nor Command Router client have been configured anyway
             final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
             adapter.setCommandRouterClient(commandRouterClient);
+
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            commandConsumerFactory.registerInternalCommandConsumer(
-                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
+
+            final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
+            final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
 
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
+                // use Kafka based command consumer
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaAdminClientConfig,
                                 kafkaConsumerConfig, id, handlers, getTracer()));
+            } else {
+                // use AMQP based command consumer
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
             }
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         }
@@ -567,7 +571,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 samplerFactory);
     }
 
-    CommandConsumerFactory commandConsumerFactory(
+    CommandConsumerFactory amqpCommandConsumerFactory(
             final SendMessageSampler.Factory samplerFactory,
             final DeviceConnectionClient deviceConnectionClient,
             final DeviceRegistrationClient registrationClient) {

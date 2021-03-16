@@ -50,8 +50,9 @@ with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses be
 
 ### Kafka based Messaging Configuration
 
-Protocol adapters can be configured to allow publishing messages to an *Apache Kafka&reg; cluster* instead of an AMQP Messaging Network. 
-Which messaging to be used, can be configured at the tenant _or_ for all tenants if a protocol adapter is only configured with one messaging system.
+Protocol adapters can be configured to allow publishing messages to an *Apache Kafka&reg; cluster* instead of an AMQP Messaging Network.
+Which messaging to be used, can be configured for each tenant individually _or_ for all tenants if a protocol adapter
+is configured with one type messaging infrastructure only.
 For details refer to [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md/#configuration-for-kafka-based-messaging" >}})
 
 The Kafka client is configured according to [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).

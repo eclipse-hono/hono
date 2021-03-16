@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -14,7 +14,7 @@ package org.eclipse.hono.application.client.kafka.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -51,7 +51,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumer;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class KafkaApplicationClientImplTest {
+
+    private static final String PROPERTY_FILE_COMMON = "target/test-classes/common.properties";
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
+
     private KafkaApplicationClientImpl client;
     private MockConsumer<String, Buffer> mockConsumer;
     private String tenantId;
@@ -72,6 +75,7 @@ public class KafkaApplicationClientImplTest {
     @BeforeEach
     void setUp(final Vertx vertx) {
         final KafkaProducerConfigProperties producerConfig = new KafkaProducerConfigProperties();
+        producerConfig.setPropertyFiles(List.of(PROPERTY_FILE_COMMON));
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> producerFactory = KafkaClientUnitTestHelper
                 .newProducerFactory(mockProducer);
@@ -81,8 +85,7 @@ public class KafkaApplicationClientImplTest {
         mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
 
         final KafkaConsumerConfigProperties consumerConfig = new KafkaConsumerConfigProperties();
-        consumerConfig.setConsumerConfig(Map.of("client.id", "application-test-consumer"));
-        producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
+        consumerConfig.setPropertyFiles(List.of(PROPERTY_FILE_COMMON));
 
         client = new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);
         client.setKafkaConsumerFactory(() -> KafkaConsumer.create(vertx, mockConsumer));
