@@ -113,16 +113,15 @@ public class HonoConnectionImpl implements HonoConnection {
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
+    private final AtomicInteger connectAttempts = new AtomicInteger(0);
 
     private final String containerId;
     private final DeferredConnectionCheckHandler deferredConnectionCheckHandler;
 
     private ProtonClientOptions clientOptions;
-    private AtomicInteger connectAttempts;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
     private Tracer tracer = NoopTracerFactory.create();
     private ProtonSession session;
-    private Handler<AsyncResult<ProtonConnection>> connectionCloseHandler;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -165,12 +164,8 @@ public class HonoConnectionImpl implements HonoConnection {
         this.containerId = ConnectionFactory.createContainerId(clientConfigProperties.getName(),
                 clientConfigProperties.getServerRole(), UUID.randomUUID());
         this.clientConfigProperties = clientConfigProperties;
-        this.connectAttempts = new AtomicInteger(0);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Vertx getVertx() {
         return vertx;
@@ -240,12 +235,9 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<Void> isConnected() {
-        return executeOnContext(result -> checkConnected(result));
+        return executeOnContext(this::checkConnected);
     }
 
     /**
@@ -268,9 +260,6 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
         return executeOnContext(result -> checkConnected(result, waitForCurrentConnectAttemptTimeout));
@@ -356,32 +345,25 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<HonoConnection> connect() {
         return connect(null);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<HonoConnection> connect(final ProtonClientOptions options) {
         final Promise<HonoConnection> result = Promise.promise();
         if (shuttingDown.get()) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
         } else {
-            connect(options, result, null);
+            connect(options, result);
         }
         return result.future();
     }
 
     private void connect(
             final ProtonClientOptions options,
-            final Handler<AsyncResult<HonoConnection>> connectionHandler,
-            final Handler<ProtonConnection> disconnectHandler) {
+            final Handler<AsyncResult<HonoConnection>> connectionHandler) {
 
         // make sure concurrently invoked connection checks get completed along with the given connectionHandler
         final Handler<AsyncResult<HonoConnection>> wrappedConnectionHandler = connectionHandler instanceof ConnectMethodConnectionHandler
@@ -411,18 +393,17 @@ public class HonoConnectionImpl implements HonoConnection {
                         connectionFactory.getServerRole());
 
                 clientOptions = options;
-                connectionCloseHandler = remoteClose -> onRemoteClose(remoteClose, disconnectHandler);
                 connectionFactory.connect(
                         clientOptions,
                         null,
                         null,
                         containerId,
-                        connectionCloseHandler,
-                        failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
+                        this::onRemoteClose,
+                        this::onRemoteDisconnect,
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                reconnect(conAttempt.cause(), wrappedConnectionHandler, disconnectHandler);
+                                reconnect(conAttempt.cause(), wrappedConnectionHandler);
                             } else {
                                 final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
@@ -431,8 +412,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     newConnection.closeHandler(null);
                                     newConnection.disconnectHandler(null);
                                     newConnection.close();
-                                    // make sure we try to re-connect as often as we tried to connect initially
-                                    connectAttempts = new AtomicInteger(0);
+                                    connectAttempts.set(0);
                                     wrappedConnectionHandler.handle(Future.failedFuture(
                                             new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
                                                     "client is already shut down")));
@@ -457,8 +437,7 @@ public class HonoConnectionImpl implements HonoConnection {
         });
     }
 
-    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose,
-            final Handler<ProtonConnection> connectionLossHandler) {
+    private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
 
         if (remoteClose.failed()) {
             log.info("remote server [{}:{}, role: {}] closed connection: {}",
@@ -474,10 +453,10 @@ public class HonoConnectionImpl implements HonoConnection {
         }
         connection.disconnectHandler(null);
         connection.close();
-        handleConnectionLoss(connectionLossHandler);
+        handleConnectionLoss();
     }
 
-    private void onRemoteDisconnect(final ProtonConnection con, final Handler<ProtonConnection> connectionLossHandler) {
+    private void onRemoteDisconnect(final ProtonConnection con) {
 
         if (con != connection) {
             log.warn("cannot handle failure of unknown connection");
@@ -486,24 +465,20 @@ public class HonoConnectionImpl implements HonoConnection {
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole());
-            handleConnectionLoss(connectionLossHandler);
+            handleConnectionLoss();
         }
     }
 
-    private void handleConnectionLoss(final Handler<ProtonConnection> connectionLossHandler) {
+    private void handleConnectionLoss() {
 
         if (isConnectedInternal()) {
             connection.disconnect();
         }
 
-        final ProtonConnection failedConnection = this.connection;
+        notifyDisconnectHandlers();
         clearState();
 
-        if (connectionLossHandler != null) {
-            connectionLossHandler.handle(failedConnection);
-        } else {
-            reconnect(this::notifyReconnectHandlers, null);
-        }
+        reconnect(null, this::notifyReconnectHandlers);
     }
 
     private void notifyReconnectHandlers(final AsyncResult<HonoConnection> reconnectAttempt) {
@@ -519,12 +494,10 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected void clearState() {
 
-        connectionCloseHandler = null;
         setConnection(null, null);
 
-        notifyDisconnectHandlers();
         // make sure we make configured number of attempts to re-connect
-        connectAttempts = new AtomicInteger(0);
+        connectAttempts.set(0);
     }
 
     private void notifyDisconnectHandlers() {
@@ -545,15 +518,9 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    private void reconnect(final Handler<AsyncResult<HonoConnection>> connectionHandler,
-            final Handler<ProtonConnection> disconnectHandler) {
-        reconnect(null, connectionHandler, disconnectHandler);
-    }
-
     private void reconnect(
             final Throwable connectionFailureCause,
-            final Handler<AsyncResult<HonoConnection>> connectionHandler,
-            final Handler<ProtonConnection> disconnectHandler) {
+            final Handler<AsyncResult<HonoConnection>> connectionHandler) {
 
         if (shuttingDown.get()) {
             // no need to try to re-connect
@@ -587,10 +554,10 @@ public class HonoConnectionImpl implements HonoConnection {
             if (reconnectDelay > 0) {
                 log.trace("scheduling new connection attempt in {}ms ...", reconnectDelay);
                 vertx.setTimer(reconnectDelay, tid -> {
-                    connect(clientOptions, connectionHandler, disconnectHandler);
+                    connect(clientOptions, connectionHandler);
                 });
             } else {
-                connect(clientOptions, connectionHandler, disconnectHandler);
+                connect(clientOptions, connectionHandler);
             }
         }
     }
@@ -734,8 +701,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                 error.getCondition(), error.getDescription()));
                     });
                 session.close();
-                Optional.ofNullable(connectionCloseHandler)
-                    .ifPresent(ch -> ch.handle(Future.failedFuture(msgBuilder.toString())));
+                onRemoteClose(Future.failedFuture(msgBuilder.toString()));
             });
             session.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
             session.open();
@@ -1016,9 +982,6 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void shutdown() {
         // we don't want to block any event loop thread (even if it's different from the one of the 'context' variable)
@@ -1046,9 +1009,6 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
@@ -1060,9 +1020,6 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void disconnect() {
         // we don't want to block any event loop thread (even if it's different from the one of the 'context' variable)
@@ -1096,9 +1053,6 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
@@ -1161,6 +1115,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     connectionFactory.getServerRole(),
                                     remoteClose.cause());
                         }
+                        notifyDisconnectHandlers();
                         clearState();
                         r.complete();
                     };

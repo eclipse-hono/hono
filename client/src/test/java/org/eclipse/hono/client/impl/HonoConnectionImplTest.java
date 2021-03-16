@@ -293,7 +293,6 @@ public class HonoConnectionImplTest {
      * connection is closed by the peer.
      *
      * @param ctx The test context.
-     *
      */
     @Test
     public void testOnRemoteCloseTriggersReconnection(final VertxTestContext ctx) {
@@ -303,7 +302,7 @@ public class HonoConnectionImplTest {
         @SuppressWarnings("unchecked")
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
         honoConnection.addDisconnectListener(disconnectListener);
-        honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
+        honoConnection.connect(new ProtonClientOptions())
             .onComplete(connected);
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
@@ -325,21 +324,59 @@ public class HonoConnectionImplTest {
     }
 
     /**
+     * Verifies that when the client tries to re-connect to a server instance if the
+     * connection is closed by the peer, the configured number of reconnect attempts is taken
+     * into account, skipping the reconnect if that number is zero.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testOnRemoteCloseTriggeredReconnectChecksReconnectAttempts(final VertxTestContext ctx) {
+
+        // GIVEN a client that is connected to a server but should do no automatic reconnect
+        props.setReconnectAttempts(0);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+        final Promise<HonoConnection> connected = Promise.promise();
+        @SuppressWarnings("unchecked")
+        final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
+        honoConnection.addDisconnectListener(disconnectListener);
+        honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(0))
+                .onComplete(connected);
+
+        connected.future().onComplete(ctx.succeeding(c -> {
+            // WHEN the peer closes the connection
+            connectionFactory.getCloseHandler().handle(Future.failedFuture("shutting down for maintenance"));
+
+            ctx.verify(() -> {
+                // THEN the client invokes the registered disconnect handler
+                verify(disconnectListener).onDisconnect(honoConnection);
+                // and the original connection has been closed locally
+                verify(con).close();
+                verify(con).disconnectHandler(null);
+
+                // and no further connect invocation has been done
+                assertThat(connectionFactory.getConnectInvocations()).isEqualTo(1);
+            });
+            ctx.completeNow();
+        }));
+    }
+
+    /**
      * Verifies that the client tries to reconnect to the peer if the peer
      * closes the connection's session.
      *
      * @param ctx The test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testRemoteSessionCloseTriggersReconnection(final VertxTestContext ctx) {
 
         // GIVEN a client that is connected to a server
         final Promise<HonoConnection> connected = Promise.promise();
+        @SuppressWarnings("unchecked")
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
         props.setServerRole("service-provider");
         honoConnection.addDisconnectListener(disconnectListener);
-        honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
+        honoConnection.connect(new ProtonClientOptions())
             .onComplete(connected);
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
@@ -347,7 +384,7 @@ public class HonoConnectionImplTest {
 
             ctx.verify(() -> {
                 // WHEN the peer closes the session
-                final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = ArgumentCaptor.forClass(Handler.class);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonSession>>> sessionCloseHandler = VertxMockSupport.argumentCaptorHandler();
                 verify(session).closeHandler(sessionCloseHandler.capture());
                 sessionCloseHandler.getValue().handle(Future.succeededFuture(session));
                 // THEN the client invokes the registered disconnect handler
@@ -367,7 +404,6 @@ public class HonoConnectionImplTest {
      * Verifies that it fails to connect after client was shutdown.
      *
      * @param ctx The test context.
-     *
      */
     @Test
     public void testConnectFailsAfterShutdown(final VertxTestContext ctx) {
@@ -399,8 +435,7 @@ public class HonoConnectionImplTest {
                 final Promise<Void> disconnected = Promise.promise();
                 // WHEN the client disconnects
                 honoConnection.disconnect(disconnected);
-                @SuppressWarnings("unchecked")
-                final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
                 ctx.verify(() -> verify(con).closeHandler(closeHandler.capture()));
                 closeHandler.getValue().handle(Future.succeededFuture(con));
                 return disconnected.future();
@@ -537,7 +572,6 @@ public class HonoConnectionImplTest {
      * Verifies that the client does not try to re-connect to a server instance if the client was shutdown.
      *
      * @param ctx The test context.
-     *
      */
     @Test
     public void testClientDoesNotTriggerReconnectionAfterShutdown(final VertxTestContext ctx) {
@@ -654,8 +688,7 @@ public class HonoConnectionImplTest {
         props.setInitialCredits(123);
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(session.createReceiver(anyString())).thenReturn(receiver);
-        @SuppressWarnings("unchecked")
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // WHEN establishing a connection
         honoConnection.connect()
@@ -716,8 +749,7 @@ public class HonoConnectionImplTest {
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteCondition()).thenReturn(errorSupplier.get());
         when(session.createReceiver(anyString())).thenReturn(receiver);
-        @SuppressWarnings("unchecked")
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
         when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             // do not run timers immediately
             return 0L;
@@ -732,8 +764,7 @@ public class HonoConnectionImplTest {
                     "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
             ctx.verify(() -> {
                 // and when the peer rejects to open the link
-                @SuppressWarnings("unchecked")
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = VertxMockSupport.argumentCaptorHandler();
                 verify(receiver).openHandler(openHandler.capture());
                 openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
             });
