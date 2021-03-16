@@ -26,7 +26,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -543,18 +542,6 @@ public final class IntegrationTestSupport {
         }
     }
 
-    private MessagingType getConfiguredMessagingType() {
-        if (getConfiguredApplicationClientType().equals(KafkaApplicationClient.class)) {
-            return MessagingType.kafka;
-        }
-
-        if (getConfiguredApplicationClientType().equals(AmqpApplicationClient.class)) {
-            return MessagingType.amqp;
-        }
-
-        throw new IllegalArgumentException("Invalid messaging system configured!");
-    }
-
     /**
      * Creates properties for connecting to the AMQP Messaging Network's secure port.
      *
@@ -742,7 +729,7 @@ public final class IntegrationTestSupport {
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
-                Collections.singletonMap(TenantConstants.FIELD_EXT_MESSAGING_TYPE, getConfiguredMessagingType().name())
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, getConfiguredMessagingType().name())
         );
     }
 
