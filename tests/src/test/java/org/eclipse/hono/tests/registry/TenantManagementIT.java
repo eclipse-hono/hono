@@ -835,6 +835,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     private static Tenant buildTenantPayload() {
         final Tenant tenant = new Tenant();
         tenant.putExtension("plan", "unlimited");
+        // explicitly (add the messaging-type extension (implicitly added by DeviceRegistryHttpClient)
+        // here so that it is also part of the expected output and hence verified
+        tenant.putExtension(TenantConstants.FIELD_EXT_MESSAGING_TYPE,
+                IntegrationTestSupport.getConfiguredMessagingType().name());
         tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .setEnabled(true)
                 .setDeviceAuthenticationRequired(true));

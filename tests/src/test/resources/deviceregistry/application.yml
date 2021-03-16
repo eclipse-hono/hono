@@ -55,3 +55,13 @@ management:
 
 server:
   port: -1
+
+---
+
+spring:
+  profiles: kafka
+hono:
+  kafka:
+    producerConfig:
+      bootstrap:
+        servers: ${hono.kafka.bootstrap.servers}

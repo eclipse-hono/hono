@@ -61,6 +61,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -727,7 +728,9 @@ public final class IntegrationTestSupport {
         registry = new DeviceRegistryHttpClient(
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, getConfiguredMessagingType().name())
+        );
     }
 
     /**
