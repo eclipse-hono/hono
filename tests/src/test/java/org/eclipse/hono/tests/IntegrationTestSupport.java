@@ -42,12 +42,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
-import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -61,6 +59,7 @@ import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
@@ -530,15 +529,15 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Get the application client type which is configured for the running integration test.
+     * Get the messaging system type which is configured for the running integration test.
      *
-     * @return The application client type.
+     * @return The messaging system type.
      */
-    public static Class<? extends ApplicationClient<?>> getConfiguredApplicationClientType() {
+    public static MessagingType getConfiguredMessagingType() {
         if (Strings.isNullOrEmpty(IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS)) {
-            return AmqpApplicationClient.class;
+            return MessagingType.amqp;
         } else {
-            return KafkaApplicationClient.class;
+            return MessagingType.kafka;
         }
     }
 
