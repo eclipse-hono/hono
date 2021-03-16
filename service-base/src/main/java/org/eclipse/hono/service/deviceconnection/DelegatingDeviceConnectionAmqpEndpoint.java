@@ -109,7 +109,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            log.debug("getting last known gateway for tenant [{}], device [{}]", tenantId, deviceId);
+            logger.debug("getting last known gateway for tenant [{}], device [{}]", tenantId, deviceId);
 
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
@@ -151,7 +151,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            log.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
+            logger.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
 
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
@@ -212,7 +212,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
                 TracingHelper.logError(span, "payload JSON is missing valid '" + DeviceConnectionConstants.FIELD_GATEWAY_IDS + "' field value");
                 resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             } else {
-                log.debug("getting command handling adapter instances for tenant [{}], device [{}]", tenantId, deviceId);
+                logger.debug("getting command handling adapter instances for tenant [{}], device [{}]", tenantId, deviceId);
 
                 @SuppressWarnings("unchecked")
                 final List<String> list = ((JsonArray) gatewaysValue).getList();
@@ -260,7 +260,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespan.getSeconds());
-            log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {} (lifespan: {}s)",
+            logger.debug("setting command handling adapter instance for tenant [{}], device [{}] to {} (lifespan: {}s)",
                     tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
             resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span)
@@ -303,7 +303,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-            log.debug("removing command handling adapter instance for tenant [{}], device [{}] with value {}", tenantId, deviceId, adapterInstanceId);
+            logger.debug("removing command handling adapter instance for tenant [{}], device [{}] with value {}", tenantId, deviceId, adapterInstanceId);
 
             resultFuture = getService().removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
                     .map(res -> DeviceConnectionConstants.getAmqpReply(
@@ -330,7 +330,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      * @return A future indicating the outcome of the service invocation.
      */
     protected Future<Message> processCustomOperationMessage(final Message request, final SpanContext spanContext) {
-        log.debug("invalid operation in request message [{}]", request.getSubject());
+        logger.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 

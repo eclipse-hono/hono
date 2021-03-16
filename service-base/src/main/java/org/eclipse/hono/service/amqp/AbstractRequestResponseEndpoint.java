@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,8 +33,6 @@ import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
@@ -60,11 +58,6 @@ import io.vertx.proton.ProtonSender;
  * @param <T> The type of configuration properties this endpoint uses.
  */
 public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
-
-    /**
-     * A logger to be shared by subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     private final Map<String, ProtonSender> replyToSenderMap = new HashMap<>();
 

@@ -100,7 +100,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            log.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
+            logger.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
 
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
@@ -151,7 +151,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespan.getSeconds());
-            log.debug("register command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}, lifespan: {}s]",
+            logger.debug("register command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}, lifespan: {}s]",
                     tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
             resultFuture = getService().registerCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, span)
@@ -195,7 +195,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-            log.debug("unregister command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}]",
+            logger.debug("unregister command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}]",
                     tenantId, deviceId, adapterInstanceId);
 
             resultFuture = getService().unregisterCommandConsumer(tenantId, deviceId, adapterInstanceId, span)
@@ -223,7 +223,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
      * @return A future indicating the outcome of the service invocation.
      */
     protected Future<Message> processCustomOperationMessage(final Message request, final SpanContext spanContext) {
-        log.debug("invalid operation in request message [{}]", request.getSubject());
+        logger.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 

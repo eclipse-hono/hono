@@ -130,7 +130,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
             } else {
                 TracingHelper.logError(span, String.format(
                         "invalid search criteria [type: %s, device-id: %s, auth-id: %s]", type, deviceId, authId));
-                log.debug("get credentials request contains invalid search criteria [type: {}, device-id: {}, auth-id: {}]",
+                logger.debug("get credentials request contains invalid search criteria [type: {}, device-id: {}, auth-id: {}]",
                         type, deviceId, authId);
                 resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             }
@@ -156,7 +156,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
     private Future<Message> processGetByAuthIdRequest(final Message request, final String tenantId,
             final JsonObject payload, final String type, final String authId, final Span span) {
 
-        log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
+        logger.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
 
@@ -190,7 +190,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
      * @return A future indicating the outcome of the service invocation.
      */
     protected Future<Message> processCustomCredentialsMessage(final Message request, final SpanContext spanContext) {
-        log.debug("invalid operation in request message [{}]", request.getSubject());
+        logger.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 

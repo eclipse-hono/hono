@@ -50,7 +50,7 @@ public abstract class AbstractDelegatingRequestResponseEndpoint<S, T extends Ser
     public AbstractDelegatingRequestResponseEndpoint(final Vertx vertx, final S service) {
         super(vertx);
         Objects.requireNonNull(service);
-        log.debug("using service instance: {}", service);
+        logger.debug("using service instance: {}", service);
         this.service = service;
     }
 

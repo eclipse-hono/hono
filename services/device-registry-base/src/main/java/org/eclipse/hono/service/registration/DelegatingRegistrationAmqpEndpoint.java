@@ -102,11 +102,11 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
 
             final Future<RegistrationResult> result;
             if (gatewayId == null) {
-                log.debug("asserting registration of device [tenant: {}, device-id: {}]", tenantId, deviceId);
+                logger.debug("asserting registration of device [tenant: {}, device-id: {}]", tenantId, deviceId);
                 result = getService().assertRegistration(tenantId, deviceId, span);
             } else {
                 TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
-                log.debug("asserting registration of device [tenant: {}, device-id: {}] for gateway [{}]",
+                logger.debug("asserting registration of device [tenant: {}, device-id: {}] for gateway [{}]",
                         tenantId, deviceId, gatewayId);
                 result = getService().assertRegistration(tenantId, deviceId, gatewayId, span);
             }
@@ -134,7 +134,7 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
      * @return A future indicating the outcome of the service invocation.
      */
     protected Future<Message> processCustomRegistrationMessage(final Message request, final SpanContext spanContext) {
-        log.debug("invalid operation in request message [{}]", request.getSubject());
+        logger.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 

@@ -104,13 +104,13 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
         final Future<Message> resultFuture;
         if (tenantId == null && payload == null) {
             TracingHelper.logError(span, "request does not contain any query parameters");
-            log.debug("request does not contain any query parameters");
+            logger.debug("request does not contain any query parameters");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
 
         } else if (tenantId != null) {
 
             // deprecated API
-            log.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
+            logger.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             span.log("using deprecated variant of get tenant request");
             // span will be finished in processGetByIdRequest
@@ -125,10 +125,10 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
 
             if (tenantIdFromPayload == null && subjectDn == null) {
                 TracingHelper.logError(span, "request does not contain any query parameters");
-                log.debug("payload does not contain any query parameters");
+                logger.debug("payload does not contain any query parameters");
                 resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             } else if (tenantIdFromPayload != null) {
-                log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
+                logger.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
                 TracingHelper.TAG_TENANT_ID.set(span, tenantIdFromPayload);
                 resultFuture = processGetByIdRequest(request, tenantIdFromPayload, span);
             } else {
@@ -152,7 +152,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
 
         try {
             final X500Principal dn = new X500Principal(subjectDn);
-            log.debug("retrieving tenant [subject DN: {}]", subjectDn);
+            logger.debug("retrieving tenant [subject DN: {}]", subjectDn);
             return getService().get(dn, span).map(tr -> {
                 String tenantId = null;
                 if (tr.isOk() && tr.getPayload() != null) {
@@ -165,7 +165,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
         } catch (final IllegalArgumentException e) {
             TracingHelper.logError(span, "illegal subject DN provided by client: " + subjectDn);
             // the given subject DN is invalid
-            log.debug("cannot parse subject DN [{}] provided by client", subjectDn);
+            logger.debug("cannot parse subject DN [{}] provided by client", subjectDn);
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
     }
@@ -184,7 +184,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
      * @return A future indicating the outcome of the service invocation.
      */
     protected Future<Message> processCustomTenantMessage(final Message request, final SpanContext spanContext) {
-        log.debug("invalid operation in request message [{}]", request.getSubject());
+        logger.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
