@@ -466,8 +466,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
         adapter.handleEndpointConnection(endpoint);
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).publishHandler(messageHandler.capture());
 
         // WHEN a device publishes a message that has an empty topic
@@ -507,8 +506,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
         adapter.handleEndpointConnection(endpoint);
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).publishHandler(messageHandler.capture());
 
         // WHEN a device publishes a message that has no topic
@@ -552,8 +550,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
         adapter.handleEndpointConnection(endpoint);
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).publishHandler(messageHandler.capture());
 
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -597,8 +594,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
         adapter.handleEndpointConnection(endpoint);
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).publishHandler(messageHandler.capture());
 
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
@@ -869,7 +865,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         testOnSubscribeRegistersAndClosesConnection(MqttQoS.AT_LEAST_ONCE);
     }
 
-    @SuppressWarnings("unchecked")
     private void testOnSubscribeRegistersAndClosesConnection(final MqttQoS qos) {
 
         // GIVEN a device connected to an adapter
@@ -896,7 +891,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // THEN the adapter creates a command consumer that is checked periodically
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
         // and the adapter registers a hook on the connection to the device
-        final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<Void>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).closeHandler(closeHookCaptor.capture());
         // which closes the command consumer when the device disconnects
         closeHookCaptor.getValue().handle(null);
@@ -912,7 +907,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      * the device has already reconnected).
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails() {
 
         // GIVEN a device connected to an adapter
@@ -940,7 +934,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // THEN the adapter creates a command consumer that is checked periodically
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
         // and the adapter registers a hook on the connection to the device
-        final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<Void>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).closeHandler(closeHookCaptor.capture());
         // which closes the command consumer when the device disconnects
         closeHookCaptor.getValue().handle(null);
@@ -1075,7 +1069,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      * This test should check if the metrics receive a call to increment and decrement when a connection is being
      * established and then closed.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionMetrics() {
 
@@ -1088,7 +1081,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.handleEndpointConnection(endpoint);
 
         verify(metrics).incrementConnections("DEFAULT_TENANT");
-        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint, times(2)).closeHandler(closeHandlerCaptor.capture());
         closeHandlerCaptor.getValue().handle(null);
         verify(metrics).decrementConnections("DEFAULT_TENANT");
@@ -1100,7 +1093,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      * This test should check if the metrics receive a call to increment and decrement when a connection is being
      * established and then closed.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testUnauthenticatedConnectionMetrics() {
 
@@ -1115,7 +1107,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // and increments the number of unauthenticated connections
         verify(metrics).incrementUnauthenticatedConnections();
         // and when the device closes the connection
-        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint, times(2)).closeHandler(closeHandlerCaptor.capture());
         closeHandlerCaptor.getValue().handle(null);
         // the number of unauthenticated connections is decremented again

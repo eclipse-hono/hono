@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,6 +35,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -191,7 +192,7 @@ public class HttpBasedMessageMappingTest {
                 ctx.completeNow();
             }));
 
-        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(httpRequest).sendBuffer(any(Buffer.class), handleCaptor.capture());
         handleCaptor.getValue().handle(Future.succeededFuture(httpResponse));
 
@@ -234,7 +235,7 @@ public class HttpBasedMessageMappingTest {
                 ctx.completeNow();
             }));
 
-        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(httpRequest).sendBuffer(any(Buffer.class), handlerCaptor.capture());
         handlerCaptor.getValue().handle(Future.succeededFuture(httpResponse));
     }

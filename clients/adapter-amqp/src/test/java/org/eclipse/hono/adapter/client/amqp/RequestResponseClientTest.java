@@ -268,8 +268,7 @@ public class RequestResponseClientTest  {
         rejected.setError(ProtonHelper.condition(errorCondition, "request message cannot be processed"));
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.getRemoteState()).thenReturn(rejected);
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(delivery);
     }

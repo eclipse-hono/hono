@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,9 @@ package org.eclipse.hono.service.amqp;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
@@ -26,6 +28,7 @@ import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -171,19 +174,18 @@ public class AmqpServiceBaseTest {
      * method when a client disconnects.
      */
     @Test
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public void testServerCallsPublishEventOnClientDisconnect() {
 
         // GIVEN a server to which a client is connected
-        final Handler<ProtonConnection> publishConnectionClosedEvent = mock(Handler.class);
+        final Handler<ProtonConnection> publishConnectionClosedEvent = VertxMockSupport.mockHandler();
         final AmqpServiceBase<ServiceConfigProperties> server = createServer(null, publishConnectionClosedEvent);
         final ProtonConnection con = newConnection(Constants.PRINCIPAL_ANONYMOUS);
         server.onRemoteConnectionOpen(con);
-        final ArgumentCaptor<Handler> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(con).disconnectHandler(closeHandlerCaptor.capture());
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(con).disconnectHandler(disconnectHandlerCaptor.capture());
 
         // WHEN the client disconnects from the service
-        closeHandlerCaptor.getValue().handle(con);
+        disconnectHandlerCaptor.getValue().handle(con);
 
         // THEN the publishConnectionClosedEvent method is invoked
         verify(publishConnectionClosedEvent).handle(any(ProtonConnection.class));

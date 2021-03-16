@@ -107,11 +107,10 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
     /**
      * Sets up common fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setup() {
 
-        startupHandler = mock(Handler.class);
+        startupHandler = VertxMockSupport.mockHandler();
         metrics = mock(CoapAdapterMetrics.class);
 
         span = TracingMockSupport.mockSpan();

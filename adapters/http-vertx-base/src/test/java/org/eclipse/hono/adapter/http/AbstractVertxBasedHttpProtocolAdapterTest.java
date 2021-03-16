@@ -101,11 +101,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     /**
      * Sets up common fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setup() {
 
-        startupHandler = mock(Handler.class);
+        startupHandler = VertxMockSupport.mockHandler();
         context = mock(Context.class);
         vertx = mock(Vertx.class);
         VertxMockSupport.runTimersImmediately(vertx);

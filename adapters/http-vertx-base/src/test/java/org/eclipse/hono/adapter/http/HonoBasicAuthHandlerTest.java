@@ -36,6 +36,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -104,7 +105,6 @@ public class HonoBasicAuthHandlerTest {
      * Verifies that the handler returns the status code {@link HttpURLConnection#HTTP_BAD_REQUEST} in case of malformed
      * authorization header.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testHandleFailsForMalformedAuthorizationHeader() {
 
@@ -122,7 +122,7 @@ public class HonoBasicAuthHandlerTest {
         when(ctx.request()).thenReturn(req);
         when(ctx.response()).thenReturn(resp);
         when(ctx.currentRoute()).thenReturn(mock(Route.class));
-        authHandler.parseCredentials(ctx, mock(Handler.class));
+        authHandler.parseCredentials(ctx, VertxMockSupport.mockHandler());
 
         // THEN the request context is failed with the 400 error code
         verify(ctx).fail(exceptionCaptor.capture());

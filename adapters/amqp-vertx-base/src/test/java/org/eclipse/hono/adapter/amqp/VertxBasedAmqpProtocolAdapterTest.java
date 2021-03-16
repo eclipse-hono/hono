@@ -210,13 +210,12 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         adapter.onConnectRequest(deviceConnection);
 
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
         // THEN the adapter's open frame contains the ANONYMOUS-RELAY capability
-        verify(deviceConnection).setOfferedCapabilities(argThat(caps -> Arrays.stream(caps).anyMatch(cap -> Constants.CAP_ANONYMOUS_RELAY.equals(cap))));
+        verify(deviceConnection).setOfferedCapabilities(argThat(caps -> Arrays.asList(caps).contains(Constants.CAP_ANONYMOUS_RELAY)));
     }
 
 
@@ -480,7 +479,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * adapter sends an empty notification downstream with TTD 0 and closes the command
      * consumer.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testAdapterClosesCommandConsumerWhenDeviceClosesReceiverLink() {
 
@@ -503,7 +501,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
 
         // WHEN the client device closes its receiver link (unsubscribe)
-        final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(sender).closeHandler(closeHookCaptor.capture());
         closeHookCaptor.getValue().handle(null);
 
@@ -525,8 +523,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testAdapterClosesCommandConsumerWhenDeviceClosesConnection(final VertxTestContext ctx) throws InterruptedException {
 
         final Handler<ProtonConnection> trigger = deviceConnection -> {
-            @SuppressWarnings("unchecked")
-            final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+            final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
             verify(deviceConnection).closeHandler(closeHandler.capture());
             closeHandler.getValue().handle(Future.succeededFuture(deviceConnection));
         };
@@ -544,8 +541,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testAdapterClosesCommandConsumerWhenConnectionToDeviceIsLost(final VertxTestContext ctx) throws InterruptedException {
 
         final Handler<ProtonConnection> trigger = deviceConnection -> {
-            @SuppressWarnings("unchecked")
-            final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+            final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = VertxMockSupport.argumentCaptorHandler();
             verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
             disconnectHandler.getValue().handle(deviceConnection);
         };
@@ -559,7 +555,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * @param ctx The vert.x test context.
      * @throws InterruptedException if the test execution gets interrupted.
      */
-    @SuppressWarnings("unchecked")
     private void testAdapterClosesCommandConsumer(
             final VertxTestContext ctx,
             final Handler<ProtonConnection> connectionLossTrigger) throws InterruptedException {
@@ -579,7 +574,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
-        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = VertxMockSupport.argumentCaptorHandler();
         verify(server).connectHandler(connectHandler.capture());
         connectHandler.getValue().handle(deviceConnection);
 
@@ -612,7 +607,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * @throws InterruptedException if the test execution gets interrupted.
      */
     @Test
-    @SuppressWarnings("unchecked")
     public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails(final VertxTestContext ctx) throws InterruptedException {
 
         // GIVEN an AMQP adapter
@@ -630,7 +624,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
-        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = VertxMockSupport.argumentCaptorHandler();
         verify(server).connectHandler(connectHandler.capture());
         connectHandler.getValue().handle(deviceConnection);
 
@@ -645,7 +639,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
 
         // WHEN the connection to the device is lost
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
@@ -803,7 +797,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).release(), ProcessingOutcome.UNDELIVERABLE);
     }
 
-    @SuppressWarnings("unchecked")
     private void testOneWayCommandOutcome(
             final ProtonDelivery deviceDisposition,
             final Consumer<CommandContext> outcomeAssertion,
@@ -829,7 +822,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         adapter.onCommandReceived(tenantObject, deviceLink, context);
         // and the device settles it
-        final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceLink).send(any(Message.class), deliveryUpdateHandler.capture());
         deliveryUpdateHandler.getValue().handle(deviceDisposition);
 
@@ -849,7 +842,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * Verifies that the adapter increments the connection count when
      * a device connects and decrement the count when the device disconnects.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionCount() {
 
@@ -881,7 +873,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         when(deviceConnection.attachments()).thenReturn(record);
         when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
         adapter.onConnectRequest(deviceConnection);
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
@@ -896,7 +888,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 any());
 
         // WHEN the connection to the device is lost
-        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
         disconnectHandler.getValue().handle(deviceConnection);
 
@@ -911,7 +903,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 any());
 
         // WHEN the device closes its connection to the adapter
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture());
 
@@ -930,7 +922,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * Verifies that the adapter increments the connection count when
      * a device connects and decrement the count when the device disconnects.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectionCountForAnonymousDevice() {
 
@@ -942,7 +933,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
         adapter.onConnectRequest(deviceConnection);
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
@@ -950,7 +941,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         verify(metrics).incrementUnauthenticatedConnections();
 
         // WHEN the connection to the device is lost
-        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
         disconnectHandler.getValue().handle(deviceConnection);
 
@@ -958,7 +949,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         verify(metrics).decrementUnauthenticatedConnections();
 
         // WHEN the device closes its connection to the adapter
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture());
 
@@ -1221,8 +1212,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final InOrder metricsInOrderVerifier = inOrder(metrics);
         metricsInOrderVerifier.verify(metrics).incrementConnections(TEST_TENANT_ID);
         // AND the adapter should close the connection right after it opened it
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture());
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
@@ -1258,8 +1248,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final InOrder metricsInOrderVerifier = inOrder(metrics);
         metricsInOrderVerifier.verify(metrics).incrementUnauthenticatedConnections();
         // AND the adapter should close the connection right after it opened it
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
         verify(deviceConnection).closeHandler(closeHandler.capture());
         closeHandler.getValue().handle(Future.succeededFuture());
         final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
