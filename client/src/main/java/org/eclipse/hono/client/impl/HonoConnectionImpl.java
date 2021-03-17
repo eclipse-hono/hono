@@ -25,6 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLException;
 import javax.security.sasl.AuthenticationException;
@@ -108,17 +109,16 @@ public class HonoConnectionImpl implements HonoConnection {
     private final List<DisconnectListener<HonoConnection>> disconnectListeners = new ArrayList<>();
     private final List<DisconnectListener<HonoConnection>> oneTimeDisconnectListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<ReconnectListener<HonoConnection>> reconnectListeners = new ArrayList<>();
-    private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
-    private final AtomicInteger connectAttempts = new AtomicInteger(0);
+    private final AtomicReference<ConnectionAttempt> currentConnectionAttempt = new AtomicReference<>();
 
     private final String containerId;
     private final DeferredConnectionCheckHandler deferredConnectionCheckHandler;
 
-    private ProtonClientOptions clientOptions;
+    private ProtonClientOptions lastUsedClientOptions;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
     private Tracer tracer = NoopTracerFactory.create();
     private ProtonSession session;
@@ -353,23 +353,20 @@ public class HonoConnectionImpl implements HonoConnection {
     @Override
     public final Future<HonoConnection> connect(final ProtonClientOptions options) {
         final Promise<HonoConnection> result = Promise.promise();
-        if (shuttingDown.get()) {
-            result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
-        } else {
-            connect(options, result);
-        }
+        connect(options, result, false);
         return result.future();
     }
 
     private void connect(
             final ProtonClientOptions options,
-            final Handler<AsyncResult<HonoConnection>> connectionHandler) {
+            final Handler<AsyncResult<HonoConnection>> connectionHandler,
+            final boolean isReconnect) {
 
-        // make sure concurrently invoked connection checks get completed along with the given connectionHandler
-        final Handler<AsyncResult<HonoConnection>> wrappedConnectionHandler = connectionHandler instanceof ConnectMethodConnectionHandler
-                ? connectionHandler
-                : new ConnectMethodConnectionHandler(connectionHandler, deferredConnectionCheckHandler::setConnectionAttemptFinished);
-
+        if (shuttingDown.get()) {
+            connectionHandler.handle(Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down")));
+            return;
+        }
         context = vertx.getOrCreateContext();
         log.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
 
@@ -382,57 +379,16 @@ public class HonoConnectionImpl implements HonoConnection {
                         connectionFactory.getHost(),
                         connectionFactory.getPort(),
                         connectionFactory.getServerRole());
-                wrappedConnectionHandler.handle(Future.succeededFuture(this));
-            } else if (connecting.compareAndSet(false, true)) {
-                deferredConnectionCheckHandler.setConnectionAttemptInProgress();
-
-                log.debug("starting attempt [#{}] to connect to server [{}:{}, role: {}]",
-                        connectAttempts.get() + 1,
-                        connectionFactory.getHost(),
-                        connectionFactory.getPort(),
-                        connectionFactory.getServerRole());
-
-                clientOptions = options;
-                connectionFactory.connect(
-                        clientOptions,
-                        null,
-                        null,
-                        containerId,
-                        this::onRemoteClose,
-                        this::onRemoteDisconnect,
-                        conAttempt -> {
-                            connecting.compareAndSet(true, false);
-                            if (conAttempt.failed()) {
-                                reconnect(conAttempt.cause(), wrappedConnectionHandler);
-                            } else {
-                                final ProtonConnection newConnection = conAttempt.result();
-                                if (shuttingDown.get()) {
-                                    // if client was shut down in the meantime, we need to immediately
-                                    // close again the newly created connection
-                                    newConnection.closeHandler(null);
-                                    newConnection.disconnectHandler(null);
-                                    newConnection.close();
-                                    connectAttempts.set(0);
-                                    wrappedConnectionHandler.handle(Future.failedFuture(
-                                            new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
-                                                    "client is already shut down")));
-                                } else {
-                                    log.debug("attempt [#{}]: connected to server [{}:{}, role: {}]; remote container: {}",
-                                            connectAttempts.get() + 1,
-                                            connectionFactory.getHost(),
-                                            connectionFactory.getPort(),
-                                            connectionFactory.getServerRole(),
-                                            newConnection.getRemoteContainer());
-                                    final ProtonSession session = createDefaultSession(newConnection);
-                                    setConnection(newConnection, session);
-                                    wrappedConnectionHandler.handle(Future.succeededFuture(this));
-                                }
-                            }
-                        });
+                connectionHandler.handle(Future.succeededFuture(this));
             } else {
-                log.debug("already trying to connect to server ...");
-                wrappedConnectionHandler.handle(Future.failedFuture(
-                        new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already connecting to server")));
+                final ConnectionAttempt connectionAttempt = new ConnectionAttempt(options, connectionHandler);
+                if (connectionAttempt.start(isReconnect)) {
+                    lastUsedClientOptions = options;
+                } else {
+                    log.debug("already trying to connect to server ...");
+                    connectionHandler.handle(Future.failedFuture(
+                            new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already connecting to server")));
+                }
             }
         });
     }
@@ -478,7 +434,9 @@ public class HonoConnectionImpl implements HonoConnection {
         notifyDisconnectHandlers();
         clearState();
 
-        reconnect(null, this::notifyReconnectHandlers);
+        if (!shuttingDown.get() && clientConfigProperties.getReconnectAttempts() != 0) {
+            connect(lastUsedClientOptions, this::notifyReconnectHandlers, true);
+        }
     }
 
     private void notifyReconnectHandlers(final AsyncResult<HonoConnection> reconnectAttempt) {
@@ -493,11 +451,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * Reset all connection and link based state.
      */
     protected void clearState() {
-
         setConnection(null, null);
-
-        // make sure we make configured number of attempts to re-connect
-        connectAttempts.set(0);
     }
 
     private void notifyDisconnectHandlers() {
@@ -515,50 +469,6 @@ public class HonoConnectionImpl implements HonoConnection {
             listener.onDisconnect(this);
         } catch (final Exception ex) {
             log.warn("error running disconnectHandler", ex);
-        }
-    }
-
-    private void reconnect(
-            final Throwable connectionFailureCause,
-            final Handler<AsyncResult<HonoConnection>> connectionHandler) {
-
-        if (shuttingDown.get()) {
-            // no need to try to re-connect
-            log.info("client is shutting down, giving up attempt to connect");
-            final ClientErrorException ex = new ClientErrorException(
-                    HttpURLConnection.HTTP_CONFLICT, "client is already shut down");
-            connectionHandler.handle(Future.failedFuture(ex));
-            return;
-        }
-        final int reconnectAttempt = connectAttempts.getAndIncrement();
-        if (clientConfigProperties.getReconnectAttempts() - reconnectAttempt == 0) {
-            log.info("max number of attempts [{}] to re-connect to server [{}:{}, role: {}] have been made, giving up",
-                    clientConfigProperties.getReconnectAttempts(),
-                    connectionFactory.getHost(),
-                    connectionFactory.getPort(),
-                    connectionFactory.getServerRole());
-            clearState();
-            failConnectionAttempt(connectionFailureCause, connectionHandler);
-
-        } else {
-            deferredConnectionCheckHandler.setConnectionAttemptInProgress();
-            if (connectionFailureCause != null) {
-                logConnectionError(connectionFailureCause);
-            }
-            // apply exponential backoff with jitter
-            final long reconnectMaxDelay = getReconnectMaxDelay(reconnectAttempt);
-            // let the actual reconnect delay be a random between the minDelay and the current maxDelay
-            final long reconnectDelay = reconnectMaxDelay > clientConfigProperties.getReconnectMinDelay()
-                    ? ThreadLocalRandom.current().nextLong(clientConfigProperties.getReconnectMinDelay(), reconnectMaxDelay)
-                    : clientConfigProperties.getReconnectMinDelay();
-            if (reconnectDelay > 0) {
-                log.trace("scheduling new connection attempt in {}ms ...", reconnectDelay);
-                vertx.setTimer(reconnectDelay, tid -> {
-                    connect(clientOptions, connectionHandler);
-                });
-            } else {
-                connect(clientOptions, connectionHandler);
-            }
         }
     }
 
@@ -581,65 +491,6 @@ public class HonoConnectionImpl implements HonoConnection {
             return clientConfigProperties.getReconnectMaxDelay();
         }
     }
-
-    /**
-     * Log the connection error.
-     *
-     * @param connectionFailureCause The connection error to log, never is {@code null}.
-     */
-    private void logConnectionError(final Throwable connectionFailureCause) {
-        if (isNoteworthyError(connectionFailureCause)) {
-            log.warn("attempt to connect to server [{}:{}, role: {}] failed",
-                    clientConfigProperties.getHost(),
-                    clientConfigProperties.getPort(),
-                    connectionFactory.getServerRole(),
-                    connectionFailureCause);
-        } else {
-            log.debug("attempt to connect to server [{}:{}, role: {}] failed",
-                    clientConfigProperties.getHost(),
-                    clientConfigProperties.getPort(),
-                    connectionFactory.getServerRole(),
-                    connectionFailureCause);
-        }
-    }
-
-    private boolean isNoteworthyError(final Throwable connectionFailureCause) {
-
-        return connectionFailureCause instanceof SSLException ||
-                connectionFailureCause instanceof AuthenticationException ||
-                connectionFailureCause instanceof MechanismMismatchException ||
-                (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
-    }
-
-    private void failConnectionAttempt(final Throwable connectionFailureCause, final Handler<AsyncResult<HonoConnection>> connectionHandler) {
-
-        log.info("stopping connection attempt to server [{}:{}, role: {}] due to terminal error",
-                connectionFactory.getHost(),
-                connectionFactory.getPort(),
-                connectionFactory.getServerRole(),
-                connectionFailureCause);
-
-        final ServiceInvocationException serviceInvocationException;
-        if (connectionFailureCause == null) {
-            serviceInvocationException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                    "failed to connect");
-        } else if (connectionFailureCause instanceof AuthenticationException) {
-            // wrong credentials?
-            serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "failed to authenticate with server");
-        } else if (connectionFailureCause instanceof MechanismMismatchException) {
-            serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "no suitable SASL mechanism found for authentication with server");
-        } else if (connectionFailureCause instanceof SSLException) {
-            serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "TLS handshake with server failed: " + connectionFailureCause.getMessage(), connectionFailureCause);
-        } else {
-            serviceInvocationException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                    "failed to connect", connectionFailureCause);
-        }
-        connectionHandler.handle(Future.failedFuture(serviceInvocationException));
-    }
-
     /**
      * {@inheritDoc}
      *
@@ -1012,6 +863,7 @@ public class HonoConnectionImpl implements HonoConnection {
     @Override
     public final void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
+        cancelCurrentConnectionAttempt("client is getting shut down");
         if (shuttingDown.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
             closeConnection(completionHandler);
         } else {
@@ -1056,12 +908,18 @@ public class HonoConnectionImpl implements HonoConnection {
     @Override
     public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
+        cancelCurrentConnectionAttempt("client got disconnected");
         if (disconnecting.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
             closeConnection(completionHandler);
         } else {
             completionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already disconnecting")));
         }
+    }
+
+    private void cancelCurrentConnectionAttempt(final String errorMessage) {
+        Optional.ofNullable(currentConnectionAttempt.get()).ifPresent(
+                attempt -> attempt.cancel(errorMessage));
     }
 
     /**
@@ -1155,23 +1013,199 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     /**
-     * Wrapped connection handler used in the {@link #connect()} method. Allows adding an additional handler.
+     * Encapsulates a connection attempt (with possible retries).
      */
-    private static class ConnectMethodConnectionHandler implements Handler<AsyncResult<HonoConnection>> {
+    private class ConnectionAttempt {
 
+        private final ProtonClientOptions clientOptions;
         private final Handler<AsyncResult<HonoConnection>> connectionHandler;
-        private final Handler<AsyncResult<HonoConnection>> additionalHandler;
+        private final AtomicInteger connectAttempts = new AtomicInteger(0);
+        private final AtomicBoolean cancelled = new AtomicBoolean();
 
-        ConnectMethodConnectionHandler(final Handler<AsyncResult<HonoConnection>> connectionHandler,
-                final Handler<AsyncResult<HonoConnection>> additionalHandler) {
-            this.connectionHandler = connectionHandler;
-            this.additionalHandler = additionalHandler;
+        private Long reconnectTimerId;
+
+        ConnectionAttempt(final ProtonClientOptions clientOptions, final Handler<AsyncResult<HonoConnection>> connectionHandler) {
+            this.clientOptions = clientOptions;
+
+            this.connectionHandler = ar -> {
+                if (ar.failed()) {
+                    clearState();
+                }
+                currentConnectionAttempt.compareAndSet(this, null);
+                connectionHandler.handle(ar);
+                deferredConnectionCheckHandler.setConnectionAttemptFinished(ar);
+            };
         }
 
-        @Override
-        public void handle(final AsyncResult<HonoConnection> event) {
-            connectionHandler.handle(event);
-            additionalHandler.handle(event);
+        /**
+         * Starts the connection attempt.
+         * Must be called on the vert.x context created for the connection attempt.
+         *
+         * @param isReconnect if {@code true}, the connection attempt is started after the configured minimum
+         *            reconnect delay.
+         * @return {@code true} if the attempt was started, {@code false} if there already is an ongoing attempt.
+         */
+        public boolean start(final boolean isReconnect) {
+            if (!currentConnectionAttempt.compareAndSet(null, this)) {
+                // there already is another ongoing attempt
+                return false;
+            }
+            deferredConnectionCheckHandler.setConnectionAttemptInProgress();
+            if (isReconnect) {
+                reconnect(null);
+            } else {
+                connect();
+            }
+            return true;
+        }
+
+        /**
+         * Cancels the connection attempt.
+         *
+         * @param errorMessage The error message with which to fail the connection handler.
+         */
+        public void cancel(final String errorMessage) {
+            if (currentConnectionAttempt.get() != this || !cancelled.compareAndSet(false, true)) {
+                // attempt already finished or cancelled
+                return;
+            }
+            final boolean timerCancelled = Optional.ofNullable(reconnectTimerId)
+                    .map(vertx::cancelTimer).orElse(false);
+            log.debug("cancelled {} connection attempt [#{}] to server [{}:{}, role: {}]",
+                    timerCancelled ? "upcoming" : "ongoing",
+                    connectAttempts.get() + 1,
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole());
+            final ClientErrorException ex = new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, errorMessage);
+            connectionHandler.handle(Future.failedFuture(ex));
+        }
+
+        private void connect() {
+            if (cancelled.get()) {
+                return;
+            }
+            log.debug("starting attempt [#{}] to connect to server [{}:{}, role: {}]",
+                    connectAttempts.get() + 1,
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole());
+
+            connectionFactory.connect(
+                    clientOptions,
+                    null,
+                    null,
+                    containerId,
+                    HonoConnectionImpl.this::onRemoteClose,
+                    HonoConnectionImpl.this::onRemoteDisconnect,
+                    conAttempt -> {
+                        if (conAttempt.failed()) {
+                            reconnect(conAttempt.cause());
+                        } else {
+                            final ProtonConnection newConnection = conAttempt.result();
+                            if (cancelled.get()) {
+                                log.debug("attempt [#{}]: connected but will directly be closed because attempt got cancelled; server [{}:{}, role: {}]",
+                                        connectAttempts.get() + 1,
+                                        connectionFactory.getHost(),
+                                        connectionFactory.getPort(),
+                                        connectionFactory.getServerRole());
+                                newConnection.closeHandler(null);
+                                newConnection.disconnectHandler(null);
+                                newConnection.close();
+                            } else {
+                                log.debug("attempt [#{}]: connected to server [{}:{}, role: {}]; remote container: {}",
+                                        connectAttempts.get() + 1,
+                                        connectionFactory.getHost(),
+                                        connectionFactory.getPort(),
+                                        connectionFactory.getServerRole(),
+                                        newConnection.getRemoteContainer());
+                                final ProtonSession session = createDefaultSession(newConnection);
+                                setConnection(newConnection, session);
+                                connectionHandler.handle(Future.succeededFuture(HonoConnectionImpl.this));
+                            }
+                        }
+                    });
+        }
+
+        private void reconnect(final Throwable connectionFailureCause) {
+            if (cancelled.get()) {
+                return;
+            }
+            if (connectionFailureCause != null) {
+                logConnectionError(connectionFailureCause);
+            }
+            if (clientConfigProperties.getReconnectAttempts() - connectAttempts.get() == 0) {
+                log.info("max number of attempts [{}] to re-connect to server [{}:{}, role: {}] have been made, giving up",
+                        clientConfigProperties.getReconnectAttempts(),
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
+                connectionHandler.handle(Future.failedFuture(mapConnectionAttemptFailure(connectionFailureCause)));
+            } else {
+                final int reconnectAttempt = connectAttempts.getAndIncrement();
+                // apply exponential backoff with jitter
+                final long reconnectMaxDelay = getReconnectMaxDelay(reconnectAttempt);
+                // let the actual reconnect delay be a random between the minDelay and the current maxDelay
+                final long reconnectDelay = reconnectMaxDelay > clientConfigProperties.getReconnectMinDelay()
+                        ? ThreadLocalRandom.current().nextLong(clientConfigProperties.getReconnectMinDelay(), reconnectMaxDelay)
+                        : clientConfigProperties.getReconnectMinDelay();
+                if (reconnectDelay > 0) {
+                    log.trace("scheduling new connection attempt in {}ms ...", reconnectDelay);
+                    reconnectTimerId = vertx.setTimer(reconnectDelay, tid -> {
+                        reconnectTimerId = null;
+                        connect();
+                    });
+                } else {
+                    connect();
+                }
+            }
+        }
+
+        private ServiceInvocationException mapConnectionAttemptFailure(final Throwable connectionFailureCause) {
+            final ServiceInvocationException serviceInvocationException;
+            if (connectionFailureCause == null) {
+                serviceInvocationException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "failed to connect");
+            } else if (connectionFailureCause instanceof AuthenticationException) {
+                // wrong credentials?
+                serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                        "failed to authenticate with server");
+            } else if (connectionFailureCause instanceof MechanismMismatchException) {
+                serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                        "no suitable SASL mechanism found for authentication with server");
+            } else if (connectionFailureCause instanceof SSLException) {
+                serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "TLS handshake with server failed: " + connectionFailureCause.getMessage(), connectionFailureCause);
+            } else {
+                serviceInvocationException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "failed to connect", connectionFailureCause);
+            }
+            return serviceInvocationException;
+        }
+
+        private void logConnectionError(final Throwable connectionFailureCause) {
+            if (isNoteworthyConnectionError(connectionFailureCause)) {
+                log.warn("attempt [#{}] to connect to server [{}:{}, role: {}] failed",
+                        connectAttempts.get() + 1,
+                        clientConfigProperties.getHost(),
+                        clientConfigProperties.getPort(),
+                        connectionFactory.getServerRole(),
+                        connectionFailureCause);
+            } else {
+                log.debug("attempt [#{}] to connect to server [{}:{}, role: {}] failed",
+                        connectAttempts.get() + 1,
+                        clientConfigProperties.getHost(),
+                        clientConfigProperties.getPort(),
+                        connectionFactory.getServerRole(),
+                        connectionFailureCause);
+            }
+        }
+
+        private boolean isNoteworthyConnectionError(final Throwable connectionFailureCause) {
+            return connectionFailureCause instanceof SSLException ||
+                    connectionFailureCause instanceof AuthenticationException ||
+                    connectionFailureCause instanceof MechanismMismatchException ||
+                    (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
         }
     }
 }
