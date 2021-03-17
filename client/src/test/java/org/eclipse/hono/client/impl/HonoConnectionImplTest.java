@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -162,6 +162,107 @@ public class HonoConnectionImplTest {
     }
 
     /**
+     * Verifies that a connection attempt from the client is failed if there already is an ongoing
+     * connection attempt.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testConnectFailsIfAnotherConnectAttemptOngoing(final VertxTestContext ctx) {
+
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection isn't getting established immediately
+        final Promise<Void> delayedConnectPromise = Promise.promise();
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
+            @Override
+            public void connect(final ProtonClientOptions options, final String username, final String password,
+                    final String containerId,
+                    final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    final Handler<ProtonConnection> disconnectHandler,
+                    final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                delayedConnectPromise.future().onComplete(v -> {
+                    super.connect(options, username, password, containerId, closeHandler, disconnectHandler, connectionResultHandler);
+                });
+            }
+        };
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1); // let connectionFactory.connect succeed
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN trying to connect
+        final Future<HonoConnection> connectFuture = honoConnection.connect();
+        // and starting another connect attempt before the connection has been established
+        final Future<HonoConnection> connectFuture2 = honoConnection.connect();
+
+        delayedConnectPromise.complete();
+        // THEN the first connect invocation succeeds and the second is failed
+        connectFuture.onComplete(ctx.succeeding(con -> {
+            ctx.verify(() -> {
+                assertThat(connectFuture2.failed()).isTrue();
+                assertThat(connectFuture2.cause()).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) connectFuture2.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
+            });
+            ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that a connection attempt by the client is failed if it occurs while another connect invocation is
+     * waiting for the next reconnect attempt.
+     *
+     * @param ctx The test execution context.
+     */
+    @Test
+    public void testConnectFailsIfAnotherConnectAttemptIsScheduled(final VertxTestContext ctx) {
+        final long reconnectMinDelay = 20L;
+
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection is only getting established on the 2nd attempt, after some delay.
+
+        // the reconnect timer handler only shall get invoked on demand (after a corresponding promise gets completed)
+        final AtomicBoolean reconnectTimerStarted = new AtomicBoolean();
+        final Promise<Void> reconnectTimerContinuePromise = Promise.promise();
+        when(vertx.setTimer(eq(reconnectMinDelay), any())).thenAnswer(invocation -> {
+            reconnectTimerStarted.set(true);
+            final Handler<Long> reconnectTimerHandler = invocation.getArgument(1);
+            reconnectTimerContinuePromise.future().onComplete(ar -> reconnectTimerHandler.handle(0L));
+            return 1L;
+        });
+
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
+            @Override
+            public void connect(final ProtonClientOptions options, final String username, final String password,
+                    final String containerId,
+                    final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    final Handler<ProtonConnection> disconnectHandler,
+                    final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                super.connect(options, username, password, containerId, closeHandler, disconnectHandler, connectionResultHandler);
+            }
+        };
+        connectionFactory.setExpectedFailingConnectionAttempts(1);
+        props.setReconnectMinDelay(reconnectMinDelay);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN trying to connect
+        final Future<HonoConnection> connectFuture = honoConnection.connect();
+        assertThat(reconnectTimerStarted.get()).isTrue();
+        // and starting another connect attempt before the connection has been established
+        final Future<HonoConnection> connectFuture2 = honoConnection.connect();
+
+        // and letting the first attempt finish
+        reconnectTimerContinuePromise.complete();
+
+        // THEN the first connect invocation succeeds and the second is failed
+        connectFuture.onComplete(ctx.succeeding(cause -> {
+            ctx.verify(() -> {
+                assertThat(connectFuture2.failed()).isTrue();
+                assertThat(connectFuture2.cause()).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) connectFuture2.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
+            });
+            ctx.completeNow();
+        }));
+    }
+
+    /**
      * Verifies that the delay between reconnect attempts conforms
      * to how it is configured in the ClientConfigProperties.
      *
@@ -241,6 +342,8 @@ public class HonoConnectionImplTest {
         final ProtonClientOptions options = new ProtonClientOptions()
                 .setReconnectAttempts(0);
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+        final AtomicInteger reconnectListenerInvocations = new AtomicInteger();
+        honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
         honoConnection.connect(options).onComplete(ctx.succeeding());
         ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
@@ -256,7 +359,10 @@ public class HonoConnectionImplTest {
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN the adapter reconnects to the downstream container again
-        ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
+        ctx.verify(() -> {
+            assertThat(connectionFactory.await()).isTrue();
+            assertThat(reconnectListenerInvocations.get()).isEqualTo(2);
+        });
         ctx.completeNow();
     }
 
@@ -275,6 +381,8 @@ public class HonoConnectionImplTest {
         props.setReconnectAttempts(2);
         props.setConnectTimeout(10);
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+        final AtomicInteger reconnectListenerInvocations = new AtomicInteger();
+        honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
 
         // WHEN trying to connect
         honoConnection.connect().onComplete(ctx.succeeding());
@@ -284,6 +392,8 @@ public class HonoConnectionImplTest {
             assertThat(connectionFactory.awaitFailure()).isTrue();
             // and succeeds to connect on the third attempt
             assertThat(connectionFactory.await()).isTrue();
+            // and there are no reconnect listener invocations (all of the above represents one connection attempt)
+            assertThat(reconnectListenerInvocations.get()).isEqualTo(0);
         });
         ctx.completeNow();
     }
@@ -302,6 +412,8 @@ public class HonoConnectionImplTest {
         @SuppressWarnings("unchecked")
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
         honoConnection.addDisconnectListener(disconnectListener);
+        final AtomicInteger reconnectListenerInvocations = new AtomicInteger();
+        honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
         honoConnection.connect(new ProtonClientOptions())
             .onComplete(connected);
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
@@ -318,6 +430,7 @@ public class HonoConnectionImplTest {
                 verify(con).disconnectHandler(null);
                 // and the connection is re-established
                 assertThat(connectionFactory.await()).isTrue();
+                assertThat(reconnectListenerInvocations.get()).isEqualTo(1);
             });
             ctx.completeNow();
         }));
@@ -340,6 +453,8 @@ public class HonoConnectionImplTest {
         @SuppressWarnings("unchecked")
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
         honoConnection.addDisconnectListener(disconnectListener);
+        final AtomicInteger reconnectListenerInvocations = new AtomicInteger();
+        honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
         honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(0))
                 .onComplete(connected);
 
@@ -356,6 +471,7 @@ public class HonoConnectionImplTest {
 
                 // and no further connect invocation has been done
                 assertThat(connectionFactory.getConnectInvocations()).isEqualTo(1);
+                assertThat(reconnectListenerInvocations.get()).isEqualTo(0);
             });
             ctx.completeNow();
         }));
@@ -374,8 +490,10 @@ public class HonoConnectionImplTest {
         final Promise<HonoConnection> connected = Promise.promise();
         @SuppressWarnings("unchecked")
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
-        props.setServerRole("service-provider");
         honoConnection.addDisconnectListener(disconnectListener);
+        final AtomicInteger reconnectListenerInvocations = new AtomicInteger();
+        honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
+        props.setServerRole("service-provider");
         honoConnection.connect(new ProtonClientOptions())
             .onComplete(connected);
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
@@ -394,6 +512,7 @@ public class HonoConnectionImplTest {
                 verify(con).disconnectHandler(null);
                 // and the connection is re-established
                 assertThat(connectionFactory.await()).isTrue();
+                assertThat(reconnectListenerInvocations.get()).isEqualTo(1);
             });
             ctx.completeNow();
         }));
@@ -446,6 +565,97 @@ public class HonoConnectionImplTest {
             })
             // THEN the connection succeeds
             .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that if a client disconnects from the server, then an ongoing attempt to connect is cancelled.
+     *
+     * @param ctx The test execution context.
+     */
+    @Test
+    public void testDisconnectAbortsConnectAttempt(final VertxTestContext ctx) {
+
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection isn't getting established immediately
+        final Promise<Void> delayedConnectPromise = Promise.promise();
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
+            @Override
+            public void connect(final ProtonClientOptions options, final String username, final String password,
+                    final String containerId,
+                    final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    final Handler<ProtonConnection> disconnectHandler,
+                    final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                delayedConnectPromise.future().onComplete(v -> {
+                    super.connect(options, username, password, containerId, closeHandler, disconnectHandler, connectionResultHandler);
+                });
+            }
+        };
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1); // let connectionFactory.connect succeed
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN trying to connect
+        final Future<HonoConnection> connectFuture = honoConnection.connect();
+        // and disconnecting before the connection has been established
+        honoConnection.disconnect();
+
+        delayedConnectPromise.complete();
+        // THEN the connect attempt is failed
+        connectFuture.onComplete(ctx.failing(cause -> {
+            ctx.verify(() -> assertThat(((ClientErrorException) cause).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_CONFLICT));
+            ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that if a client disconnects from the server, then an ongoing attempt to connect, currently waiting
+     * for the next reconnect attempt, is cancelled.
+     *
+     * @param ctx The test execution context.
+     */
+    @Test
+    public void testDisconnectAbortsConnectAttemptWaitingForReconnect(final VertxTestContext ctx) {
+        final long reconnectTimerId = 32L;
+        final long reconnectMinDelay = 20L;
+
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection is only getting established on the 2nd attempt, after some delay.
+
+        // the reconnect timer handler will not get invoked, timer should get cancelled
+        final AtomicBoolean reconnectTimerStarted = new AtomicBoolean();
+        when(vertx.setTimer(eq(reconnectMinDelay), any())).thenAnswer(invocation -> {
+            reconnectTimerStarted.set(true);
+            return reconnectTimerId;
+        });
+        when(vertx.cancelTimer(eq(reconnectTimerId))).thenReturn(true);
+
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
+            @Override
+            public void connect(final ProtonClientOptions options, final String username, final String password,
+                    final String containerId,
+                    final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                    final Handler<ProtonConnection> disconnectHandler,
+                    final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                super.connect(options, username, password, containerId, closeHandler, disconnectHandler, connectionResultHandler);
+            }
+        };
+        connectionFactory.setExpectedFailingConnectionAttempts(1);
+        props.setReconnectMinDelay(reconnectMinDelay);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN trying to connect
+        final Future<HonoConnection> connectFuture = honoConnection.connect();
+        assertThat(reconnectTimerStarted.get()).isTrue();
+        // and disconnecting before the connection has been established
+        honoConnection.disconnect();
+
+        // THEN the reconnectTimer has been cancelled
+        verify(vertx).cancelTimer(eq(reconnectTimerId));
+
+        // AND the connect attempt is failed
+        connectFuture.onComplete(ctx.failing(cause -> {
+            ctx.verify(() -> assertThat(((ClientErrorException) cause).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_CONFLICT));
+            ctx.completeNow();
+        }));
     }
 
     /**
