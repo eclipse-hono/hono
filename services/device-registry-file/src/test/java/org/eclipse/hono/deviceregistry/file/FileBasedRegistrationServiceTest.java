@@ -335,7 +335,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         final Device device2 = new Device();
         device2.setEnabled(false);
         device2.setVia(Arrays.asList(deviceId1));
-        device2.setMapper("mapper");
+        device2.setDownstreamMessageMapper("mapper");
         devices.put(UUID.randomUUID().toString(), device2);
 
         // run test

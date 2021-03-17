@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -108,7 +108,7 @@ public class AbstractRegistrationServiceTest {
     public void testAssertRegistrationContainsDeviceInfo(final VertxTestContext ctx) {
 
         final JsonObject registreredDevice = new JsonObject()
-                .put(RegistrationConstants.FIELD_MAPPER, "mapping-service")
+                .put(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER, "mapping-service")
                 .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject().put("foo", "bar"))
                 .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw1").add("gw2"))
                 .put("ext", new JsonObject().put("key", "value"));
@@ -122,7 +122,7 @@ public class AbstractRegistrationServiceTest {
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                    assertThat(result.getPayload().getString(RegistrationConstants.FIELD_MAPPER)).isEqualTo("mapping-service");
+                    assertThat(result.getPayload().getString(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER)).isEqualTo("mapping-service");
                     assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsOnly("gw1", "gw2");
                     assertThat(result.getPayload().getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)).containsOnly(Map.entry("foo", "bar"));
                     assertThat(result.getPayload().containsKey("ext")).isFalse();

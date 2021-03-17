@@ -1546,33 +1546,46 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             TracingHelper.TAG_QOS.set(commandContext.getTracingSpan(), subscription.getQos().name());
 
             final String targetInfo = command.isTargetedAtGateway()
-                    ? String.format("gateway [%s], device [%s]", command.getGatewayId(), command.getDeviceId())
-                    : String.format("device [%s]", command.getDeviceId());
+                ? String.format("gateway [%s], device [%s]", command.getGatewayId(), command.getDeviceId())
+                : String.format("device [%s]", command.getDeviceId());
 
-            final Buffer payload = Optional.ofNullable(command.getPayload()).orElseGet(Buffer::buffer);
-            endpoint.publish(publishTopic, payload, subscription.getQos(), false, false, sentHandler -> {
-                if (sentHandler.succeeded()) {
+            getCommandPayload(commandContext)
+                .onSuccess(mappedPayload -> {
+                    endpoint.publish(publishTopic, mappedPayload, subscription.getQos(), false, false, sentHandler -> {
+                        if (sentHandler.succeeded()) {
 
-                    final Integer msgId = sentHandler.result();
-                    log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                            msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                            subscription.getQos(), publishTopic);
-                    commandContext.getTracingSpan().log(subscription.getQos().value() > 0 ? "published command, packet-id: " + msgId
-                            : "published command");
-                    afterCommandPublished(msgId, commandContext, tenantObject, subscription);
-
-                } else {
-                    log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                            targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                            subscription.getQos(), publishTopic, sentHandler.cause());
-                    TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", sentHandler.cause());
-                    reportPublishedCommand(
-                            tenantObject,
-                            subscription,
-                            commandContext,
-                            ProcessingOutcome.from(sentHandler.cause()));
-                    commandContext.release();
+                            final Integer msgId = sentHandler.result();
+                            log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                                msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                                subscription.getQos(), publishTopic);
+                            commandContext.getTracingSpan().log(subscription.getQos().value() > 0 ? "published command, packet-id: " + msgId
+                                : "published command");
+                            afterCommandPublished(msgId, commandContext, tenantObject, subscription);
+                        } else {
+                            log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                                targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                                subscription.getQos(), publishTopic, sentHandler.cause());
+                            TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", sentHandler.cause());
+                            reportPublishedCommand(
+                                tenantObject,
+                                subscription,
+                                commandContext,
+                                ProcessingOutcome.from(sentHandler.cause()));
+                            commandContext.release();
+                        }
+                    });
                 }
+            ).onFailure(t -> {
+                log.debug("error mapping command [tenant-id: {}, MQTT client-id: {}, QoS: {}]",
+                    subscription.getTenant(), endpoint.clientIdentifier(),
+                    subscription.getQos(), t);
+                TracingHelper.logError(commandContext.getTracingSpan(), "failed to map command", t);
+                reportPublishedCommand(
+                    tenantObject,
+                    subscription,
+                    commandContext,
+                    ProcessingOutcome.from(t));
+                commandContext.release();
             });
         }
 
@@ -1752,5 +1765,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
             return span;
         }
+    }
+
+    /**
+     * Get the buffer to send as a command to the gateway/device.
+     * <p>
+     * Subclasses should override this method in order to overwrite the provided command.
+     * <p>
+     *  @param ctx The command context for this command.
+     * @return A future containing the mapped buffer.
+     */
+    protected Future<Buffer> getCommandPayload(final CommandContext ctx) {
+        return Future.succeededFuture(ctx.getCommand().getPayload());
     }
 }

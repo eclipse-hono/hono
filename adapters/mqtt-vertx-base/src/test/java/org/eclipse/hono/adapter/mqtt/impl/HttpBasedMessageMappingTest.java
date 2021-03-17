@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -29,6 +30,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
@@ -92,7 +94,7 @@ public class HttpBasedMessageMappingTest {
 
     /**
      * Verifies that the result returned by the mapping service contains the
-     * original payload and target address if no mapper has been defined for
+     * original payload and target address if no downstream mapper has been defined for
      * the gateway.
      *
      * @param ctx The helper to use for running tests on vert.x.
@@ -105,7 +107,7 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
-        messageMapping.mapMessage(context, targetAddress, new RegistrationAssertion("gateway"))
+        messageMapping.mapDownstreamMessage(context, targetAddress, new RegistrationAssertion("gateway"))
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
                     assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
@@ -119,7 +121,7 @@ public class HttpBasedMessageMappingTest {
 
     /**
      * Verifies that the result returned by the mapping service contains the
-     * original payload and target address if no mapper endpoint has been configured
+     * original payload and target address if no downstream mapper endpoint has been configured
      * for the adapter.
      *
      * @param ctx The helper to use for running tests on vert.x.
@@ -131,8 +133,8 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
-        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
-        messageMapping.mapMessage(context, targetAddress, assertion)
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
+        messageMapping.mapDownstreamMessage(context, targetAddress, assertion)
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
                     assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
@@ -168,7 +170,7 @@ public class HttpBasedMessageMappingTest {
         final HttpResponse<Buffer> httpResponse = mock(HttpResponse.class);
         when(httpResponse.headers()).thenReturn(responseHeaders);
         when(httpResponse.bodyAsBuffer()).thenReturn(responseBody);
-        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpResponse.statusCode()).thenReturn(HttpURLConnection.HTTP_OK);
 
         when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
 
@@ -180,8 +182,8 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, topic);
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
-        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
-        messageMapping.mapMessage(context, targetAddress, assertion)
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
+        messageMapping.mapDownstreamMessage(context, targetAddress, assertion)
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
                     assertThat(mappedMessage.getTargetAddress().getResourceId()).isEqualTo("new-device");
@@ -204,7 +206,7 @@ public class HttpBasedMessageMappingTest {
     }
 
     /**
-     * Verifies that the mapper returns a failed future with a ServerErrorException if the mapper has been configured
+     * Verifies that the downstream mapper returns a failed future with a ServerErrorException if the downstream mapper has been configured
      * for an adapter but the remote service returns a 403 status code indicating that the device payload cannot be mapped.
      *
      * @param ctx   The Vert.x test context.
@@ -225,8 +227,8 @@ public class HttpBasedMessageMappingTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, "mqtt-topic");
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
-        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setMapper("mapper");
-        messageMapping.mapMessage(context, targetAddress, assertion)
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
+        messageMapping.mapDownstreamMessage(context, targetAddress, assertion)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     assertThat(t).isInstanceOf(ServerErrorException.class);
@@ -261,5 +263,131 @@ public class HttpBasedMessageMappingTest {
         when(message.payload()).thenReturn(payload);
         when(message.topicName()).thenReturn(topic);
         return message;
+    }
+
+    /**
+     * Verifies that the result returned by the mapping service contains the
+     * original payload and target address if no upstream mapper has been defined for
+     * the gateway.
+     *
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testMapCommandSucceedsIfNoMapperIsSet(final VertxTestContext ctx) {
+        config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
+        final Command command = mock(Command.class);
+        final Buffer payload = Buffer.buffer("payload");
+        when(command.getPayload()).thenReturn(payload);
+
+        messageMapping.mapUpstreamMessage(new RegistrationAssertion("gateway"), command)
+            .onComplete(ctx.succeeding(mappedBuffer -> {
+                ctx.verify(() -> {
+                    assertThat(mappedBuffer).isEqualTo(payload);
+                    verify(mapperWebClient, never()).post(anyInt(), anyString(), anyString());
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the result returned by the mapping service contains the
+     * original payload and target address if no upstream mapper endpoint has been configured
+     * for the adapter.
+     *
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testMapCommandSucceedsIfNoMapperEndpointIsConfigured(final VertxTestContext ctx) {
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setUpstreamMessageMapper("mapper");
+        final Command command = mock(Command.class);
+        final Buffer payload = Buffer.buffer("payload");
+        when(command.getPayload()).thenReturn(payload);
+
+        messageMapping.mapUpstreamMessage(assertion, command)
+            .onComplete(ctx.succeeding(mappedBuffer -> {
+                ctx.verify(() -> {
+                    assertThat(mappedBuffer).isEqualTo(payload);
+                    verify(mapperWebClient, never()).post(anyInt(), anyString(), anyString());
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the result returned by the upstream mapping service contains the
+     * mapped payload.
+     *
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testMapCommandSucceeds(final VertxTestContext ctx) {
+
+        config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
+        final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
+
+        final Buffer payload = Buffer.buffer("payload");
+        final Buffer responseBody = Buffer.buffer("changed");
+
+        final HttpResponse<Buffer> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.bodyAsBuffer()).thenReturn(responseBody);
+        when(httpResponse.statusCode()).thenReturn(HttpURLConnection.HTTP_OK);
+
+        when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
+
+        final Command command = mock(Command.class);
+        when(command.getPayload()).thenReturn(payload);
+
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setUpstreamMessageMapper("mapper");
+        messageMapping.mapUpstreamMessage(assertion, command)
+            .onComplete(ctx.succeeding(mappedBuffer -> {
+                ctx.verify(() -> {
+                    assertThat(mappedBuffer).isEqualTo(responseBody);
+                    verify(mapperWebClient, times(1)).post(anyInt(), anyString(), anyString());
+                });
+                ctx.completeNow();
+            }));
+
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(httpRequest).sendBuffer(any(Buffer.class), handleCaptor.capture());
+        handleCaptor.getValue().handle(Future.succeededFuture(httpResponse));
+    }
+
+    /**
+     * Verifies that the upstream mapper returns a failed future with a ServerErrorException if the upstream mapper has been configured
+     * for an adapter but the remote service returns a 403 status code indicating that the device payload cannot be mapped.
+     *
+     * @param ctx   The Vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testMappingCommandFailsForWhenPayloadCannotMapped(final VertxTestContext ctx) {
+
+        config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
+        final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
+
+        final Buffer payload = Buffer.buffer("payload");
+
+        final HttpResponse<Buffer> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+
+        when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
+
+        final Command command = mock(Command.class);
+        when(command.getPayload()).thenReturn(payload);
+
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setUpstreamMessageMapper("mapper");
+        messageMapping.mapUpstreamMessage(assertion, command)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                });
+                ctx.completeNow();
+            }));
+
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(httpRequest).sendBuffer(any(Buffer.class), handleCaptor.capture());
+        handleCaptor.getValue().handle(Future.succeededFuture(httpResponse));
     }
 }

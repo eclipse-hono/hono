@@ -20,6 +20,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   on such errors is now to keep the MQTT connection open. Please refer to the
   [MQTT Adapter User Guide] ({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
 * The LoraWAN protocol adapter now supports command and control for providers *Chirpstack*, *Firefly* and *Loriot*.
+* The MQTT adapter now supports mapping the command payload through an external http service.
 
 ### Fixes & Enhancements
 
@@ -43,6 +44,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `org.eclipse.hono.service.AbstractApplication` and `org.eclipse.hono.service.AbstractBaseApplication` classes
   have been moved to `org.eclipse.hono.service.spring.AbstractApplication` and `org.eclipse.hono.service.spring.AbstractApplication`
   in the newly added `service-base-spring` module respectively.
+* The existing `mapper` configuration has been renamed to `downstream-message-mapper`. 
 
 ### End of Life
 

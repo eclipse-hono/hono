@@ -417,7 +417,7 @@ public interface AbstractRegistrationServiceTest {
         final Device device = new Device()
                 .setVia(List.of("a", "b", "c"))
                 .setViaGroups(List.of("group1", "group2"))
-                .setMapper("mapper");
+                .setDownstreamMessageMapper("mapper");
 
         createDevices(Map.of(deviceId, device))
             .compose(ok -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
@@ -427,7 +427,7 @@ public interface AbstractRegistrationServiceTest {
                     assertThat(s.getPayload()).isNotNull();
                     assertThat(s.getPayload().getVia()).contains("a", "b", "c");
                     assertThat(s.getPayload().getViaGroups()).contains("group1", "group2");
-                    assertThat(s.getPayload().getMapper()).isEqualTo("mapper");
+                    assertThat(s.getPayload().getDownstreamMessageMapper()).isEqualTo("mapper");
                 });
                 ctx.completeNow();
             }));

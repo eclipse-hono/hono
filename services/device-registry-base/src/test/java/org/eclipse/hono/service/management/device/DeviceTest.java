@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -176,17 +176,28 @@ public class DeviceTest {
     }
 
     /**
-     * Encode device with "mapper=test".
+     * Encode device with "downstream-message-mapper=test".
      */
     @Test
-    public void testEncodeMapper() {
+    public void testEncodeDownstreamMessageMapper() {
         final var device = new Device();
-        device.setMapper("test");
+        device.setDownstreamMessageMapper("test");
         final var json = JsonObject.mapFrom(device);
         assertThat(json).isNotNull();
-        assertThat(json.getString("mapper")).isEqualTo("test");
+        assertThat(json.getString("downstream-message-mapper")).isEqualTo("test");
     }
 
+    /**
+     * Encode device with "upstream-message-mapper=test".
+     */
+    @Test
+    public void testEncodeUpstreamMessageMapper() {
+        final var device = new Device();
+        device.setUpstreamMessageMapper("test");
+        final var json = JsonObject.mapFrom(device);
+        assertThat(json).isNotNull();
+        assertThat(json.getString("upstream-message-mapper")).isEqualTo("test");
+    }
     /**
      * Tests that the status property is serialized to JSON.
      */

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -71,8 +71,11 @@ public class Device {
     @JsonInclude(value = Include.NON_EMPTY)
     private DeviceStatus status;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
-    private String mapper;
+    @JsonProperty(RegistryManagementConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER)
+    private String downstreamMessageMapper;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_UPSTREAM_MESSAGE_MAPPER)
+    private String upstreamMessageMapper;
 
     @JsonProperty(RegistryManagementConstants.FIELD_AUTHORITIES)
     @JsonInclude(value = Include.NON_EMPTY)
@@ -118,7 +121,8 @@ public class Device {
             this.commandEndpoint = other.commandEndpoint;
         }
 
-        this.mapper = other.mapper;
+        this.downstreamMessageMapper = other.downstreamMessageMapper;
+        this.upstreamMessageMapper = other.upstreamMessageMapper;
         this.status = other.status;
     }
 
@@ -280,25 +284,47 @@ public class Device {
     }
 
     /**
-     * Sets the (logical) name of a service that can be used to transform messages
+     * Sets the (logical) name of a service that can be used to transform downstream messages
      * uploaded by this device before they are forwarded to downstream consumers.
      *
-     * @param mapper The service name or {@code null} if no service should be invoked.
+     * @param downstreamMessageMapper The service name or {@code null} if no service should be invoked.
      * @return A reference to this for fluent use.
      */
-    public Device setMapper(final String mapper) {
-        this.mapper = mapper;
+    public Device setDownstreamMessageMapper(final String downstreamMessageMapper) {
+        this.downstreamMessageMapper = downstreamMessageMapper;
         return this;
     }
 
     /**
-     * Sets the (logical) name of a service that can be used to transform messages
+     * Sets the (logical) name of a service that can be used to transform downstream messages
      * uploaded by this device before they are forwarded to downstream consumers.
      *
      * @return The service name or {@code null} if no service is configured.
      */
-    public String getMapper() {
-        return mapper;
+    public String getDownstreamMessageMapper() {
+        return downstreamMessageMapper;
+    }
+
+    /**
+     * Sets the (logical) name of a service that can be used to transform upstream commands
+     * to be sent to this device.
+     *
+     * @param upstreamMessageMapper The service name or {@code null} if no service should be invoked.
+     * @return A reference to this for fluent use.
+     */
+    public Device setUpstreamMessageMapper(final String upstreamMessageMapper) {
+        this.upstreamMessageMapper = upstreamMessageMapper;
+        return this;
+    }
+
+    /**
+     * Sets the (logical) name of a service that can be used to transform upstream commands
+     * to be sent to this device.
+     *
+     * @return The service name or {@code null} if no service is configured.
+     */
+    public String getUpstreamMessageMapper() {
+        return upstreamMessageMapper;
     }
 
     /**
