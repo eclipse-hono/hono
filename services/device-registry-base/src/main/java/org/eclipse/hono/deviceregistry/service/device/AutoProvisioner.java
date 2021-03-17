@@ -19,10 +19,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
@@ -62,7 +62,7 @@ public class AutoProvisioner implements Lifecycle {
     private Tracer tracer = NoopTracerFactory.create();
     private TenantInformationService tenantInformationService = new NoopTenantInformationService();
     private DeviceManagementService deviceManagementService;
-    private MessagingClients messagingClients;
+    private MessagingClient<EventSender> eventClients;
     private Vertx vertx;
 
     private AutoProvisionerConfigProperties config;
@@ -78,13 +78,13 @@ public class AutoProvisioner implements Lifecycle {
     }
 
     /**
-     * Sets the messaging client to use.
+     * Sets the clients to use for sending events.
      *
-     * @param messagingClients The messaging client.
-     * @throws NullPointerException if the client is {@code null}.
+     * @param clients The clients.
+     * @throws NullPointerException if clients is {@code null}.
      */
-    public void setMessagingClients(final MessagingClients messagingClients) {
-        this.messagingClients = Objects.requireNonNull(messagingClients);
+    public void setEventSenders(final MessagingClient<EventSender> clients) {
+        this.eventClients = Objects.requireNonNull(clients);
     }
 
     /**
@@ -147,8 +147,8 @@ public class AutoProvisioner implements Lifecycle {
         if (vertx == null) {
             throw new IllegalStateException("vert.x instance must be set");
         }
-        if (messagingClients == null) {
-             throw new IllegalStateException("messaging client must be set");
+        if (eventClients == null || !eventClients.containsImplementations()) {
+             throw new IllegalStateException("Event client must be set");
         }
         if (deviceManagementService == null) {
             throw new IllegalStateException("device management service is not set");
@@ -158,9 +158,9 @@ public class AutoProvisioner implements Lifecycle {
             // decouple establishment of the sender's downstream connection from this component's
             // start-up process and instead rely on the event sender's readiness check to succeed
             // once the connection has been established
-            messagingClients.start()
-                    .onSuccess(ok -> LOG.info("Messaging clients successfully connected"))
-                    .onFailure((t -> LOG.warn("Messaging clients failed to connect", t)));
+            eventClients.start()
+                    .onSuccess(ok -> LOG.info("Event clients successfully connected"))
+                    .onFailure((t -> LOG.warn("Event clients failed to connect", t)));
         }
         return Future.succeededFuture();
     }
@@ -174,7 +174,7 @@ public class AutoProvisioner implements Lifecycle {
     public final Future<Void> stop() {
         if (started.compareAndSet(true, false)) {
             LOG.info("shutting down");
-            return messagingClients.stop();
+            return eventClients.stop();
         } else {
             return Future.succeededFuture();
         }
@@ -207,8 +207,7 @@ public class AutoProvisioner implements Lifecycle {
             props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY);
             props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, EventConstants.EVENT_ENDPOINT);
 
-            final EventSender eventSender = messagingClients.getClientSetForTenant(tenantTracker.result().getPayload())
-                    .getEventSender();
+            final EventSender eventSender = eventClients.getClient(tenantTracker.result().getPayload());
 
             return eventSender.sendEvent(
                     tenantTracker.result().getPayload(),

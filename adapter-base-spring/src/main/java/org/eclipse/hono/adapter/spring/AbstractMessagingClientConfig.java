@@ -10,12 +10,12 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.adapter.spring;
 
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.AdapterConfigurationSupport;
-import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
@@ -30,6 +30,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CommandConstants;
@@ -66,24 +67,57 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
      *
      * @return The created messaging clients.
      */
-    protected MessagingClients messagingClients(final SendMessageSampler.Factory samplerFactory,
+    protected MessagingClients messagingClients(
+            final SendMessageSampler.Factory samplerFactory,
             final Tracer tracer,
             final Vertx vertx,
             final ProtocolAdapterProperties adapterProperties) {
 
-        final MessagingClients messagingClients = new MessagingClients();
+        final MessagingClient<TelemetrySender> telemetrySenders = new MessagingClient<>();
+        final MessagingClient<EventSender> eventSenders = new MessagingClient<>();
+        final MessagingClient<CommandResponseSender> commandResponseSenders = new MessagingClient<>();
 
         if (kafkaProducerConfig().isConfigured()) {
-            log.info("Kafka Producer is configured. Adding Kafka messaging client.");
-            messagingClients.addClientSet(kafkaMessagingClientSet(adapterProperties, vertx, tracer));
+            log.info("Kafka Producer is configured, adding Kafka messaging clients");
+            final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
+            final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
+
+            telemetrySenders.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedTelemetrySender(factory, producerConfig, adapterProperties.isDefaultsEnabled(), tracer));
+            eventSenders.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedEventSender(factory, producerConfig, adapterProperties.isDefaultsEnabled(), tracer));
+            commandResponseSenders.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
         }
 
         if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
-            log.info("AMQP 1.0 Downstream Sender is configured. Adding AMQP 1.0 messaging client.");
-            messagingClients.addClientSet(amqpMessagingClientSet(vertx, samplerFactory, adapterProperties));
+            log.info("AMQP 1.0 connection is configured, adding AMQP 1.0 messaging clients");
+            telemetrySenders.setClient(
+                    MessagingType.amqp,
+                    new ProtonBasedDownstreamSender(
+                            downstreamConnection(vertx),
+                            samplerFactory,
+                            adapterProperties.isDefaultsEnabled(),
+                            adapterProperties.isJmsVendorPropsEnabled()));
+            eventSenders.setClient(
+                    MessagingType.amqp,
+                    new ProtonBasedDownstreamSender(
+                            downstreamConnection(vertx),
+                            samplerFactory,
+                            adapterProperties.isDefaultsEnabled(),
+                            adapterProperties.isJmsVendorPropsEnabled()));
+            commandResponseSenders.setClient(
+                    MessagingType.amqp,
+                    new ProtonBasedCommandResponseSender(
+                            commandConsumerConnection(vertx),
+                            samplerFactory,
+                            adapterProperties));
         }
 
-        return messagingClients;
+        return new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders);
     }
 
     /**
@@ -114,30 +148,6 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
             configProperties.setDefaultClientIdPrefix(getAdapterName());
         }
         return configProperties;
-    }
-
-    /**
-     * Exposes a messaging client set for <em>Kafka</em> as a Spring bean.
-     *
-     * @param adapterConfig The protocol adapter's configuration properties.
-     * @param vertx The Vert.x instance to use.
-     * @param tracer The tracer instance.
-     *
-     * @return The client set.
-     */
-    @Bean
-    @Scope("prototype")
-    public MessagingClientSet kafkaMessagingClientSet(final ProtocolAdapterProperties adapterConfig,
-            final Vertx vertx,
-            final Tracer tracer) {
-
-        final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
-        final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
-
-        return new MessagingClientSet(MessagingType.kafka,
-                new KafkaBasedEventSender(factory, producerConfig, adapterConfig.isDefaultsEnabled(), tracer),
-                new KafkaBasedTelemetrySender(factory, producerConfig, adapterConfig.isDefaultsEnabled(), tracer),
-                new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
     }
 
     /**
@@ -229,33 +239,5 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
     @Scope("prototype")
     public HonoConnection commandConsumerConnection(final Vertx vertx) {
         return HonoConnection.newConnection(vertx, commandConsumerFactoryConfig());
-    }
-
-    /**
-     * Exposes a messaging client set for <em>AMQP</em> as a Spring bean.
-     * <p>
-     * The clients are initialized with the connections provided by {@link #downstreamConnection(Vertx)}.
-     *
-     * @param vertx The Vert.x instance to use.
-     * @param samplerFactory The sampler factory to use. Can re-use adapter metrics, based on
-     *            {@link org.eclipse.hono.adapter.metric.MicrometerBasedMetrics} out of the box.
-     * @param adapterConfig The protocol adapter's configuration properties.
-     * @return The client set.
-     */
-    @Bean
-    @Scope("prototype")
-    public MessagingClientSet amqpMessagingClientSet(
-            final Vertx vertx,
-            final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
-
-        final EventSender eventSender = new ProtonBasedDownstreamSender(downstreamConnection(vertx), samplerFactory,
-                adapterConfig.isDefaultsEnabled(), adapterConfig.isJmsVendorPropsEnabled())    ;
-        final TelemetrySender telemetrySender = new ProtonBasedDownstreamSender(downstreamConnection(vertx), samplerFactory,
-                adapterConfig.isDefaultsEnabled(), adapterConfig.isJmsVendorPropsEnabled());
-        final CommandResponseSender commandResponseSender = new ProtonBasedCommandResponseSender(
-                commandConsumerConnection(vertx), samplerFactory, adapterConfig);
-
-        return new MessagingClientSet(MessagingType.amqp, eventSender, telemetrySender, commandResponseSender);
     }
 }

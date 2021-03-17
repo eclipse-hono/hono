@@ -13,125 +13,107 @@
 
 package org.eclipse.hono.adapter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.MessagingType;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
- * The messaging clients present in a protocol adapter.
+ * A wrapper around the messaging clients required by protocol adapters.
  * <p>
- * It contains one set of clients for each connected messaging system type and allows to get the messaging clients to be
- * used for a tenant based on the tenants configuration.
+ * It contains clients for each of Hono's south bound API endpoints.
  */
 public final class MessagingClients implements Lifecycle {
 
-    private final Logger log = LoggerFactory.getLogger(MessagingClients.class);
-    private final HashMap<MessagingType, MessagingClientSet> clientSets = new HashMap<>();
+    private MessagingClient<TelemetrySender> telemetrySenders;
+    private MessagingClient<EventSender> eventSenders;
+    private MessagingClient<CommandResponseSender> commandResponseSenders;
 
     /**
-     * Adds a set of messaging clients of for a messaging type.
+     * Creates a new instance.
      *
-     * @param clientSet The client set to be added.
-     * @return a reference to this for fluent use.
-     * @throws NullPointerException if the client set is {@code null}
+     * @param telemetrySenders The clients for sending telemetry messages downstream.
+     * @param eventSenders The clients for sending events downstream.
+     * @param commandResponseSenders The clients for sending command response messages downstream.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if any of the senders does not contain at least one client implementation.
      */
-    public MessagingClients addClientSet(final MessagingClientSet clientSet) {
-        Objects.requireNonNull(clientSet);
-        log.info("adding messaging client set of type {}", clientSet.getType().name());
-        clientSets.put(clientSet.getType(), clientSet);
-        return this;
-    }
+    public MessagingClients(
+            final MessagingClient<TelemetrySender> telemetrySenders,
+            final MessagingClient<EventSender> eventSenders,
+            final MessagingClient<CommandResponseSender> commandResponseSenders) {
 
-    /**
-     * Gets the messaging client set to be used for a tenant.
-     * <p>
-     * The property to determine the messaging type is expected in the {@link TenantConstants#FIELD_EXT_MESSAGING_TYPE}
-     * inside of the {@link TenantConstants#FIELD_EXT} property of the tenant. Valid values are the names of
-     * {@link MessagingType}.
-     *
-     * @param tenant The tenant to select the messaging clients for.
-     * @return The messaging client set that is configured at the tenant or, if this is missing and only one client set
-     *         is present, that one, otherwise, the AMQP-based client.
-     * @throws IllegalStateException if no client set has been added.
-     */
-    public MessagingClientSet getClientSetForTenant(final TenantObject tenant) {
+        Objects.requireNonNull(telemetrySenders);
+        Objects.requireNonNull(eventSenders);
+        Objects.requireNonNull(commandResponseSenders);
 
-        if (clientSets.isEmpty()) {
-            throw new IllegalStateException("No messaging client present");
+        if (!telemetrySenders.containsImplementations()) {
+            throw new IllegalArgumentException("at least one TelemetrySender implementation must be set");
         }
-
-        // check if configured on the tenant
-        final MessagingClientSet tenantConfiguredClientSet = getTenantConfiguredClientSet(tenant);
-        if (tenantConfiguredClientSet != null) {
-            return tenantConfiguredClientSet;
+        if (!eventSenders.containsImplementations()) {
+            throw new IllegalArgumentException("at least one EventSender implementation must be set");
         }
-
-        // not configured -> check if only one client set present
-        if (clientSets.size() == 1) {
-            return clientSets.values().stream().findFirst().get();
+        if (!commandResponseSenders.containsImplementations()) {
+            throw new IllegalArgumentException("at least one CommandResponseSender implementation must be set");
         }
-
-        // multiple client sets are present -> fallback to default
-        return clientSets.get(MessagingType.amqp);
-    }
-
-    private MessagingClientSet getTenantConfiguredClientSet(final TenantObject tenant) {
-        final JsonObject ext = Optional.ofNullable(tenant.getProperty(TenantConstants.FIELD_EXT, JsonObject.class))
-                .orElse(new JsonObject());
-        final String configuredType = ext.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE);
-
-        if (configuredType != null) {
-            return clientSets.get(MessagingType.valueOf(configuredType));
-        } else {
-            return null;
-        }
+        this.telemetrySenders = telemetrySenders;
+        this.eventSenders = eventSenders;
+        this.commandResponseSenders = commandResponseSenders;
     }
 
     /**
-     * Checks if no client set is present.
+     * Gets a client for sending events using a particular messaging system.
      *
-     * @return true if no client set has been added.
+     * @param tenant The tenant to get the client for.
+     * @return The client.
      */
-    public boolean isUnconfigured() {
-        return clientSets.isEmpty();
+    public EventSender getEventSender(final TenantObject tenant) {
+        return eventSenders.getClient(tenant);
     }
 
-    @SuppressWarnings("rawtypes")
+    /**
+     * Gets a client for sending telemetry messages using a particular messaging system.
+     *
+     * @param tenant The tenant to get the client for.
+     * @return The client.
+     */
+    public TelemetrySender getTelemetrySender(final TenantObject tenant) {
+        return telemetrySenders.getClient(tenant);
+    }
+
+    /**
+     * Gets a client for sending command response messages using a particular messaging system.
+     *
+     * @param tenant The tenant to get the client for.
+     * @return The client.
+     */
+    public CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
+        return commandResponseSenders.getClient(tenant);
+    }
+
     @Override
     public Future<Void> start() {
-        if (clientSets.isEmpty()) {
-            throw new IllegalStateException("No messaging client set present");
-        }
 
-        final List<Future> startFutures = new ArrayList<>();
-        for (final MessagingClientSet clientSet : clientSets.values()) {
-            startFutures.add(clientSet.start());
-        }
-        return CompositeFuture.all(startFutures).mapEmpty();
+        return CompositeFuture.all(
+                telemetrySenders.start(),
+                eventSenders.start(),
+                commandResponseSenders.start()).mapEmpty();
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public Future<Void> stop() {
-        final List<Future> stopFutures = new ArrayList<>();
-        for (final MessagingClientSet clientSet : clientSets.values()) {
-            stopFutures.add(clientSet.stop());
-        }
-        return CompositeFuture.all(stopFutures).mapEmpty();
+        return CompositeFuture.all(
+                telemetrySenders.stop(),
+                eventSenders.stop(),
+                commandResponseSenders.stop()).mapEmpty();
     }
 
     /**
@@ -140,9 +122,9 @@ public final class MessagingClients implements Lifecycle {
      * @param handler The handler to register the checks with.
      */
     public void registerLivenessChecks(final HealthCheckHandler handler) {
-        for (final MessagingClientSet clientSet : clientSets.values()) {
-            clientSet.registerLivenessChecks(handler);
-        }
+        telemetrySenders.registerLivenessChecks(handler);
+        eventSenders.registerLivenessChecks(handler);
+        commandResponseSenders.registerLivenessChecks(handler);
     }
 
     /**
@@ -151,10 +133,8 @@ public final class MessagingClients implements Lifecycle {
      * @param handler The handler to register the checks with.
      */
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        for (final MessagingClientSet clientSet : clientSets.values()) {
-            clientSet.registerReadinessChecks(handler);
-        }
-        // TODO come up with ideas for readiness checks for the Kafka producers
+        telemetrySenders.registerReadinessChecks(handler);
+        eventSenders.registerReadinessChecks(handler);
+        commandResponseSenders.registerReadinessChecks(handler);
     }
-
 }

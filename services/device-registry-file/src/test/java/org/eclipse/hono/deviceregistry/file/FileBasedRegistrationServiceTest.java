@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,11 +34,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.eclipse.hono.adapter.MessagingClientSet;
-import org.eclipse.hono.adapter.MessagingClients;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
@@ -103,35 +100,19 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         autoProvisioner.setDeviceManagementService(registrationService);
         autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
 
-        final MessagingClients messagingClients = mockMessagingClients();
+        final MessagingClient<EventSender> messagingClients = mockEventSenders();
 
-        autoProvisioner.setMessagingClients(messagingClients);
+        autoProvisioner.setEventSenders(messagingClients);
 
         registrationService.setAutoProvisioner(autoProvisioner);
     }
 
-    private MessagingClients mockMessagingClients() {
+    private MessagingClient<EventSender> mockEventSenders() {
         final EventSender eventSender = mock(EventSender.class);
         when(eventSender.start()).thenReturn(Future.succeededFuture());
         when(eventSender.stop()).thenReturn(Future.succeededFuture());
 
-        final TelemetrySender telemetrySender = mock(TelemetrySender.class);
-        when(telemetrySender.start()).thenReturn(Future.succeededFuture());
-        when(telemetrySender.stop()).thenReturn(Future.succeededFuture());
-
-        final CommandResponseSender commandResponseSender = mock(CommandResponseSender.class);
-        when(commandResponseSender.start()).thenReturn(Future.succeededFuture());
-        when(commandResponseSender.stop()).thenReturn(Future.succeededFuture());
-
-        final MessagingClientSet messagingClientSet = new MessagingClientSet(MessagingType.amqp,
-                eventSender,
-                telemetrySender,
-                commandResponseSender);
-
-        final MessagingClients messagingClients = new MessagingClients();
-        messagingClients.addClientSet(messagingClientSet);
-
-        return messagingClients;
+        return new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender);
     }
 
     @Override

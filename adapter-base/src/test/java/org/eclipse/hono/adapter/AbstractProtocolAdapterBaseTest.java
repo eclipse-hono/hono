@@ -50,6 +50,7 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -137,11 +138,20 @@ public class AbstractProtocolAdapterBaseTest {
         kafkaCommandResponseSender = mock(CommandResponseSender.class);
         when(kafkaCommandResponseSender.start()).thenReturn(Future.succeededFuture());
 
-        messagingClients = new MessagingClients()
-                .addClientSet(new MessagingClientSet(MessagingType.amqp, amqpEventSender, amqpTelemetrySender,
-                        amqpCommandResponseSender))
-                .addClientSet(new MessagingClientSet(MessagingType.kafka, kafkaEventSender, kafkaTelemetrySender,
-                        kafkaCommandResponseSender));
+        final var telemetrySenders = new MessagingClient<TelemetrySender>()
+                .setClient(MessagingType.amqp, amqpTelemetrySender)
+                .setClient(MessagingType.kafka, kafkaTelemetrySender);
+        final var eventSenders = new MessagingClient<EventSender>()
+                .setClient(MessagingType.amqp, amqpEventSender)
+                .setClient(MessagingType.kafka, kafkaEventSender);
+        final var commandResponseSenders = new MessagingClient<CommandResponseSender>()
+                .setClient(MessagingType.amqp, amqpCommandResponseSender)
+                .setClient(MessagingType.kafka, kafkaCommandResponseSender);
+
+        messagingClients = new MessagingClients(
+                telemetrySenders,
+                eventSenders,
+                commandResponseSenders);
 
         commandRouterClient = mock(CommandRouterClient.class);
         when(commandRouterClient.start()).thenReturn(Future.succeededFuture());

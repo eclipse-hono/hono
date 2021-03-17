@@ -21,7 +21,6 @@ import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConfigurationSupport;
-import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
@@ -40,6 +39,8 @@ import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
@@ -49,6 +50,7 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
@@ -227,10 +229,20 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             adapter.setCommandConsumerFactory(commandConsumerFactory(deviceConnectionClient, registrationClient));
         }
 
-        final MessagingClients messagingClients = new MessagingClients();
-        messagingClients.addClientSet(amqpMessagingClientSet());
+        final MessagingClient<TelemetrySender> telemetrySenders = new MessagingClient<>();
+        final MessagingClient<EventSender> eventSenders = new MessagingClient<>();
+        final MessagingClient<CommandResponseSender> commandResponseSenders = new MessagingClient<>();
 
-        adapter.setMessagingClients(messagingClients);
+        telemetrySenders.setClient(MessagingType.amqp, downstreamSender());
+        eventSenders.setClient(MessagingType.amqp, downstreamSender());
+        commandResponseSenders.setClient(
+                MessagingType.amqp,
+                new ProtonBasedCommandResponseSender(
+                    HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
+                    messageSamplerFactory,
+                    protocolAdapterProperties));
+
+        adapter.setMessagingClients(new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
@@ -401,23 +413,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 messageSamplerFactory,
                 protocolAdapterProperties.isDefaultsEnabled(),
                 protocolAdapterProperties.isJmsVendorPropsEnabled());
-    }
-
-    /**
-     * Creates a new messaging client set for AMQP.
-     *
-     * @return The client set.
-     */
-    protected MessagingClientSet amqpMessagingClientSet() {
-        final CommandResponseSender commandResponseSender = new ProtonBasedCommandResponseSender(
-                HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
-                messageSamplerFactory,
-                protocolAdapterProperties);
-
-        return new MessagingClientSet(MessagingType.amqp,
-                downstreamSender(),
-                downstreamSender(),
-                commandResponseSender);
     }
 
     private ClientConfigProperties commandConsumerFactoryConfig() {

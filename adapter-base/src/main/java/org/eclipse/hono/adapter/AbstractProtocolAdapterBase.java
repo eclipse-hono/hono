@@ -185,9 +185,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The sender.
      */
     public final TelemetrySender getTelemetrySender(final TenantObject tenant) {
-        final MessagingClientSet clientSetForTenant = messagingClients.getClientSetForTenant(tenant);
-        log.debug("getting TelemetrySender [{}] for tenant [{}]", clientSetForTenant.getType(), tenant.getTenantId());
-        return clientSetForTenant.getTelemetrySender();
+        return messagingClients.getTelemetrySender(tenant);
     }
 
     /**
@@ -197,9 +195,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The sender.
      */
     public final EventSender getEventSender(final TenantObject tenant) {
-        final MessagingClientSet clientSetForTenant = messagingClients.getClientSetForTenant(tenant);
-        log.debug("getting EventSender [{}] for tenant [{}]", clientSetForTenant.getType(), tenant.getTenantId());
-        return clientSetForTenant.getEventSender();
+        return messagingClients.getEventSender(tenant);
     }
 
     /**
@@ -379,8 +375,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
             result.fail(new IllegalStateException("Tenant client must be set"));
-        } else if (messagingClients == null || messagingClients.isUnconfigured()) {
-            result.fail(new IllegalStateException("A messaging client must be set"));
+        } else if (messagingClients == null) {
+            result.fail(new IllegalStateException("Downstream messaging clients must be set"));
         } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsClient == null) {
@@ -781,7 +777,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(response);
         Objects.requireNonNull(tenant);
 
-        final CommandResponseSender sender = messagingClients.getClientSetForTenant(tenant).getCommandResponseSender();
+        final CommandResponseSender sender = messagingClients.getCommandResponseSender(tenant);
         return sender.sendCommandResponse(response, context);
     }
 

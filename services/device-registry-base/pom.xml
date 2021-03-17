@@ -41,11 +41,15 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-common</artifactId>
+      <artifactId>hono-client-adapter</artifactId>
     </dependency>
+    <!--
+      explicitly declare dependency on vert.x in order to pull in
+      Netty artifacts, which are excluded by hono-client-adapter
+    -->
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-base</artifactId>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>

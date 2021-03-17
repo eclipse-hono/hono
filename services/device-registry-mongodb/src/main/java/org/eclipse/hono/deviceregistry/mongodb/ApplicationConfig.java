@@ -15,12 +15,18 @@ package org.eclipse.hono.deviceregistry.mongodb;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.spring.AbstractMessagingClientConfig;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -37,6 +43,7 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -57,6 +64,7 @@ import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessagingType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -72,6 +80,7 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
@@ -83,7 +92,7 @@ import io.vertx.ext.web.handler.BasicAuthHandler;
  */
 @Configuration
 @Import(PrometheusSupport.class)
-public class ApplicationConfig extends AbstractMessagingClientConfig {
+public class ApplicationConfig {
 
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
     private static final String BEAN_NAME_HTTP_SERVER = "httpServer";
@@ -305,9 +314,63 @@ public class ApplicationConfig extends AbstractMessagingClientConfig {
         return new AutoProvisionerConfigProperties();
     }
 
-    @Override
-    protected String getAdapterName() {
-        return "device-registry";
+    /**
+     * Creates a client for publishing events via the configured messaging systems.
+     *
+     * @return The client.
+     */
+    @Bean
+    @Scope("prototype")
+    public MessagingClient<EventSender> eventSenders() {
+
+        final MessagingClient<EventSender> result = new MessagingClient<>();
+
+        if (downstreamSenderConfig().isHostConfigured()) {
+            result.setClient(
+                    MessagingType.amqp,
+                    new ProtonBasedDownstreamSender(
+                            HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer()),
+                            SendMessageSampler.Factory.noop(),
+                            true,
+                            true));
+        }
+
+        if (kafkaProducerConfig().isConfigured()) {
+            final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx());
+            result.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer()));
+        }
+
+        healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(result));
+        return result;
+    }
+
+    /**
+     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.messaging")
+    @Bean
+    public ClientConfigProperties downstreamSenderConfig() {
+        final ClientConfigProperties config = new ClientConfigProperties();
+        config.setNameIfNotSet("Device Registry");
+        config.setServerRoleIfUnknown("AMQP Messaging Network");
+        return config;
+    }
+
+    /**
+     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public KafkaProducerConfigProperties kafkaProducerConfig() {
+        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+        configProperties.setDefaultClientIdPrefix("device-registry");
+        return configProperties;
     }
 
     /**
@@ -328,11 +391,10 @@ public class ApplicationConfig extends AbstractMessagingClientConfig {
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setVertx(vertx());
-        final Tracer tracer = tracer();
-        autoProvisioner.setTracer(tracer);
+        autoProvisioner.setTracer(tracer());
         autoProvisioner.setDeviceManagementService(service);
         autoProvisioner.setTenantInformationService(tenantInformationService);
-        autoProvisioner.setMessagingClients(messagingClients(SendMessageSampler.Factory.noop(), tracer, vertx(), new ProtocolAdapterProperties()));
+        autoProvisioner.setEventSenders(eventSenders());
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
         service.setAutoProvisioner(autoProvisioner);

@@ -30,12 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.MessagingClientSet;
-import org.eclipse.hono.adapter.MessagingClients;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -113,15 +110,7 @@ class AutoProvisionerTest {
                 any()))
             .thenReturn(Future.succeededFuture());
 
-        final MessagingClientSet messagingClientSet = new MessagingClientSet(MessagingType.amqp,
-                sender,
-                mock(TelemetrySender.class),
-                mock(CommandResponseSender.class));
-
-        final MessagingClients messagingClients = new MessagingClients();
-        messagingClients.addClientSet(messagingClientSet);
-
-        autoProvisioner.setMessagingClients(messagingClients);
+        autoProvisioner.setEventSenders(new MessagingClient<EventSender>().setClient(MessagingType.amqp, sender));
 
         when(deviceManagementService
                 .updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(Device.class), any(), any()))

@@ -29,7 +29,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.MessagingClientSet;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
@@ -43,6 +42,7 @@ import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -164,9 +164,10 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
 
     private MessagingClients createMessagingClients() {
 
-        final MessagingClientSet clientSet = new MessagingClientSet(MessagingType.amqp, eventSender, telemetrySender,
-                commandResponseSender);
-        return new MessagingClients().addClientSet(clientSet);
+        return new MessagingClients(
+                new MessagingClient<TelemetrySender>().setClient(MessagingType.amqp, telemetrySender),
+                new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender),
+                new MessagingClient<CommandResponseSender>().setClient(MessagingType.amqp, commandResponseSender));
     }
 
     /**
