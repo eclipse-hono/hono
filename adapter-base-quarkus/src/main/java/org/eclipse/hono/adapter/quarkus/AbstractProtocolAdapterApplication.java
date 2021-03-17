@@ -33,6 +33,7 @@ import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClie
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
+import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -42,6 +43,8 @@ import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.adapter.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedEventSender;
+import org.eclipse.hono.adapter.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
@@ -49,6 +52,8 @@ import org.eclipse.hono.adapter.monitoring.quarkus.ConnectionEventProducerConfig
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -80,6 +85,7 @@ import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
 
 /**
@@ -117,6 +123,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     @Inject
     protected ApplicationConfigProperties appConfig;
+
+    @Inject
+    protected KafkaProducerConfigProperties kafkaProducerConfig;
 
     @ConfigPrefix("hono.messaging")
     protected RequestResponseClientConfigProperties downstreamSenderConfig;
@@ -233,14 +242,35 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final MessagingClient<EventSender> eventSenders = new MessagingClient<>();
         final MessagingClient<CommandResponseSender> commandResponseSenders = new MessagingClient<>();
 
-        telemetrySenders.setClient(MessagingType.amqp, downstreamSender());
-        eventSenders.setClient(MessagingType.amqp, downstreamSender());
-        commandResponseSenders.setClient(
-                MessagingType.amqp,
-                new ProtonBasedCommandResponseSender(
-                    HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
-                    messageSamplerFactory,
-                    protocolAdapterProperties));
+        if (kafkaProducerConfig.isConfigured()) {
+            LOG.info("Kafka Producer is configured, adding Kafka messaging clients");
+
+            Optional.ofNullable(getAdapterName()).ifPresent(kafkaProducerConfig::setDefaultClientIdPrefix);
+            LOG.debug("KafkaProducerConfig: " + kafkaProducerConfig.getProducerConfig("log"));
+
+            final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
+            telemetrySenders.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
+                            protocolAdapterProperties.isDefaultsEnabled(), tracer));
+            eventSenders.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedEventSender(factory, kafkaProducerConfig,
+                            protocolAdapterProperties.isDefaultsEnabled(), tracer));
+            commandResponseSenders.setClient(
+                    MessagingType.kafka,
+                    new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer));
+        }
+        if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
+            telemetrySenders.setClient(MessagingType.amqp, downstreamSender());
+            eventSenders.setClient(MessagingType.amqp, downstreamSender());
+            commandResponseSenders.setClient(
+                    MessagingType.amqp,
+                    new ProtonBasedCommandResponseSender(
+                            HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
+                            messageSamplerFactory,
+                            protocolAdapterProperties));
+        }
 
         adapter.setMessagingClients(new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders));
         Optional.ofNullable(connectionEventProducer())
@@ -407,7 +437,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      *
      * @return The sender.
      */
-    protected ProtonBasedDownstreamSender downstreamSender() {
+    private ProtonBasedDownstreamSender downstreamSender() {
         return new ProtonBasedDownstreamSender(
                 HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
                 messageSamplerFactory,

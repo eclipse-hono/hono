@@ -58,6 +58,11 @@
       <groupId>io.opentracing.contrib</groupId>
       <artifactId>opentracing-tracerresolver</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-kafka-client</artifactId>
+      <version>${quarkus.platform.version}</version>
+    </dependency>
 
     <!-- testing -->
     <dependency>
@@ -111,6 +116,32 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-config-yaml</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-vertx</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-ide-launcher</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>test</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
@@ -122,6 +153,15 @@
       <plugin>
         <groupId>org.jboss.jandex</groupId>
         <artifactId>jandex-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            <maven.home>${maven.home}</maven.home>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
     </plugins>
   </build>

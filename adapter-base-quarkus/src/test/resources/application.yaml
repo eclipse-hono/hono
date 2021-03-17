@@ -1,0 +1,17 @@
+hono:
+  kafka:
+    commonClientConfig:
+      common:
+        property: "present"
+      number: 123
+      bootstrap.servers: example.com:9999
+      FOO: bar
+      admin.property: "common"
+      consumer.property: "common"
+      producer.property: "common"
+    adminClientConfig:
+      admin.property: "admin"
+    consumerConfig:
+      consumer.property: "consumer"
+    producerConfig:
+      producer.property: "producer"
