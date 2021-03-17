@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.adapter.client.telemetry.kafka;
 
@@ -408,23 +408,19 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, adapterConfig, tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, null, config, adapterConfig, tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(factory, null, config, adapterConfig.isDefaultsEnabled(), tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, null, adapterConfig, tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, null, adapterConfig.isDefaultsEnabled(), tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, null, tracer) {
-                });
-
-        assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, adapterConfig, null) {
+                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), null) {
                 });
     }
 
@@ -453,7 +449,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     private AbstractKafkaBasedDownstreamSender newSender(final CachingKafkaProducerFactory<String, Buffer> factory) {
-        return new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, adapterConfig, tracer) {
+        return new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), tracer) {
         };
     }
 

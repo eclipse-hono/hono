@@ -1,4 +1,4 @@
-/*
+/*******************************************************************************
  * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.adapter.client.telemetry.kafka;
 
@@ -20,7 +20,6 @@ import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -41,15 +40,17 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
      *
      * @param producerFactory The factory to use for creating Kafka producers.
      * @param kafkaProducerConfig The Kafka producer configuration properties to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
+     * @param includeDefaults {@code true} if a device's default properties should be included in messages being sent.
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public KafkaBasedTelemetrySender(final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties kafkaProducerConfig, final ProtocolAdapterProperties adapterConfig,
+    public KafkaBasedTelemetrySender(
+            final KafkaProducerFactory<String, Buffer> producerFactory,
+            final KafkaProducerConfigProperties kafkaProducerConfig,
+            final boolean includeDefaults,
             final Tracer tracer) {
 
-        super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig, adapterConfig, tracer);
+        super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
     }
 
     /**

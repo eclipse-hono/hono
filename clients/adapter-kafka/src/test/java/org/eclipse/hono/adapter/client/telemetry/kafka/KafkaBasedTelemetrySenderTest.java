@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.adapter.client.telemetry.kafka;
 
@@ -78,7 +78,7 @@ public class KafkaBasedTelemetrySenderTest {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                adapterConfig, tracer);
+                adapterConfig.isDefaultsEnabled(), tracer);
 
         // WHEN sending telemetry data with QoS 0
         sender.sendTelemetry(tenant, device, qos, "the-content-type", Buffer.buffer(payload), null, null)
@@ -116,7 +116,7 @@ public class KafkaBasedTelemetrySenderTest {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                adapterConfig, tracer);
+                adapterConfig.isDefaultsEnabled(), tracer);
 
         // WHEN sending telemetry data with QoS 1
         sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), null, null)
@@ -147,13 +147,13 @@ public class KafkaBasedTelemetrySenderTest {
                 .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, adapterConfig, tracer));
+                () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedTelemetrySender(factory, null, adapterConfig, tracer));
+                () -> new KafkaBasedTelemetrySender(factory, null, adapterConfig.isDefaultsEnabled(), tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, adapterConfig, null));
+                () -> new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), null));
     }
 
     /**
@@ -167,7 +167,7 @@ public class KafkaBasedTelemetrySenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper
                 .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                adapterConfig, tracer);
+                adapterConfig.isDefaultsEnabled(), tracer);
 
         assertThrows(NullPointerException.class,
                 () -> sender.sendTelemetry(null, device, qos, "the-content-type", null, null, null));

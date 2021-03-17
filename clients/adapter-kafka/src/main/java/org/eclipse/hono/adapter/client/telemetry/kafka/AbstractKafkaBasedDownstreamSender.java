@@ -1,4 +1,4 @@
-/*
+/*******************************************************************************
  * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.adapter.client.telemetry.kafka;
 
@@ -23,7 +23,6 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -39,7 +38,7 @@ import io.vertx.core.buffer.Buffer;
  */
 public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBasedMessageSender {
 
-    private final ProtocolAdapterProperties adapterConfig;
+    private final boolean isDefaultsEnabled;
 
     /**
      * Creates a new Kafka-based downstream sender.
@@ -47,16 +46,18 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      * @param producerFactory The factory to use for creating Kafka producers.
      * @param producerName The producer name to use.
      * @param config The Kafka producer configuration properties to use.
-     * @param adapterConfig The protocol adapter's configuration properties.
+     * @param includeDefaults {@code true} if a device's default properties should be included in messages being sent.
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public AbstractKafkaBasedDownstreamSender(final KafkaProducerFactory<String, Buffer> producerFactory,
-            final String producerName, final KafkaProducerConfigProperties config,
-            final ProtocolAdapterProperties adapterConfig, final Tracer tracer) {
+    public AbstractKafkaBasedDownstreamSender(
+            final KafkaProducerFactory<String, Buffer> producerFactory,
+            final String producerName,
+            final KafkaProducerConfigProperties config,
+            final boolean includeDefaults,
+            final Tracer tracer) {
         super(producerFactory, producerName, config, tracer);
-
-        this.adapterConfig = Objects.requireNonNull(adapterConfig);
+        this.isDefaultsEnabled = includeDefaults;
     }
 
     /**
@@ -118,7 +119,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
             final QoS qos, final String contentType, final Map<String, Object> properties) {
 
         final Map<String, Object> headerProperties = new HashMap<>();
-        if (adapterConfig.isDefaultsEnabled()) {
+        if (isDefaultsEnabled) {
             headerProperties.putAll(tenant.getDefaults().copy().getMap()); // (1) add tenant defaults
             headerProperties.putAll(device.getDefaults()); // (2) overwrite with device defaults
         }

@@ -135,8 +135,8 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
         final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
 
         return new MessagingClientSet(MessagingType.kafka,
-                new KafkaBasedEventSender(factory, producerConfig, adapterConfig, tracer),
-                new KafkaBasedTelemetrySender(factory, producerConfig, adapterConfig, tracer),
+                new KafkaBasedEventSender(factory, producerConfig, adapterConfig.isDefaultsEnabled(), tracer),
+                new KafkaBasedTelemetrySender(factory, producerConfig, adapterConfig.isDefaultsEnabled(), tracer),
                 new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
     }
 

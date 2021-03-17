@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.adapter.client.telemetry.kafka;
 
@@ -77,7 +77,7 @@ public class KafkaBasedEventSenderTest {
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
-        final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig,
+        final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(),
                 tracer);
 
         // WHEN sending a message
@@ -110,13 +110,13 @@ public class KafkaBasedEventSenderTest {
                 .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedEventSender(null, kafkaProducerConfig, adapterConfig, tracer));
+                () -> new KafkaBasedEventSender(null, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedEventSender(factory, null, adapterConfig, tracer));
+                () -> new KafkaBasedEventSender(factory, null, adapterConfig.isDefaultsEnabled(), tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig, null));
+                () -> new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), null));
     }
 
     /**
@@ -128,7 +128,7 @@ public class KafkaBasedEventSenderTest {
     public void testThatSendEventThrowsOnMissingMandatoryParameter() {
         final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper
                 .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
-        final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig,
+        final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(),
                 tracer);
 
         assertThrows(NullPointerException.class,
