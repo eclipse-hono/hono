@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -73,10 +73,16 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String FIELD_STATUS_LAST_USER = "last-user";
 
     /**
-     * The name of the field that contains the name of a service that can be used to transform messages
+     * The name of the field that contains the name of a service that can be used to transform downstream messages
      * uploaded by the device before they are forwarded to downstream consumers.
      */
-    public static final String FIELD_MAPPER = "mapper";
+    public static final String FIELD_DOWNSTREAM_MESSAGE_MAPPER = "downstream-message-mapper";
+
+    /**
+     * The name of the field that contains the name of a service that can be used to transform upstream commands
+     * to be sent to the device.
+     */
+    public static final String FIELD_UPSTREAM_MESSAGE_MAPPER = "upstream-message-mapper";
 
     /**
      * The name of the field that contains the names of the gateway groups that the (gateway) device is a member of.

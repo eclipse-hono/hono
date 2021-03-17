@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,8 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MappedMessage;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
@@ -30,6 +32,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -59,7 +62,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
      * The service will be invoked after the client device has been authenticated
      * and before the downstream AMQP message is being created.
      *
-     * @param messageMappingService The service to use for mapping messages.
+     * @param messageMappingService The service to use for messageMapping messages.
      * @throws NullPointerException if messageMapping is {@code null}.
      */
     public void setMessageMapping(final MessageMapping<MqttContext> messageMappingService) {
@@ -102,7 +105,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 targetAddress.getResourceId(),
                 ctx.authenticatedDevice(),
                 ctx.getTracingContext())
-                .compose(registrationInfo -> messageMapping.mapMessage(ctx, targetAddress, registrationInfo))
+                .compose(registrationInfo -> messageMapping.mapDownstreamMessage(ctx, targetAddress, registrationInfo))
                 .map(mappedMessage -> {
                     ctx.put(MAPPER_DATA, mappedMessage.getAdditionalProperties());
                     return mappedMessage;
@@ -167,5 +170,15 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such endpoint"));
         }
         return result.future();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Future<Buffer> getCommandPayload(final CommandContext ctx) {
+        final Command command = ctx.getCommand();
+        return getRegistrationClient().assertRegistration(command.getTenant(), command.getGatewayOrDeviceId(), null, ctx.getTracingContext())
+            .compose(registrationInfo -> messageMapping.mapUpstreamMessage(registrationInfo, command));
     }
 }

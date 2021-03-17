@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -354,7 +354,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         final Device device2 = new Device();
         device2.setEnabled(false);
         device2.setVia(Arrays.asList(deviceId1));
-        device2.setMapper("mapper");
+        device2.setDownstreamMessageMapper("mapper");
         devices.put(UUID.randomUUID().toString(), device2);
 
         // run test

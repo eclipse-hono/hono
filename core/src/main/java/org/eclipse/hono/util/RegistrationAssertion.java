@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,7 +39,8 @@ public final class RegistrationAssertion {
 
     private List<String> authorizedGateways = new ArrayList<>();
     private Map<String, Object> defaults = new HashMap<>();
-    private String mapper;
+    private String downstreamMessageMapper;
+    private String upstreamMessageMapper;
     private CommandEndpoint commandEndpoint;
 
     /**
@@ -89,23 +90,45 @@ public final class RegistrationAssertion {
     }
 
     /**
-     * Gets the name of the mapper definition to use for the device.
+     * Gets the name of the downstream mapper definition to use for the device.
      *
-     * @return The mapper or {@code null} if not set.
+     * @return The downstream mapper or {@code null} if not set.
      */
-    @JsonProperty(value = RegistrationConstants.FIELD_MAPPER)
-    public String getMapper() {
-        return mapper;
+    @JsonProperty(value = RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER)
+    public String getDownstreamMessageMapper() {
+        return downstreamMessageMapper;
     }
 
     /**
-     * Sets the name of the mapper definition to use for the device.
+     * Sets the name of the downstream mapper definition to use for the device.
      *
-     * @param mapper The mapper to set or {@code null} if no mapper should be used.
+     * @param downstreamMessageMapper The mapper to set or {@code null} if no downstream mapper should be used.
      * @return A reference to this object for method chaining.
      */
-    public RegistrationAssertion setMapper(final String mapper) {
-        this.mapper = mapper;
+    public RegistrationAssertion setDownstreamMessageMapper(final String downstreamMessageMapper) {
+        this.downstreamMessageMapper = downstreamMessageMapper;
+        return this;
+    }
+
+
+    /**
+     * Gets the name of the upstream mapper definition to use for the device.
+     *
+     * @return The upstream mapper or {@code null} if not set.
+     */
+    @JsonProperty(value = RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER)
+    public String getUpstreamMessageMapper() {
+        return upstreamMessageMapper;
+    }
+
+    /**
+     * Sets the name of the upstream mapper definition to use for the device.
+     *
+     * @param upstreamMessageMapper The upstream mapper to set or {@code null} if no upstream mapper should be used.
+     * @return A reference to this object for method chaining.
+     */
+    public RegistrationAssertion setUpstreamMessageMapper(final String upstreamMessageMapper) {
+        this.upstreamMessageMapper = upstreamMessageMapper;
         return this;
     }
 

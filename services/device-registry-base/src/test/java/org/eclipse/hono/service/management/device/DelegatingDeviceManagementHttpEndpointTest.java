@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -112,7 +112,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     public void testCreateDeviceUsesIdFromUriParam() {
 
         final JsonObject json = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_MAPPER, "my-mapper")
+                .put(RegistryManagementConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER, "my-mapper")
                 .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("custom", "value"));
         requestBody = json.toBuffer();
 
@@ -145,7 +145,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 eq("mytenant"),
                 argThat(deviceId -> "mydeviceid".equals(deviceId.get())),
                 argThat(device -> {
-                    return "my-mapper".equals(device.getMapper()) &&
+                    return "my-mapper".equals(device.getDownstreamMessageMapper()) &&
                             "value".equals(device.getExtensions().get("custom"));
                 }),
                 any(Span.class));

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.mqtt.MappedMessage;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
@@ -96,7 +97,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
      *         Otherwise, the future will be failed with a {@link ServerErrorException}.
      */
     @Override
-    public Future<MappedMessage> mapMessage(
+    public Future<MappedMessage> mapDownstreamMessage(
             final MqttContext ctx,
             final ResourceIdentifier targetAddress,
             final RegistrationAssertion registrationInfo) {
@@ -105,7 +106,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         Objects.requireNonNull(registrationInfo);
 
         final Promise<MappedMessage> result = Promise.promise();
-        final String mapper = registrationInfo.getMapper();
+        final String mapper = registrationInfo.getDownstreamMessageMapper();
 
         if (Strings.isNullOrEmpty(mapper)) {
             LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
@@ -116,14 +117,94 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                 LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, ctx.authenticatedDevice());
                 result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
             } else {
-                mapMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
+                mapDownstreamMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
             }
         }
 
         return result.future();
     }
 
-    private void mapMessageRequest(
+    @Override
+    public Future<Buffer> mapUpstreamMessage(final RegistrationAssertion registrationInfo, final Command command) {
+        Objects.requireNonNull(registrationInfo);
+        Objects.requireNonNull(command);
+
+        final Promise<Buffer> result = Promise.promise();
+        final String mapper = registrationInfo.getUpstreamMessageMapper();
+
+        if (Strings.isNullOrEmpty(mapper)) {
+            LOG.debug("no payload mapping configured for {}", registrationInfo.getDeviceId());
+            result.complete(command.getPayload());
+        } else {
+            final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
+            if (mapperEndpoint == null) {
+                LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, registrationInfo.getDeviceId());
+                result.complete(command.getPayload());
+            } else {
+                mapUpstreamMessageRequest(command, registrationInfo, mapperEndpoint, result);
+            }
+        }
+
+        return result.future();
+    }
+
+    private void mapUpstreamMessageRequest(
+        final Command command,
+        final RegistrationAssertion registrationInfo,
+        final MapperEndpoint mapperEndpoint,
+        final Handler<AsyncResult<Buffer>> resultHandler) {
+
+        final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+        JsonObject.mapFrom(registrationInfo).forEach(property -> {
+            final Object value = property.getValue();
+            if (value instanceof String) {
+                // prevent strings from being enclosed in quotes
+                headers.add(property.getKey(), (String) value);
+            } else {
+                headers.add(property.getKey(), Json.encode(value));
+            }
+        });
+        if (command.getGatewayId() != null) {
+            headers.add(MessageHelper.APP_PROPERTY_GATEWAY_ID, command.getGatewayId());
+        }
+
+        if (command.getDeviceId() != null) {
+            headers.add(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getDeviceId());
+        }
+
+        if (command.getContentType() != null) {
+            headers.add(HttpHeaders.CONTENT_TYPE.toString(), command.getContentType());
+        }
+
+        final Promise<Buffer> result = Promise.promise();
+
+        webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
+            .putHeaders(headers)
+            .ssl(mapperEndpoint.isTlsEnabled())
+            .sendBuffer(command.getPayload(), httpResponseAsyncResult -> {
+                if (httpResponseAsyncResult.failed()) {
+                    LOG.debug("failed to map message [origin: {}] using mapping service [host: {}, port: {}, URI: {}]",
+                        command.getDeviceId(),
+                        mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
+                        httpResponseAsyncResult.cause());
+                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, httpResponseAsyncResult.cause()));
+                } else {
+                    final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
+                    if (httpResponse.statusCode() == HttpURLConnection.HTTP_OK) {
+                        result.complete(httpResponse.bodyAsBuffer());
+                    } else {
+                        LOG.debug("mapping service [host: {}, port: {}, URI: {}] returned unexpected status code: {}",
+                            mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
+                            httpResponse.statusCode());
+                        result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "could not invoke configured mapping service"));
+                    }
+                }
+                resultHandler.handle(result.future());
+            });
+    }
+
+    private void mapDownstreamMessageRequest(
             final MqttContext ctx,
             final ResourceIdentifier targetAddress,
             final RegistrationAssertion registrationInfo,
@@ -154,7 +235,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                 if (httpResponseAsyncResult.failed()) {
                     LOG.debug("failed to map message [origin: {}] using mapping service [host: {}, port: {}, URI: {}]",
                             ctx.authenticatedDevice(),
-                            mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri(),
+                            mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                             httpResponseAsyncResult.cause());
                     result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, httpResponseAsyncResult.cause()));
                 } else {
@@ -176,7 +257,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                                 additionalProperties));
                     } else {
                         LOG.debug("mapping service [host: {}, port: {}, URI: {}] returned unexpected status code: {}",
-                                mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri(),
+                                mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                                 httpResponse.statusCode());
                         result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                 "could not invoke configured mapping service"));

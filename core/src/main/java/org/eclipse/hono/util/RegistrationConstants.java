@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,10 +37,16 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String FIELD_VIA = "via";
 
     /**
-     * The name of the mapper used. This mapper should be configured for the adapter and can be referenced using
+     * The name of the downstream mapper used. This mapper should be configured for the adapter and can be referenced using
      * this field.
      */
-    public static final String FIELD_MAPPER = "mapper";
+    public static final String FIELD_DOWNSTREAM_MESSAGE_MAPPER = "downstream-message-mapper";
+
+    /**
+     * The name of the upstream mapper used. This mapper should be configured for the adapter and can be referenced using
+     * this field.
+     */
+    public static final String FIELD_UPSTREAM_MESSAGE_MAPPER = "upstream-message-mapper";
 
     /**
      * The name of the Device Registration API endpoint.
