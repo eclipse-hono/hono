@@ -928,7 +928,6 @@ import io.vertx.junit5.VertxTestContext;
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testHandleConcurrentUploadWithTtd(final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
@@ -1237,7 +1236,6 @@ import io.vertx.junit5.VertxTestContext;
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(
             final HttpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {

@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -33,11 +32,14 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.BufferResult;
@@ -45,6 +47,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +57,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Checkpoint;
@@ -101,8 +105,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         helper.registry.addTenant(tenantId).onComplete(ctx.completing());
     }
 
-    private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+    private Future<MessageConsumer> createEventConsumer(final String tenantId, final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
     private Future<ProtonReceiver> subscribeToCommands(
@@ -138,7 +142,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             log.debug("received notification [{}]", notification);
             ctx.verify(() -> assertThat(notification).isNotNull());
             if (notification.getTtd() == -1) {
@@ -284,6 +288,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendAsyncCommandsSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -306,7 +311,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        final Future<MessageConsumer> asyncResponseConsumer = helper.applicationClientFactory.createAsyncCommandResponseConsumer(
+        final Future<MessageConsumer> asyncResponseConsumer = helper.applicationClient.createCommandResponseConsumer(
                 tenantId,
                 replyId,
                 response -> {
@@ -362,11 +367,13 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long commandsCompleted = totalNoOfCommandsToSend - commandsSucceeded.getCount();
         log.info("commands sent: {}, responses received: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
-        if (commandsCompleted == commandsSent.get()) {
-            ctx.completeNow();
-        } else {
-            ctx.failNow(new IllegalStateException("did not complete all commands sent"));
-        }
+        asyncResponseConsumer.result().close().onComplete(ar -> {
+            if (commandsCompleted == commandsSent.get()) {
+                ctx.completeNow();
+            } else {
+                ctx.failNow(new IllegalStateException("did not complete all commands sent"));
+            }
+        });
     }
 
     /**
@@ -379,6 +386,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -460,7 +468,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }
         }
 
-        final long timeToWait = totalNoOfCommandsToSend * 200;
+        final long timeToWait = totalNoOfCommandsToSend * 500;
         if (!commandsSucceeded.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for commands to succeed", timeToWait);
         }
@@ -484,6 +492,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandFailsForMalformedMessage(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -504,7 +513,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             setup.verify(() -> assertThat(msg.getContentType())
                     .as("receive TTD notification")
                     .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             log.debug("received notification [{}]", notification);
             setup.verify(() -> assertThat(notification).isNotNull());
             if (notification.getTtd() == -1) {
@@ -569,6 +578,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandFailsWhenNoCredit(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -586,7 +596,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             setup.verify(() -> assertThat(msg.getContentType())
                     .as("receive TTD notification")
                     .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             log.debug("received notification [{}]", notification);
             setup.verify(() -> assertThat(notification).isNotNull());
             if (notification.getTtd() == -1) {
@@ -656,6 +666,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandFailsForCommandRejectedByDevice(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -749,6 +760,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandFailsForCommandNotAcknowledgedByDevice(
             final VertxTestContext ctx) throws InterruptedException {
 
