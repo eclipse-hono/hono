@@ -34,7 +34,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import org.apache.qpid.proton.message.Message;
 import org.assertj.core.data.Index;
 import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.CoapHandler;
@@ -54,19 +53,20 @@ import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -244,7 +244,7 @@ public abstract class CoapTestBase {
      * @return A future succeeding with the created consumer.
      */
     protected abstract Future<MessageConsumer> createConsumer(
-            String tenantId, Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer);
+            String tenantId, Handler<DownstreamMessage<? extends MessageContext>> messageConsumer);
 
     /**
      * Gets the name of the resource that unauthenticated devices
@@ -326,7 +326,7 @@ public abstract class CoapTestBase {
      * @param msg The message to perform checks on.
      * @throws RuntimeException if any of the checks fail.
      */
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         // empty
     }
 
@@ -492,7 +492,7 @@ public abstract class CoapTestBase {
             final VertxTestContext ctx,
             final String tenantId,
             final Supplier<Future<?>> warmUp,
-            final Consumer<Message> messageConsumer,
+            final Consumer<DownstreamMessage<? extends MessageContext>> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
     }
@@ -514,7 +514,7 @@ public abstract class CoapTestBase {
             final VertxTestContext ctx,
             final String tenantId,
             final Supplier<Future<?>> warmUp,
-            final Consumer<Message> messageConsumer,
+            final Consumer<DownstreamMessage<? extends MessageContext>> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender,
             final int numberOfMessages,
             final QoS expectedQos) throws InterruptedException {
@@ -524,13 +524,12 @@ public abstract class CoapTestBase {
         final VertxTestContext setup = new VertxTestContext();
         createConsumer(tenantId, msg -> {
             ctx.verify(() -> {
-                final var rawMessage = msg.getMessageContext().getRawMessage();
-                logger.trace("received {}", rawMessage);
+                logger.trace("received {}", msg);
                 IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
                 assertThat(msg.getQos()).isEqualTo(getExpectedQoS(expectedQos));
                 assertAdditionalMessageProperties(msg);
                 if (messageConsumer != null) {
-                    messageConsumer.accept(rawMessage);
+                    messageConsumer.accept(msg);
                 }
             });
             received.countDown();
@@ -737,6 +736,7 @@ public abstract class CoapTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithCommand(
             final CoapCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -774,7 +774,7 @@ public abstract class CoapTestBase {
                 () -> warmUp(client, createCoapsOrCoapRequest(endpointConfig, deviceId, 0)),
                 msg -> {
 
-                    TimeUntilDisconnectNotification.fromMessage(msg)
+                    msg.getTimeUntilDisconnectNotification()
                         .map(notification -> {
                             logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
                             ctx.verify(() -> {
@@ -879,6 +879,7 @@ public abstract class CoapTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(
             final CoapCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -907,9 +908,9 @@ public abstract class CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
-                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                    final Integer ttd = msg.getTimeTillDisconnect();
                     logger.debug("north-bound message received {}, ttd: {}", msg, ttd);
-                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                    msg.getTimeUntilDisconnectNotification().ifPresent(notification -> {
                         ctx.verify(() -> {
                             assertThat(notification.getTenantId()).isEqualTo(tenantId);
                             assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);

@@ -333,7 +333,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             context.runOnContext(go -> {
                 final String correlationId = String.valueOf(commandsSent.getAndIncrement());
                 final Buffer msg = Buffer.buffer("value: " + correlationId);
-                helper.amqpApplicationClient.sendAsyncCommand(
+                helper.applicationClient.sendAsyncCommand(
                         tenantId,
                         commandTargetDeviceId,
                         "setValue",
@@ -678,7 +678,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
-        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
+        final Future<CommandClient> commandClient = helper.applicationClientFactory
+                .getOrCreateCommandClient(tenantId, "test-client")
                 .onSuccess(c -> c.setRequestTimeout(commandTimeout))
                 .onComplete(commandClientCreation.completing());
 
@@ -772,7 +773,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
-        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
+        final Future<CommandClient> commandClient = helper.applicationClientFactory
+                .getOrCreateCommandClient(tenantId, "test-client")
                 .onSuccess(c -> c.setRequestTimeout(commandTimeout))
                 .onComplete(commandClientCreation.completing());
 

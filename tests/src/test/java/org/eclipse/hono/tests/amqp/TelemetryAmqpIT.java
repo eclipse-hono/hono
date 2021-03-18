@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -39,8 +39,8 @@ public class TelemetryAmqpIT extends AmqpUploadTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
-            final Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer) {
-        return helper.amqpApplicationClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+        return helper.applicationClient.createTelemetryConsumer(tenantId, (Handler) messageConsumer, close -> {});
     }
 
     @Override

@@ -408,6 +408,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <systemProperties>
                 <downstream.bootstrap.servers>${docker.host.address}:${kafka.port}</downstream.bootstrap.servers>
               </systemProperties>
+              <!--
+                TODO: Remove these exclusions as soon as Command and Control is implemented for Kafka.
+                Until then excluding these speeds up Kafka based integration test runs
+              -->
+              <excludes>
+                <exclude>**/CommandAndControlAmqpIT.java</exclude>
+                <exclude>**/CommandAndControlMqttIT.java</exclude>
+              </excludes>
             </configuration>
           </plugin>
         </plugins>

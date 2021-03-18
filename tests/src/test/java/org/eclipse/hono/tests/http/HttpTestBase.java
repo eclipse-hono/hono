@@ -33,13 +33,13 @@ import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -47,9 +47,9 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,7 +82,7 @@ import io.vertx.junit5.VertxTestContext;
  * Base class for HTTP adapter integration tests.
  *
  */
-public abstract class HttpTestBase {
+    public abstract class HttpTestBase {
 
     /**
      * The default password of devices.
@@ -247,7 +247,7 @@ public abstract class HttpTestBase {
      */
     protected abstract Future<MessageConsumer> createConsumer(
             String tenantId,
-            Handler<DownstreamMessage<AmqpMessageContext>> messageConsumer);
+            Handler<DownstreamMessage<? extends MessageContext>> messageConsumer);
 
     /**
      * Perform additional checks on a received message.
@@ -258,7 +258,7 @@ public abstract class HttpTestBase {
      * @param msg The message to perform checks on.
      * @throws RuntimeException if any of the checks fail.
      */
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<AmqpMessageContext> msg) {
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         // empty
     }
 
@@ -501,7 +501,7 @@ public abstract class HttpTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Function<Message, Future<?>> messageConsumer,
+            final Function<DownstreamMessage<? extends MessageContext>, Future<?>> messageConsumer,
             final Function<Integer, Future<HttpResponse<Buffer>>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
     }
@@ -537,7 +537,7 @@ public abstract class HttpTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Function<Message, Future<?>> messageConsumer,
+            final Function<DownstreamMessage<? extends MessageContext>, Future<?>> messageConsumer,
             final Function<Integer, Future<HttpResponse<Buffer>>> requestSender,
             final int numberOfMessages,
             final QoS expectedQos) throws InterruptedException {
@@ -557,7 +557,7 @@ public abstract class HttpTestBase {
                 assertAdditionalMessageProperties(msg);
             });
             Optional.ofNullable(messageConsumer)
-                .map(consumer -> consumer.apply(msg.getMessageContext().getRawMessage()))
+                .map(consumer -> consumer.apply(msg))
                 .orElseGet(() -> Future.succeededFuture())
                 .onComplete(attempt -> {
                     if (attempt.succeeded()) {
@@ -928,6 +928,7 @@ public abstract class HttpTestBase {
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testHandleConcurrentUploadWithTtd(final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
@@ -939,9 +940,8 @@ public abstract class HttpTestBase {
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
         .compose(ok -> createConsumer(tenantId, msg -> {
-            final var rawMessage = msg.getMessageContext().getRawMessage();
-            logger.trace("received message: {}", rawMessage);
-            TimeUntilDisconnectNotification.fromMessage(rawMessage).ifPresent(notification -> {
+            logger.trace("received message: {}", msg);
+            msg.getTimeUntilDisconnectNotification().ifPresent(notification -> {
                 logger.debug("processing piggy backed message [ttd: {}]", notification.getTtd());
                 ctx.verify(() -> {
                     assertThat(notification.getTenantId()).isEqualTo(tenantId);
@@ -1070,7 +1070,7 @@ public abstract class HttpTestBase {
                 msg -> {
                     // do NOT send a command, but let the HTTP adapter's timer expire
                     logger.trace("received message");
-                    return TimeUntilDisconnectNotification.fromMessage(msg)
+                    return msg.getTimeUntilDisconnectNotification()
                     .map(notification -> {
                         ctx.verify(() -> {
                             assertThat(notification.getTtd()).isEqualTo(2);
@@ -1111,6 +1111,7 @@ public abstract class HttpTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithCommand(
             final HttpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -1155,7 +1156,7 @@ public abstract class HttpTestBase {
         testUploadMessages(ctx, tenantId,
                 msg -> {
 
-                    return TimeUntilDisconnectNotification.fromMessage(msg)
+                    return msg.getTimeUntilDisconnectNotification()
                             .map(notification -> {
                                 logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
                                 ctx.verify(() -> {
@@ -1236,6 +1237,7 @@ public abstract class HttpTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(
             final HttpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -1268,7 +1270,7 @@ public abstract class HttpTestBase {
         final AtomicInteger counter = new AtomicInteger();
         testUploadMessages(ctx, tenantId,
                 msg -> {
-                    return TimeUntilDisconnectNotification.fromMessage(msg)
+                    return msg.getTimeUntilDisconnectNotification()
                             .map(notification -> {
 
                                 logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
