@@ -16,7 +16,6 @@ package org.eclipse.hono.client.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ public class KafkaAdminClientConfigPropertiesTest {
     @Test
     public void testThatGetAdminClientConfigReturnsGivenProperties() {
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
-        config.setAdminClientConfig(Collections.singletonMap("foo", "bar"));
+        config.setAdminClientConfig(Map.of("foo", "bar"));
 
         final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
         assertThat(adminClientConfig.get("foo")).isEqualTo("bar");
@@ -65,7 +64,7 @@ public class KafkaAdminClientConfigPropertiesTest {
     public void testThatGetAdminClientConfigReturnsGivenPropertiesWithCommonProperties() {
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
-        config.setAdminClientConfig(Collections.singletonMap("foo", "bar"));
+        config.setAdminClientConfig(Map.of("foo", "bar"));
 
         final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
         assertThat(adminClientConfig.get("foo")).isEqualTo("bar");
@@ -82,7 +81,7 @@ public class KafkaAdminClientConfigPropertiesTest {
         assertThat(new KafkaAdminClientConfigProperties().isConfigured()).isFalse();
 
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
-        config.setAdminClientConfig(Collections.singletonMap("foo", "bar"));
+        config.setAdminClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 
@@ -95,7 +94,7 @@ public class KafkaAdminClientConfigPropertiesTest {
         final String clientId = "the-client";
 
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
-        config.setAdminClientConfig(Collections.emptyMap());
+        config.setAdminClientConfig(Map.of());
         config.setDefaultClientIdPrefix(clientId);
 
         final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");
@@ -111,7 +110,7 @@ public class KafkaAdminClientConfigPropertiesTest {
         final String userProvidedClientId = "custom-client";
 
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
-        config.setAdminClientConfig(Collections.singletonMap("client.id", userProvidedClientId));
+        config.setAdminClientConfig(Map.of("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 
         final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");

@@ -76,6 +76,9 @@ hono:
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
+  kafka:
+    commonClientConfig:
+      bootstrap.servers: ${hono.kafka.bootstrap.servers}
 
 quarkus:
   log:
@@ -102,14 +105,3 @@ management:
 
 server:
   port: -1
-
----
-
-spring:
-  profiles: kafka
-hono:
-  kafka:
-    producerConfig:
-      bootstrap:
-        servers: ${hono.kafka.bootstrap.servers}
-

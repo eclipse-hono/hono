@@ -55,10 +55,10 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
     /**
      * Checks if a configuration has been set.
      *
-     * @return true if configuration is present.
+     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null value.
      */
     public final boolean isConfigured() {
-        return commonClientConfig != null || consumerConfig != null;
+        return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(consumerConfig);
     }
 
     /**

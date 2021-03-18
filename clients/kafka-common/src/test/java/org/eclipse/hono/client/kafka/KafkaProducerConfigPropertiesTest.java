@@ -16,7 +16,6 @@ package org.eclipse.hono.client.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +49,7 @@ public class KafkaProducerConfigPropertiesTest {
     @Test
     public void testThatGetProducerConfigReturnsGivenProperties() {
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
+        config.setProducerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
         assertThat(producerConfig.get("foo")).isEqualTo("bar");
@@ -66,7 +65,7 @@ public class KafkaProducerConfigPropertiesTest {
     public void testThatGetProducerConfigReturnsGivenPropertiesWithCommonProperties() {
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
-        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
+        config.setProducerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
         assertThat(producerConfig.get("foo")).isEqualTo("bar");
@@ -83,7 +82,7 @@ public class KafkaProducerConfigPropertiesTest {
         assertThat(new KafkaProducerConfigProperties().isConfigured()).isFalse();
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.singletonMap("foo", "bar"));
+        config.setProducerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 
@@ -120,7 +119,7 @@ public class KafkaProducerConfigPropertiesTest {
         final String clientId = "the-client";
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.emptyMap());
+        config.setProducerConfig(Map.of());
         config.setDefaultClientIdPrefix(clientId);
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
@@ -136,7 +135,7 @@ public class KafkaProducerConfigPropertiesTest {
         final String userProvidedClientId = "custom-client";
 
         final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(Collections.singletonMap("client.id", userProvidedClientId));
+        config.setProducerConfig(Map.of("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");

@@ -16,10 +16,10 @@ package org.eclipse.hono.client.kafka.consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -58,7 +58,7 @@ public class KafkaConsumerConfigPropertiesTest {
     @Test
     public void testThatGetConsumerConfigReturnsGivenProperties() {
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
+        config.setConsumerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
         assertThat(consumerConfig.get("foo")).isEqualTo("bar");
@@ -74,7 +74,7 @@ public class KafkaConsumerConfigPropertiesTest {
     public void testThatGetConsumerConfigReturnsGivenPropertiesWithCommonProperties() {
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
-        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
+        config.setConsumerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
         assertThat(consumerConfig.get("foo")).isEqualTo("bar");
@@ -91,7 +91,7 @@ public class KafkaConsumerConfigPropertiesTest {
         assertThat(new KafkaConsumerConfigProperties().isConfigured()).isFalse();
 
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.singletonMap("foo", "bar"));
+        config.setConsumerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 
@@ -127,7 +127,7 @@ public class KafkaConsumerConfigPropertiesTest {
         final String clientId = "the-client";
 
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.emptyMap());
+        config.setConsumerConfig(Map.of());
         config.setDefaultClientIdPrefix(clientId);
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
@@ -143,7 +143,7 @@ public class KafkaConsumerConfigPropertiesTest {
         final String userProvidedClientId = "custom-client";
 
         final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(Collections.singletonMap("client.id", userProvidedClientId));
+        config.setConsumerConfig(Map.of("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");

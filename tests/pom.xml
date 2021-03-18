@@ -42,7 +42,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.commandrouter.host>hono-service-command-router.hono</hono.commandrouter.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
-    <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
 
     <!-- duration before vert.x complains about blocking the event loop -->
     <max.event-loop.execute-time>PT5S</max.event-loop.execute-time>
@@ -90,6 +89,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     -->
     <hono.kafka.disabled>true</hono.kafka.disabled>
     <hono.kafka.log-level>WARN</hono.kafka.log-level>
+    <hono.kafka.bootstrap.servers></hono.kafka.bootstrap.servers>
 
     <!--
       Device Registry related properties - The MongoDB based device registry is used as the default one.
@@ -340,7 +340,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </activation>
       <properties>
         <hono.kafka.disabled>false</hono.kafka.disabled>
-        <messaging.profile>kafka,</messaging.profile>
+        <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
       </properties>
       <build>
         <plugins>

@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +26,11 @@ import org.slf4j.LoggerFactory;
  * Common configuration properties for Kafka clients.
  */
 public abstract class AbstractKafkaConfigProperties {
+
+    /**
+     * The name of the Kafka configuration property containing the servers to bootstrap from.
+     */
+    public static final String PROPERTY_BOOTSTRAP_SERVERS = "bootstrap.servers";
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -111,4 +117,15 @@ public abstract class AbstractKafkaConfigProperties {
         }
     }
 
+    /**
+     * Checks if a given set of properties contains the minimal required configuration.
+     *
+     * @param properties The properties to check.
+     * @return {@code true} if the properties contain a non-null value for key {@value #PROPERTY_BOOTSTRAP_SERVERS}.
+     */
+    protected final boolean containsMinimalConfiguration(final Map<String, String> properties) {
+        return Optional.ofNullable(properties)
+                .map(props -> !Strings.isNullOrEmpty(props.get(PROPERTY_BOOTSTRAP_SERVERS)))
+                .orElse(false);
+    }
 }
