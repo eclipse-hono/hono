@@ -154,13 +154,11 @@ public class AutoProvisioner implements Lifecycle {
             throw new IllegalStateException("device management service is not set");
         }
         if (started.compareAndSet(false, true)) {
-            LOG.info("starting up");
+            LOG.debug("starting up");
             // decouple establishment of the sender's downstream connection from this component's
             // start-up process and instead rely on the event sender's readiness check to succeed
             // once the connection has been established
-            eventClients.start()
-                    .onSuccess(ok -> LOG.info("Event clients successfully connected"))
-                    .onFailure((t -> LOG.warn("Event clients failed to connect", t)));
+            eventClients.start();
         }
         return Future.succeededFuture();
     }
@@ -173,7 +171,7 @@ public class AutoProvisioner implements Lifecycle {
     @Override
     public final Future<Void> stop() {
         if (started.compareAndSet(true, false)) {
-            LOG.info("shutting down");
+            LOG.debug("shutting down");
             return eventClients.stop();
         } else {
             return Future.succeededFuture();

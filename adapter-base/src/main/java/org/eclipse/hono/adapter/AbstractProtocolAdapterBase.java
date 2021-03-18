@@ -390,11 +390,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
             messagingClients.start();
-            startServiceClient(tenantClient, "Tenant service");
-            startServiceClient(registrationClient, "Device Registration service");
-            startServiceClient(credentialsClient, "Credentials service");
-            startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
-            startServiceClient(commandRouterClient, "Command Router service");
+            tenantClient.start();
+            registrationClient.start();
+            credentialsClient.start();
+            commandConsumerFactory.start();
+            commandRouterClient.start();
             doStart(result);
         }
         return result.future();
@@ -435,11 +435,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
-        results.add(stopServiceClient(tenantClient));
-        results.add(stopServiceClient(registrationClient));
-        results.add(stopServiceClient(credentialsClient));
-        results.add(stopServiceClient(commandConsumerFactory));
-        results.add(stopServiceClient(commandRouterClient));
+        results.add(tenantClient.stop());
+        results.add(registrationClient.stop());
+        results.add(credentialsClient.stop());
+        results.add(commandConsumerFactory.stop());
+        results.add(commandRouterClient.stop());
         results.add(messagingClients.stop());
         return CompositeFuture.all(results);
     }
@@ -451,7 +451,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param client The client to stop.
      * @return A future indicating the outcome of stopping the client.
+     * @deprecated Simply use the client's {@link Lifecycle#stop()} method instead.
      */
+    @Deprecated(forRemoval = true)
     protected final Future<Void> stopServiceClient(final Lifecycle client) {
 
         return Optional.ofNullable(client)
@@ -709,7 +711,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return A future indicating the outcome of starting the client. If the given client is {@code null}, a succeeded
      *         future will be returned.
      * @throws NullPointerException if serviceName is {@code null} and serviceClient is not {@code null}.
+     * @deprecated Simply use the client's {@link Lifecycle#start()} method instead.
      */
+    @Deprecated(forRemoval = true)
     protected final Future<Void> startServiceClient(final Lifecycle serviceClient, final String serviceName) {
 
         if (serviceClient == null) {
