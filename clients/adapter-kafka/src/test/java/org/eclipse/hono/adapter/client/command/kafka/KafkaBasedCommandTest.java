@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
@@ -71,7 +72,7 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject, correlationId));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_REQUIRED, "true"));
+        headers.add(KafkaHeader.header(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, "true"));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertTrue(cmd.isValid());
@@ -162,7 +163,7 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.HEADER_RESPONSE_REQUIRED, "true"));
+        headers.add(KafkaHeader.header(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, "true"));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertFalse(cmd.isValid());

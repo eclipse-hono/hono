@@ -39,11 +39,6 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 public final class KafkaBasedCommand implements Command {
 
     /**
-     * The name of the boolean Kafka record header that defines whether a response is required for the command.
-     */
-    public static final String HEADER_RESPONSE_REQUIRED = "response-required";
-
-    /**
      * If present, the command is invalid.
      */
     private final Optional<String> validationError;
@@ -169,7 +164,7 @@ public final class KafkaBasedCommand implements Command {
         final String contentType = KafkaRecordHelper
                 .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_CONTENT_TYPE, String.class).orElse(null);
         final boolean responseRequired = KafkaRecordHelper
-                .getHeaderValue(record.headers(), HEADER_RESPONSE_REQUIRED, Boolean.class).orElse(false);
+                .getHeaderValue(record.headers(), KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, Boolean.class).orElse(false);
         final String correlationId = KafkaRecordHelper
                 .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_CORRELATION_ID, String.class)
                 .filter(id -> !id.isEmpty())
