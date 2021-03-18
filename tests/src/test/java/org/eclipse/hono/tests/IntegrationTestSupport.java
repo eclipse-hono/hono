@@ -909,18 +909,13 @@ public final class IntegrationTestSupport {
             legacyClientResult.complete();
         }
 
-        final Promise<Void> newClientResult = Promise.promise();
-        if (applicationClient instanceof AmqpApplicationClient) {
-            ((AmqpApplicationClient) applicationClient).disconnect(newClientResult);
-        } else {
-            newClientResult.complete();
-        }
+        final Future<Void> stopResult = applicationClient.stop();
 
         return CompositeFuture.all(
                 legacyClientResult.future()
                     .onSuccess(ok -> LOGGER.info("legacy client's connection to AMQP Messaging Network closed")),
-                newClientResult.future()
-                    .onSuccess(ok -> LOGGER.info("new client's connection to AMQP Messaging Network closed")))
+                stopResult
+                    .onSuccess(ok -> LOGGER.info("new client's connection to messaging network closed")))
                 .mapEmpty();
     }
 
