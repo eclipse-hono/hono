@@ -23,6 +23,8 @@ import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -122,6 +124,8 @@ public final class TracingHelper {
 
     private static final String AMQP_ANNOTATION_NAME_TRACE_CONTEXT = "x-opt-trace-context";
 
+    private static final Logger LOG = LoggerFactory.getLogger(TracingHelper.class);
+
     private TracingHelper() {
         // prevent instantiation
     }
@@ -169,6 +173,11 @@ public final class TracingHelper {
      * @throws NullPointerException if error is {@code null}.
      */
     public static void logError(final Span span, final Throwable error) {
+        if (error instanceof NullPointerException
+            || error instanceof IllegalArgumentException
+            || error instanceof IllegalStateException) {
+            LOG.warn("An unexpected error occurred!", error);
+        }
         if (span != null) {
             logError(span, getErrorLogItems(error));
         }
