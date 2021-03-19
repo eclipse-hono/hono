@@ -34,7 +34,7 @@ maven/mavencentral/io.vertx/vertx-auth-mongo/3.9.5, , approved, eclipse
 maven/mavencentral/net.bytebuddy/byte-buddy/1.10.18, , approved, CQ22491
 maven/mavencentral/io.quarkus/quarkus-arc/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-x500-deprecated/1.14.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-aop/5.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-aop/5.3.4, Apache-2.0, approved, CQ23152
 maven/mavencentral/io.jsonwebtoken/jjwt-jackson/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.fasterxml.jackson.core/jackson-annotations/2.11.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-http-basic/1.14.1.Final, Apache-2.0, approved, clearlydefined
@@ -73,6 +73,7 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-realm-ldap/1.14.1.Final,
 maven/mavencentral/jakarta.activation/jakarta.activation-api/1.2.1, , approved, eclipse
 maven/mavencentral/io.smallrye.common/smallrye-common-function/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-oauth2/1.14.1.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.eclipse.hono/hono-adapter-lora-vertx-base/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.6.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-legal/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/org.infinispan.protostream/protostream/4.3.4.Final, Apache-2.0, approved, CQ22393
@@ -129,6 +130,7 @@ maven/mavencentral/jakarta.enterprise/jakarta.enterprise.cdi-api/2.0.2, , approv
 maven/mavencentral/org.wildfly.security/wildfly-elytron-credential-source-impl/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.eclipse.hono/hono-adapter-mqtt-vertx-base/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-codegen/3.9.5, , approved, eclipse
+maven/mavencentral/io.quarkus/quarkus-kafka-client/1.11.3.Final, , restricted, clearlydefined
 maven/mavencentral/io.smallrye.reactive/vertx-mutiny-generator/1.3.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.common/smallrye-common-constraint/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.vertx/vertx-auth-common/3.9.5, , approved, eclipse
@@ -188,6 +190,7 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-anonymous/1.14.1.Fi
 maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.4.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-jackson/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-registry-graphite/1.6.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-caffeine/1.11.3.Final, , restricted, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-realm/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-jaeger/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.graalvm.sdk/graal-sdk/20.3.1, UPL-1.0, approved, clearlydefined
@@ -208,7 +211,7 @@ maven/mavencentral/io.smallrye.reactive/mutiny-context-propagation/0.12.5, Apach
 maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-localuser/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.junit.platform/junit-platform-commons/1.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/ch.qos.logback/logback-classic/1.2.3, EPL-1.0, approved, CQ13636
-maven/mavencentral/org.springframework/spring-expression/5.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-expression/5.3.4, Apache-2.0, approved, CQ23155
 maven/mavencentral/io.quarkus.arc/arc/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.boot/spring-boot-actuator/2.4.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/jakarta.interceptor/jakarta.interceptor-api/1.2.5, , approved, eclipse
@@ -234,7 +237,7 @@ maven/mavencentral/io.jsonwebtoken/jjwt-impl/0.11.2, Apache-2.0, approved, clear
 maven/mavencentral/org.eclipse.hono/hono-service-base/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-otp/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-http-cert/1.14.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-core/5.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-core/5.3.4, Apache-2.0 AND BSD-3-Clause, approved, CQ23154
 maven/mavencentral/org.eclipse.californium/californium-core/2.6.0, , approved, eclipse
 maven/mavencentral/org.eclipse.hono/hono-client-common/1.7.0-SNAPSHOT, , approved, eclipse
 maven/mavencentral/io.dropwizard.metrics/metrics-graphite/4.1.14, Apache-2.0, approved, clearlydefined
@@ -246,7 +249,7 @@ maven/mavencentral/io.netty/netty-tcnative-boringssl-static/2.0.30.Final, Apache
 maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-scram/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-util/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-http/1.14.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-jcl/5.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-jcl/5.3.4, Apache-2.0, approved, CQ23156
 maven/mavencentral/io.vertx/vertx-mqtt/3.9.5, , approved, eclipse
 maven/mavencentral/jakarta.annotation/jakarta.annotation-api/1.3.5, , approved, eclipse
 maven/mavencentral/org.jboss.logmanager/log4j2-jboss-logmanager/1.0.0.Beta1, Apache-2.0, approved, clearlydefined
@@ -274,7 +277,7 @@ maven/mavencentral/io.quarkus/quarkus-mutiny/1.11.3.Final, Apache-2.0, approved,
 maven/mavencentral/org.infinispan/infinispan-client-hotrod/11.0.9.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-x500-principal/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-password-impl/1.14.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-beans/5.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-beans/5.3.4, Apache-2.0, approved, CQ23153
 maven/mavencentral/org.wildfly.security/wildfly-elytron-auth-server-sasl/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.junit.platform/junit-platform-engine/1.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/org.eclipse.hono/hono-service-base-quarkus/1.7.0-SNAPSHOT, , approved, eclipse

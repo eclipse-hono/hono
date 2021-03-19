@@ -57,11 +57,13 @@ io.prometheus:simpleclient:jar:0.9.0
 io.quarkus.arc:arc:jar:1.11.3.Final
 io.quarkus:quarkus-arc:jar:1.11.3.Final
 io.quarkus:quarkus-bootstrap-runner:jar:1.11.3.Final
+io.quarkus:quarkus-caffeine:jar:1.11.3.Final
 io.quarkus:quarkus-config-yaml:jar:1.11.3.Final
 io.quarkus:quarkus-core:jar:1.11.3.Final
 io.quarkus:quarkus-development-mode-spi:jar:1.11.3.Final
 io.quarkus:quarkus-jackson:jar:1.11.3.Final
 io.quarkus:quarkus-jaeger:jar:1.11.3.Final
+io.quarkus:quarkus-kafka-client:jar:1.11.3.Final
 io.quarkus:quarkus-mutiny:jar:1.11.3.Final
 io.quarkus:quarkus-netty:jar:1.11.3.Final
 io.quarkus:quarkus-smallrye-context-propagation:jar:1.11.3.Final
@@ -139,6 +141,7 @@ org.eclipse.hono:hono-adapter-base-quarkus:jar:1.7.0-SNAPSHOT
 org.eclipse.hono:hono-adapter-base-spring:jar:1.7.0-SNAPSHOT
 org.eclipse.hono:hono-adapter-coap-vertx-base:jar:1.7.0-SNAPSHOT
 org.eclipse.hono:hono-adapter-http-vertx-base:jar:1.7.0-SNAPSHOT
+org.eclipse.hono:hono-adapter-lora-vertx-base:jar:1.7.0-SNAPSHOT
 org.eclipse.hono:hono-adapter-mqtt-vertx-base:jar:1.7.0-SNAPSHOT
 org.eclipse.hono:hono-client-adapter-amqp:jar:1.7.0-SNAPSHOT
 org.eclipse.hono:hono-client-adapter:jar:1.7.0-SNAPSHOT
