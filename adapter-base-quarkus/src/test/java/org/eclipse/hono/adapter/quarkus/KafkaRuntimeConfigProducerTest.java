@@ -13,12 +13,13 @@
 
 package org.eclipse.hono.adapter.quarkus;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import javax.inject.Inject;
 
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -40,18 +41,13 @@ public class KafkaRuntimeConfigProducerTest {
     KafkaAdminClientConfigProperties kafkaAdminClientConfig;
 
     /**
-     * Asserts that the Kafka configuration is exposed as a bean.
+     * Asserts that the Kafka configuration is exposed as a beans.
      */
     @Test
-    public void testThatBeanIsProvided() {
-        Assertions.assertNotNull(kafkaProducerConfig);
-        Assertions.assertNotNull(kafkaProducerConfig);
-
-        Assertions.assertNotNull(kafkaConsumerConfig);
-        Assertions.assertNotNull(kafkaConsumerConfig);
-
-        Assertions.assertNotNull(kafkaAdminClientConfig);
-        Assertions.assertNotNull(kafkaAdminClientConfig);
+    public void testThatBeansAreProvided() {
+        assertThat(kafkaProducerConfig).isNotNull();
+        assertThat(kafkaConsumerConfig).isNotNull();
+        assertThat(kafkaAdminClientConfig).isNotNull();
     }
 
     /**
@@ -59,7 +55,7 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatCommonConfigIsPresent() {
-        Assertions.assertEquals("present", kafkaProducerConfig.getProducerConfig("test").get("common.property"));
+        assertThat(kafkaProducerConfig.getProducerConfig("test").get("common.property")).isEqualTo("present");
     }
 
     /**
@@ -67,7 +63,7 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatConsumerConfigIsPresent() {
-        Assertions.assertEquals("consumer", kafkaConsumerConfig.getConsumerConfig("test").get("consumer.property"));
+        assertThat(kafkaConsumerConfig.getConsumerConfig("test").get("consumer.property")).isEqualTo("consumer");
     }
 
     /**
@@ -75,8 +71,7 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatAdminClientConfigIsPresent() {
-        Assertions.assertEquals("admin",
-                kafkaAdminClientConfig.getAdminClientConfig("test").get("admin.property"));
+        assertThat(kafkaAdminClientConfig.getAdminClientConfig("test").get("admin.property")).isEqualTo("admin");
     }
 
     /**
@@ -84,7 +79,7 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatProducerConfigIsPresent() {
-        Assertions.assertEquals("producer", kafkaProducerConfig.getProducerConfig("test").get("producer.property"));
+        assertThat(kafkaProducerConfig.getProducerConfig("test").get("producer.property")).isEqualTo("producer");
     }
 
     /**
@@ -92,7 +87,7 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatKeysAreLowercase() {
-        Assertions.assertEquals("bar", kafkaProducerConfig.getProducerConfig("test").get("foo"));
+        assertThat(kafkaProducerConfig.getProducerConfig("test").get("foo")).isEqualTo("bar");
     }
 
     /**
@@ -100,8 +95,8 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatKeysWithDotsAreAllowed() {
-        Assertions.assertEquals("example.com:9999",
-                kafkaProducerConfig.getProducerConfig("test").get("bootstrap.servers"));
+        assertThat(kafkaProducerConfig.getProducerConfig("test").get("bootstrap.servers"))
+                .isEqualTo("example.com:9999");
     }
 
     /**
@@ -109,7 +104,7 @@ public class KafkaRuntimeConfigProducerTest {
      */
     @Test
     public void testThatNumberArePresentAsStrings() {
-        Assertions.assertEquals("123", kafkaProducerConfig.getProducerConfig("test").get("number"));
+        assertThat(kafkaProducerConfig.getProducerConfig("test").get("number")).isEqualTo("123");
     }
 
 }
