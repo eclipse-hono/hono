@@ -26,14 +26,14 @@ jobs:
       matrix:
         device-registry: [file,jdbc,mongodb]
         include:
-          # let the jdbc test-run use the command-router component
+          # let the jdbc test-run use the device connection service component (instead of the command router)
           - device-registry: jdbc
-            commandrouting-mode: commandrouter
+            commandrouting-mode: dev-con-service
           # let the mongodb test-run use the quarkus adapters
           - device-registry: mongodb
             component-type: quarkus-jvm
 
-    name: Use ${{ matrix.device-registry }}-registry [${{ matrix.adapters-type }}${{ matrix.commandrouting-mode }}]
+    name: Use ${{ matrix.device-registry }}-registry [${{ matrix.component-type }}${{ matrix.commandrouting-mode }}]
     steps:
     - uses: actions/checkout@v2
     - name: Cache local Maven repository

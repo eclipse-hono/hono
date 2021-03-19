@@ -76,13 +76,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
     <!--
      Properties defining whether the Device Connection service (now deprecated) or the Command Router service
-     shall be used for Command & Control. The default here lets the Device Connection service be used.
-     See the 'command-router' maven profile below for the Command Router values.
+     shall be used for Command & Control. The default here lets the Command Router service be used.
+     See the 'device-connection-service' maven profile below for the Device Connection service values.
      -->
-    <hono.command-related-service.configname>deviceConnection</hono.command-related-service.configname>
-    <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
-    <hono.commandrouter.disabled>true</hono.commandrouter.disabled>
-    <hono.device-connection.disabled>false</hono.device-connection.disabled>
+    <hono.command-related-service.configname>commandRouter</hono.command-related-service.configname>
+    <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
+    <hono.commandrouter.disabled>false</hono.commandrouter.disabled>
+    <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
     <!--
       Messaging related properties - AMQP is used as the default one.
@@ -316,18 +316,18 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
-      <id>command-router</id>
+      <id>device-connection-service</id>
       <activation>
         <property>
           <name>hono.commandrouting.mode</name>
-          <value>commandrouter</value>
+          <value>dev-con-service</value>
         </property>
       </activation>
       <properties>
-        <hono.command-related-service.configname>commandRouter</hono.command-related-service.configname>
-        <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
-        <hono.commandrouter.disabled>false</hono.commandrouter.disabled>
-        <hono.device-connection.disabled>true</hono.device-connection.disabled>
+        <hono.command-related-service.configname>deviceConnection</hono.command-related-service.configname>
+        <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
+        <hono.commandrouter.disabled>true</hono.commandrouter.disabled>
+        <hono.device-connection.disabled>false</hono.device-connection.disabled>
       </properties>
     </profile>
     <profile>

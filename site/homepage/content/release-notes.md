@@ -21,6 +21,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   [MQTT Adapter User Guide] ({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
 * The LoraWAN protocol adapter now supports command and control for providers *Chirpstack*, *Firefly* and *Loriot*.
 * The MQTT adapter now supports mapping the command payload through an external http service.
+* The Command Router component has been promoted from *tech preview* to *fully supported*.
 
 ### Fixes & Enhancements
 

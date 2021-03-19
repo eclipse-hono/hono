@@ -10,11 +10,6 @@ The Command Router service provides an implementation of Eclipse Hono&trade;'s [
 
 <!--more-->
 
-{{% note title="Tech preview" %}}
-This component is not considered production ready yet. It is meant as a replacement for the component implementing the [Device Connection API]({{< relref "/api/device-connection" >}}).
-It can be used by configuring the [Command Router service connection properties]({{< relref "common-config.md/#command-router-service-connection-configuration" >}}), instead of the Device Connection service connection properties, in the protocol adapter.
-{{% /note %}}
-
 The Command Router component provides an implementation of the Command Router API which uses a remote *data grid* for storing information about device connections. The data grid can be scaled out independently from the Command Router service components to meet the storage demands at hand.
 
 The Command Router component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-command-router/) created from it.

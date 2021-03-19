@@ -140,11 +140,11 @@ Note: the profile can also be activated by setting the Maven property *hono.comp
 mvn verify -Prun-tests -Dhono.components.type=quarkus-jvm
 ```
 
-### Running the Tests with the Command Router component
+### Running the Tests with the Device Connection service component
 
-By default, the integration tests are run using the Device Connection service component. In order to use the Command
-Router service component instead, the `command-router` maven profile can be set:
+By default, the integration tests are run using the Command Router service component. In order to use the Device
+Connection service component instead, the `device-connection-service` maven profile can be set:
 
 ```sh
-mvn verify -Prun-tests,command-router
+mvn verify -Prun-tests,device-connection-service
 ```
