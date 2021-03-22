@@ -30,6 +30,7 @@
 
   <springProfile name="trace">
     <logger name="org.eclipse.hono.adapter.amqp" level="TRACE"/>
+    <logger name="org.eclipse.hono.adapter.client" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.client.amqp" level="TRACE"/>
     <logger name="org.eclipse.hono.client.impl" level="TRACE"/>
@@ -42,6 +43,7 @@
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter.amqp" level="DEBUG"/>
+    <logger name="org.eclipse.hono.adapter.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.client.amqp" level="DEBUG"/>
     <logger name="org.eclipse.hono.client.impl" level="DEBUG"/>
@@ -62,4 +64,3 @@
   <logger name="io.vertx.core.net.impl" level="INFO"/>
 
 </configuration>
-
