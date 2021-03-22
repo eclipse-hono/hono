@@ -416,8 +416,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             IntegrationTestSupport.getSendCommandTimeout())
                         .map(response -> {
                             ctx.verify(() -> {
-                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
-                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
+                                assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
+                                assertThat(response.getTenantId()).isEqualTo(tenantId);
                             });
                             return response;
                         });

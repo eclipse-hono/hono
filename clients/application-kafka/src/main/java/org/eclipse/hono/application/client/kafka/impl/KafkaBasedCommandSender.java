@@ -18,12 +18,13 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.application.client.CommandSender;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.SpanContext;
@@ -37,7 +38,8 @@ import io.vertx.core.buffer.Buffer;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">
  *      Command &amp; Control API for Kafka Specification</a>
  */
-public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender implements CommandSender {
+public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
+        implements CommandSender<KafkaMessageContext> {
 
     /**
      * Creates a new Kafka-based command sender.
@@ -111,7 +113,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
      * @throws NullPointerException if tenantId, deviceId, or command is {@code null}.
      */
     @Override
-    public Future<BufferResult> sendCommand(
+    public Future<DownstreamMessage<KafkaMessageContext>> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,

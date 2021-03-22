@@ -18,12 +18,12 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.CommandSender;
+import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.util.AddressHelper;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -39,7 +39,8 @@ import io.vertx.proton.ProtonHelper;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">
  *      Command &amp; Control API for AMQP 1.0 Specification</a>
  */
-public class ProtonBasedCommandSender extends SenderCachingServiceClient implements CommandSender {
+public class ProtonBasedCommandSender extends SenderCachingServiceClient
+        implements CommandSender<AmqpMessageContext> {
 
     private final ProtonBasedRequestResponseCommandClient requestResponseClient;
 
@@ -100,12 +101,18 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient impleme
      * {@inheritDoc}
      */
     @Override
-    public Future<BufferResult> sendCommand(final String tenantId, final String deviceId, final String command,
-            final String contentType, final Buffer data, final String replyId, final Map<String, Object> properties,
+    public Future<DownstreamMessage<AmqpMessageContext>> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String replyId,
+            final Map<String, Object> properties,
             final SpanContext context) {
 
-        return requestResponseClient.sendCommand(tenantId, deviceId, command, contentType, data, replyId, properties,
-                context);
+        return requestResponseClient
+                .sendCommand(tenantId, deviceId, command, contentType, data, replyId, properties, context);
     }
 
     private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
