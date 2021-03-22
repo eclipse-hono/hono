@@ -15,10 +15,10 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 
 * Copyright 2016-2019 Bosch Software Innovations GmbH
 * Copyright 2020-2021 Bosch.IO GmbH
-* Copyright 2016-2020 Red Hat, Inc.
+* Copyright 2016-2021 Red Hat, Inc.
 * Copyright 2017 Francois Travais
 * Copyright 2018-2020 Alfusainey Jallow
-* Copyright 2019-2020 Aloxy NV
+* Copyright 2019-2021 Aloxy NV
 * Copyright 2019 Thiyagarajan B
 * Copyright 2019 Microsoft Corporation
 * Copyright 2020 pragmatic industries GmbH
@@ -54,6 +54,26 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=commons-logging/commons-logging/1.2/commons-logging-1.2-sources.jar).
 
+### Apache SSHD
+
+This product includes software developed by the [Apache Software Foundation](https://mina.apache.org/sshd-project/).
+
+Your use of *Apache SSHD* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Apache Git Box](https://gitbox.apache.org/repos/asf?p=mina-sshd.git;a=summary).
+
+### Apache Thrift
+
+This product includes software developed by the [Apache Software Foundation](https://thirft.apache.org).
+
+Your use of *Apache Thrift* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/thrift).
+
 ### Google Guava ${guava.version}
 
 This product includes software developed by the [Guava project](https://github.com/google/guava).
@@ -84,6 +104,15 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=com/github/ben-manes/caffeine/caffeine/${caffeine.version}/caffeine-${caffeine.version}-sources.jar).
+
+### Graal SDK
+
+This product includes software developed by [Oracle](https://www.graalvm.org/).
+
+Your use of *Graal SDK* is subject to the terms and conditions of the Universal Permissive License 1.0.
+A copy of the license is contained in the file [LICENSE.Graal-SDK.md](LICENSE.Graal-SDK.md).
+
+The source code is available from [GitHub](https://github.com/oracle/graal).
 
 ### Gson ${gson.version}
 
@@ -128,7 +157,17 @@ Your use of *Jackson* is subject to the terms and conditions of the Apache Softw
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.fasterxml.jackson.core%22%20AND%20v%3A%22${jackson.version}%22).
+The source code is available from [GitHub](https://github.com/FasterXML).
+
+### Jaeger Client Java ${jaeger.version}
+
+This product includes software developed by the [Jaeger project](https://jaegertracing.io).
+
+Your use of *Jaeger Client Java* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/jaegertracing/jaeger-client-java).
 
 ### Java Transaction API 1.2
 
@@ -159,6 +198,16 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/jboss-logging/jboss-logging/tree/${jboss-logging.version}).
+
+### JBoss Threads
+
+This product includes software developed by the [JBoss Threads project](https://github.com/jbossas/jboss-threads).
+
+Your use of *JBoss Threads* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/jbossas/jboss-threads).
 
 ### JCL-over-SLF4J ${slf4j.version}
 
@@ -208,6 +257,16 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/kafka/tree/${kafka-clients.version}).
+
+### Kotlin Standard Library
+
+This product includes software developed by the [JetBrains](https://kotlinlang.org/).
+
+Your use of the *Kotlin Standard Library* is subject to the terms and conditions of the Apache Software License 2.0
+and others as indicated by the file [README.md](kotlin/README.md). This file contains links to the licenses
+whose terms and conditions apply.
+
+The source code is available from [GitHub](https://github.com/JetBrains/kotlin).
 
 ### LOG4J-over-SLF4J ${slf4j.version}
 
@@ -277,13 +336,24 @@ The source code is available from [GitHub](https://github.com/mongodb/mongo-java
 This product includes software developed by [The Netty project](http://netty.io/).
 
 Your use of *Netty* is subject to the terms and conditions of the Apache Software License 2.0 and others
-as indicated by the file [NOTICE.Netty.txt](NOTICE.Netty.txt). This file contains links to the licenses
+as indicated by the file [NOTICE.Netty.txt](netty/NOTICE.Netty.txt). This file contains links to the licenses
 whose terms and conditions apply.
 
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.netty%22%20AND%20v%3A%22${netty.version}%22).
+
+### okhttp & okio
+
+This product includes software developed by [Square Inc.](https://square.github.io/).
+
+Your use of *okhttp* and *okio* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/square/okhttp) and
+[GitHub](https://github.com/square/okio).
 
 ### OpenTracing API for Java ${opentracing.version}
 
@@ -363,6 +433,16 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/infinispan/protostream/tree/${protostream.version}).
 
+### Quarkus ${quarkus.platform.version}
+
+This product includes software developed by the [Quarkus project](https://quarkus.io).
+
+Your use of *Quarkus* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/quarkusio/quarkus/tree/${quarkus.platform.version}).
+
 ### run-java.sh ${run-java-sh.version}
 
 This product includes software developed by the [run-java.sh project](https://github.com/fabric8io-images/run-java-sh).
@@ -393,6 +473,18 @@ and is also available at http://slf4j.org/license.html
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/slf4j/slf4j-api/${slf4j.version}/slf4j-api-${slf4j.version}-sources.jar).
 
+### SmallRye
+
+This product includes software developed by the [SmallRye project](https://smallrye.io).
+
+Your use of *SmallRye* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/smallrye).
+
+
+
 ### SnakeYAML ${snakeyaml.version}
 
 This product includes software developed by the [SnakeYAML project](http://www.snakeyaml.org).
@@ -419,10 +511,10 @@ The source code is available from [GitHub](https://github.com/xerial/snappy-java
 This product includes software developed by the [Spring project](http://spring.io) and others.
 
 Your use of the *Spring Framework* is subject to the terms and conditions of the Apache Software License 2.0
-and others as indicated by [NOTICE.Spring.txt](NOTICE.Spring.txt).
-A copy of the licenses is contained in the file [LICENSE.Spring.txt](LICENSE.Spring.txt).
+and others as indicated by [notice.txt](spring/notice.txt).
+A copy of the licenses is contained in the file [license.txt](spring/license.txt).
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework%22%20AND%20v%3A%22${spring.version}%22).
+The source code is available from [GitHub](https://github.com/spring-projects/spring-framework).
 
 ### Spring Boot ${spring-boot.version}
 
@@ -432,17 +524,17 @@ Your use of *Spring Boot* is subject to the terms and conditions of the Apache S
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework.boot%22%20AND%20v%3A%22${spring-boot.version}%22).
+The source code is available from [GitHub](https://github.com/spring-projects/spring-boot).
 
-### Spring Security ${spring-security-crypto.version}
+### Spring Security Crypto ${spring-security-crypto.version}
 
 This product includes software developed by the [Spring project](http://spring.io) and others.
 
-Your use of *Spring Security* is subject to the terms and conditions of the Apache Software License 2.0
-and others as indicated by [NOTICE.Spring.txt](NOTICE.Spring.txt).
-A copy of the licenses is contained in the file [LICENSE.Spring.txt](LICENSE.Spring.txt).
+Your use of *Spring Security Crypto* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework.security%22%20AND%20v%3A%22${spring-security-crypto.version}%22).
+The source code is available from [GitHub](https://github.com/spring-projects/spring-security).
 
 ### vert.x Auth Common ${vertx.version}
 

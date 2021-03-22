@@ -12,5 +12,5 @@
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
 
-mvn dependency:list -Pjaeger,metrics-prometheus,build-docker-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > legal/src/main/resources/legal/hono-maven.deps
+mvn dependency:list -DexcludeGroupIds=org.eclipse -Pjaeger,metrics-prometheus,build-docker-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > legal/src/main/resources/legal/hono-maven.deps
 
