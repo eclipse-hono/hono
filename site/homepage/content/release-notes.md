@@ -48,7 +48,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `org.eclipse.hono.service.AbstractApplication` and `org.eclipse.hono.service.AbstractBaseApplication` classes
   have been moved to `org.eclipse.hono.service.spring.AbstractApplication` and `org.eclipse.hono.service.spring.AbstractApplication`
   in the newly added `service-base-spring` module respectively.
-* The existing `mapper` configuration has been renamed to `downstream-message-mapper`. 
+* The existing `mapper` configuration has been renamed to `downstream-message-mapper`.
+* The Command Router component now requires the configuration of a tenant service client. Please refer to 
+  [Tenant Service Connection Configuration]({{% doclink "/admin-guide/command-router-config/#tenant-service-connection-configuration" %}})
+  for details.
 
 ### End of Life
 

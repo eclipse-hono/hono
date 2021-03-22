@@ -31,12 +31,14 @@ import java.util.UUID;
 
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -51,6 +53,8 @@ import io.vertx.kafka.client.producer.KafkaHeader;
  * Verifies behavior of {@link KafkaBasedMappingAndDelegatingCommandHandler}.
  */
 public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
+
+    private TenantClient tenantClient;
     private CommandTargetMapper commandTargetMapper;
     private KafkaBasedMappingAndDelegatingCommandHandler cmdHandler;
     private KafkaBasedInternalCommandSender internalCommandSender;
@@ -67,14 +71,17 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         deviceId = UUID.randomUUID().toString();
         adapterInstanceId = UUID.randomUUID().toString();
 
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(eq(tenantId), any())).thenReturn(Future.succeededFuture(TenantObject.from(tenantId)));
+
         commandTargetMapper = mock(CommandTargetMapper.class);
         when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId), any()))
                 .thenReturn(Future.succeededFuture(createTargetAdapterInstanceJson(deviceId, adapterInstanceId)));
 
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
 
-        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(commandTargetMapper, internalCommandSender,
-                TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
+        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandTargetMapper,
+                internalCommandSender, TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
     }
 
     /**

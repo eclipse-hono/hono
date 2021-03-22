@@ -28,6 +28,15 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
+  tenant:
+    name: 'Hono Command Router'
+    host: ${hono.registration.host}
+    port: 5672
+    username: command-router@HONO
+    password: cmd-router-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   command:
     name: 'Hono Command Router'
     host: ${hono.amqp-network.host}

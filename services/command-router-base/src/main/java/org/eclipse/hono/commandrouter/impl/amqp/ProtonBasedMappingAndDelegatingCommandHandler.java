@@ -22,6 +22,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandSender;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -45,14 +46,16 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
     /**
      * Creates a new ProtonBasedMappingAndDelegatingCommandHandler instance.
      *
+     * @param tenantClient The Tenant service client.
      * @param connection The connection to the AMQP network.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedMappingAndDelegatingCommandHandler(
+            final TenantClient tenantClient,
             final HonoConnection connection,
             final CommandTargetMapper commandTargetMapper) {
-        super(commandTargetMapper, new ProtonBasedInternalCommandSender(connection));
+        super(tenantClient, commandTargetMapper, new ProtonBasedInternalCommandSender(connection));
         this.tracer = connection.getTracer();
     }
 

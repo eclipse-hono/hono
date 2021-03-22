@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
@@ -82,9 +83,10 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     }
 
     @Override
-    public void initialize(final CommandTargetMapper commandTargetMapper) {
+    public void initialize(final TenantClient tenantClient, final CommandTargetMapper commandTargetMapper) {
+        Objects.requireNonNull(tenantClient);
         Objects.requireNonNull(commandTargetMapper);
-        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(connection,
+        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient, connection,
                 commandTargetMapper);
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
         initialized.set(true);

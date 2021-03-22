@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
@@ -31,6 +32,7 @@ import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +56,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private static final Logger LOG = LoggerFactory.getLogger(CommandRouterServiceImpl.class);
 
     private DeviceRegistrationClient registrationClient;
+    private TenantClient tenantClient;
     private DeviceConnectionInfo deviceConnectionInfo;
     private CommandConsumerFactory commandConsumerFactory;
     private CommandTargetMapper commandTargetMapper;
@@ -109,6 +112,18 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     }
 
     /**
+     * Sets the client to use for accessing the Tenant service.
+     *
+     * @param client The client.
+     * @throws NullPointerException if the client is {@code null}.
+     */
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Autowired
+    public final void setTenantClient(final TenantClient client) {
+        this.tenantClient = Objects.requireNonNull(client);
+    }
+
+    /**
      * Sets the factory to use for creating clients to receive commands.
      *
      * @param factory The factory.
@@ -139,17 +154,20 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         }
         if (registrationClient == null) {
             return Future.failedFuture(new IllegalStateException("Device Registration client must be set"));
+        } else if (tenantClient == null) {
+            return Future.failedFuture(new IllegalStateException("Tenant client must be set"));
         } else if (deviceConnectionInfo == null) {
             return Future.failedFuture(new IllegalStateException("Device Connection info client must be set"));
         }
 
         registrationClient.start();
+        tenantClient.start();
         if (deviceConnectionInfo instanceof Lifecycle) {
             ((Lifecycle) deviceConnectionInfo).start();
         }
         // initialize components dependent on the above clients
         commandTargetMapper.initialize(registrationClient, deviceConnectionInfo);
-        commandConsumerFactory.initialize(commandTargetMapper);
+        commandConsumerFactory.initialize(tenantClient, commandTargetMapper);
         commandConsumerFactory.start();
 
         return Future.succeededFuture();
@@ -162,6 +180,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
         results.add(registrationClient.stop());
+        results.add(tenantClient.stop());
         if (deviceConnectionInfo instanceof Lifecycle) {
             results.add(((Lifecycle) deviceConnectionInfo).stop());
         }
@@ -229,6 +248,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (registrationClient instanceof ServiceClient) {
             ((ServiceClient) registrationClient).registerReadinessChecks(handler);
         }
+        if (tenantClient instanceof ServiceClient) {
+            ((ServiceClient) tenantClient).registerReadinessChecks(handler);
+        }
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerReadinessChecks(handler);
         }
@@ -242,6 +264,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         registerEventLoopBlockedCheck(handler);
         if (registrationClient instanceof ServiceClient) {
             ((ServiceClient) registrationClient).registerLivenessChecks(handler);
+        }
+        if (tenantClient instanceof ServiceClient) {
+            ((ServiceClient) tenantClient).registerLivenessChecks(handler);
         }
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerLivenessChecks(handler);

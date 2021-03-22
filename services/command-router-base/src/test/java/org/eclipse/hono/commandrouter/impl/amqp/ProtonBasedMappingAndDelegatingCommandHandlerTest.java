@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -34,6 +35,7 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -43,6 +45,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +68,8 @@ import io.vertx.proton.ProtonSender;
  */
 public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
+    private String tenantId;
+    private TenantClient tenantClient;
     private CommandTargetMapper commandTargetMapper;
     private ProtonBasedMappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
     // sender used in the DelegatedCommandSender
@@ -95,10 +100,13 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         sender = mockProtonSender();
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(sender));
 
+        tenantId = UUID.randomUUID().toString();
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(eq(tenantId), any())).thenReturn(Future.succeededFuture(TenantObject.from(tenantId)));
         commandTargetMapper = mock(CommandTargetMapper.class);
 
-        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(connection,
-                commandTargetMapper);
+        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient,
+                connection, commandTargetMapper);
     }
 
     /**
@@ -113,11 +121,11 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         // contain a device ID
         final String deviceId = "4711";
         final Message message = getValidCommandMessage(deviceId);
-        message.setAddress(String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT));
+        message.setAddress(String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId));
 
         // WHEN mapping and delegating the command
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the disposition is REJECTED
         verify(delivery).disposition(
@@ -143,7 +151,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
         // WHEN mapping and delegating the command
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the disposition is REJECTED
         verify(delivery).disposition(
@@ -170,7 +178,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         final Message message = getValidCommandMessage(deviceId);
         message.setSubject(null); // make the message invalid
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the disposition is REJECTED
         verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -191,7 +199,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         // WHEN mapping and delegating a command message
         final Message message = getValidCommandMessage(deviceId);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the disposition is RELEASED
         verify(delivery).disposition(any(Released.class), eq(true));
@@ -225,14 +233,14 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         // WHEN mapping and delegating the command message
         final Message message = getValidCommandMessage(deviceId);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the delivery gets ACCEPTED as well
         verify(delivery).disposition(any(Accepted.class), eq(true));
         final Message delegatedMessage = delegatedMessageRef.get();
         assertThat(delegatedMessage).isNotNull();
         assertThat(delegatedMessage.getAddress()).isEqualTo(String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, deviceId));
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
     }
 
     /**
@@ -252,7 +260,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         final Message message = getValidCommandMessage(deviceId);
         message.setSubject(null); // make the message invalid
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the delivery gets REJECTED
         verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -278,7 +286,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         // WHEN mapping and delegating the command message
         final Message message = getValidCommandMessage(deviceId);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the delivery gets RELEASED
         verify(delivery).disposition(any(Released.class), eq(true));
@@ -313,14 +321,14 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         // WHEN mapping and delegating the command message
         final Message message = getValidCommandMessage(deviceId);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(tenantId, delivery, message);
 
         // THEN the delivery gets ACCEPTED as well
         verify(delivery).disposition(any(Accepted.class), eq(true));
         final Message delegatedMessage = delegatedMessageRef.get();
         assertThat(delegatedMessage).isNotNull();
         assertThat(delegatedMessage.getAddress()).isEqualTo(String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, deviceId));
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
         final String viaProperty = MessageHelper.getApplicationProperty(delegatedMessage.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_CMD_VIA, String.class);
         assertThat(viaProperty).isEqualTo(gatewayId);
@@ -336,7 +344,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
     private Message getValidCommandMessage(final String deviceId) {
         final Message message = ProtonHelper.message("input data");
         message.setAddress(String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, deviceId));
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
         message.setSubject("doThis");
         message.setCorrelationId("the-correlation-id");
         return message;
