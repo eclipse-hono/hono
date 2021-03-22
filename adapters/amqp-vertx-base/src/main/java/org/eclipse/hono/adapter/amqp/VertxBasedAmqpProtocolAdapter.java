@@ -615,11 +615,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                     spanPreparationFuture
                             .compose(ar -> onMessageReceived(ctx)
-                            .onComplete(r -> msgSpan.finish()));
-
+                                    .onSuccess(ok -> msgSpan.finish())
+                                    .onFailure(error -> closeConnectionOnTerminalError(error, conn, ctx, msgSpan)));
                 } catch (final Exception ex) {
-                    log.warn("error handling message [container: {}, {}]", conn.getRemoteContainer(), authenticatedDevice, ex);
-                    ProtonHelper.released(delivery, true);
+                    log.warn("error handling message [container: {}, {}]", conn.getRemoteContainer(),
+                            authenticatedDevice, ex);
+                    if (!conn.isDisconnected()) {
+                        ProtonHelper.released(delivery, true);
+                    }
                 }
             });
             receiver.open();
@@ -752,6 +755,24 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         .onComplete(s -> {
             span.finish();
         });
+    }
+
+    private void closeConnectionOnTerminalError(final Throwable error, final ProtonConnection conn,
+            final AmqpContext ctx, final Span span) {
+        final ResourceIdentifier address = ctx.getAddress();
+        if (address != null) {
+            isTerminalError(error, address.getResourceId(), ctx.getAuthenticatedDevice(), span.context())
+                    .onSuccess(isTerminalError -> {
+                        if (isTerminalError) {
+                            span.log("closing connection to device");
+                            conn.close();
+                            conn.disconnect();
+                        }
+                    })
+                    .onComplete(o -> span.finish());
+        } else {
+            span.finish();
+        }
     }
 
     private Span newSpan(final String operationName, final Device authenticatedDevice,

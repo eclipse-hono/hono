@@ -110,6 +110,11 @@ The AMQP adapter distinguishes between two types of errors when a message is pub
 
 For a client side error, the adapter settles the message transfer with the *rejected* outcome and provides an error description in the corresponding disposition frame. In the case of a server-side error, the adapter settles the message with the *released* outcome, indicating to the client that the message itself was OK but it cannot be delivered due to a failure beyond the control of the client. In the latter case, a client may attempt to re-send the message unaltered.
 
+In case of terminal errors the AMQP connection to the device is closed. The errors that are classified as terminal are listed below.
+
+* The adapter is disabled for the tenant that the client belongs to.
+* The authenticated device or gateway is disabled or not registered.
+* The tenant is disabled or does not exist.
 
 ## AMQP Command-line Client
 

@@ -35,11 +35,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
-import org.eclipse.hono.adapter.AdapterDisabledException;
 import org.eclipse.hono.adapter.AuthorizationException;
-import org.eclipse.hono.adapter.DeviceDisabledOrNotRegisteredException;
-import org.eclipse.hono.adapter.GatewayDisabledOrNotRegisteredException;
-import org.eclipse.hono.adapter.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.ChainAuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
@@ -1127,8 +1123,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
 
             errorSentIfNeededFuture
-                    .compose(ok -> isTerminalError(error, context.tenant(), context.deviceId(),
-                            authenticatedDevice, span.context()))
+                    .compose(ok -> isTerminalError(error, context.deviceId(), authenticatedDevice, span.context()))
                     .onComplete(ar -> {
                         final boolean isTerminalError = ar.succeeded() ? ar.result() : false;
                         final ErrorHandlingMode errorHandlingMode = context
@@ -1149,29 +1144,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         }
                         span.finish();
                     });
-        }
-
-        private Future<Boolean> isTerminalError(final Throwable error, final String tenantId, final String deviceId,
-                final Device authenticatedDevice, final SpanContext spanContext) {
-
-            // if the device is not registered or disabled
-            if (error instanceof DeviceDisabledOrNotRegisteredException) {
-                // and if the device is authenticated and connected via a gateway
-                if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(deviceId)) {
-                    return getRegistrationAssertion(tenantId, authenticatedDevice.getDeviceId(), null, spanContext)
-                            .map(ok -> false)
-                            .recover(e -> {
-                                // and if the gateway is not registered then it is a terminal error
-                                return Future.succeededFuture(e instanceof DeviceDisabledOrNotRegisteredException);
-                            });
-                }
-
-                return Future.succeededFuture(authenticatedDevice != null);
-            }
-
-            return Future.succeededFuture(error instanceof AdapterDisabledException
-                    || error instanceof GatewayDisabledOrNotRegisteredException
-                    || error instanceof TenantDisabledOrNotRegisteredException);
         }
 
         /**
