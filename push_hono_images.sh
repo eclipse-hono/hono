@@ -34,10 +34,12 @@ QUARKUS_IMAGES="hono-adapter-amqp-vertx-quarkus \
         hono-adapter-coap-vertx-quarkus-native \
         hono-adapter-http-vertx-quarkus \
         hono-adapter-http-vertx-quarkus-native \
+        hono-adapter-lora-vertx-quarkus \
+        hono-adapter-lora-vertx-quarkus-native \
         hono-adapter-mqtt-vertx-quarkus \
         hono-adapter-mqtt-vertx-quarkus-native \
         hono-service-auth-quarkus \
-        hono-service-auth-quarkus-native
+        hono-service-auth-quarkus-native \
         hono-service-command-router-quarkus \
         hono-service-command-router-quarkus-native"
 
