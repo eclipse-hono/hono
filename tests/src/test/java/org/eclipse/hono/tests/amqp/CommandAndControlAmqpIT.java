@@ -133,7 +133,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final VertxTestContext ctx,
             final String commandTargetDeviceId,
             final AmqpCommandEndpointConfiguration endpointConfig,
-            final BiFunction<ProtonReceiver, ProtonSender, ProtonMessageHandler> commandConsumerFactory) throws InterruptedException {
+            final BiFunction<ProtonReceiver, ProtonSender, ProtonMessageHandler> commandConsumerFactory,
+            final int expectedNoOfCommands) throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint setupDone = setup.checkpoint();
@@ -154,7 +155,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         .compose(sender -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
             .map(recv -> {
                 recv.handler(commandConsumerFactory.apply(recv, sender));
-                recv.flow(50);
+                // make sure that there are always enough credits, even if commands are sent faster than answered
+                recv.flow(expectedNoOfCommands);
                 return null;
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
@@ -297,14 +299,15 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
+        final int totalNoOfCommandsToSend = 60;
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
-                (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender));
+                (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender),
+                totalNoOfCommandsToSend);
         if (ctx.failed()) {
             return;
         }
 
         final String replyId = "reply-id";
-        final int totalNoOfCommandsToSend = 60;
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
@@ -431,7 +434,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Function<Buffer, Future<?>> commandSender,
             final int totalNoOfCommandsToSend) throws InterruptedException {
 
-        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig, commandConsumerFactory);
+        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig, commandConsumerFactory, totalNoOfCommandsToSend);
         if (ctx.failed()) {
             return;
         }
@@ -675,13 +678,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
+        final int totalNoOfCommandsToSend = 3;
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
-                (cmdReceiver, cmdResponseSender) -> createRejectingCommandConsumer(ctx, cmdReceiver));
+                (cmdReceiver, cmdResponseSender) -> createRejectingCommandConsumer(ctx, cmdReceiver),
+                totalNoOfCommandsToSend);
         if (ctx.failed()) {
             return;
         }
 
-        final int totalNoOfCommandsToSend = 3;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
@@ -770,14 +774,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 : deviceId;
 
         final AtomicInteger receivedMessagesCounter = new AtomicInteger(0);
+        final int totalNoOfCommandsToSend = 2;
         // command handler won't send a disposition update
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
-                (cmdReceiver, cmdResponseSender) -> createNotSendingDeliveryUpdateCommandConsumer(ctx, cmdReceiver, receivedMessagesCounter));
+                (cmdReceiver, cmdResponseSender) -> createNotSendingDeliveryUpdateCommandConsumer(ctx, cmdReceiver, receivedMessagesCounter), totalNoOfCommandsToSend);
         if (ctx.failed()) {
             return;
         }
 
-        final int totalNoOfCommandsToSend = 2;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();

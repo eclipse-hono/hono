@@ -67,7 +67,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     -->
     <link.establishment.timeout>5000</link.establishment.timeout>
     <flow.latency>1000</flow.latency>
-    <request.timeout>4000</request.timeout>
+    <request.timeout>500</request.timeout>
     <adapter.sendMessageToDeviceTimeout>1000</adapter.sendMessageToDeviceTimeout>
     <!-- use minimum cost factor in order to speed up test execution -->
     <max.bcrypt.costFactor>4</max.bcrypt.costFactor>
@@ -339,6 +339,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <properties>
         <hono.kafka.disabled>false</hono.kafka.disabled>
         <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
+        <request.timeout>4000</request.timeout>
       </properties>
       <build>
         <plugins>
