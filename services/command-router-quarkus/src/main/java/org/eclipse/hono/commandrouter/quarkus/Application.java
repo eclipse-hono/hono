@@ -173,8 +173,6 @@ public class Application {
 
     /**
      * Logs information about the JVM.
-     *
-     * @param start The event indicating that the application has been started.
      */
     private void logJvmDetails() {
         if (LOG.isInfoEnabled()) {
