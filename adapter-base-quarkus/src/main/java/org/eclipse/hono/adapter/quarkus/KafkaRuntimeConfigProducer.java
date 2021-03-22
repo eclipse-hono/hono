@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Parses Hono's Kafka configuration properties and provides them as beans.
  * <p>
- * This replaces the behavior of {@link io.quarkus.kafka.client.runtime.KafkaRuntimeConfigProducer} from Quarkus' Kafka
+ * This replaces the behavior of {@code io.quarkus.kafka.client.runtime.KafkaRuntimeConfigProducer} from Quarkus' Kafka
  * extension. The dependency also provides some patches that are required to use the Kafka clients in native images with
  * GraalVM.
  */
