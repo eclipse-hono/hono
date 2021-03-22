@@ -57,7 +57,11 @@
     "command-router": [
       {
         "resource": "registration/*",
-        "activities": [ "READ" ]
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "registration/*:*",
+        "activities": [ "EXECUTE" ]
       }
     ],
     "device-manager": [
