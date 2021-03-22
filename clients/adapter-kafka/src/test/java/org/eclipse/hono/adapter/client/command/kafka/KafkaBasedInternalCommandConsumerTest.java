@@ -33,7 +33,9 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.admin.KafkaAdminClient;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
@@ -48,6 +50,7 @@ public class KafkaBasedInternalCommandConsumerTest {
 
     private KafkaBasedInternalCommandConsumer internalCommandConsumer;
     private CommandHandlers commandHandlers;
+    private Context context;
 
     /**
      * Sets up fixture.
@@ -67,6 +70,7 @@ public class KafkaBasedInternalCommandConsumerTest {
                 adapterInstanceId,
                 commandHandlers,
                 tracer);
+        context = VertxMockSupport.mockContext(mock(Vertx.class));
     }
 
     /**
@@ -83,7 +87,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler);
+        commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
@@ -109,7 +113,7 @@ public class KafkaBasedInternalCommandConsumerTest {
                 getHeaders(tenantId, deviceId, subject));
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler);
+        commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
@@ -136,7 +140,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(tenantId, gatewayId, null, commandHandler);
+        commandHandlers.putCommandHandler(tenantId, gatewayId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
@@ -164,7 +168,7 @@ public class KafkaBasedInternalCommandConsumerTest {
                 getHeaders(tenantId, deviceId, subject));
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(tenantId, deviceId, gatewayId, commandHandler);
+        commandHandlers.putCommandHandler(tenantId, deviceId, gatewayId, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 

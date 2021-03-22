@@ -38,6 +38,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
@@ -52,6 +53,7 @@ public class ProtonBasedInternalCommandConsumerTest {
 
     private ProtonBasedInternalCommandConsumer internalCommandConsumer;
     private CommandHandlers commandHandlers;
+    private Context context;
 
     /**
      * Sets up fixture.
@@ -64,6 +66,7 @@ public class ProtonBasedInternalCommandConsumerTest {
         commandHandlers = new CommandHandlers();
         internalCommandConsumer = new ProtonBasedInternalCommandConsumer(honoConnection, adapterInstanceId,
                 commandHandlers);
+        context = VertxMockSupport.mockContext(mock(Vertx.class));
     }
 
     /**
@@ -115,7 +118,7 @@ public class ProtonBasedInternalCommandConsumerTest {
         message.setCorrelationId(correlationId);
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, null, commandHandler);
+        commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
@@ -143,7 +146,7 @@ public class ProtonBasedInternalCommandConsumerTest {
                 new ApplicationProperties(Collections.singletonMap(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId)));
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, gatewayId, null, commandHandler);
+        commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, gatewayId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
@@ -171,7 +174,7 @@ public class ProtonBasedInternalCommandConsumerTest {
         message.setCorrelationId(correlationId);
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
-        commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, gatewayId, commandHandler);
+        commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, gatewayId, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
