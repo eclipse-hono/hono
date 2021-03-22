@@ -173,8 +173,8 @@ public class ProtonBasedDelegatingCommandConsumerFactory extends AbstractService
     @Override
     public Future<Void> start() {
         return connection.connect()
-                .onSuccess(ok -> log.info("{} consumer factory client successfully connected", connection.getConfig().getServerRole()))
-                .onFailure(t -> log.warn("{} consumer factory failed to connect", connection.getConfig().getServerRole(), t))
+                .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
+                .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
                 .onComplete(ar -> {
                     // initialize factory (also if connection attempt failed - retry logic takes care of that)
                     factory.initialize(commandTargetMapper, new CommandHandlingAdapterInfoAccess() {

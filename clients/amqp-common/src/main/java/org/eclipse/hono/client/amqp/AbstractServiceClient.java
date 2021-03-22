@@ -268,8 +268,8 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
     @Override
     public Future<Void> start() {
         return connection.connect()
-                .onSuccess(ok -> log.info("{} client successfully connected", connection.getConfig().getServerRole()))
-                .onFailure(t -> log.warn("{} client failed to connect", connection.getConfig().getServerRole(), t))
+                .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
+                .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
                 .mapEmpty();
     }
 
@@ -283,7 +283,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
         final Promise<Void> result = Promise.promise();
         connection.shutdown(result);
         return result.future()
-            .onSuccess(ok -> log.info("{} service client disconnected",
+            .onSuccess(ok -> log.info("connection to {} endpoint has been closed",
                     connection.getConfig().getServerRole()));
     }
 }
