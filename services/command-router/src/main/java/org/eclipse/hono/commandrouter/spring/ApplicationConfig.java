@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.commandrouter;
+package org.eclipse.hono.commandrouter.spring;
 
 import java.util.Optional;
 
@@ -23,6 +23,11 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
+import org.eclipse.hono.commandrouter.CommandConsumerFactory;
+import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
+import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
+import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;

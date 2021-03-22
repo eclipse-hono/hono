@@ -26,6 +26,11 @@
   <name>Hono Services (Quarkus)</name>
   <description>Defines common dependencies for Quarkus-based service implementations</description>
 
+  <properties>
+    <!-- delegate verification of credentials to Authentication server by default -->
+    <hono.auth>delegating</hono.auth>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -90,6 +95,10 @@
             </goals>
             <configuration>
               <properties>
+                <property>
+                  <name>hono.auth</name>
+                  <value>${hono.auth}</value>
+                </property>
                 <property>
                   <name>hono.metrics</name>
                   <value>${hono.metrics}</value>
@@ -187,7 +196,11 @@
     <profile>
       <id>build-native-image</id>
       <properties>
-        <quarkus.native.additional-build-args>--initialize-at-run-time=io.netty.internal.tcnative.SSL, -H:ResourceConfigurationFiles=resources-config.json, -H:ReflectionConfigurationFiles=reflection-config.json</quarkus.native.additional-build-args>
+        <quarkus.native.additional-build-args>
+          --initialize-at-run-time=io.netty.internal.tcnative.SSL,
+          -H:ResourceConfigurationFiles=resources-config.json,
+          -H:ReflectionConfigurationFiles=reflection-config.json
+        </quarkus.native.additional-build-args>
         <!-- build native image inside of a container, doesn't require GraalVM SDK to be installed locally -->
         <quarkus.native.container-build>true</quarkus.native.container-build>
         <quarkus.package.type>native</quarkus.package.type>

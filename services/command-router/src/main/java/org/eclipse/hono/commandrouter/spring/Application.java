@@ -11,12 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.commandrouter;
+package org.eclipse.hono.commandrouter.spring;
 
 import java.util.Objects;
 
-import org.eclipse.hono.commandrouter.infinispan.EmbeddedCacheConfig;
-import org.eclipse.hono.commandrouter.infinispan.RemoteCacheConfig;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;

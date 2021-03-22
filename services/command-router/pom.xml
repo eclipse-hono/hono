@@ -21,40 +21,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <relativePath>../base-spring</relativePath>
   </parent>
   <artifactId>hono-service-command-router</artifactId>
-  <name>Hono Command Router</name>
-  <description>An implementation of Hono's Command Router API that is using Infinispan for storing data.</description>
+  <name>Hono Command Router (Spring)</name>
+  <description>A Spring Boot based implementation of Hono's Command Router API that is using Infinispan for storing data.</description>
   <inceptionYear>2020</inceptionYear>
 
   <dependencies>
     <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-client-hotrod</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-handler</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-infinispan</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-amqp</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-kafka</artifactId>
+      <artifactId>hono-service-command-router-base</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
@@ -80,7 +55,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                     </ports>
                     <env>
                       <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Dorg.jboss.logging.provider=slf4j</JAVA_OPTIONS>
-                      <JAVA_MAIN_CLASS>org.eclipse.hono.commandrouter.Application</JAVA_MAIN_CLASS>
+                      <JAVA_MAIN_CLASS>org.eclipse.hono.commandrouter.spring.Application</JAVA_MAIN_CLASS>
                     </env>
                   </build>
                 </image>

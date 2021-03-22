@@ -11,13 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.adapter.quarkus;
+package org.eclipse.hono.commandrouter.quarkus;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.service.util.quarkus.ConfigPropertiesHelper;
@@ -27,7 +26,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 /**
  * Parses Hono's Kafka configuration properties and provides them as beans.
  * <p>
- * This replaces the behavior of {@code io.quarkus.kafka.client.runtime.KafkaRuntimeConfigProducer} from Quarkus' Kafka
+ * This replaces the behavior of {@link io.quarkus.kafka.client.runtime.KafkaRuntimeConfigProducer} from Quarkus' Kafka
  * extension. The dependency also provides some patches that are required to use the Kafka clients in native images with
  * GraalVM.
  */
@@ -35,27 +34,24 @@ import org.eclipse.microprofile.config.ConfigProvider;
 public class KafkaRuntimeConfigProducer {
 
     /**
-     * The prefix for Hono's common Kafka configuration.
+     * The prefix of the common Kafka configuration.
      */
-    public static final String COMMON_CONFIG_PREFIX = "hono.kafka.commonClientConfig";
+    public static final String COMMON_CONFIG_PREFIX = "hono.command.kafka.commonClientConfig";
 
     /**
-     * The prefix for Hono's Kafka producer configuration.
+     * The prefix of the Kafka producer configuration.
      */
-    public static final String PRODUCER_CONFIG_PREFIX = "hono.kafka.producerConfig";
+    public static final String PRODUCER_CONFIG_PREFIX = "hono.command.kafka.producerConfig";
 
     /**
-     * The prefix for Hono's Kafka consumer configuration.
+     * The prefix of the Kafka consumer configuration.
      */
-    public static final String CONSUMER_CONFIG_PREFIX = "hono.kafka.consumerConfig";
+    public static final String CONSUMER_CONFIG_PREFIX = "hono.command.kafka.consumerConfig";
+
+    private static final String DEFAULT_CLIENT_ID_PREFIX = "cmd-router";
 
     /**
-     * The prefix for Hono's Kafka admin client configuration.
-     */
-    public static final String ADMIN_CLIENT_CONFIG_PREFIX = "hono.kafka.adminClientConfig";
-
-    /**
-     * Exposes Hono's Kafka producer configuration properties as a bean.
+     * Exposes Kafka producer configuration properties as a bean.
      * <p>
      * The configuration properties are derived from the provided configuration with the prefixes
      * {@link #COMMON_CONFIG_PREFIX} and {@link #PRODUCER_CONFIG_PREFIX}.
@@ -70,11 +66,12 @@ public class KafkaRuntimeConfigProducer {
         final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(ConfigPropertiesHelper.createPropertiesFromConfig(config, COMMON_CONFIG_PREFIX));
         configProperties.setProducerConfig(ConfigPropertiesHelper.createPropertiesFromConfig(config, PRODUCER_CONFIG_PREFIX));
+        configProperties.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
         return configProperties;
     }
 
     /**
-     * Exposes Hono's Kafka consumer configuration properties as a bean.
+     * Exposes Kafka consumer configuration properties as a bean.
      * <p>
      * The configuration properties are derived from the provided configuration with the prefixes
      * {@link #COMMON_CONFIG_PREFIX} and {@link #CONSUMER_CONFIG_PREFIX}.
@@ -89,25 +86,7 @@ public class KafkaRuntimeConfigProducer {
         final KafkaConsumerConfigProperties configProperties = new KafkaConsumerConfigProperties();
         configProperties.setCommonClientConfig(ConfigPropertiesHelper.createPropertiesFromConfig(config, COMMON_CONFIG_PREFIX));
         configProperties.setConsumerConfig(ConfigPropertiesHelper.createPropertiesFromConfig(config, CONSUMER_CONFIG_PREFIX));
-        return configProperties;
-    }
-
-    /**
-     * Exposes Hono's Kafka admin client configuration properties as a bean.
-     * <p>
-     * The configuration properties are derived from the provided configuration with the prefixes
-     * {@link #COMMON_CONFIG_PREFIX} and {@link #ADMIN_CLIENT_CONFIG_PREFIX}.
-     *
-     * @return The configuration properties.
-     */
-    @Produces
-    @Singleton
-    public KafkaAdminClientConfigProperties createKafkaAdminClientRuntimeConfig() {
-        final Config config = ConfigProvider.getConfig();
-
-        final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
-        configProperties.setCommonClientConfig(ConfigPropertiesHelper.createPropertiesFromConfig(config, COMMON_CONFIG_PREFIX));
-        configProperties.setAdminClientConfig(ConfigPropertiesHelper.createPropertiesFromConfig(config, ADMIN_CLIENT_CONFIG_PREFIX));
+        configProperties.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
         return configProperties;
     }
 }
