@@ -34,6 +34,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 /**
  * A factory for creating consumers of command messages.
@@ -120,9 +121,6 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         return CompositeFuture.all(futures).mapEmpty();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<CommandConsumer> createCommandConsumer(
             final String tenantId,
@@ -138,9 +136,6 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         return doCreateCommandConsumer(tenantId, deviceId, null, commandHandler, lifespan, context);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<CommandConsumer> createCommandConsumer(
             final String tenantId,
@@ -172,7 +167,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
 
         // register the command handler
         final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(tenantId, deviceId, gatewayId,
-                commandHandler);
+                commandHandler, Vertx.currentContext());
         commandHandlers.putCommandHandler(commandHandlerWrapper);
         final Instant lifespanStart = Instant.now();
 

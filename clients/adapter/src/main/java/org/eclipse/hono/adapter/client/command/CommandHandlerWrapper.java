@@ -15,7 +15,9 @@ package org.eclipse.hono.adapter.client.command;
 
 import java.util.Objects;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 /**
  * Wraps a command handler to be used in a command consumer.
@@ -26,6 +28,7 @@ public final class CommandHandlerWrapper {
     private final String deviceId;
     private final String gatewayId;
     private final Handler<CommandContext> commandHandler;
+    private final Context context;
 
     /**
      * Creates a new CommandHandlerWrapper.
@@ -38,14 +41,16 @@ public final class CommandHandlerWrapper {
      *                  using a {@code null} value here and providing the gateway id in the <em>deviceId</em>
      *                  parameter.)
      * @param commandHandler The command handler.
+     * @param context The vert.x context to run the handler on or {@code null} to invoke the handler directly.
      * @throws NullPointerException If tenantId, deviceId or commandHandler is {@code null}.
      */
     public CommandHandlerWrapper(final String tenantId, final String deviceId, final String gatewayId,
-                                 final Handler<CommandContext> commandHandler) {
+            final Handler<CommandContext> commandHandler, final Context context) {
         this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
         this.gatewayId = gatewayId;
         this.commandHandler = Objects.requireNonNull(commandHandler);
+        this.context = context;
     }
 
     /**
@@ -82,7 +87,11 @@ public final class CommandHandlerWrapper {
      * @param commandContext The command context to pass on to the command handler.
      */
     public void handleCommand(final CommandContext commandContext) {
-        commandHandler.handle(commandContext);
+        if (context == null || Vertx.currentContext() == context) {
+            commandHandler.handle(commandContext);
+        } else {
+            context.runOnContext(go -> commandHandler.handle(commandContext));
+        }
     }
 
     @Override

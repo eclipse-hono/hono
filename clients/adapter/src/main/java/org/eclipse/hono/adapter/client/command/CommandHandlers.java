@@ -21,6 +21,7 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
 
 /**
@@ -45,16 +46,17 @@ public class CommandHandlers {
      * @param commandHandler The command handler. The handler must invoke one of the terminal methods of the passed
      *                       in {@link CommandContext} in order to settle the command message transfer and finish
      *                       the trace span associated with the {@link CommandContext}.
+     * @param context The vert.x context to run the handler on or {@code null} to invoke the handler directly.
      * @return The replaced handler entry or {@code null} if there was none.
      * @throws NullPointerException If any of tenantId, deviceId or commandHandler is {@code null}.
      */
     public CommandHandlerWrapper putCommandHandler(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler) {
+            final String gatewayId, final Handler<CommandContext> commandHandler, final Context context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
 
-        return putCommandHandler(new CommandHandlerWrapper(tenantId, deviceId, gatewayId, commandHandler));
+        return putCommandHandler(new CommandHandlerWrapper(tenantId, deviceId, gatewayId, commandHandler, context));
     }
 
     /**
