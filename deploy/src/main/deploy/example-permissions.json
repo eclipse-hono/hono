@@ -56,6 +56,14 @@
     ],
     "command-router": [
       {
+        "resource": "tenant",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "tenant/*:*",
+        "activities": [ "EXECUTE" ]
+      },
+      {
         "resource": "registration/*",
         "activities": [ "READ", "WRITE" ]
       },

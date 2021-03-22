@@ -18,11 +18,14 @@ import java.util.Objects;
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.InternalCommandSender;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,23 +42,26 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
+    private final TenantClient tenantClient;
     private final CommandTargetMapper commandTargetMapper;
     private final InternalCommandSender internalCommandSender;
 
     /**
      * Creates a new MappingAndDelegatingCommandHandler instance.
      *
+     * @param tenantClient The Tenant service client.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public AbstractMappingAndDelegatingCommandHandler(final CommandTargetMapper commandTargetMapper,
+    public AbstractMappingAndDelegatingCommandHandler(
+            final TenantClient tenantClient,
+            final CommandTargetMapper commandTargetMapper,
             final InternalCommandSender internalCommandSender) {
-        Objects.requireNonNull(commandTargetMapper);
-        Objects.requireNonNull(internalCommandSender);
 
-        this.commandTargetMapper = commandTargetMapper;
-        this.internalCommandSender = internalCommandSender;
+        this.tenantClient = Objects.requireNonNull(tenantClient);
+        this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
+        this.internalCommandSender = Objects.requireNonNull(internalCommandSender);
     }
 
     @Override
@@ -83,8 +89,17 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
 
         // determine last used gateway device id
         log.trace("determine command target gateway/adapter for [{}]", command);
-        commandTargetMapper
-                .getTargetGatewayAndAdapterInstance(command.getTenant(), command.getDeviceId(), commandContext.getTracingContext())
+
+        final Future<TenantObject> tenantObjectFuture = tenantClient
+                .get(command.getTenant(), commandContext.getTracingContext());
+        tenantObjectFuture
+                .map(tenantObject -> {
+                    TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, null,
+                            commandContext.getTracingSpan());
+                    return tenantObject;
+                })
+                .compose(tenantObject -> commandTargetMapper.getTargetGatewayAndAdapterInstance(command.getTenant(),
+                        command.getDeviceId(), commandContext.getTracingContext()))
                 .onSuccess(result -> {
                     final String targetAdapterInstanceId = result
                             .getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
@@ -107,7 +122,9 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                 .onFailure(cause -> {
                     final String errorMsg;
 
-                    if (ServiceInvocationException.extractStatusCode(cause) == HttpURLConnection.HTTP_NOT_FOUND) {
+                    if (tenantObjectFuture.failed()) {
+                        errorMsg = "error getting tenant information for tenant " + command.getTenant();
+                    } else if (ServiceInvocationException.extractStatusCode(cause) == HttpURLConnection.HTTP_NOT_FOUND) {
                         errorMsg = "no target adapter instance found for command with device id "
                                 + command.getDeviceId();
                     } else {

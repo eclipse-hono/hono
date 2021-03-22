@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
@@ -112,10 +113,11 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     }
 
     @Override
-    public void initialize(final CommandTargetMapper commandTargetMapper) {
+    public void initialize(final TenantClient tenantClient, final CommandTargetMapper commandTargetMapper) {
+        Objects.requireNonNull(tenantClient);
         Objects.requireNonNull(commandTargetMapper);
-        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(commandTargetMapper, internalCommandSender,
-                tracer);
+        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandTargetMapper,
+                internalCommandSender, tracer);
         initialized.set(true);
     }
 

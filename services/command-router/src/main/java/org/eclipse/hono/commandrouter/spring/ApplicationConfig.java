@@ -16,7 +16,9 @@ package org.eclipse.hono.commandrouter.spring;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -54,6 +56,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -356,6 +359,49 @@ public class ApplicationConfig {
     @Scope("prototype")
     public HonoConnection registrationServiceConnection() {
         return HonoConnection.newConnection(vertx(), registrationClientConfig());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the tenant service as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.tenant")
+    @Bean
+    public RequestResponseClientConfigProperties tenantClientConfig() {
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        config.setServerRoleIfUnknown("Tenant");
+        config.setNameIfNotSet(COMPONENT_NAME);
+        return config;
+    }
+
+    /**
+     * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
+     *
+     * @return The client.
+     */
+    @Bean
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Scope("prototype")
+    public TenantClient tenantClient() {
+
+        return new ProtonBasedTenantClient(
+                tenantServiceConnection(),
+                SendMessageSampler.Factory.noop(),
+                Caches.newCaffeineCache(tenantClientConfig()));
+    }
+
+    /**
+     * Exposes the connection used for accessing the tenant service as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Scope("prototype")
+    public HonoConnection tenantServiceConnection() {
+        return HonoConnection.newConnection(vertx(), tenantClientConfig());
     }
 
     //Kafka based

@@ -14,10 +14,13 @@ The Command Router component provides an implementation of the Command Router AP
 
 The Command Router component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-command-router/) created from it.
 
+The adapter supports the following standard configuration options:
+
+* [Common Java VM Options]({{< relref "common-config.md/#java-vm-options" >}})
+* [Common vert.x Options]({{< relref "common-config.md/#vert-x-options" >}})
+* [Monitoring Options]({{< relref "monitoring-tracing-config.md" >}})
 
 ## Service Configuration
-
-In addition to the following options, this component supports the options described in [Common Configuration]({{< relref "common-config.md" >}}).
 
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the Command Router component.
 
@@ -95,6 +98,30 @@ commands from downstream applications and forward them on a specific link on whi
 
 The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 with `HONO_COMMAND` being used as `${PREFIX}`. The properties for configuring response caching can be ignored.
+
+### Tenant Service Connection Configuration
+
+The Command Router component requires a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}}) in order to retrieve information for a tenant.
+
+The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
+
+The adapter caches the responses from the service according to the *cache directive* included in the response.
+If the response doesn't contain a *cache directive* no data will be cached.
+
+### Device Registration Service Connection Configuration
+
+The Command Router component requires a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}}) in order to retrieve registration status assertions for the target devices of incoming command messages.
+
+The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+where the `${PREFIX}` is set to `HONO_REGISTRATION`.
+
+The adapter caches the responses from the service according to the *cache directive* included in the response.
+If the response doesn't contain a *cache directive* no data will be cached.
+
+Note that the adapter uses a single cache for all responses from the service regardless of the tenant identifier.
+Consequently, the Device Registration Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
+determine the overall number of responses that can be cached.
 
 ## Data Grid Connection Configuration
 

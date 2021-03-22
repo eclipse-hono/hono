@@ -19,7 +19,9 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
+import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
@@ -46,6 +48,8 @@ import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoin
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +99,9 @@ public class Application {
     @ConfigPrefix("hono.registration")
     RequestResponseClientConfigProperties deviceRegistrationClientConfig;
 
+    @ConfigPrefix("hono.tenant")
+    RequestResponseClientConfigProperties tenantClientConfig;
+
     @Inject
     KafkaProducerConfigProperties kafkaProducerConfig;
 
@@ -117,6 +124,8 @@ public class Application {
     AuthenticationService authenticationService;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
+
+    private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
 
     String getComponentName() {
         return COMPONENT_NAME;
@@ -228,6 +237,7 @@ public class Application {
         service.setConfig(serviceConfig);
         service.setDeviceConnectionInfo(deviceConnectionInfo);
         service.setRegistrationClient(registrationClient());
+        service.setTenantClient(tenantClient());
         service.setTracer(tracer);
         return service;
     }
@@ -270,6 +280,19 @@ public class Application {
         return registrationResponseCache;
     }
 
+    private RequestResponseClientConfigProperties tenantServiceClientConfig() {
+        tenantClientConfig.setServerRoleIfUnknown("Tenant");
+        tenantClientConfig.setNameIfNotSet(getComponentName());
+        return tenantClientConfig;
+    }
+
+    private Cache<Object, TenantResult<TenantObject>> tenantResponseCache() {
+        if (tenantResponseCache == null) {
+            tenantResponseCache = Caches.newCaffeineCache(tenantClientConfig);
+        }
+        return tenantResponseCache;
+    }
+
     /**
      * Creates a new client for Hono's Device Registration service.
      *
@@ -280,5 +303,17 @@ public class Application {
                 HonoConnection.newConnection(vertx, registrationServiceClientConfig(), tracer),
                 SendMessageSampler.Factory.noop(),
                 registrationResponseCache());
+    }
+
+    /**
+     * Creates a new client for Hono's Tenant service.
+     *
+     * @return The client.
+     */
+    protected TenantClient tenantClient() {
+        return new ProtonBasedTenantClient(
+                HonoConnection.newConnection(vertx, tenantServiceClientConfig(), tracer),
+                SendMessageSampler.Factory.noop(),
+                tenantResponseCache());
     }
 }

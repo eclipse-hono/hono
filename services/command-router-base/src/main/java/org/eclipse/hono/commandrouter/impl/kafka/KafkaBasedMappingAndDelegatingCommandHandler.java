@@ -17,6 +17,7 @@ import java.util.Objects;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
+import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -37,16 +38,18 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
     /**
      * Creates a new KafkaBasedMappingAndDelegatingCommandHandler instance.
      *
+     * @param tenantClient The Tenant service client.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public KafkaBasedMappingAndDelegatingCommandHandler(
+            final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper,
             final KafkaBasedInternalCommandSender internalCommandSender,
             final Tracer tracer) {
-        super(commandTargetMapper, internalCommandSender);
+        super(tenantClient, commandTargetMapper, internalCommandSender);
         Objects.requireNonNull(tracer);
 
         this.tracer = tracer;
