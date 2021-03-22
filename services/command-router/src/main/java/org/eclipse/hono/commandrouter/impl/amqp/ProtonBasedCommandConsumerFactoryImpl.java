@@ -97,6 +97,8 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
         }
 
         return connection.connect()
+                .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
+                .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
                 .map(ok -> {
                     // TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in
                     // order to close unused tenant-scoped receiver links

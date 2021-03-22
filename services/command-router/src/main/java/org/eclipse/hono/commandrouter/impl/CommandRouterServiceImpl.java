@@ -37,8 +37,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
-import io.opentracing.Tracer;
-import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -57,7 +55,6 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private DeviceConnectionInfo deviceConnectionInfo;
     private CommandConsumerFactory commandConsumerFactory;
     private CommandTargetMapper commandTargetMapper;
-    private Tracer tracer = NoopTracerFactory.create();
     /**
      * Vert.x context that this service has been started in.
      */
@@ -68,21 +65,6 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     @Autowired
     public void setConfig(final CommandRouterServiceConfigProperties configuration) {
         this.config = configuration;
-    }
-
-    /**
-     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
-     * of messages published by devices across Hono's components.
-     * <p>
-     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
-     * be used.
-     *
-     * @param opentracingTracer The tracer.
-     */
-    @Autowired(required = false)
-    public final void setTracer(final Tracer opentracingTracer) {
-        LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
-        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     /**
@@ -143,14 +125,14 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             return Future.failedFuture(new IllegalStateException("Device Connection info client must be set"));
         }
 
-        startServiceClient(registrationClient, "Device Registration service");
+        registrationClient.start();
         if (deviceConnectionInfo instanceof Lifecycle) {
-            startServiceClient((Lifecycle) deviceConnectionInfo, "Device Connection info");
+            ((Lifecycle) deviceConnectionInfo).start();
         }
         // initialize components dependent on the above clients
         commandTargetMapper.initialize(registrationClient, deviceConnectionInfo);
         commandConsumerFactory.initialize(commandTargetMapper);
-        startServiceClient(commandConsumerFactory, "Command & Control consumer factory");
+        commandConsumerFactory.start();
 
         return Future.succeededFuture();
     }
@@ -161,11 +143,11 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
-        results.add(stopServiceClient(registrationClient));
+        results.add(registrationClient.stop());
         if (deviceConnectionInfo instanceof Lifecycle) {
-            results.add(stopServiceClient((Lifecycle) deviceConnectionInfo));
+            results.add(((Lifecycle) deviceConnectionInfo).stop());
         }
-        results.add(stopServiceClient(commandConsumerFactory));
+        results.add(commandConsumerFactory.stop());
 
         return CompositeFuture.all(results)
                 .recover(t -> {
@@ -176,45 +158,6 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                     LOG.info("successfully stopped command router");
                     return (Void) null;
                 });
-    }
-
-    /**
-     * Starts a service client.
-     * <p>
-     * This method invokes the given client's {@link Lifecycle#start()} method.
-     *
-     * @param serviceClient The client to start.
-     * @param serviceName The name of the service that the client is for (used for logging).
-     * @return A future indicating the outcome of starting the client.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final Future<Void> startServiceClient(final Lifecycle serviceClient, final String serviceName) {
-
-        Objects.requireNonNull(serviceClient);
-        Objects.requireNonNull(serviceName);
-
-        return serviceClient.start().map(c -> {
-            LOG.info("{} client [{}] successfully connected", serviceName, serviceClient);
-            return c;
-        }).recover(t -> {
-            LOG.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
-            return Future.failedFuture(t);
-        });
-    }
-
-    /**
-     * Stops a service client.
-     * <p>
-     * This method invokes the client's {@link Lifecycle#stop()} method.
-     *
-     * @param client The client to stop.
-     * @return A future indicating the outcome of stopping the client.
-     * @throws NullPointerException if client is {@code null}.
-     */
-    protected final Future<Void> stopServiceClient(final Lifecycle client) {
-
-        Objects.requireNonNull(client);
-        return client.stop();
     }
 
     @Override
