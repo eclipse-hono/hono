@@ -1340,4 +1340,53 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return ConnectionAttemptOutcome.UNKNOWN;
         }
     }
+
+    /**
+     * Checks if the given error is terminal or not.
+     * <p>
+     * The errors that are classified as terminal are listed below.
+     * <ul>
+     * <li>The adapter is disabled for the tenant that the client belongs to.</li>
+     * <li>The authenticated device or gateway is disabled or not registered.</li>
+     * <li>The tenant is disabled or does not exist.</li>
+     * </ul>
+     *
+     * @param error The error to be checked.
+     * @param deviceId The device identifier or {@code null}.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param spanContext The OpenTracing context to use for tracking the operation.
+     * @return A future indicating the outcome of the check.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    protected Future<Boolean> isTerminalError(final Throwable error, final String deviceId,
+            final Device authenticatedDevice, final SpanContext spanContext) {
+
+        Objects.requireNonNull(error);
+
+        if (authenticatedDevice == null) {
+            // If the device is unauthenticated then the error is classified as non-terminal.
+            return Future.succeededFuture(false);
+        } else {
+            // if the device is not registered or disabled
+            if (error instanceof DeviceDisabledOrNotRegisteredException) {
+                // and if the device is connected via a gateway
+                if (deviceId != null && !authenticatedDevice.getDeviceId().equals(deviceId)) {
+                    return getRegistrationAssertion(authenticatedDevice.getTenantId(),
+                            authenticatedDevice.getDeviceId(), null, spanContext)
+                                    .map(ok -> false)
+                                    .recover(e -> {
+                                        // and if the gateway is not registered then it is a terminal error
+                                        return Future
+                                                .succeededFuture(e instanceof DeviceDisabledOrNotRegisteredException);
+                                    });
+                } else {
+                    return Future.succeededFuture(true);
+                }
+            }
+
+            return Future.succeededFuture(error instanceof AdapterDisabledException
+                    || error instanceof GatewayDisabledOrNotRegisteredException
+                    || error instanceof TenantDisabledOrNotRegisteredException);
+        }
+    }
 }
