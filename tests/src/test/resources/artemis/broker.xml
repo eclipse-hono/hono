@@ -84,7 +84,7 @@
 
       <!-- once the disk hits this limit the system will block, or close the connection in certain protocols
            that won't support flow control. -->
-      <max-disk-usage>90</max-disk-usage>
+      <max-disk-usage>98</max-disk-usage>
 
       <!-- the system will enter into page mode once you hit this limit.
            This is an estimate in bytes of how much the messages are using in memory -->
