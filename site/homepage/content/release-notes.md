@@ -8,18 +8,19 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### New Features
 
-* The Device Registry Management API has been extended now to support an optional unique identifier 
+* The Device Registry Management API has been extended now to support an optional unique identifier
   for trust anchors belonging to a tenant. The file, JDBC and MongoDB based device registries
   support this feature. Please refer to the
   [Device registry management API]({{% doclink "/api/management#/tenants/" %}}) for details.
 * The LoraWAN protocol adapter has been extended with support for *The Things Stack* provider.
+* The LoraWAN protocol adapter now supports command and control for providers *Chirpstack*, *Firefly* and *Loriot*.
 * Added (experimental) Quarkus based variant of the Authentication service.
 * Added (experimental) Quarkus based variant of the CoAP protocol adapter.
+* Added (experimental) Quarkus based variant of the Command Router protocol adapter.
 * The MQTT adapter now lets devices subscribe on a new error topic to get informed about errors during the processing
   of telemetry, event or command response message. With such an error subscription in place, the default behaviour
   on such errors is now to keep the MQTT connection open. Please refer to the
   [MQTT Adapter User Guide] ({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
-* The LoraWAN protocol adapter now supports command and control for providers *Chirpstack*, *Firefly* and *Loriot*.
 * The MQTT adapter now supports mapping the command payload through an external http service.
 * The Command Router component has been promoted from *tech preview* to *fully supported*.
 

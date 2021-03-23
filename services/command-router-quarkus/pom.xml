@@ -43,6 +43,7 @@
         </exclusion>
       </exclusions>
     </dependency>
+
   </dependencies>
 
   <build>
@@ -99,6 +100,10 @@
            <artifactId>org.osgi.compendium</artifactId>
            <scope>runtime</scope>
            <version>4.3.1</version>
+        </dependency>
+        <dependency>
+           <groupId>io.smallrye</groupId>
+           <artifactId>smallrye-metrics</artifactId>
         </dependency>
       </dependencies>
       <build>

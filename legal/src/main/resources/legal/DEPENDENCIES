@@ -22,6 +22,7 @@ maven/mavencentral/io.vertx/vertx-junit5/3.9.5, , approved, eclipse
 maven/mavencentral/io.netty/netty-transport/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/org.wildfly.security/wildfly-elytron-security-manager/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gs2/1.14.1.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/jakarta.json/jakarta.json-api/1.1.6, , approved, eclipse
 maven/mavencentral/org.infinispan/infinispan-commons/11.0.9.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apiguardian/apiguardian-api/1.1.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.guava/guava/28.0-jre, Apache-2.0, approved, clearlydefined
@@ -36,6 +37,7 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-http-basic/1.14.1.Final,
 maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.13.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup/protoparser/4.0.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-digest/1.14.1.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.netty/netty-tcnative/2.0.30.Final, Apache-2.0, approved, CQ16909
 maven/mavencentral/io.smallrye.common/smallrye-common-annotation/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gssapi/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-core/1.5.0, Apache-2.0, approved, clearlydefined
@@ -101,6 +103,7 @@ maven/mavencentral/org.springframework.security/spring-security-crypto/5.4.5, Ap
 maven/mavencentral/net.bytebuddy/byte-buddy-agent/1.10.18, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.netty/netty-handler-proxy/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/org.apache.kafka/kafka-clients/2.6.0, Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND EPL-2.0, approved, clearlydefined
+maven/mavencentral/org.osgi/org.osgi.core/4.3.1, Apache-2.0, approved, CQ10111
 maven/mavencentral/org.junit.jupiter/junit-jupiter-engine/5.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/org.mockito/mockito-core/3.6.28, MIT, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-provider-util/1.14.1.Final, Apache-2.0, approved, clearlydefined
@@ -135,9 +138,11 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-http-sso/1.14.1.Final, A
 maven/mavencentral/org.yaml/snakeyaml/1.26, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-client/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.reactivex.rxjava3/rxjava/3.0.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.osgi/org.osgi.compendium/4.3.1, Apache-2.0, approved, CQ10111
 maven/mavencentral/io.vertx/vertx-mongo-client/3.9.5, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-jdbc-client/3.9.5, , approved, eclipse
 maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism/1.14.1.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-metrics-api/2.4.4, , restricted, clearlydefined
 maven/mavencentral/org.slf4j/slf4j-api/1.7.28, MIT, approved, CQ13368
 maven/mavencentral/io.netty/netty-resolver/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.dropwizard.metrics/metrics-core/4.1.14, Apache-2.0, approved, clearlydefined
@@ -245,5 +250,6 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-auth-server-sasl/1.14.1.
 maven/mavencentral/org.junit.platform/junit-platform-engine/1.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/io.smallrye.common/smallrye-common-io/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.lz4/lz4-java/1.7.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-metrics/2.4.4, , restricted, clearlydefined
 maven/mavencentral/io.vertx/vertx-kafka-client/3.9.5, , approved, eclipse
 maven/mavencentral/io.netty/netty-handler/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
