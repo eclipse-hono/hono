@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -48,33 +47,20 @@ public class RemoteCacheConfig {
     }
 
     /**
-     * Exposes a remote cache manager as a Spring bean.
-     *
-     * @return The newly created cache manager. The manager will not be started.
-     */
-    @Bean
-    public RemoteCacheManager remoteCacheManager() {
-        final InfinispanRemoteConfigurationProperties properties = remoteCacheProperties();
-        return new RemoteCacheManager(properties.getConfigurationBuilder().build(), false);
-    }
-
-    /**
-     * Exposes a remote cache for accessing the Infinispan data grid that contains device
-     * connection information.
+     * Exposes a remote cache for accessing the Infinispan data grid that contains command
+     * routing information.
      *
      * @param vertx The vert.x instance to run on.
-     * @param cacheConfig Common cache configuration options.
+     * @param commonCacheConfig Common cache configuration options.
      * @return The cache.
      */
     @Bean
-    public BasicCache<String, String> remoteCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
-        log.info("Common Config: {}", cacheConfig);
-        return new HotrodCache<>(
+    public BasicCache<String, String> remoteCache(final Vertx vertx, final CommonCacheConfig commonCacheConfig) {
+        log.info("Common Config: {}", commonCacheConfig);
+        return HotrodCache.from(
                 vertx,
-                remoteCacheManager(),
-                cacheConfig.getCacheName(),
-                cacheConfig.getCheckKey(),
-                cacheConfig.getCheckValue());
+                remoteCacheProperties(),
+                commonCacheConfig);
     }
 
 }

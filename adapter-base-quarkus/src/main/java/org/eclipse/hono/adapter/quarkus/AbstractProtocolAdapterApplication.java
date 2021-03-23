@@ -72,7 +72,6 @@ import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,7 +144,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @ConfigPrefix("hono.commandRouter")
     protected RequestResponseClientConfigProperties commandRouterConfig;
 
-    // either this property or the deviceConnectionCacheConfig property
+    // either this property or the commandRouterConfig property
     // will contain a valid configuration
     @ConfigPrefix("hono.deviceConnection")
     protected RequestResponseClientConfigProperties deviceConnectionClientConfig;
@@ -410,16 +409,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     HonoConnection.newConnection(vertx, deviceConnectionServiceClientConfig(), tracer),
                     messageSamplerFactory);
         } else {
-            final RemoteCacheManager cacheManager = new RemoteCacheManager(
-                    deviceConnectionCacheConfig.getConfigurationBuilder().build(),
-                    false);
-            final CommonCacheConfig cacheConfig = new CommonCacheConfig();
-            final HotrodCache<String, String> cache = new HotrodCache<>(
-                    vertx,
-                    cacheManager,
-                    cacheConfig.getCacheName(),
-                    cacheConfig.getCheckKey(),
-                    cacheConfig.getCheckValue());
+            final var cache = HotrodCache.from(vertx, deviceConnectionCacheConfig, new CommonCacheConfig());
             return new CacheBasedDeviceConnectionClient(
                     new CacheBasedDeviceConnectionInfo(cache, tracer),
                     tracer);

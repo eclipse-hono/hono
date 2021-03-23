@@ -17,7 +17,6 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -36,6 +35,17 @@ import io.vertx.core.Vertx;
 public class HotrodCacheConfig {
 
     /**
+     * Gets properties for configuring the service's common cache aspects.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.device-connection.common")
+    public CommonCacheConfig commonCacheConfig() {
+        return new CommonCacheConfig();
+    }
+
+    /**
      * Gets properties for configuring the connection to the Infinispan
      * data grid that contains device connection information.
      *
@@ -48,18 +58,6 @@ public class HotrodCacheConfig {
     }
 
     /**
-     * Exposes the Infinispan data grid that contains device connection information
-     * as a remote cache manager.
-     *
-     * @return The newly created cache manager. The manager will not be started.
-     */
-    @Bean
-    public RemoteCacheManager remoteCacheManager() {
-        final InfinispanRemoteConfigurationProperties properties = remoteCacheProperties();
-        return new RemoteCacheManager(properties.getConfigurationBuilder().build(), false);
-    }
-
-    /**
      * Exposes a remote cache for accessing the Infinispan data grid that contains device
      * connection information.
      *
@@ -68,13 +66,10 @@ public class HotrodCacheConfig {
      * @return The cache.
      */
     @Bean
-    public HotrodCache<String, String> remoteCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
-        return new HotrodCache<>(
-                vertx,
-                remoteCacheManager(),
-                cacheConfig.getCacheName(),
-                cacheConfig.getCheckKey(),
-                cacheConfig.getCheckValue());
+    public HotrodCache<String, String> remoteCache(
+            final Vertx vertx,
+            final CommonCacheConfig cacheConfig) {
+        return HotrodCache.from(vertx, remoteCacheProperties(), cacheConfig);
     }
 
     /**
@@ -95,16 +90,5 @@ public class HotrodCacheConfig {
         return new CacheBasedDeviceConnectionClient(
                 new CacheBasedDeviceConnectionInfo(cache, effectiveTracer),
                 effectiveTracer);
-    }
-
-    /**
-     * Gets properties for configuring the service's common cache aspects.
-     *
-     * @return The properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.device-connection.common")
-    public CommonCacheConfig commonCacheConfig() {
-        return new CommonCacheConfig();
     }
 }

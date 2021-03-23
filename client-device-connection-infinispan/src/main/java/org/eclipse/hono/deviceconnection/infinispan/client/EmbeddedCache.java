@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.infinispan.lifecycle.ComponentStatus;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +58,7 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
 
     @Override
     protected boolean isStarted() {
-        return cacheManager.getStatus() == ComponentStatus.RUNNING && getCache() != null;
+        return cacheManager.isRunning(cacheName) && getCache() != null;
     }
 
     @Override
@@ -71,19 +70,15 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
 
             vertx.executeBlocking(r -> {
                 try {
-                    final var status = cacheManager.getStatus();
-                    if (status != ComponentStatus.RUNNING) {
-                        LOG.debug("trying to start cache manager, current state: {}", status);
-                        cacheManager.start();
-                        LOG.info("started cache manager");
-                    }
+                    LOG.debug("trying to start cache manager, current state");
+                    cacheManager.start();
+                    LOG.info("started cache manager");
                     LOG.debug("trying to get cache");
                     setCache(cacheManager.getCache(cacheName));
-                    if (getCache() == null) {
-                        r.fail(new IllegalStateException("cache [" + cacheName + "] is not configured"));
-                    } else {
-                        getCache().start();
+                    if (isStarted()) {
                         r.complete(getCache());
+                    } else {
+                        r.fail(new IllegalStateException("cache [" + cacheName + "] is not configured"));
                     }
                 } catch (final Throwable t) {
                     r.fail(t);

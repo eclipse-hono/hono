@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -49,6 +48,7 @@ import io.vertx.junit5.VertxTestContext;
 class HotrodCacheTest extends AbstractBasicCacheTest {
 
     private RemoteCacheContainer remoteCacheManager;
+    private HotrodCache<String, String> cache;
 
     /**
      * Sets up the fixture.
@@ -60,22 +60,31 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
     }
 
     @Override
-    protected org.infinispan.client.hotrod.RemoteCache<Object, Object> givenAConnectedCache() {
+    protected org.infinispan.client.hotrod.RemoteCache<Object, Object> givenAConnectedInfinispanCache() {
         final Configuration configuration = mock(Configuration.class);
+        when(configuration.forceReturnValues()).thenReturn(false);
         @SuppressWarnings("unchecked")
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> result = mock(org.infinispan.client.hotrod.RemoteCache.class);
-        when(remoteCacheManager.getCache(anyString(), anyBoolean())).thenReturn(result);
+        when(remoteCacheManager.getCache(anyString())).thenReturn(result);
         when(remoteCacheManager.getConfiguration()).thenReturn(configuration);
         when(remoteCacheManager.isStarted()).thenReturn(true);
-        when(configuration.forceReturnValues()).thenReturn(false);
         when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
         return result;
     }
 
     @Override
-    protected void mockRemoveWithValue(final BasicCache<Object, Object> cache, final String key, final Object value,
+    protected org.eclipse.hono.deviceconnection.infinispan.client.BasicCache<String, String> getCache() {
+        return cache;
+    }
+
+    @Override
+    protected void mockRemoveWithValue(
+            final BasicCache<Object, Object> infinispanCache,
+            final String key,
+            final Object value,
             final boolean removeOperationResult) {
-        final org.infinispan.client.hotrod.RemoteCache<Object, Object> remoteCache = (RemoteCache<Object, Object>) cache;
+
+        final org.infinispan.client.hotrod.RemoteCache<Object, Object> remoteCache = (RemoteCache<Object, Object>) infinispanCache;
         if (removeOperationResult) {
             final long version = 1;
             when(remoteCache.getWithMetadataAsync(eq(key)))
@@ -89,15 +98,18 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
     }
 
     @Override
-    protected void verifyRemoveWithValue(final BasicCache<Object, Object> cache, final String key,
-            final Object value, final boolean expectedRemoveOperationResult) {
-        final org.infinispan.client.hotrod.RemoteCache<Object, Object> remoteCache = (RemoteCache<Object, Object>) cache;
+    protected void verifyRemoveWithValue(
+            final BasicCache<Object, Object> infinispanCache,
+            final String key,
+            final Object value,
+            final boolean expectedRemoveOperationResult) {
+
+        final org.infinispan.client.hotrod.RemoteCache<Object, Object> remoteCache = (RemoteCache<Object, Object>) infinispanCache;
         verify(remoteCache).getWithMetadataAsync(key);
         if (expectedRemoveOperationResult) {
             verify(remoteCache).removeWithVersionAsync(eq(key), anyLong());
         }
     }
-
 
     /**
      * Verifies that the <em>checkForCacheAvailability</em> check uses a cached connection
@@ -107,12 +119,12 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
      */
     @Test
     void testCheckForCacheAvailabilityUsesCachedResult(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
+        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
         when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
-        cache.start()
-                .compose(c -> cache.checkForCacheAvailability())
+        getCache().start()
+                .compose(c -> getCache().checkForCacheAvailability())
                 // 2nd invocation is supposed to use cached value
-                .compose(c -> cache.checkForCacheAvailability())
+                .compose(c -> getCache().checkForCacheAvailability())
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         // putAsync() must have only been called once

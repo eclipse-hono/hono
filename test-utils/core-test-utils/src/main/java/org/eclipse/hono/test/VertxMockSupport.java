@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import org.mockito.Mockito;
 
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -66,6 +67,23 @@ public final class VertxMockSupport {
             handler.handle(timerId);
             return timerId;
         });
+    }
+
+    /**
+     * Ensures that blocking code is executed immediately on the given vert.x instance.
+     *
+     * @param vertx The mocked vert.x instance.
+     */
+    public static void executeBlockingCodeImmediately(final Vertx vertx) {
+
+        doAnswer(invocation -> {
+            final Promise<Void> result = Promise.promise();
+            final Handler<Promise<?>> blockingCodeHandler = invocation.getArgument(0);
+            final Handler<Promise<?>> resultHandler = invocation.getArgument(1);
+            blockingCodeHandler.handle(result);
+            resultHandler.handle(result);
+            return null;
+        }).when(vertx).executeBlocking(anyHandler(), anyHandler());
     }
 
     /**

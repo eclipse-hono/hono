@@ -29,7 +29,6 @@ import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.InfinispanRemoteConfigurationProperties;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
 import org.infinispan.manager.DefaultCacheManager;
@@ -80,12 +79,10 @@ public class DeviceConnectionInfoProducer {
                     commonCacheConfig.getCacheName());
         } else {
             LOG.info("configuring remote cache");
-            return new HotrodCache<>(
+            return HotrodCache.from(
                     vertx,
-                    remoteCacheManager(),
-                    commonCacheConfig.getCacheName(),
-                    commonCacheConfig.getCheckKey(),
-                    commonCacheConfig.getCheckValue());
+                    infinispanCacheConfig,
+                    commonCacheConfig);
         }
     }
 
@@ -111,9 +108,5 @@ public class DeviceConnectionInfoProducer {
 
     private EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {
         return new DefaultCacheManager(configuration(cacheConfig), false);
-    }
-
-    private RemoteCacheManager remoteCacheManager() {
-        return new RemoteCacheManager(infinispanCacheConfig.getConfigurationBuilder().build(), false);
     }
 }

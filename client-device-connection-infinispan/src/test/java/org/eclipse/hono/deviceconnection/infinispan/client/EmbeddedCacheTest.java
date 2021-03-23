@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,30 +32,39 @@ import io.vertx.junit5.VertxExtension;
 
 
 /**
- * Tests verifying behavior of the {@link HotrodCache}.
+ * Tests verifying behavior of the {@link EmbeddedCache}.
  *
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
 class EmbeddedCacheTest extends AbstractBasicCacheTest {
 
-    private EmbeddedCacheManager remoteCacheManager;
+    private static final String CACHE_NAME = "cache";
+
+    private EmbeddedCacheManager cacheManager;
+    private EmbeddedCache<String , String> cache;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     void setUpCache() {
-        remoteCacheManager = mock(EmbeddedCacheManager.class);
-        cache = new EmbeddedCache<>(vertx, remoteCacheManager, "cache");
+        cacheManager = mock(EmbeddedCacheManager.class);
+        when(cacheManager.isRunning(eq(CACHE_NAME))).thenReturn(Boolean.TRUE);
+        cache = new EmbeddedCache<>(vertx, cacheManager, CACHE_NAME);
     }
 
     @Override
-    protected org.infinispan.commons.api.BasicCache<Object, Object> givenAConnectedCache() {
+    protected org.infinispan.commons.api.BasicCache<Object, Object> givenAConnectedInfinispanCache() {
         @SuppressWarnings("unchecked")
         final Cache<Object, Object> result = mock(Cache.class);
-        when(remoteCacheManager.getCache(anyString())).thenReturn(result);
-        when(remoteCacheManager.getStatus()).thenReturn(ComponentStatus.RUNNING);
+        when(cacheManager.getCache(anyString())).thenReturn(result);
+        when(cacheManager.getStatus()).thenReturn(ComponentStatus.RUNNING);
         return result;
+    }
+
+    @Override
+    protected BasicCache<String, String> getCache() {
+        return cache;
     }
 }
