@@ -47,5 +47,14 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: '11'
-    - name: Build all components (incl. unit tests) and run integration tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.components.type=${{ matrix.component-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
+    - name: Build all components and run unit tests
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image
+    - name: Free disk space
+      run: |
+        du -hs
+        mvn clean -B -e -q -pl '!tests'
+        du -hs
+    - name: Run integration tests
+      run: |
+        cd tests
+        mvn install -B -e -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.components.type=${{ matrix.component-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Prun-tests
