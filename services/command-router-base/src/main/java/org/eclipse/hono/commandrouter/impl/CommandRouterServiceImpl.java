@@ -25,22 +25,15 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
-import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
-import io.opentracing.Tracer;
-import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -55,95 +48,39 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandRouterServiceImpl.class);
 
-    private DeviceRegistrationClient registrationClient;
-    private TenantClient tenantClient;
-    private DeviceConnectionInfo deviceConnectionInfo;
-    private CommandConsumerFactory commandConsumerFactory;
-    private CommandTargetMapper commandTargetMapper;
-    private Tracer tracer = NoopTracerFactory.create();
+    private final CommandRouterServiceConfigProperties config;
+    private final DeviceRegistrationClient registrationClient;
+    private final TenantClient tenantClient;
+    private final DeviceConnectionInfo deviceConnectionInfo;
+    private final CommandConsumerFactory commandConsumerFactory;
     /**
      * Vert.x context that this service has been started in.
      */
     private Context context;
 
-    private CommandRouterServiceConfigProperties config;
-
-    @Autowired
-    public void setConfig(final CommandRouterServiceConfigProperties configuration) {
-        this.config = configuration;
-    }
 
     /**
-     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
-     * of messages published by devices across Hono's components.
-     * <p>
-     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
-     * be used.
+     * Creates a new CommandRouterServiceImpl.
      *
-     * @param opentracingTracer The tracer.
+     * @param config The command router service configuration.
+     * @param registrationClient The device registration client.
+     * @param tenantClient The tenant client.
+     * @param deviceConnectionInfo The client for accessing device connection data.
+     * @param commandConsumerFactory The factory to use for creating clients to receive commands.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    @Autowired(required = false)
-    public final void setTracer(final Tracer opentracingTracer) {
-        LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
-        this.tracer = Objects.requireNonNull(opentracingTracer);
-    }
+    public CommandRouterServiceImpl(
+            final CommandRouterServiceConfigProperties config,
+            final DeviceRegistrationClient registrationClient,
+            final TenantClient tenantClient,
+            final DeviceConnectionInfo deviceConnectionInfo,
+            final CommandConsumerFactory commandConsumerFactory) {
 
-    /**
-     * Sets the client for accessing device connection data.
-     *
-     * @param deviceConnectionInfo The client object.
-     * @throws NullPointerException if deviceConnectionInfo is {@code null}.
-     */
-    @Autowired
-    public final void setDeviceConnectionInfo(final DeviceConnectionInfo deviceConnectionInfo) {
+        this.config = Objects.requireNonNull(config);
+        this.registrationClient = Objects.requireNonNull(registrationClient);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
-    }
-
-    /**
-     * Sets the client to use for accessing the Device Registration service.
-     *
-     * @param client The client.
-     * @throws NullPointerException if the client is {@code null}.
-     */
-    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
-    @Autowired
-    public final void setRegistrationClient(final DeviceRegistrationClient client) {
-        this.registrationClient = Objects.requireNonNull(client);
-    }
-
-    /**
-     * Sets the client to use for accessing the Tenant service.
-     *
-     * @param client The client.
-     * @throws NullPointerException if the client is {@code null}.
-     */
-    @Qualifier(TenantConstants.TENANT_ENDPOINT)
-    @Autowired
-    public final void setTenantClient(final TenantClient client) {
-        this.tenantClient = Objects.requireNonNull(client);
-    }
-
-    /**
-     * Sets the factory to use for creating clients to receive commands.
-     *
-     * @param factory The factory.
-     * @throws NullPointerException if factory is {@code null}.
-     */
-    @Autowired
-    public final void setCommandConsumerFactory(final CommandConsumerFactory factory) {
-        this.commandConsumerFactory = Objects.requireNonNull(factory);
-    }
-
-    /**
-     * Sets the component for mapping an incoming command to the gateway (if applicable)
-     * and protocol adapter instance that can handle it.
-     *
-     * @param commandTargetMapper The mapper component.
-     * @throws NullPointerException if commandTargetMapper is {@code null}.
-     */
-    @Autowired
-    public final void setCommandTargetMapper(final CommandTargetMapper commandTargetMapper) {
-        this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
+        this.commandConsumerFactory = Objects.requireNonNull(commandConsumerFactory);
     }
 
     @Override
@@ -152,22 +89,12 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (context == null) {
             return Future.failedFuture(new IllegalStateException("Service must be started in a Vert.x context"));
         }
-        if (registrationClient == null) {
-            return Future.failedFuture(new IllegalStateException("Device Registration client must be set"));
-        } else if (tenantClient == null) {
-            return Future.failedFuture(new IllegalStateException("Tenant client must be set"));
-        } else if (deviceConnectionInfo == null) {
-            return Future.failedFuture(new IllegalStateException("Device Connection info client must be set"));
-        }
 
         registrationClient.start();
         tenantClient.start();
         if (deviceConnectionInfo instanceof Lifecycle) {
             ((Lifecycle) deviceConnectionInfo).start();
         }
-        // initialize components dependent on the above clients
-        commandTargetMapper.initialize(registrationClient, deviceConnectionInfo);
-        commandConsumerFactory.initialize(tenantClient, commandTargetMapper);
         commandConsumerFactory.start();
 
         return Future.succeededFuture();

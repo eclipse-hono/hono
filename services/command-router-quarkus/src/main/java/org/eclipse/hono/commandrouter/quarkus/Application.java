@@ -231,15 +231,16 @@ public class Application {
     }
 
     private CommandRouterService commandRouterService() {
-        final var service = new CommandRouterServiceImpl();
-        service.setCommandConsumerFactory(commandConsumerFactory());
-        service.setCommandTargetMapper(CommandTargetMapper.create(tracer));
-        service.setConfig(serviceConfig);
-        service.setDeviceConnectionInfo(deviceConnectionInfo);
-        service.setRegistrationClient(registrationClient());
-        service.setTenantClient(tenantClient());
-        service.setTracer(tracer);
-        return service;
+        final DeviceRegistrationClient registrationClient = registrationClient();
+        final TenantClient tenantClient = tenantClient();
+
+        final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, tracer);
+        return new CommandRouterServiceImpl(
+                serviceConfig,
+                registrationClient,
+                tenantClient,
+                deviceConnectionInfo,
+                commandConsumerFactory(tenantClient, commandTargetMapper));
     }
 
     private ClientConfigProperties commandConsumerFactoryConfig() {
@@ -248,12 +249,15 @@ public class Application {
         return commandConsumerFactoryConfig;
     }
 
-    private CommandConsumerFactory commandConsumerFactory() {
+    private CommandConsumerFactory commandConsumerFactory(final TenantClient tenantClient,
+            final CommandTargetMapper commandTargetMapper) {
 
         if (kafkaProducerConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
 
             return new KafkaBasedCommandConsumerFactoryImpl(
                     vertx,
+                    tenantClient,
+                    commandTargetMapper,
                     KafkaProducerFactory.sharedProducerFactory(vertx),
                     kafkaProducerConfig,
                     kafkaConsumerConfig,
@@ -263,6 +267,8 @@ public class Application {
 
             return new ProtonBasedCommandConsumerFactoryImpl(
                     HonoConnection.newConnection(vertx, commandConsumerFactoryConfig(), tracer),
+                    tenantClient,
+                    commandTargetMapper,
                     SendMessageSampler.Factory.noop());
         }
     }

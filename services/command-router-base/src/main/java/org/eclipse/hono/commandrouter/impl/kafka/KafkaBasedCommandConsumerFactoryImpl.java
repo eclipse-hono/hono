@@ -20,7 +20,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -69,10 +68,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             .compile(Pattern.quote(HonoTopic.Type.COMMAND.prefix) + ".*");
     private static final long WAIT_FOR_REBALANCE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
-    private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final KafkaConsumer<String, Buffer> kafkaConsumer;
-    private final KafkaBasedInternalCommandSender internalCommandSender;
-    private final Tracer tracer;
     private final Vertx vertx;
     /**
      * Currently subscribed topics, i.e. the topics matching COMMANDS_TOPIC_PATTERN.
@@ -82,51 +78,50 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private Set<String> subscribedTopics = new HashSet<>();
     private final AtomicReference<Promise<Void>> onSubscribedTopicsNextUpdated = new AtomicReference<>();
 
-    private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
+    private final KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
 
     /**
      * Creates a new factory to process commands via the Kafka cluster.
      *
      * @param vertx The Vert.x instance to use.
+     * @param tenantClient The Tenant service client.
+     * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
+     *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
+     *            here, that is supposed to be done by the calling method.
      * @param kafkaProducerFactory The producer factory for creating Kafka producers for sending messages.
      * @param kafkaProducerConfig The Kafka producer configuration.
      * @param kafkaConsumerConfig The Kafka consumer configuration.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public KafkaBasedCommandConsumerFactoryImpl(
             final Vertx vertx,
+            final TenantClient tenantClient,
+            final CommandTargetMapper commandTargetMapper,
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfig,
             final KafkaConsumerConfigProperties kafkaConsumerConfig,
             final Tracer tracer) {
+
         this.vertx = Objects.requireNonNull(vertx);
+        Objects.requireNonNull(tenantClient);
+        Objects.requireNonNull(commandTargetMapper);
         Objects.requireNonNull(kafkaProducerFactory);
         Objects.requireNonNull(kafkaProducerConfig);
         Objects.requireNonNull(kafkaConsumerConfig);
-        this.tracer = Objects.requireNonNull(tracer);
+        Objects.requireNonNull(tracer);
 
-        this.internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
+        final KafkaBasedInternalCommandSender internalCommandSender = new KafkaBasedInternalCommandSender(
+                kafkaProducerFactory, kafkaProducerConfig, tracer);
+        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandTargetMapper,
+                internalCommandSender, tracer);
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("cmd-router");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "cmd-router-group");
         this.kafkaConsumer = KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
     @Override
-    public void initialize(final TenantClient tenantClient, final CommandTargetMapper commandTargetMapper) {
-        Objects.requireNonNull(tenantClient);
-        Objects.requireNonNull(commandTargetMapper);
-        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandTargetMapper,
-                internalCommandSender, tracer);
-        initialized.set(true);
-    }
-
-    @Override
     public Future<Void> start() {
-        if (!initialized.get()) {
-            return Future.failedFuture("not initialized");
-        }
-
         //TODO in the next iteration: handling of offsets and commits.
         // And if required, to use a consumer(at most once) class similar to the AbstractAtLeastOnceKafkaConsumer
         kafkaConsumer

@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.commandrouter.impl.amqp;
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,7 +24,6 @@ import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
@@ -57,13 +55,12 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     /**
      * Cache key used here is the tenant id.
      */
-    private CachingClientFactory<CommandConsumer> mappingAndDelegatingCommandConsumerFactory;
+    private final CachingClientFactory<CommandConsumer> mappingAndDelegatingCommandConsumerFactory;
 
     private final AtomicBoolean recreatingConsumers = new AtomicBoolean(false);
     private final AtomicBoolean tryAgainRecreatingConsumers = new AtomicBoolean(false);
 
-    private ProtonBasedMappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
-    private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final ProtonBasedMappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
     /**
      * List of tenant ids corresponding to the tenants for which consumers have been registered.
      */
@@ -73,31 +70,29 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
      * Creates a new factory for an existing connection.
      *
      * @param connection The connection to the AMQP network.
+     * @param tenantClient The Tenant service client.
+     * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
+     *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
+     *            here, that is supposed to be done by the calling method.
      * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedCommandConsumerFactoryImpl(
             final HonoConnection connection,
+            final TenantClient tenantClient,
+            final CommandTargetMapper commandTargetMapper,
             final SendMessageSampler.Factory samplerFactory) {
         super(connection, samplerFactory);
-    }
-
-    @Override
-    public void initialize(final TenantClient tenantClient, final CommandTargetMapper commandTargetMapper) {
         Objects.requireNonNull(tenantClient);
         Objects.requireNonNull(commandTargetMapper);
+
         mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient, connection,
                 commandTargetMapper);
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
-        initialized.set(true);
     }
 
     @Override
     public Future<Void> start() {
-        if (!initialized.get()) {
-            return Future.failedFuture("not initialized");
-        }
-
         return connection.connect()
                 .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
                 .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
@@ -125,11 +120,6 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     @Override
     public final Future<Void> createCommandConsumer(final String tenantId, final SpanContext context) {
         Objects.requireNonNull(tenantId);
-
-        if (!initialized.get()) {
-            log.error("not initialized");
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
-        }
         return connection.executeOnContext(result -> {
             // create the tenant-scoped consumer ("command/<tenantId>") that maps/delegates incoming commands to the right adapter-instance
             getOrCreateMappingAndDelegatingCommandConsumer(tenantId)

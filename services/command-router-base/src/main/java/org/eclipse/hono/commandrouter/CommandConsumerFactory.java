@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Lifecycle;
 
@@ -26,23 +25,7 @@ import io.vertx.core.Future;
 public interface CommandConsumerFactory extends Lifecycle {
 
     /**
-     * Initializes the CommandConsumerFactory with the given commandTargetMapper.
-     * <p>
-     * This method must be invoked before the {@link #start()} method.
-     *
-     * @param tenantClient The Tenant service client.
-     * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
-     *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
-     *            here, that is supposed to be done by the calling method.
-     * @throws NullPointerException if commandTargetMapper is {@code null}.
-     */
-    void initialize(TenantClient tenantClient, CommandTargetMapper commandTargetMapper);
-
-    /**
      * Creates a command consumer to receive commands for the given tenant.
-     * <p>
-     * Note that {@link #initialize(TenantClient, CommandTargetMapper)} has to have been called already, otherwise
-     * a failed future is returned.
      *
      * @param tenantId The tenant to consume commands for.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
