@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -68,7 +69,9 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             .compile(Pattern.quote(HonoTopic.Type.COMMAND.prefix) + ".*");
     private static final long WAIT_FOR_REBALANCE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
 
-    private final KafkaConsumer<String, Buffer> kafkaConsumer;
+    private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
+    private final KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
+    private final AtomicReference<Promise<Void>> onSubscribedTopicsNextUpdated = new AtomicReference<>();
     private final Vertx vertx;
     /**
      * Currently subscribed topics, i.e. the topics matching COMMANDS_TOPIC_PATTERN.
@@ -76,9 +79,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
      * here will receive messages for.
      */
     private Set<String> subscribedTopics = new HashSet<>();
-    private final AtomicReference<Promise<Void>> onSubscribedTopicsNextUpdated = new AtomicReference<>();
-
-    private final KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
+    private KafkaConsumer<String, Buffer> kafkaConsumer;
 
     /**
      * Creates a new factory to process commands via the Kafka cluster.
@@ -117,11 +118,13 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 internalCommandSender, tracer);
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("cmd-router");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "cmd-router-group");
-        this.kafkaConsumer = KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
+        consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
     @Override
     public Future<Void> start() {
+        // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
+        kafkaConsumer = consumerCreator.get();
         //TODO in the next iteration: handling of offsets and commits.
         // And if required, to use a consumer(at most once) class similar to the AbstractAtLeastOnceKafkaConsumer
         kafkaConsumer
@@ -188,17 +191,20 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
 
     @Override
     public Future<Void> stop() {
+        if (kafkaConsumer == null) {
+            return Future.failedFuture("not started");
+        }
         final Promise<Void> consumerClosePromise = Promise.promise();
-
         kafkaConsumer.close(consumerClosePromise);
-
         return CompositeFuture.all(commandHandler.stop(), consumerClosePromise.future())
                 .mapEmpty();
     }
 
     @Override
     public Future<Void> createCommandConsumer(final String tenantId, final SpanContext context) {
-
+        if (kafkaConsumer == null) {
+            return Future.failedFuture("not started");
+        }
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
         // check whether tenant topic exists and its existence has been applied to the wildcard subscription yet;
         // use previously updated topics list (less costly than invoking kafkaConsumer.subscription() here)
