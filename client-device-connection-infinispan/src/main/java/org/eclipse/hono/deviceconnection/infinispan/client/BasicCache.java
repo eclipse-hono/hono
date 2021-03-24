@@ -80,6 +80,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      */
     @Override
     public Future<Void> start() {
+        LOG.info("starting cache");
         return connectToCache();
     }
 
@@ -88,6 +89,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      */
     @Override
     public Future<Void> stop() {
+        LOG.info("stopping cache");
         final Promise<Void> result = Promise.promise();
         vertx.executeBlocking(r -> {
             try {

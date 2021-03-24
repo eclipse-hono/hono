@@ -66,6 +66,7 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
      *                           to the data grid.
      * @param connectionCheckValue The value to use for checking the connection
      *                           to the data grid.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     HotrodCache(
             final Vertx vertx,
@@ -85,24 +86,32 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
      *
      * @param vertx The vert.x instance to run on.
      * @param properties The remote cache configuration.
-     * @param cacheConfig The common cache configuration.
+     * @param commonCacheConfig The common cache configuration.
      * @return The remote cache.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static HotrodCache<String, String> from(
             final Vertx vertx,
             final InfinispanRemoteConfigurationProperties properties,
-            final CommonCacheConfig cacheConfig) {
+            final CommonCacheConfig commonCacheConfig) {
+
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(properties);
+        Objects.requireNonNull(commonCacheConfig);
+
         // make sure that put() and remove() methods return previous values
         // because they are required by the
         // org.eclipse.hono.deviceconnection.infinispan.client.Cache API.
         final var configBuilder = properties.getConfigurationBuilder();
-        configBuilder.remoteCache(cacheConfig.getCacheName()).forceReturnValues(true);
+        configBuilder.remoteCache(commonCacheConfig.getCacheName()).forceReturnValues(true);
+        final var configuration = configBuilder.build();
+        LOG.info("creating HotrodCache using configuration: {}", configuration);
         return new HotrodCache<String, String>(
                 vertx,
-                new RemoteCacheManager(configBuilder.build(), false),
-                cacheConfig.getCacheName(),
-                cacheConfig.getCheckKey(),
-                cacheConfig.getCheckValue());
+                new RemoteCacheManager(configuration, false),
+                commonCacheConfig.getCacheName(),
+                commonCacheConfig.getCheckKey(),
+                commonCacheConfig.getCheckValue());
     }
 
     @Override
@@ -120,12 +129,14 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
                         LOG.info("started cache manager, now connecting to remote cache");
                     }
                     LOG.debug("trying to connect to remote cache");
-                    setCache(cacheManager.getCache(cacheName));
-                    if (getCache() == null) {
+                    @SuppressWarnings("unchecked")
+                    final var cache = (RemoteCache<K, V>) cacheManager.getCache(cacheName);
+                    if (cache == null) {
                         r.fail(new IllegalStateException("remote cache [" + cacheName + "] does not exist"));
                     } else {
-                        getCache().start();
-                        r.complete(getCache());
+                        cache.start();
+                        setCache(cache);
+                        r.complete(cache);
                     }
                 } catch (final Throwable t) {
                     r.fail(t);
