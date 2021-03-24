@@ -15,15 +15,16 @@ The diagram below provides an overview of the top level *logical* components.
 The *MQTT* and *HTTP Adapters* use the *Device Registry* to authenticate *Devices* connecting to the adapters and asserting their
 registration status. The adapters then forward the telemetry data and events received from the devices to the *AMQP 1.0 Messaging Network*
 for delivery to *Business Applications*. Business applications also use the messaging network to send commands to connected devices.
+Commands are first received by the *Command Router* and then forwarded to the protocol adapter that is connected to the respective devices.
 
-The *Device Registry* uses the *Auth Server* to authenticate the protocol adapters during connection establishment.
+The *Device Registry* and the *Command Router* use the *Auth Server* to authenticate the protocol adapters during connection establishment.
 
 All interactions between the components are based on AMQP 1.0 message exchanges as defined by the
 
 * [Credentials API]({{< relref "/api/credentials" >}}),
 * [Tenant API]({{< relref "/api/tenant" >}}),
 * [Device Registration API]({{< relref "/api/device-registration" >}}),
-* [Device Connection API]({{< relref "/api/device-connection" >}}),
+* [Command Router API]({{< relref "/api/command-router" >}}),
 * [Command & Control API]({{< relref "/api/command-and-control" >}}),
 * [Telemetry API]({{< relref "/api/telemetry" >}}) and
 * [Event API]({{< relref "/api/event" >}}).
@@ -34,14 +35,27 @@ The diagram below provides an overview of the *Device Registry* component's inte
 
 {{< figure src="device-registry.png" width="100%" >}}
 
-The *Device Registry* component implements the [Credentials API]({{< relref "/api/credentials" >}}), [Tenant API]({{< relref "/api/tenant" >}}),
-[Device Registration API]({{< relref "/api/device-registration" >}}) and [Device Connection API]({{< relref "/api/device-connection" >}}).
-Clients opening a connection to *SimpleDeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port.
-The *FileBasedCredentialsService*, *FileBasedTenantService* and *FileBasedRegistrationService* store all data in the local file system.
-The *MapBasedDeviceConnectionService* keeps all data in memory.
-The *Device Registry* is therefore not recommended to be used in production environments because the component cannot easily scale out horizontally.
-It is mainly intended to be used for demonstration purposes and PoCs. In real world scenarios, a more sophisticated implementation should
-be used that is designed to scale out, e.g. using a persistent store for keeping device registration information that can be shared by multiple instances.
+The *Device Registry* component implements the [Credentials API]({{< relref "/api/credentials" >}}), [Tenant API]({{< relref "/api/tenant" >}})
+and [Device Registration API]({{< relref "/api/device-registration" >}}).
+Clients opening a connection to the *DeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port.
+
+Hono provides the following Device Registry implementations:
+
+- [MongoDB Based Device Registry]({{< relref "/user-guide/mongodb-based-device-registry" >}})
+- [JDBC Based Device Registry]({{< relref "/user-guide/jdbc-based-device-registry" >}})
+- [File Based Device Registry]({{< relref "/user-guide/file-based-device-registry" >}})
+
+## Command Router
+
+The diagram below provides an overview of the *Command Router* component's internal structure.
+
+{{< figure src="command-router.png" width="100%" >}}
+
+The *Command Router* component implements the [Command Router API]({{< relref "/api/command-router" >}}).
+Clients opening a connection to the *CommandRouterServer* are authenticated by means of an external service accessed via the *Auth* port.
+
+The *Command Router* component uses the *Device Registry* via the [Tenant API]({{< relref "/api/tenant" >}}) and the [Device Registration API]({{< relref "/api/device-registration" >}})
+and is connected to the *AMQP 1.0 Messaging Network* to receive and forward Command & Control messages as defined by the [Command & Control API]({{< relref "/api/command-and-control" >}}).
 
 ## AMQP 1.0 Messaging Network
 
