@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -61,11 +62,13 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private static final short REPLICATION_FACTOR = 1; // TODO use value from adapter configuration instead.
     private static final String CLIENT_NAME = "internal-cmd";
 
+    private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
     private final String adapterInstanceId;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final KafkaAdminClient adminClient;
-    private final KafkaConsumer<String, Buffer> consumer;
+
+    private KafkaConsumer<String, Buffer> consumer;
 
     /**
      * Creates a consumer.
@@ -96,9 +99,10 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         adminClient = KafkaAdminClient.create(vertx, adminClientConfig);
 
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig(CLIENT_NAME);
-        // TODO configure offset/commit handling
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
-        consumer = KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
+        // no commits of partition offsets needed - topic only used during lifetime of this consumer
+        consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
     /**
@@ -124,10 +128,13 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
+        consumerCreator = () -> consumer;
     }
 
     @Override
     public Future<Void> start() {
+        // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
+        consumer = consumerCreator.get();
         // trigger creation of adapter specific topic and consumer
         return createTopic().compose(v -> subscribeToTopic());
     }
@@ -183,6 +190,9 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
     @Override
     public Future<Void> stop() {
+        if (consumer == null) {
+            return Future.failedFuture("not started");
+        }
         final String topicName = getTopicName();
         final Promise<Void> adminClientClosePromise = Promise.promise();
         LOG.debug("stop: delete topic [{}]", topicName);
