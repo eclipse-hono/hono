@@ -260,7 +260,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     MessagingType.kafka,
                     new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer));
         }
-        if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
+        if (downstreamSenderConfig().isHostConfigured()) {
             telemetrySenders.setClient(MessagingType.amqp, downstreamSender());
             eventSenders.setClient(MessagingType.amqp, downstreamSender());
             commandResponseSenders.setClient(

@@ -104,9 +104,6 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
         return clientImplementations.get(MessagingType.amqp);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         clientImplementations.values().stream()
@@ -115,9 +112,6 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
             .forEach(client -> client.registerReadinessChecks(readinessHandler));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
         clientImplementations.values().stream()
@@ -126,9 +120,6 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
             .forEach(client -> client.registerLivenessChecks(livenessHandler));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> start() {
         requireClientsConfigured();

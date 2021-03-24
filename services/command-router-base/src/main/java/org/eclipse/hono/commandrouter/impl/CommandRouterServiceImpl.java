@@ -22,6 +22,7 @@ import java.util.Objects;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
@@ -52,7 +53,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final DeviceRegistrationClient registrationClient;
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
-    private final CommandConsumerFactory commandConsumerFactory;
+    private final MessagingClient<CommandConsumerFactory> commandConsumerFactories;
     /**
      * Vert.x context that this service has been started in.
      */
@@ -66,7 +67,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      * @param registrationClient The device registration client.
      * @param tenantClient The tenant client.
      * @param deviceConnectionInfo The client for accessing device connection data.
-     * @param commandConsumerFactory The factory to use for creating clients to receive commands.
+     * @param commandConsumerFactories The factories to use for creating clients to receive commands.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public CommandRouterServiceImpl(
@@ -74,13 +75,13 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final DeviceRegistrationClient registrationClient,
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,
-            final CommandConsumerFactory commandConsumerFactory) {
+            final MessagingClient<CommandConsumerFactory> commandConsumerFactories) {
 
         this.config = Objects.requireNonNull(config);
         this.registrationClient = Objects.requireNonNull(registrationClient);
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
-        this.commandConsumerFactory = Objects.requireNonNull(commandConsumerFactory);
+        this.commandConsumerFactories = Objects.requireNonNull(commandConsumerFactories);
     }
 
     @Override
@@ -89,13 +90,16 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (context == null) {
             return Future.failedFuture(new IllegalStateException("Service must be started in a Vert.x context"));
         }
+        if (!commandConsumerFactories.containsImplementations()) {
+            return Future.failedFuture("no command consumer factories set");
+        }
 
         registrationClient.start();
         tenantClient.start();
         if (deviceConnectionInfo instanceof Lifecycle) {
             ((Lifecycle) deviceConnectionInfo).start();
         }
-        commandConsumerFactory.start();
+        commandConsumerFactories.start();
 
         return Future.succeededFuture();
     }
@@ -111,7 +115,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (deviceConnectionInfo instanceof Lifecycle) {
             results.add(((Lifecycle) deviceConnectionInfo).stop());
         }
-        results.add(commandConsumerFactory.stop());
+        results.add(commandConsumerFactories.stop());
 
         return CompositeFuture.all(results)
                 .recover(t -> {
@@ -137,7 +141,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final String deviceId, final String adapterInstanceId, final Duration lifespan,
             final Span span) {
 
-        return commandConsumerFactory.createCommandConsumer(tenantId, span.context())
+        return tenantClient.get(tenantId, span.context())
+                .compose(tenantObject -> commandConsumerFactories.getClient(tenantObject)
+                        .createCommandConsumer(tenantId, span.context()))
                 .compose(v -> deviceConnectionInfo
                         .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, getSanitizedLifespan(lifespan), span)
                         .recover(thr -> {
@@ -181,9 +187,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerReadinessChecks(handler);
         }
-        if (commandConsumerFactory instanceof ServiceClient) {
-            ((ServiceClient) commandConsumerFactory).registerReadinessChecks(handler);
-        }
+        commandConsumerFactories.registerReadinessChecks(handler);
     }
 
     @Override
@@ -198,9 +202,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerLivenessChecks(handler);
         }
-        if (commandConsumerFactory instanceof ServiceClient) {
-            ((ServiceClient) commandConsumerFactory).registerLivenessChecks(handler);
-        }
+        commandConsumerFactories.registerLivenessChecks(handler);
     }
 
     /**
