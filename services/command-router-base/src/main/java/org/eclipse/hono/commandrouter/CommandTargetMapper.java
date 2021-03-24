@@ -50,22 +50,18 @@ public interface CommandTargetMapper {
     /**
      * Creates a new {@link CommandTargetMapper} using the default implementation.
      *
+     * @param registrationClient The Device Registration service client.
+     * @param deviceConnectionInfo The Device Connection service client.
      * @param tracer The tracer instance.
      * @return The CommandTargetMapper instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    static CommandTargetMapper create(final Tracer tracer) {
-        return new CommandTargetMapperImpl(tracer);
+    static CommandTargetMapper create(
+            final DeviceRegistrationClient registrationClient,
+            final DeviceConnectionInfo deviceConnectionInfo,
+            final Tracer tracer) {
+        return new CommandTargetMapperImpl(registrationClient, deviceConnectionInfo, tracer);
     }
-
-    /**
-     * Initializes the mapper with the given context.
-     *
-     * @param registrationClient The Device Registration service client.
-     * @param deviceConnectionInfo The Device Connection service client.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    void initialize(DeviceRegistrationClient registrationClient, DeviceConnectionInfo deviceConnectionInfo);
 
     /**
      * Determines the target protocol adapter instance for a command directed at the given device. Also determines
@@ -88,9 +84,6 @@ public interface CommandTargetMapper {
      * {@link DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values. If the command is not
      * mapped to a gateway here, the {@link DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
      * id itself.
-     * <p>
-     * Note that {@link #initialize(DeviceRegistrationClient, DeviceConnectionInfo)} has to have been called already,
-     * otherwise a failed future is returned.
      *
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.

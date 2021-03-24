@@ -17,7 +17,6 @@ import java.net.HttpURLConnection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.ServerErrorException;
@@ -48,25 +47,25 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
     private static final Logger LOG = LoggerFactory.getLogger(CommandTargetMapperImpl.class);
 
     private final Tracer tracer;
-    private final AtomicBoolean initialized = new AtomicBoolean(false);
-    private DeviceRegistrationClient registrationClient;
-    private DeviceConnectionInfo deviceConnectionInfo;
+    private final DeviceRegistrationClient registrationClient;
+    private final DeviceConnectionInfo deviceConnectionInfo;
 
     /**
      * Creates a new GatewayMapperImpl instance.
      *
+     * @param registrationClient The Device Registration service client.
+     * @param deviceConnectionInfo The Device Connection service client.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if tracer is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public CommandTargetMapperImpl(final Tracer tracer) {
-        this.tracer = Objects.requireNonNull(tracer);
-    }
+    public CommandTargetMapperImpl(
+            final DeviceRegistrationClient registrationClient,
+            final DeviceConnectionInfo deviceConnectionInfo,
+            final Tracer tracer) {
 
-    @Override
-    public void initialize(final DeviceRegistrationClient registrationClient, final DeviceConnectionInfo deviceConnectionInfo) {
         this.registrationClient = Objects.requireNonNull(registrationClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
-        initialized.set(true);
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     @Override
@@ -75,10 +74,6 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        if (!initialized.get()) {
-            LOG.error("not initialized");
-            return Future.failedFuture(new IllegalStateException("CommandTargetMapper not initialized"));
-        }
         final Span span = TracingHelper
                 .buildChildSpan(tracer, context, "get target gateway and adapter instance",
                         CommandTargetMapper.class.getSimpleName())

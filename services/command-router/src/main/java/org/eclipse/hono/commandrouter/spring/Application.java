@@ -59,7 +59,9 @@ public class Application extends AbstractApplication {
     }
 
     /**
-     * {@inheritDoc}
+     * Invoked before the service instances are being deployed.
+     * <p>
+     * Deploys the authentication service verticle.
      */
     @Override
     protected Future<?> deployRequiredVerticles(final int maxInstances) {
@@ -84,7 +86,7 @@ public class Application extends AbstractApplication {
         }
     }
     /**
-     * {@inheritDoc}
+     * Invoked after a service instance object has been deployed successfully to vert.x.
      * <p>
      * Registers the service instance's health checks (if any).
      */

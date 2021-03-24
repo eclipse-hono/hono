@@ -185,12 +185,12 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Command Router</em> API.
      *
+     * @param commandRouterService The Command Router service.
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    public AmqpEndpoint commandRouterAmqpEndpoint() {
-        final CommandRouterService commandRouterService = commandRouterService();
+    public AmqpEndpoint commandRouterAmqpEndpoint(final CommandRouterService commandRouterService) {
         return new DelegatingCommandRouterAmqpEndpoint<>(vertx(), commandRouterService) {
 
             @Override
@@ -223,12 +223,39 @@ public class ApplicationConfig {
     /**
      * Exposes a Command Router service as a Spring bean.
      *
+     * @param deviceConnectionInfo The client to access device connection data.
      * @return The service implementation.
      */
     @Bean
     @Scope("prototype")
-    public CommandRouterService commandRouterService() {
-        return new CommandRouterServiceImpl();
+    public CommandRouterService commandRouterService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo) {
+        final DeviceRegistrationClient registrationClient = registrationClient();
+        final TenantClient tenantClient = tenantClient();
+
+        final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
+        final CommandConsumerFactory commandConsumerFactory;
+        if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
+            commandConsumerFactory = new KafkaBasedCommandConsumerFactoryImpl(
+                    vertx(),
+                    tenantClient,
+                    commandTargetMapper,
+                    kafkaProducerFactory(),
+                    kafkaProducerConfig(),
+                    kafkaConsumerConfig(),
+                    getTracer());
+        } else {
+            commandConsumerFactory = new ProtonBasedCommandConsumerFactoryImpl(
+                    commandConsumerConnection(),
+                    tenantClient,
+                    commandTargetMapper,
+                    SendMessageSampler.Factory.noop());
+        }
+        return new CommandRouterServiceImpl(
+                commandRouterServiceConfigProperties(),
+                registrationClient,
+                tenantClient,
+                deviceConnectionInfo,
+                commandConsumerFactory);
     }
 
     /**
@@ -281,41 +308,6 @@ public class ApplicationConfig {
     @Scope("prototype")
     public HonoConnection commandConsumerConnection() {
         return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
-    }
-
-    /**
-     * Exposes a factory for creating clients for receiving upstream commands
-     * via the AMQP Messaging Network.
-     *
-     * @return The factory.
-     */
-    @Bean
-    @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory() {
-        if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
-            return new KafkaBasedCommandConsumerFactoryImpl(
-                    vertx(),
-                    kafkaProducerFactory(),
-                    kafkaProducerConfig(),
-                    kafkaConsumerConfig(),
-                    getTracer());
-        } else {
-            return new ProtonBasedCommandConsumerFactoryImpl(
-                    commandConsumerConnection(),
-                    SendMessageSampler.Factory.noop());
-        }
-    }
-
-    /**
-     * Exposes the component for mapping an incoming command to the gateway (if applicable)
-     * and protocol adapter instance that can handle it.
-     *
-     * @return The newly created mapper instance.
-     */
-    @Bean
-    @Scope("prototype")
-    public CommandTargetMapper commandTargetMapper() {
-        return CommandTargetMapper.create(getTracer());
     }
 
     /**
