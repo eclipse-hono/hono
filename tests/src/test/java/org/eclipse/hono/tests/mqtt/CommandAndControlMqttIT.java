@@ -23,21 +23,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.jms.IllegalStateException;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,8 +115,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         helper.registry.addTenant(tenantId).onComplete(ctx.completing());
     }
 
-    private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+    private Future<MessageConsumer> createConsumer(final String tenantId, final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
     private Future<Void> subscribeToCommands(
@@ -188,6 +191,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandSucceedsWithQos0(
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -205,6 +209,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandSucceedsWithQos1(
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -278,7 +283,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         .compose(ok -> createConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             setup.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             LOGGER.info("received notification [{}]", notification);
             setup.verify(() -> assertThat(notification).isNotNull());
             if (notification.getTtd() == -1) {
@@ -352,6 +357,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandFailsForMalformedMessage(
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -368,8 +374,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         createConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             setup.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification
-                    .fromMessage(msg).orElse(null);
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             LOGGER.info("received notification [{}]", notification);
             if (notification.getTtd() == -1) {
                 ready.flag();
@@ -431,6 +436,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandFailsForCommandNotAcknowledgedByDevice(
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -471,7 +477,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(ok -> createConsumer(tenantId, msg -> {
                     // expect empty notification with TTD -1
                     setup.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-                    final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+                    final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
                     LOGGER.info("received notification [{}]", notification);
                     setup.verify(() -> assertThat(notification).isNotNull());
                     if (notification.getTtd() == -1) {

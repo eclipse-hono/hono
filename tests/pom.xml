@@ -48,8 +48,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
     <!-- logging profile used by all Hono components: prod, dev or trace -->
     <logging.profile>prod</logging.profile>
-    <!-- messaging profile configurable for integration tests: kafka or empty (defaults to AMQP) -->
-    <messaging.profile></messaging.profile>
     <!-- maximum time (milliseconds) to wait for successful startup of a single service component -->
     <service.startup.timeout>120000</service.startup.timeout>
     <!-- color used by components of the AMQP Messaging Network for logging -->
@@ -346,6 +344,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <properties>
         <hono.kafka.disabled>false</hono.kafka.disabled>
         <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
+        <request.timeout>4000</request.timeout>
       </properties>
       <build>
         <plugins>
@@ -413,14 +412,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <systemProperties>
                 <downstream.bootstrap.servers>${docker.host.address}:${kafka.port}</downstream.bootstrap.servers>
               </systemProperties>
-              <!--
-                TODO: Remove these exclusions as soon as Command and Control is implemented for Kafka.
-                Until then excluding these speeds up Kafka based integration test runs
-              -->
-              <excludes>
-                <exclude>**/CommandAndControlAmqpIT.java</exclude>
-                <exclude>**/CommandAndControlMqttIT.java</exclude>
-              </excludes>
             </configuration>
           </plugin>
         </plugins>
@@ -1038,7 +1029,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
@@ -1265,7 +1256,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
@@ -1336,7 +1327,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</JDK_JAVA_OPTIONS>
                       <!--
                         disable -Xmx calculation done by the runJava.sh script
@@ -1412,7 +1403,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${amqp.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-amqp</JAEGER_SERVICE_NAME>
@@ -1483,7 +1474,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${messaging.profile}${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${coap.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-coap</JAEGER_SERVICE_NAME>

@@ -39,6 +39,9 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
+    kafka:
+      commonClientConfig:
+        bootstrap.servers: ${hono.kafka.bootstrap.servers}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
@@ -65,3 +68,4 @@ quarkus:
 spring:
   jmx:
     enabled: false
+

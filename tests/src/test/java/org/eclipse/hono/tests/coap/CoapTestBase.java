@@ -879,7 +879,6 @@ public abstract class CoapTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(
             final CoapCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
