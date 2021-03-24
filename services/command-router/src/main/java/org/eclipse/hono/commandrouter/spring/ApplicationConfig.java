@@ -402,7 +402,7 @@ public class ApplicationConfig {
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.command.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
     public KafkaConsumerConfigProperties kafkaConsumerConfig() {
         final KafkaConsumerConfigProperties kafkaConsumerConfigProperties = new KafkaConsumerConfigProperties();
@@ -415,7 +415,7 @@ public class ApplicationConfig {
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.command.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
     public KafkaProducerConfigProperties kafkaProducerConfig() {
         final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();

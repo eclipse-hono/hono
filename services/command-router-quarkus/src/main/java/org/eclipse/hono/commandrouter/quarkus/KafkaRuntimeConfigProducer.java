@@ -36,17 +36,17 @@ public class KafkaRuntimeConfigProducer {
     /**
      * The prefix of the common Kafka configuration.
      */
-    public static final String COMMON_CONFIG_PREFIX = "hono.command.kafka.commonClientConfig";
+    public static final String COMMON_CONFIG_PREFIX = "hono.kafka.commonClientConfig";
 
     /**
      * The prefix of the Kafka producer configuration.
      */
-    public static final String PRODUCER_CONFIG_PREFIX = "hono.command.kafka.producerConfig";
+    public static final String PRODUCER_CONFIG_PREFIX = "hono.kafka.producerConfig";
 
     /**
      * The prefix of the Kafka consumer configuration.
      */
-    public static final String CONSUMER_CONFIG_PREFIX = "hono.command.kafka.consumerConfig";
+    public static final String CONSUMER_CONFIG_PREFIX = "hono.kafka.consumerConfig";
 
     private static final String DEFAULT_CLIENT_ID_PREFIX = "cmd-router";
 
