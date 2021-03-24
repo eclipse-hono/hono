@@ -25,6 +25,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
@@ -55,6 +56,7 @@ import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -233,29 +235,30 @@ public class ApplicationConfig {
         final TenantClient tenantClient = tenantClient();
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
-        final CommandConsumerFactory commandConsumerFactory;
+        final MessagingClient<CommandConsumerFactory> commandConsumerFactories = new MessagingClient<>();
         if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
-            commandConsumerFactory = new KafkaBasedCommandConsumerFactoryImpl(
+            commandConsumerFactories.setClient(MessagingType.kafka, new KafkaBasedCommandConsumerFactoryImpl(
                     vertx(),
                     tenantClient,
                     commandTargetMapper,
                     kafkaProducerFactory(),
                     kafkaProducerConfig(),
                     kafkaConsumerConfig(),
-                    getTracer());
-        } else {
-            commandConsumerFactory = new ProtonBasedCommandConsumerFactoryImpl(
+                    getTracer()));
+        }
+        if (commandConsumerFactoryConfig().isHostConfigured()) {
+            commandConsumerFactories.setClient(MessagingType.amqp, new ProtonBasedCommandConsumerFactoryImpl(
                     commandConsumerConnection(),
                     tenantClient,
                     commandTargetMapper,
-                    SendMessageSampler.Factory.noop());
+                    SendMessageSampler.Factory.noop()));
         }
         return new CommandRouterServiceImpl(
                 commandRouterServiceConfigProperties(),
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                commandConsumerFactory);
+                commandConsumerFactories);
     }
 
     /**

@@ -93,7 +93,7 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
                     new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
         }
 
-        if (downstreamSenderConfig() != null) { // TODO proper check if AMQP network configured
+        if (downstreamSenderConfig().isHostConfigured()) {
             log.info("AMQP 1.0 connection is configured, adding AMQP 1.0 messaging clients");
             telemetrySenders.setClient(
                     MessagingType.amqp,
