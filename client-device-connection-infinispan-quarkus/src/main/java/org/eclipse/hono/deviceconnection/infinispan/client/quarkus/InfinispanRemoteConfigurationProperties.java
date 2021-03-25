@@ -55,7 +55,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setServerList(final Optional<String> serverList) {
         serverList.ifPresent(s -> {
-            LOG.debug("setting serverList: {}", s);
+            LOG.trace("setting serverList: {}", s);
             super.setServerList(s);
         });
     }
@@ -65,7 +65,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setAuthServerName(final Optional<String> authServerName) {
         authServerName.ifPresent(s -> {
-            LOG.debug("setting authServerName: {}", s);
+            LOG.trace("setting authServerName: {}", s);
             super.setAuthServerName(s);
         });
     }
@@ -75,7 +75,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setAuthUsername(final Optional<String> authUsername) {
         authUsername.ifPresent(s -> {
-            LOG.debug("setting authUsername: {}", s);
+            LOG.trace("setting authUsername: {}", s);
             super.setAuthUsername(s);
         });
     }
@@ -85,7 +85,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setAuthPassword(final Optional<String> authPassword) {
         authPassword.ifPresent(s -> {
-            LOG.debug("setting authPassword: ******");
+            LOG.trace("setting authPassword: ******");
             super.setAuthPassword(s);
         });
     }
@@ -95,7 +95,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setAuthRealm(final Optional<String> value) {
         value.ifPresent(s -> {
-            LOG.debug("setting authRealm: {}", s);
+            LOG.trace("setting authRealm: {}", s);
             super.setAuthRealm(s);
         });
     }
@@ -105,7 +105,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setSaslMechanism(final Optional<String> value) {
         value.ifPresent(s -> {
-            LOG.debug("setting saslMechanism: {}", s);
+            LOG.trace("setting saslMechanism: {}", s);
             super.setSaslMechanism(s);
         });
     }
@@ -115,7 +115,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setSocketTimeout(final Optional<Integer> value) {
         value.ifPresent(s -> {
-            LOG.debug("setting socketTimeout: {}", s);
+            LOG.trace("setting socketTimeout: {}", s);
             super.setSocketTimeout(s);
         });
     }
@@ -125,7 +125,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setConnectTimeout(final Optional<Integer> value) {
         value.ifPresent(s -> {
-            LOG.debug("setting connectTimeout: {}", s);
+            LOG.trace("setting connectTimeout: {}", s);
             super.setConnectTimeout(s);
         });
     }
