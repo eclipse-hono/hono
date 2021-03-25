@@ -19,10 +19,10 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.client.ServerErrorException;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.commons.marshall.ProtoStreamMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,10 +99,11 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
         Objects.requireNonNull(properties);
         Objects.requireNonNull(commonCacheConfig);
 
+        final var configBuilder = properties.getConfigurationBuilder();
+        configBuilder.marshaller(new ProtoStreamMarshaller());
         // make sure that put() and remove() methods return previous values
         // because they are required by the
         // org.eclipse.hono.deviceconnection.infinispan.client.Cache API.
-        final var configBuilder = properties.getConfigurationBuilder();
         configBuilder.remoteCache(commonCacheConfig.getCacheName()).forceReturnValues(true);
         final var configuration = configBuilder.build();
         LOG.info("creating HotrodCache using configuration: {}", configuration);
@@ -192,7 +193,7 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
      * Checks if the cache is connected.
      *
      * @return A future that is completed with information about a successful check's result.
-     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServerErrorException}.
      */
     @Override
     public Future<JsonObject> checkForCacheAvailability() {

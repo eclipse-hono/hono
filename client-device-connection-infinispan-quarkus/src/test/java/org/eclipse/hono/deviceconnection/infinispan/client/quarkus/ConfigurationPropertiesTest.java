@@ -39,7 +39,7 @@ public class ConfigurationPropertiesTest {
     InfinispanRemoteConfigurationProperties remoteCacheConfig;
 
     @Test
-    void testCommandCacheConfigurationPropertiesArePickedUp() {
+    void testCommonCacheConfigurationPropertiesArePickedUp() {
         assertThat(commonCacheConfig).isNotNull();
         assertThat(commonCacheConfig.getCacheName()).isEqualTo("the-cache");
     }

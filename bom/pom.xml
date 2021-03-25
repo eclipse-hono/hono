@@ -690,7 +690,7 @@
         <groupId>org.infinispan.protostream</groupId>
         <artifactId>protostream</artifactId>
         <version>${protostream.version}</version>
-        <scope>runtime</scope>
+        <scope>compile</scope>
       </dependency>
       <dependency>
         <groupId>io.reactivex.rxjava2</groupId>

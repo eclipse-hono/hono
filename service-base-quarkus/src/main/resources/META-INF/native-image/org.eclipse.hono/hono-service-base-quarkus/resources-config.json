@@ -17,8 +17,15 @@
         "pattern": ".*\\.proto$"
       },
       {
-        "pattern": "META-INF/services/.*$"
+        "pattern": "META-INF\\/services\\/io\\.jsonwebtoken\\..*$"
       }
-  ]
+    ],
+    "excludes": [
+      {
+        "pattern": "META-INF\\/maven\\/.*$"
+      },{
+        "pattern": "META-INF\\/native-image\\/.*$"
+      }
+    ]
   }
 }

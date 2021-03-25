@@ -1,105 +1,18 @@
 [
   {
-    "name": "org.apache.logging.log4j.message.ReusableMessageFactory",
+    "name" : "org.infinispan.CoreModuleImpl",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
   },
   {
-    "name": "org.apache.logging.log4j.message.DefaultFlowMessageFactory",
+    "name" : "org.infinispan.client.hotrod.impl.async.DefaultAsyncExecutorFactory",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
   },
   {
-    "name" : "org.eclipse.hono.util.RegistrationAssertion",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "com.github.benmanes.caffeine.cache.SSMSA",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "com.github.benmanes.caffeine.cache.PSWMS",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "io.jsonwebtoken.impl.DefaultJwtBuilder",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "io.jsonwebtoken.impl.DefaultJwtParserBuilder",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "io.jsonwebtoken.jackson.io.JacksonDeserializer",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name" : "io.jsonwebtoken.jackson.io.JacksonSerializer",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name" : "io.jsonwebtoken.impl.compression.DeflateCompressionCodec",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name" : "io.jsonwebtoken.impl.compression.GzipCompressionCodec",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name" : "io.vertx.kafka.client.serialization.BufferSerializer",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "io.vertx.kafka.client.serialization.BufferDeserializer",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "org.infinispan.distribution.ch.impl.HashFunctionPartitioner",
+    "name" : "org.infinispan.client.hotrod.impl.consistenthash.SegmentConsistentHash",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
@@ -111,7 +24,7 @@
     ]
   },
   {
-    "name" : "org.infinispan.CoreModuleImpl",
+    "name" : "org.infinispan.distribution.ch.impl.HashFunctionPartitioner",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
@@ -205,5 +118,71 @@
     "allPublicMethods" : true,
     "allDeclaredFields" : true,
     "allPublicFields" : true
+  },
+  {
+    "name" : "org.wildfly.security.sasl.anonymous.AnonymousClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.digest.DigestClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.entity.EntitySaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.external.ExternalSaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.gs2.Gs2SaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.gssapi.GssapiClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.localuser.LocalUserClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.oauth2.OAuth2SaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.otp.OTPSaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.plain.PlainSaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.scram.ScramSaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
   }
 ]

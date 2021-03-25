@@ -142,7 +142,7 @@ maven/mavencentral/org.osgi/org.osgi.compendium/4.3.1, Apache-2.0, approved, CQ1
 maven/mavencentral/io.vertx/vertx-mongo-client/3.9.5, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-jdbc-client/3.9.5, , approved, eclipse
 maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism/1.14.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye/smallrye-metrics-api/2.4.4, , restricted, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-metrics-api/2.4.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.slf4j/slf4j-api/1.7.28, MIT, approved, CQ13368
 maven/mavencentral/io.netty/netty-resolver/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.dropwizard.metrics/metrics-core/4.1.14, Apache-2.0, approved, clearlydefined
@@ -250,6 +250,6 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-auth-server-sasl/1.14.1.
 maven/mavencentral/org.junit.platform/junit-platform-engine/1.7.0, EPL-2.0, approved, CQ22640
 maven/mavencentral/io.smallrye.common/smallrye-common-io/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.lz4/lz4-java/1.7.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye/smallrye-metrics/2.4.4, , restricted, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-metrics/2.4.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.vertx/vertx-kafka-client/3.9.5, , approved, eclipse
 maven/mavencentral/io.netty/netty-handler/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
