@@ -17,6 +17,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Added (experimental) Quarkus based variant of the Authentication service.
 * Added (experimental) Quarkus based variant of the CoAP protocol adapter.
 * Added (experimental) Quarkus based variant of the Command Router protocol adapter.
+* The container images for the (experimental) Quarkus based variant of Hono compenents are now being published on
+  Docker Hub as well. The JVM based image names contain a `-quarkus` suffix whereas the native image names contain a
+  `-quarkus-native` suffix. Note that the Quarkus based protocol adapter images do **not** support using the Device
+  Connection service but require a connection to the Command Router service being configured instead.
 * The MQTT adapter now lets devices subscribe on a new error topic to get informed about errors during the processing
   of telemetry, event or command response message. With such an error subscription in place, the default behaviour
   on such errors is now to keep the MQTT connection open. Please refer to the

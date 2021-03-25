@@ -29,7 +29,7 @@ jobs:
           # let the jdbc test-run use the device connection service component (instead of the command router)
           - device-registry: jdbc
             commandrouting-mode: dev-con-service
-          # let the mongodb test-run use the quarkus adapters
+          # let the mongodb test-run use the Quarkus based components (running on JVM)
           - device-registry: mongodb
             component-type: quarkus-jvm
 

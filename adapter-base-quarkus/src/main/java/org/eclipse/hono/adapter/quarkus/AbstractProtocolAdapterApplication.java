@@ -27,13 +27,12 @@ import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.CommandRouterClient;
 import org.eclipse.hono.adapter.client.command.CommandRouterCommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClientAdapter;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandRouterClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandResponseSender;
+import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
@@ -52,18 +51,15 @@ import org.eclipse.hono.adapter.monitoring.quarkus.ConnectionEventProducerConfig
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
-import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionClient;
-import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
-import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
-import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.util.CredentialsObject;
@@ -126,6 +122,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     protected KafkaProducerConfigProperties kafkaProducerConfig;
 
+    @Inject
+    protected KafkaConsumerConfigProperties kafkaConsumerConfig;
+
+    @Inject
+    protected KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+
     @ConfigPrefix("hono.messaging")
     protected RequestResponseClientConfigProperties downstreamSenderConfig;
 
@@ -144,14 +146,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @ConfigPrefix("hono.commandRouter")
     protected RequestResponseClientConfigProperties commandRouterConfig;
 
-    // either this property or the commandRouterConfig property
-    // will contain a valid configuration
-    @ConfigPrefix("hono.deviceConnection")
-    protected RequestResponseClientConfigProperties deviceConnectionClientConfig;
-
-    @Inject
-    protected InfinispanRemoteConfigurationProperties deviceConnectionCacheConfig;
-
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache;
@@ -164,6 +158,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected abstract AbstractProtocolAdapterBase<C> adapter();
 
     void onStart(final @Observes StartupEvent ev) {
+        logJvmDetails();
         LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getAdapterName());
 
         final CompletableFuture<Void> startup = new CompletableFuture<>();
@@ -198,10 +193,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     /**
      * Logs information about the JVM.
-     *
-     * @param start The event indicating that the application has been started.
      */
-    protected void logJvmDetails(@Observes final StartupEvent start) {
+    private void logJvmDetails() {
         if (LOG.isInfoEnabled()) {
             LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MB, processors: {}]",
                     System.getProperty("java.version"),
@@ -230,11 +223,18 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
             commandConsumerFactory.registerInternalCommandConsumer(
                     (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+
+            if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaAdminClientConfig,
+                                kafkaConsumerConfig, id, handlers, tracer));
+            }
+
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         } else {
-            final DeviceConnectionClient deviceConnectionClient = deviceConnectionClient();
-            adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
-            adapter.setCommandConsumerFactory(commandConsumerFactory(deviceConnectionClient, registrationClient));
+            LOG.warn("Quarkus based protocol adapters do not support the Device Connection service to be used."
+                    + " Make sure to configure a connection to the Command Router service instead.");
+            throw new IllegalStateException("No Command Router connection configured");
         }
 
         final MessagingClient<TelemetrySender> telemetrySenders = new MessagingClient<>();
@@ -389,31 +389,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return new ProtonBasedCommandRouterClient(
                 HonoConnection.newConnection(vertx, commandRouterServiceClientConfig(), tracer),
                 messageSamplerFactory);
-    }
-
-    private RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
-        deviceConnectionClientConfig.setServerRoleIfUnknown("Device Connection");
-        deviceConnectionClientConfig.setNameIfNotSet(getAdapterName());
-        return deviceConnectionClientConfig;
-    }
-
-    /**
-     * Creates a new client for Hono's Device Connection service.
-     *
-     * @return The client.
-     */
-    protected DeviceConnectionClient deviceConnectionClient() {
-
-        if (deviceConnectionClientConfig.isHostConfigured()) {
-            return new ProtonBasedDeviceConnectionClient(
-                    HonoConnection.newConnection(vertx, deviceConnectionServiceClientConfig(), tracer),
-                    messageSamplerFactory);
-        } else {
-            final var cache = HotrodCache.from(vertx, deviceConnectionCacheConfig, new CommonCacheConfig());
-            return new CacheBasedDeviceConnectionClient(
-                    new CacheBasedDeviceConnectionInfo(cache, tracer),
-                    tracer);
-        }
     }
 
     private ClientConfigProperties downstreamSenderConfig() {
