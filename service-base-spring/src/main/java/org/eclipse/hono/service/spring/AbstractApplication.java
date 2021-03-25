@@ -59,6 +59,16 @@ public class AbstractApplication extends AbstractBaseApplication {
         log.debug("added {} service factories", factories.size());
     }
 
+    @Override
+    protected Future<?> deployVerticles() {
+        // call into super ...
+        return super.deployVerticles()
+                // ... then deploy the required verticles
+                .compose(s -> deployRequiredVerticles(getConfig().getMaxInstances()))
+                // ... then deploy service verticles
+                .compose(s -> deployServiceVerticles(getConfig().getMaxInstances()));
+    }
+
     /**
      * Invoked before the service instances are being deployed.
      * <p>
@@ -124,16 +134,6 @@ public class AbstractApplication extends AbstractBaseApplication {
      */
     protected void postDeploy(final AbstractServiceBase<?> serviceInstance) {
         // do nothing
-    }
-
-    @Override
-    protected Future<?> deployVerticles() {
-        // call into super ...
-        return super.deployVerticles()
-                // ... then deploy the required verticles
-                .compose(s -> deployRequiredVerticles(getConfig().getMaxInstances()))
-                // ... then deploy service verticles
-                .compose(s -> deployServiceVerticles(getConfig().getMaxInstances()));
     }
 
 }
