@@ -90,13 +90,13 @@ public class Application extends AbstractBaseApplication {
     }
 
     /**
-     * Registers the health checks set using {@link #setHealthCheckProviders(List)}.
+     * Registers the health checks that have been set using {@link #setHealthCheckProviders(List)}.
      *
      * @return A succeeded future.
      */
     @Override
-    protected Future<Void> postRegisterServiceVerticles() {
-        return super.postRegisterServiceVerticles()
+    protected Future<Void> postDeployVerticles() {
+        return super.postDeployVerticles()
                 .onSuccess(ok -> this.healthCheckProviders.forEach(this::registerHealthchecks))
                 .mapEmpty();
     }

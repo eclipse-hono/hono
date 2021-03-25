@@ -123,10 +123,8 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * <p>
      * The start up process entails the following steps:
      * <ol>
-     * <li>invoke <em>deployRequiredVerticles</em> to deploy the verticle(s) implementing the service's
-     * functionality</li>
-     * <li>invoke <em>deployServiceVerticles</em> to deploy the protocol specific service endpoints</li>
-     * <li>invoke <em>postRegisterServiceVerticles</em> to perform any additional post deployment steps</li>
+     * <li>invoke {@link #deployVerticles()} to deploy all verticles that should be part of this application</li>
+     * <li>invoke {@link #postDeployVerticles()} to perform any additional post deployment steps</li>
      * <li>start the health check server</li>
      * </ol>
      *
@@ -156,7 +154,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
         final CompletableFuture<Void> started = new CompletableFuture<>();
 
         deployVerticles()
-            .compose(s -> postRegisterServiceVerticles())
+            .compose(s -> postDeployVerticles())
             .compose(s -> healthCheckServer.start())
             .onSuccess(started::complete)
             .onFailure(started::completeExceptionally);
@@ -187,6 +185,19 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
     protected Future<?> deployVerticles() {
+        return Future.succeededFuture();
+    }
+
+    /**
+     * Invoked after the application verticles have been deployed successfully.
+     * <p>
+     * May be overridden to provide additional startup logic.
+     * <p>
+     * This default implementation simply returns a succeeded future.
+     *
+     * @return A future indicating success. Application start-up fails if the returned future fails.
+     */
+    protected Future<?> postDeployVerticles() {
         return Future.succeededFuture();
     }
 
@@ -246,19 +257,6 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
 
     private Future<Void> stopHealthCheckServer() {
         return healthCheckServer.stop();
-    }
-
-    /**
-     * Invoked after the service instances have been deployed successfully.
-     * <p>
-     * May be overridden to provide additional startup logic, e.g. deploying additional verticles.
-     * <p>
-     * This default implementation simply returns a succeeded future.
-     *
-     * @return A future indicating success. Application start-up fails if the returned future fails.
-     */
-    protected Future<?> postRegisterServiceVerticles() {
-        return Future.succeededFuture();
     }
 
     /**
