@@ -290,7 +290,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendAsyncCommandsSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
