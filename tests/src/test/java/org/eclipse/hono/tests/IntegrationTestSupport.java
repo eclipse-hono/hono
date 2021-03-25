@@ -469,6 +469,7 @@ public final class IntegrationTestSupport {
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
     private static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
+    private static final int KAFKA_ADD_TO_TEST_SETUP_TIMEOUT = 2; // seconds to add
 
     private static final boolean testEnv = Optional.ofNullable(System.getenv("CI"))
             .map(s -> {
@@ -688,9 +689,12 @@ public final class IntegrationTestSupport {
      * @return The time out in seconds. The value will be
      *         {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS}
      *         multiplied by the value returned by {@link #getTimeoutMultiplicator()}.
+     *         If Kafka as messaging system is used, an extra {@value IntegrationTestSupport#KAFKA_ADD_TO_TEST_SETUP_TIMEOUT}
+     *         seconds are added (for creation/propagation of topics created during setup).
      */
     public static long getTestSetupTimeout() {
-        return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * getTimeoutMultiplicator();
+        return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * getTimeoutMultiplicator()
+                + (getConfiguredMessagingType() == MessagingType.kafka ? KAFKA_ADD_TO_TEST_SETUP_TIMEOUT : 0);
     }
 
     /**
