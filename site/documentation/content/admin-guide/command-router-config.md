@@ -99,7 +99,7 @@ commands from downstream applications and forward them on a specific link on whi
 The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 with `HONO_COMMAND` being used as `${PREFIX}`. The properties for configuring response caching can be ignored.
 
-### Tenant Service Connection Configuration
+## Tenant Service Connection Configuration
 
 The Command Router component requires a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}}) in order to retrieve information for a tenant.
 
@@ -109,7 +109,7 @@ where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for resp
 The adapter caches the responses from the service according to the *cache directive* included in the response.
 If the response doesn't contain a *cache directive* no data will be cached.
 
-### Device Registration Service Connection Configuration
+## Device Registration Service Connection Configuration
 
 The Command Router component requires a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}}) in order to retrieve registration status assertions for the target devices of incoming command messages.
 
