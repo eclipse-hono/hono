@@ -111,6 +111,28 @@ public final class KafkaTracingHelper {
     }
 
     /**
+     * Sets tags from a consumer record.
+     * <p>
+     * It sets the following tags:
+     * <ul>
+     * <li>{@link Tags#MESSAGE_BUS_DESTINATION}</li>
+     * <li>{@link #TAG_OFFSET}</li>
+     * <li>{@link #TAG_PARTITION}</li>
+     * <li>{@link #TAG_TIMESTAMP}</li>
+     * </ul>
+     *
+     * @param span The span to set the tags on.
+     * @param record The record.
+     */
+    public static void setRecordTags(final Span span, final KafkaConsumerRecord<?, ?> record) {
+
+        Tags.MESSAGE_BUS_DESTINATION.set(span, record.topic());
+        TAG_OFFSET.set(span, record.offset());
+        TAG_PARTITION.set(span, record.partition());
+        TAG_TIMESTAMP.set(span, record.timestamp());
+    }
+
+    /**
      * Injects a {@code SpanContext} into a Kafka record.
      * <p>
      * The span context will be written to the record headers.

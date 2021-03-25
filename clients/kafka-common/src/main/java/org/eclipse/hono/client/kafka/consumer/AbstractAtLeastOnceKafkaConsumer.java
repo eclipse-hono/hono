@@ -18,7 +18,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.errors.TimeoutException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -82,6 +84,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     private final KafkaConsumer<String, Buffer> kafkaConsumer;
     private final Set<String> topics;
     private final Pattern topicPattern;
+    private final String topicsLogString;
     private final Handler<T> messageHandler;
     private final Handler<Throwable> closeHandler;
     private final Duration pollTimeout;
@@ -166,6 +169,10 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
         this.topics = topics;
         this.topicPattern = topicPattern;
+        topicsLogString = topics != null
+                ? "[" + topics.stream().limit(3).collect(Collectors.joining(", "))
+                        + (topics.size() > 3 ? ", ...]" : "]")
+                : topicPattern.toString();
 
         this.pollTimeout = Duration.ofMillis(pollTimeout);
     }
@@ -201,6 +208,9 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
             return Future.failedFuture("consumer already stopped"); // the underlying Kafka consumer cannot be reopened
         }
 
+        kafkaConsumer.partitionsAssignedHandler(this::onPartitionsAssigned);
+        kafkaConsumer.partitionsRevokedHandler(this::onPartitionsRevoked);
+
         final Promise<Void> promise = Promise.promise();
         if (topics != null) {
             kafkaConsumer.subscribe(topics, promise);
@@ -217,6 +227,27 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
                             .recover(cause -> Future.failedFuture(new KafkaConsumerPollException(cause)))
                             .mapEmpty();
                 });
+    }
+
+    private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("partitions assigned: [{}]", getPartitionsDebugString(partitionsSet));
+        }
+    }
+
+    private void onPartitionsRevoked(final Set<TopicPartition> partitionsSet) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("partitions revoked: [{}]", getPartitionsDebugString(partitionsSet));
+        }
+    }
+
+    private String getPartitionsDebugString(final Set<TopicPartition> partitionsSet) {
+        return partitionsSet.size() <= 20 // skip details for larger set
+                ? partitionsSet.stream()
+                        .collect(Collectors.groupingBy(TopicPartition::getTopic,
+                                Collectors.mapping(TopicPartition::getPartition, Collectors.toCollection(TreeSet::new))))
+                        .toString()
+                : partitionsSet.size() + " topic partitions";
     }
 
     /**
@@ -246,7 +277,9 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
 
     private void handleBatch(final KafkaConsumerRecords<String, Buffer> records) {
         try {
-            LOG.debug("Polled {} records", records.size());
+            if (!records.isEmpty()) {
+                LOG.debug("polled {} records on {}", records.size(), topicsLogString);
+            }
 
             for (int i = 0; i < records.size(); i++) {
                 if (stopped) {
@@ -328,8 +361,11 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
             return Future.succeededFuture();
         }
 
-        LOG.debug("committing the current offsets");
-        LOG.trace("committing offsets: {}", offsetsToBeCommitted);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("committing offsets: {}", offsetsToBeCommitted);
+        } else {
+            LOG.debug("committing current offsets");
+        }
 
         final Promise<Map<TopicPartition, OffsetAndMetadata>> completionHandler = Promise.promise();
         kafkaConsumer.commit(offsetsToBeCommitted, completionHandler);

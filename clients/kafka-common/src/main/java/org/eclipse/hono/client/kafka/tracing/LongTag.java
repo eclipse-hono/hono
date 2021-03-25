@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,7 @@ import io.opentracing.Span;
 import io.opentracing.tag.AbstractTag;
 
 /**
- * An OpenTracing tag type for {@code long} values.
+ * An OpenTracing tag type for {@code Long} values.
  */
 public class LongTag extends AbstractTag<Long> {
 
@@ -32,6 +32,6 @@ public class LongTag extends AbstractTag<Long> {
 
     @Override
     public void set(final Span span, final Long tagValue) {
-
+        span.setTag(super.key, tagValue);
     }
 }

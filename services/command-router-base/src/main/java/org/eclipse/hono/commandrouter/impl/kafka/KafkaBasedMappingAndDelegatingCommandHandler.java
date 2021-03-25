@@ -79,6 +79,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, consumerRecord);
         final Span currentSpan = CommandConsumer.createSpan("map and delegate command", command.getTenant(),
                 command.getDeviceId(), null, tracer, spanContext);
+        KafkaTracingHelper.setRecordTags(currentSpan, consumerRecord);
         final KafkaBasedCommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan);
 
         command.logToSpan(currentSpan);

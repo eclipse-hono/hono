@@ -13,13 +13,11 @@
 
 package org.eclipse.hono.adapter.client.command.kafka;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -156,7 +154,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         consumer.partitionsRevokedHandler(this::onPartitionsRevoked);
         final Promise<Void> partitionAssignedPromise = Promise.promise();
         consumer.partitionsAssignedHandler(partitionsSet -> {
-            LOG.debug("partitions assigned: [{}]", getPartitionsString(partitionsSet));
+            LOG.debug("partitions assigned: {}", partitionsSet);
             partitionAssignedPromise.tryComplete();
         });
         final String topicName = getTopicName();
@@ -171,17 +169,11 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     }
 
     private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
-        LOG.debug("partitions assigned: [{}]", getPartitionsString(partitionsSet));
+        LOG.debug("partitions assigned: {}", partitionsSet);
     }
 
     private void onPartitionsRevoked(final Set<TopicPartition> partitionsSet) {
-        LOG.debug("partitions revoked: [{}]", getPartitionsString(partitionsSet));
-    }
-
-    private String getPartitionsString(final Collection<TopicPartition> partitionsSet) {
-        return partitionsSet.stream()
-                .map(topicPartition -> Integer.toString(topicPartition.getPartition()))
-                .collect(Collectors.joining(", "));
+        LOG.debug("partitions revoked: {}", partitionsSet);
     }
 
     private String getTopicName() {

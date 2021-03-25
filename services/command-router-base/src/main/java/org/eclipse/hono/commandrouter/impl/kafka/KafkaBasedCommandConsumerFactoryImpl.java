@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -29,17 +31,21 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -72,6 +78,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
     private final KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
     private final AtomicReference<Promise<Void>> onSubscribedTopicsNextUpdated = new AtomicReference<>();
+    private final Tracer tracer;
     private final Vertx vertx;
     /**
      * Currently subscribed topics, i.e. the topics matching COMMANDS_TOPIC_PATTERN.
@@ -110,7 +117,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         Objects.requireNonNull(kafkaProducerFactory);
         Objects.requireNonNull(kafkaProducerConfig);
         Objects.requireNonNull(kafkaConsumerConfig);
-        Objects.requireNonNull(tracer);
+        this.tracer = Objects.requireNonNull(tracer);
 
         final KafkaBasedInternalCommandSender internalCommandSender = new KafkaBasedInternalCommandSender(
                 kafkaProducerFactory, kafkaProducerConfig, tracer);
@@ -148,15 +155,17 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT, ar -> {
             if (!subscribedTopicsPromise.future().isComplete()) {
                 final String errorMsg = "timed out waiting for rebalance and update of subscribed topics";
-                LOG.error(errorMsg);
-                subscribedTopicsPromise.tryFail(errorMsg);
+                LOG.warn(errorMsg);
+                subscribedTopicsPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
             }
         });
         return CompositeFuture.all(subscriptionPromise.future(), subscribedTopicsPromise.future()).mapEmpty();
     }
 
     private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
-        LOG.debug("partitions assigned: [{}]", getPartitionsDebugString(partitionsSet));
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("partitions assigned: [{}]", getPartitionsDebugString(partitionsSet));
+        }
         // update subscribedTopics (subscription() will return the actual topics, not the topic pattern)
         kafkaConsumer.subscription(ar -> {
             if (ar.succeeded()) {
@@ -176,17 +185,18 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     }
 
     private void onPartitionsRevoked(final Set<TopicPartition> partitionsSet) {
-        LOG.debug("partitions revoked: [{}]", getPartitionsDebugString(partitionsSet));
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("partitions revoked: [{}]", getPartitionsDebugString(partitionsSet));
+        }
     }
 
     private String getPartitionsDebugString(final Set<TopicPartition> partitionsSet) {
-        if (partitionsSet.size() <= 20) {
-            // return detailed info
-            return partitionsSet.stream()
-                    .map(topicPartition -> String.format("'%s' -> %s", topicPartition.getTopic(), topicPartition.getPartition()))
-                    .collect(Collectors.joining(", "));
-        }
-        return partitionsSet.size() + " topic partitions";
+        return partitionsSet.size() <= 20 // skip details for larger set
+                ? partitionsSet.stream()
+                .collect(Collectors.groupingBy(TopicPartition::getTopic,
+                        Collectors.mapping(TopicPartition::getPartition, Collectors.toCollection(TreeSet::new))))
+                .toString()
+                : partitionsSet.size() + " topic partitions";
     }
 
     @Override
@@ -203,7 +213,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     @Override
     public Future<Void> createCommandConsumer(final String tenantId, final SpanContext context) {
         if (kafkaConsumer == null) {
-            return Future.failedFuture("not started");
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, "not started"));
         }
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
         // check whether tenant topic exists and its existence has been applied to the wildcard subscription yet;
@@ -212,6 +222,12 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             LOG.debug("createCommandConsumer: topic is already subscribed [{}]", topic);
             return Future.succeededFuture();
         }
+        LOG.debug("createCommandConsumer: topic not subscribed; check for its existence, triggering auto-creation if enabled [{}]", topic);
+        final Span span = TracingHelper
+                .buildServerChildSpan(tracer, context, "wait for topic subscription update", CommandConsumerFactory.class.getSimpleName())
+                .start();
+        TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+        Tags.MESSAGE_BUS_DESTINATION.set(span, topic);
 
         final Promise<List<PartitionInfo>> topicCheckFuture = Promise.promise();
         // check whether tenant topic has been created since the last rebalance
@@ -219,11 +235,15 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         // (partitionsFor() will create the topic if it doesn't exist, provided "auto.create.topics.enable" is true)
         partitionsFor(topic, topicCheckFuture);
         return topicCheckFuture.future()
-                .onFailure(thr -> LOG.error("createCommandConsumer: error getting partitions for topic [{}]", topic, thr))
-                .compose(partitions -> {
-                    LOG.debug("createCommandConsumer: got partitions for topic [{}]: {}", topic, partitions.size());
+                .recover(thr -> {
+                    LOG.warn("createCommandConsumer: error getting partitions for topic [{}]", topic, thr);
+                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "error getting topic partitions", thr));
+                }).compose(partitions -> {
                     if (partitions.isEmpty()) {
-                        return Future.failedFuture("topic does not exist: " + topic);
+                        LOG.warn("createCommandConsumer: topic doesn't exist and didn't get auto-created: {}", topic);
+                        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "topic doesn't exist and didn't get auto-created"));
                     }
                     // again check topics in case rebalance happened in between
                     if (subscribedTopics.contains(topic)) {
@@ -231,9 +251,24 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                     }
                     // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
                     // therefore enforce a refresh here by again subscribing to the topic pattern
-                    return subscribeAndWaitForRebalanceAndTopicsUpdate();
-                })
-                .onSuccess(ar -> LOG.debug("createCommandConsumer: done with refreshing topic subscription"));
+                    LOG.debug("createCommandConsumer: verified topic existence, wait for subscription update and rebalance [{}]", topic);
+                    span.log("verified topic existence, wait for subscription update and rebalance");
+                    return subscribeAndWaitForRebalanceAndTopicsUpdate()
+                            .compose(v -> {
+                                if (!subscribedTopics.contains(topic)) {
+                                    LOG.warn("createCommandConsumer: subscription not updated with topic after rebalance [topic: {}]", topic);
+                                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                                    "subscription not updated with topic after rebalance"));
+                                }
+                                LOG.debug("createCommandConsumer: done updating topic subscription");
+                                return Future.succeededFuture(v);
+                            });
+                }).onComplete(ar -> {
+                    if (ar.failed()) {
+                        TracingHelper.logError(span, ar.cause());
+                    }
+                    span.finish();
+                });
     }
 
     /**

@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.util.ServiceClient;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
@@ -110,6 +111,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             .recover(t -> {
                 LOG.debug("failed to set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
                         tenantId, deviceId, gatewayId, t);
+                TracingHelper.logError(span, "failed to set last known gateway", t);
                 return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
             });
     }
@@ -127,6 +129,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                 .recover(t -> {
                     LOG.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
                             tenantId, deviceId, t);
+                    TracingHelper.logError(span, "failed to find last known gateway for device", t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 })
                 .compose(gatewayId -> {
@@ -162,6 +165,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                 .recover(t -> {
                     LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
                             tenantId, deviceId, adapterInstanceId, lifespanMillis, t);
+                    TracingHelper.logError(span, "failed to set command handling adapter instance cache entry", t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 });
     }
@@ -179,8 +183,9 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return cache
                 .remove(key, adapterInstanceId)
                 .recover(t -> {
-                    LOG.debug("failed to remove the cache entry when for the command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
+                    LOG.debug("failed to remove the cache entry for the command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
                             tenantId, deviceId, adapterInstanceId, t);
+                    TracingHelper.logError(span, "failed to remove cache entry for the command handling adapter instance", t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 })
                 .compose(removed -> {
@@ -209,7 +214,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         if (viaGateways.isEmpty()) {
              // get the command handling adapter instance for the device (no gateway involved)
             resultFuture = cache.get(getAdapterInstanceEntryKey(tenantId, deviceId))
-                    .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
+                    .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                     .compose(adapterInstanceId -> {
                         if (adapterInstanceId == null) {
                             LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
@@ -244,7 +249,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         // get the command handling adapter instances for the device and *all* via-gateways in one call first
         // (this saves the extra lastKnownGateway check if only one adapter instance is returned)
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
-                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
+                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                 .compose(getAllMap -> {
                     final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
                     final Future<JsonObject> resultFuture;
@@ -261,7 +266,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                     } else if (deviceToInstanceMap.size() > 1) {
                         // multiple gateways found - check last known gateway
                         resultFuture = cache.get(getGatewayEntryKey(tenantId, deviceId))
-                                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
+                                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                                 .compose(lastKnownGateway -> {
                                     if (lastKnownGateway == null) {
                                         // no last known gateway found - just return all found mapping entries
@@ -316,7 +321,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     private Future<JsonObject> getInstancesGettingLastKnownGatewayFirst(final String tenantId, final String deviceId,
             final Set<String> viaGateways, final Span span) {
         return cache.get(getGatewayEntryKey(tenantId, deviceId))
-                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
+                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                 .compose(lastKnownGateway -> {
                     if (lastKnownGateway == null) {
                         LOG.trace("no last known gateway found [tenant: {}, device-id: {}]", tenantId, deviceId);
@@ -328,7 +333,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                     if (lastKnownGateway != null && viaGateways.contains(lastKnownGateway)) {
                         // fetch command handling instances for lastKnownGateway and device
                         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, lastKnownGateway))
-                                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
+                                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                                 .compose(getAllMap -> {
                                     final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
                                     if (deviceToInstanceMap.isEmpty()) {
@@ -357,7 +362,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     private Future<JsonObject> getAdapterInstancesWithoutLastKnownGatewayCheck(final String tenantId,
             final String deviceId, final Set<String> viaGateways, final Span span) {
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
-                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
+                .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                 .compose(getAllMap -> {
                     final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
                     final Future<JsonObject> resultFuture;
@@ -388,9 +393,10 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return Future.succeededFuture(getAdapterInstancesResultJson(deviceId, adapterInstanceId));
     }
 
-    private <T> Future<T> failedToGetEntriesWhenGettingInstances(final String tenantId, final String deviceId, final Throwable t) {
+    private <T> Future<T> failedToGetEntriesWhenGettingInstances(final String tenantId, final String deviceId, final Throwable t, final Span span) {
         LOG.debug("failed to get cache entries when trying to get command handling adapter instances [tenant: {}, device-id: {}]",
                 tenantId, deviceId, t);
+        TracingHelper.logError(span, "failed to get cache entries when trying to get command handling adapter instances", t);
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
     }
 
@@ -475,16 +481,10 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             .onComplete(ar -> status.tryComplete(ar.result()));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> start() {
         if (cache instanceof Lifecycle) {
@@ -494,9 +494,6 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> stop() {
         if (cache instanceof Lifecycle) {

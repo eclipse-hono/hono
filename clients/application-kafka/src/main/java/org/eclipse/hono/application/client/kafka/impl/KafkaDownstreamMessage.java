@@ -79,35 +79,23 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
 
     private String getContentType(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getContentType(headers)
-                .orElseGet(() -> {
-                    log.debug("content type not present in Kafka record");
-                    return MessageHelper.CONTENT_TYPE_OCTET_STREAM;
-                });
+                .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
     }
 
     private QoS getQoS(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getQoS(headers)
-                .orElseGet(() -> {
-                    log.debug("QoS not present in Kafka record");
-                    return QoS.AT_LEAST_ONCE;
-                });
+                .orElse(QoS.AT_LEAST_ONCE);
     }
 
     private Instant getCreationTime(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
                 .map(Instant::ofEpochMilli)
-                .orElseGet(() -> {
-                    log.debug("creation time not present in Kafka record");
-                    return null;
-                });
+                .orElse(null);
     }
 
     private Integer getTimeTillDisconnect(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.class)
-                .orElseGet(() -> {
-                    log.debug("ttd not present in Kafka record");
-                    return null;
-                });
+                .orElse(null);
     }
 
     @Override
@@ -145,33 +133,21 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
         return payload;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Instant getCreationTime() {
         return creationTime;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Integer getTimeTillDisconnect() {
         return timeTillDisconnect;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getCorrelationId() {
         return properties.getProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID, String.class);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Integer getStatus() {
         return properties.getProperty(MessageHelper.APP_PROPERTY_STATUS, Integer.class);
