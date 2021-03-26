@@ -38,7 +38,6 @@ public interface KafkaApplicationClient extends ApplicationClient<KafkaMessageCo
      * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
      * sense to create a new consumer and other cases that need to be resolved externally.
      * <p>
-     * </p>
      * ERROR CASES:
      * <p>
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
@@ -72,7 +71,6 @@ public interface KafkaApplicationClient extends ApplicationClient<KafkaMessageCo
      * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
      * sense to create a new consumer and other cases that need to be resolved externally.
      * <p>
-     * </p>
      * ERROR CASES:
      * <p>
      * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
