@@ -14,7 +14,7 @@ com.google.protobuf:protobuf-java:jar:3.12.2
 com.h2database:h2:jar:1.4.200
 com.mchange:c3p0:jar:0.9.5.4
 com.mchange:mchange-commons-java:jar:0.2.15
-commons-cli:commons-cli:jar:1.2
+commons-cli:commons-cli:jar:1.4
 com.rabbitmq:amqp-client:jar:5.5.3
 com.squareup.okhttp3:okhttp:jar:4.9.0
 com.squareup.okio:okio:jar:2.8.0
