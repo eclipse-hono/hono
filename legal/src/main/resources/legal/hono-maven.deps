@@ -9,7 +9,7 @@ com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.11.3
 com.github.ben-manes.caffeine:caffeine:jar:2.8.8
 com.github.luben:zstd-jni:jar:1.4.4-7
 com.google.code.gson:gson:jar:2.8.5
-com.google.guava:guava:jar:28.0-jre
+com.google.guava:guava:jar:29.0-jre
 com.google.protobuf:protobuf-java:jar:3.12.2
 com.h2database:h2:jar:1.4.200
 com.mchange:c3p0:jar:0.9.5.4
@@ -252,4 +252,4 @@ org.wildfly.security:wildfly-elytron-x500-deprecated:jar:1.14.1.Final
 org.wildfly.security:wildfly-elytron-x500:jar:1.14.1.Final
 org.wildfly.security:wildfly-elytron-x500-principal:jar:1.14.1.Final
 org.xerial.snappy:snappy-java:jar:1.1.7.3
-org.yaml:snakeyaml:jar:1.26
+org.yaml:snakeyaml:jar:1.28

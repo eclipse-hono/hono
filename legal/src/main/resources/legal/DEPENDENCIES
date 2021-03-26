@@ -25,7 +25,6 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gs2/1.14.1.Final, A
 maven/mavencentral/jakarta.json/jakarta.json-api/1.1.6, , approved, eclipse
 maven/mavencentral/org.infinispan/infinispan-commons/11.0.9.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apiguardian/apiguardian-api/1.1.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/com.google.guava/guava/28.0-jre, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.vertx/vertx-auth-mongo/3.9.5, , approved, eclipse
 maven/mavencentral/net.bytebuddy/byte-buddy/1.10.18, , approved, CQ22491
 maven/mavencentral/io.quarkus/quarkus-arc/1.11.3.Final, Apache-2.0, approved, clearlydefined
@@ -85,6 +84,7 @@ maven/mavencentral/org.xerial.snappy/snappy-java/1.1.7.3, Apache-2.0, approved, 
 maven/mavencentral/io.vertx/vertx-web-common/3.9.5, , approved, eclipse
 maven/mavencentral/org.wildfly.security/wildfly-elytron-http-digest/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-core/1.6.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/com.google.guava/guava/29.0-jre, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.objenesis/objenesis/3.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-netty/1.11.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/commons-cli/commons-cli/1.4, Apache-2.0, approved, CQ13132
@@ -135,11 +135,11 @@ maven/mavencentral/org.jboss.threads/jboss-threads/3.2.0.Final, Apache-2.0, appr
 maven/mavencentral/io.netty/netty-codec-http2/4.1.49.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.vertx/vertx-auth-jdbc/3.9.5, , approved, eclipse
 maven/mavencentral/org.wildfly.security/wildfly-elytron-http-sso/1.14.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.yaml/snakeyaml/1.26, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-client/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.reactivex.rxjava3/rxjava/3.0.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.osgi/org.osgi.compendium/4.3.1, Apache-2.0, approved, CQ10111
 maven/mavencentral/io.vertx/vertx-mongo-client/3.9.5, , approved, eclipse
+maven/mavencentral/org.yaml/snakeyaml/1.28, , approved, CQ23168
 maven/mavencentral/io.vertx/vertx-jdbc-client/3.9.5, , approved, eclipse
 maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye/smallrye-metrics-api/2.4.4, Apache-2.0, approved, clearlydefined
