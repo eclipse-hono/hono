@@ -659,9 +659,16 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final AtomicReference<Integer> subMessageIdRef = new AtomicReference<>();
         mqttClient.subscribeCompletionHandler(subAckMsg -> {
             final List<Integer> ackQoSLevels = subAckMsg.grantedQoSLevels();
-            if (ackQoSLevels.size() == 1 && ackQoSLevels.get(0) == 0 && subAckMsg.messageId() == subMessageIdRef.get()) {
-                result.complete();
-            } else {
+
+            try {
+                if (ackQoSLevels.size() == 1 && ackQoSLevels.get(0) == 0 && subAckMsg.messageId() == subMessageIdRef.get()) {
+                    result.complete();
+                } else {
+                    result.fail("could not subscribe to error topic");
+                }
+            } catch (final Throwable e) {
+                LOGGER.warn("could not process SUBACK packet from MQTT adapter [grantedQoSLevels: {}, messageId: {}",
+                        ackQoSLevels, subAckMsg.messageId(), e);
                 result.fail("could not subscribe to error topic");
             }
         });
