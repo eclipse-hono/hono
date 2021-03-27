@@ -28,6 +28,7 @@ import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.InfinispanRemoteConfigurationProperties;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
@@ -38,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
 import io.quarkus.arc.config.ConfigPrefix;
-import io.quarkus.runtime.configuration.ProfileManager;
 import io.vertx.core.Vertx;
 
 /**
@@ -51,7 +51,6 @@ import io.vertx.core.Vertx;
 public class DeviceConnectionInfoProducer {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceConnectionInfoProducer.class);
-    private static final String PROFILE_EMBEDDED_CACHE = "embedded-cache";
 
     @ConfigProperty(name = "hono.commandRouter.cache.embedded.configurationFile", defaultValue = "/etc/hono/cache-config.xml")
     String configFile;
@@ -71,7 +70,7 @@ public class DeviceConnectionInfoProducer {
             final Vertx vertx,
             final CommonCacheConfig commonCacheConfig) {
 
-        if (PROFILE_EMBEDDED_CACHE.equals(ProfileManager.getActiveProfile())) {
+        if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring embedded cache");
             return new EmbeddedCache<>(
                     vertx,
@@ -84,6 +83,10 @@ public class DeviceConnectionInfoProducer {
                     infinispanCacheConfig,
                     commonCacheConfig);
         }
+    }
+
+    private EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {
+        return new DefaultCacheManager(configuration(cacheConfig), false);
     }
 
     private ConfigurationBuilderHolder configuration(final CommonCacheConfig cacheConfig) {
@@ -104,9 +107,5 @@ public class DeviceConnectionInfoProducer {
             LOG.info("using default embedded cache configuration:{}{}", System.lineSeparator(), builder.toString());
             return builderHolder;
         }
-    }
-
-    private EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {
-        return new DefaultCacheManager(configuration(cacheConfig), false);
     }
 }

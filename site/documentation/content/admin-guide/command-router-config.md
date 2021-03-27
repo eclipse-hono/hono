@@ -128,7 +128,8 @@ determine the overall number of responses that can be cached.
 The Command Router component requires either an embedded cache or a remote
 data grid, using the Infinispan Hotrod protocol to store device information.
 
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the common aspects of the service:
+The following table provides an overview of the configuration variables and corresponding command line options for
+configuring the common aspects of the service:
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
@@ -136,9 +137,9 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_COMMANDROUTER_CACHE_COMMON_CHECKKEY`<br>`--hono.commandRouter.cache.common.checkKey` | no | `KEY_CONNECTION_CHECK` | The key used to check the health of the cache. This is only used in case of a remote cache. |
 | `HONO_COMMANDROUTER_CACHE_COMMON_CHECKVALUE`<br>`--hono.commandRouter.cache.common.checkValue` | no | `VALUE_CONNECTION_CHECK` | The value used to check the health of the cache. This is only used in case of a remote cache. |
 
-The type of the cache is selected on startup by enabling or disabling the
-profile `embedded-cache`. If the profile is enabled the embedded cache is
-used, otherwise the remote cache is being used. The remote cache is the default.
+The type of cache (embedded or remote) is determined during startup by means of the `HONO_COMMANDROUTER_CACHE_REMOTE_SERVERLIST`
+configuration variable. If the variable has a non empty value, a [remote cache]({{< relref "#remote-cache" >}}) is configured.
+Otherwise, an [embedded cache]({{< relref "#embedded-cache" >}}) is configured.
 
 ### Remote cache
 
@@ -151,8 +152,9 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHREALM`<br>`--hono.commandRouter.cache.remote.authRealm` | yes | - | The authentication realm for the SASL handshake when authenticating to the server. |
 | `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHUSERNAME`<br>`--hono.commandRouter.cache.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
 | `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHPASSWORD`<br>`--hono.commandRouter.cache.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_SASLMECHANISM`<br>`--hono.commandRouter.cache.remote.saslMechanism` | yes | - | The SASL mechanism to use for authenticating to the server. |
 
-In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/10.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.commandRouter.cache.remote` instead of the `infinispan.client.hotrod` prefix.
+In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/11.0/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.commandRouter.cache.remote` instead of the `infinispan.client.hotrod` prefix.
 
 ### Embedded cache
 
@@ -160,7 +162,7 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_COMMANDROUTER_CACHE_EMBEDDED_CONFIGURATIONFILE`<br>`--hono.commandRouter.cache.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/10.1/configdocs/). |
+| `HONO_COMMANDROUTER_CACHE_EMBEDDED_CONFIGURATIONFILE`<br>`--hono.commandRouter.cache.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/11.0/configdocs/infinispan-config-11.0.html). |
 
 ## Authentication Service Connection Configuration
 

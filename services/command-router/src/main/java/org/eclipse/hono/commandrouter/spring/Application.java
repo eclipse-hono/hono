@@ -36,7 +36,7 @@ import io.vertx.core.Verticle;
  * Command Router API</a>.
  */
 @ComponentScan("org.eclipse.hono.service.auth")
-@Import(value = { ApplicationConfig.class, EmbeddedCacheConfig.class, RemoteCacheConfig.class })
+@Import(value = { ApplicationConfig.class, CacheConfig.class })
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 

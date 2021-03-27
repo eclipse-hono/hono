@@ -1183,7 +1183,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
                       <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
                       <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
-                      <QUARKUS_PROFILE>embedded-cache</QUARKUS_PROFILE>
                     </env>
                     <log>
                       <prefix>CMDROUTER</prefix>

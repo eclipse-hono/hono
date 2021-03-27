@@ -24,7 +24,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MQTT adapter now lets devices subscribe on a new error topic to get informed about errors during the processing
   of telemetry, event or command response message. With such an error subscription in place, the default behaviour
   on such errors is now to keep the MQTT connection open. Please refer to the
-  [MQTT Adapter User Guide] ({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
+  [MQTT Adapter User Guide]({{% doclink "/user-guide/mqtt-adapter/#error-reporting-via-error-topic" %}}) for details.
 * The MQTT adapter now supports mapping the command payload through an external http service.
 * The Command Router component has been promoted from *tech preview* to *fully supported*.
 * The AMQP adapter now closes the network connection to the device if any terminal errors happen. Please refer to the
@@ -44,6 +44,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   updated to version 11.0.9. The syntax of configuration file used for defining an embedded cache in the Device
   Connection and/or Command Router service has changed as documented
   [in the Infinispan version details](https://infinispan.org/docs/stable/titles/upgrading/upgrading.html#upgrading_from_10_1_to_11_0).
+* The Command Router no longer uses the `embedded-cache` *Spring profile* in order to configure an embedded cache.
+  Instead, the Command Router determines the type of cache (embedded or remote) by means of the
+  `HONO_COMMANDROUTER_CACHE_REMOTE_SERVERLIST` configuration variable. Please refer to the
+  [Command Router Admin Guide]({{% doclink "/admin-guide/command-router-config/#data-grid-connection-configuration" %}})
+  for details.
 
 ### API Changes
 
