@@ -7,6 +7,7 @@ resources:
   - src: register_cmd_consumer.svg
   - src: unregister_cmd_consumer.svg
   - src: set_last_known_gateway_success.svg
+  - src: enable_command_routing.svg
 ---
 
 *Protocol Adapters* use the *Command Router API* to supply information with which a Command Router service component can route command & control messages to the protocol adapters that the target devices are connected to.
@@ -48,6 +49,7 @@ The following table provides an overview of the properties a client needs to set
 | :-------------------- | :-------: | :----------------------- | :-------- | :---------- |
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `register-cmd-consumer`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance that currently handles commands for the device or gateway identified by the *device_id* property. |
+| *device_id*           | yes       | *application-properties* | *string*  | MUST contain the ID of the device that is subject to the operation. |
 | *lifespan*            | no        | *application-properties* | *int*     | The lifespan of the mapping entry in seconds. After that period, the registration entry shall be treated as non-existent by the Command Router service component. A negative value, as well as an omitted property, is interpreted as an unlimited lifespan. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
@@ -86,6 +88,7 @@ The following table provides an overview of the properties a client needs to set
 | :-------------------- | :-------: | :----------------------- | :-------- | :---------- |
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `unregister-cmd-consumer`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance to remove the registration entry for. Only if this adapter instance is currently associated with the device or gateway identified by the *device_id* property, the registration entry will be removed. |
+| *device_id*           | yes       | *application-properties* | *string*  | MUST contain the ID of the device that is subject to the operation. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -113,7 +116,6 @@ As this operation is invoked frequently by Hono's components, implementors may c
 
 **Message Flow**
 
-
 {{< figure src="set_last_known_gateway_success.svg" title="Client sets the last known gateway for a device" alt="A client sends a request message for setting the last known gateway and receives a response containing a confirmation" >}}
 
 **Request Message Format**
@@ -123,6 +125,7 @@ The following table provides an overview of the properties a client needs to set
 | Name         | Mandatory | Location                 | AMQP Type | Description |
 | :----------- | :-------: | :----------------------- | :-------- | :---------- |
 | *subject*    | yes       | *properties*             | *string*  | MUST be set to `set-last-gw`. |
+| *device_id*  | yes       | *application-properties* | *string*  | MUST contain the ID of the device that is subject to the operation. |
 | *gateway_id* | yes       | *application-properties* | *string*  | The identifier of the gateway that last acted on behalf of the device identified by the *device_id* property. For a device that connects to the adapter directly instead of through a gateway, the value of this property MUST be the same as the value of the *device_id* application property. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
@@ -142,6 +145,57 @@ Implementors of this API may return a *404* status code in order to indicate tha
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
+## Enable Command Routing
+
+A *Protocol Adapter* uses this operation to inform the Command Router service about the tenants that the devices belong to
+that are connected to the adapter and which have subscribed to commands.
+
+During normal operation, the Command Router is able to keep track of these tenants implicitly as part of the information
+provided in invocations of the [register command consumer]({{< relref "#register-command-consumer-for-device" >}})
+operation. Depending on the service's implementation, this information might be lost after an unexpected restart.
+Protocol adapters will perceive such a case by means of a loss of their AMQP connection to the service.
+Once the connection has been re-established, an adapter can then use this operation to help the Command Router
+service recover and re-establish the downstream network links which are required to receive and forward commands.
+
+**Message Flow**
+
+{{< figure src="enable_command_routing.svg" title="Client submits tenant IDs to enable command routing for"
+alt="A client sends a request message for (re-)enabling command routing for a list of tenants and receives a response containing a confirmation" >}}
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to enable command routing
+in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name             | Mandatory | Location                 | AMQP Type    | Description |
+| :--------------- | :-------: | :----------------------- | :----------- | :---------- |
+| *subject*        | yes       | *properties*             | *string*     | MUST be set to `enable-command-routing`. |
+
+The body of the request MUST consist of a single *Data* section containing a UTF-8 encoded string representation of a
+single JSON array containing tenant identifiers. Note that the number of tenant identifiers supported in the array may
+be limited by the maximum message size negotiated between the service and the client. In such a case, a client may use
+multiple consecutive requests to overcome this limitation.
+
+The following request payload may be used to re-enable command routing of tenants *one*, *two* and *three*:
+
+~~~json
+[ "one", "two", "three" ]
+~~~
+
+**Response Message Format**
+
+A response to an *enable command routing* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response message's *status* property may contain the following codes:
+
+| Code  | Description |
+| :---- | :---------- |
+| *204* | OK, the tenant identifiers have been accepted for processing. Note that this status code does not necessarily mean that command routing has already been enabled (again) for the given tenant identifiers. Implementors may also choose to accept the tenant identifiers and then (asynchronously) start to process them afterwards. In such a case, implementors are advised to implement adequate re-try logic for enabling command routing for each tenant identifier. |
+| *400* | Bad Request, the body does not contain a valid JSON array of strings. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
+
 ## Standard Message Properties
 
 Due to the nature of the request/response message pattern of the operations of the Command Router API, there are some standard properties shared by all of the request and response messages exchanged as part of the operations.
@@ -156,7 +210,6 @@ The following table provides an overview of the properties shared by all request
 | *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. Either this or the *message-id* property MUST be set. |
 | *message-id*     | no        | *properties*             | *string*     | MAY contain an identifier that uniquely identifies the message at the sender side. Either this or the *correlation-id* property MUST be set. |
 | *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions-for-invoking-the-device-connection-api" >}})). |
-| *device_id*      | yes       | *application-properties* | *string*     | MUST contain the ID of the device that is subject to the operation. |
 
 ### Standard Response Properties
 

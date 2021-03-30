@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
@@ -55,6 +56,8 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
     private final CommandRouterClient commandRouterClient;
     private final List<Lifecycle> internalCommandConsumers = new ArrayList<>();
 
+    private int maxTenantIdsPerRequest = 100;
+
     /**
      * Creates a new factory.
      *
@@ -65,6 +68,30 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
     public CommandRouterCommandConsumerFactory(final CommandRouterClient commandRouterClient, final String adapterName) {
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
         this.adapterInstanceId = getNewAdapterInstanceId(Objects.requireNonNull(adapterName));
+        if (commandRouterClient instanceof ConnectionLifecycle<?>) {
+            ((ConnectionLifecycle<?>) commandRouterClient).addReconnectListener(con -> reenableCommandRouting());
+        }
+    }
+
+    void setMaxTenantIdsPerRequest(final int count) {
+        this.maxTenantIdsPerRequest = count;
+    }
+
+    private void reenableCommandRouting() {
+        final List<String> tenantIds = commandHandlers.getCommandHandlers().stream()
+                .map(CommandHandlerWrapper::getTenantId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        int idx = 0;
+        // re-enable routing of commands in chunks of tenant IDs
+        while (idx < tenantIds.size()) {
+            final int from = idx;
+            final int to = from + Math.min(maxTenantIdsPerRequest, tenantIds.size() - idx);
+            final List<String> chunk = tenantIds.subList(from, to);
+            commandRouterClient.enableCommandRouting(chunk, null);
+            idx = to;
+        }
     }
 
     private static String getNewAdapterInstanceId(final String adapterName) {

@@ -258,7 +258,8 @@ public class ApplicationConfig {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                commandConsumerFactories);
+                commandConsumerFactories,
+                getTracer());
     }
 
     /**

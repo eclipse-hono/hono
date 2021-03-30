@@ -242,7 +242,8 @@ public class Application {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                commandConsumerFactories(tenantClient, commandTargetMapper));
+                commandConsumerFactories(tenantClient, commandTargetMapper),
+                tracer);
     }
 
     private ClientConfigProperties commandConsumerFactoryConfig() {
