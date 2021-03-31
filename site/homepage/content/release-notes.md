@@ -49,6 +49,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   `HONO_COMMANDROUTER_CACHE_REMOTE_SERVERLIST` configuration variable. Please refer to the
   [Command Router Admin Guide]({{% doclink "/admin-guide/command-router-config/#data-grid-connection-configuration" %}})
   for details.
+* The Prometheus based resource limit checks can now be configured with a time out for establishing the TCP connection
+  to the Prometheus server. This is useful to limit the time it takes to invoke the Prometheus Query API.
+  Please refer to the
+  [Protocol Adapter Common Configuration guide]({{% doclink "/adming-guide/common-config/#resource-limits-checker-configuration" %}})
+  for details.
 
 ### API Changes
 

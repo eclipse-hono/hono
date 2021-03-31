@@ -662,6 +662,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 .maximumSize(config.getCacheMaxSize())
                 .expireAfterWrite(Duration.ofSeconds(config.getCacheTimeout()));
         final WebClientOptions webClientOptions = new WebClientOptions();
+        webClientOptions.setConnectTimeout(config.getConnectTimeout());
         webClientOptions.setDefaultHost(config.getHost());
         webClientOptions.setDefaultPort(config.getPort());
         webClientOptions.setTrustOptions(config.getTrustOptions());

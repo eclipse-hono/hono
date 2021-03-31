@@ -54,6 +54,7 @@ public class ResourceLimitChecksProducer {
 
         if (config.isHostConfigured()) {
             final WebClientOptions webClientOptions = new WebClientOptions();
+            webClientOptions.setConnectTimeout(config.getConnectTimeout());
             webClientOptions.setDefaultHost(config.getHost());
             webClientOptions.setDefaultPort(config.getPort());
             webClientOptions.setTrustOptions(config.getTrustOptions());

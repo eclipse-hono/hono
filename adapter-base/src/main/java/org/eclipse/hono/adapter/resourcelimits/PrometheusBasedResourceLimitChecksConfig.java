@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,11 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
      * The default timeout for cached data in seconds until they are considered invalid.
      */
     public static final long DEFAULT_CACHE_TIMEOUT = 15L;
-
+    /**
+     * The default number of milliseconds that the client waits for a connection to
+     * the Prometheus server.
+     */
+    public static final int DEFAULT_CONNECT_TIMEOUT = 1000;
     /**
      * The default number of milliseconds after which the client cancels queries to
      * the Prometheus REST API.
@@ -42,6 +46,7 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
     private long cacheMaxSize = DEFAULT_CACHE_MAX_SIZE;
     private long cacheTimeout = DEFAULT_CACHE_TIMEOUT;
     private long queryTimeout = DEFAULT_QUERY_TIMEOUT;
+    private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
     /**
      * Creates new properties with default values.
@@ -167,5 +172,31 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
      */
     public void setQueryTimeout(final long timeout) {
         this.queryTimeout = timeout;
+    }
+
+    /**
+     * Gets the maximum period of time that the client waits for a connection to a Prometheus server.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_CONNECT_TIMEOUT}.
+     *
+     * @return The timeout for the attempt to establish a TCP connection to a server in milliseconds.
+     */
+    public int getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    /**
+     * Sets the maximum period of time that the client waits for a TCP connection to a Prometheus server to be established.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_CONNECT_TIMEOUT}.
+     *
+     * @param timeout The timeout in milliseconds.
+     * @throws IllegalArgumentException if timeout is &lt; 0.
+     */
+    public void setConnectTimeout(final int timeout) {
+        if (connectTimeout < 0) {
+            throw new IllegalArgumentException("connectTimeout must be >= 0");
+        }
+        this.connectTimeout = timeout;
     }
 }

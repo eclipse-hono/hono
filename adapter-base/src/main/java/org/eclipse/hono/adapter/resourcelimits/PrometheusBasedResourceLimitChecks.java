@@ -514,20 +514,23 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     private HttpRequest<JsonObject> newQueryRequest(final String query) {
-        final HttpRequest<JsonObject> request = client.get(QUERY_URI)
+
+        final HttpRequest<?> request = client.post(QUERY_URI)
                 .addQueryParam("query", query)
-                .expect(ResponsePredicate.SC_OK)
-                .as(BodyCodec.jsonObject());
+                .expect(ResponsePredicate.SC_OK);
 
         if (config.getQueryTimeout() > 0) {
-            // enables timeout for Prometheus queries via HTTP API
-            request.timeout(config.getQueryTimeout());
+            // limit query execution time on Prometheus
+            request.addQueryParam("timeout", String.format("%dms", config.getQueryTimeout()));
+            // make sure that the HTTP client waits at least as long as Prometheus will spend on
+            // executing the query before giving up
+            request.timeout(config.getQueryTimeout() + 100);
         }
 
         if (!Strings.isNullOrEmpty(config.getUsername()) && !Strings.isNullOrEmpty(config.getPassword())) {
             request.basicAuthentication(config.getUsername(), config.getPassword());
         }
-        return request;
+        return request.as(BodyCodec.jsonObject());
     }
 
     /**

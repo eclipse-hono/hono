@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,9 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
-import org.eclipse.hono.adapter.resourcelimits.LimitedResource;
-import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecks;
-import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.ConnectionDuration;
@@ -81,11 +78,14 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, unit = TimeUnit.SECONDS)
 public class PrometheusBasedResourceLimitChecksTest {
 
+    private static final int QUERY_TIMEOUT = 500;
+    private static final int REQUEST_TIMEOUT = QUERY_TIMEOUT + 100;
+
     private PrometheusBasedResourceLimitChecksConfig config;
     private PrometheusBasedResourceLimitChecks limitChecksImpl;
     private WebClient webClient;
-    private HttpRequest<JsonObject> request;
-    private HttpRequest<Buffer> req;
+    private HttpRequest<JsonObject> jsonRequest;
+    private HttpRequest<Buffer> bufferReq;
     private AsyncCache<String, LimitedResource<Long>> connectionCountCache;
     private AsyncCache<String, LimitedResource<Duration>> connectionDurationCache;
     private AsyncCache<String, LimitedResource<Long>> dataVolumeCache;
@@ -99,17 +99,17 @@ public class PrometheusBasedResourceLimitChecksTest {
     @BeforeEach
     public void setup() {
 
-        request = mock(HttpRequest.class);
-        when(request.basicAuthentication(anyString(), anyString())).thenReturn(request);
-        when(request.timeout(anyLong())).thenReturn(request);
+        jsonRequest = mock(HttpRequest.class);
 
-        req = mock(HttpRequest.class);
-        when(req.addQueryParam(anyString(), anyString())).thenReturn(req);
-        when(req.expect(any(ResponsePredicate.class))).thenReturn(req);
-        when(req.as(any(BodyCodec.class))).thenReturn(request);
+        bufferReq = mock(HttpRequest.class);
+        when(bufferReq.addQueryParam(anyString(), anyString())).thenReturn(bufferReq);
+        when(bufferReq.expect(any(ResponsePredicate.class))).thenReturn(bufferReq);
+        when(bufferReq.basicAuthentication(anyString(), anyString())).thenReturn(bufferReq);
+        when(bufferReq.timeout(anyLong())).thenReturn(bufferReq);
+        when(bufferReq.as(any(BodyCodec.class))).thenReturn(jsonRequest);
 
         webClient = mock(WebClient.class);
-        when(webClient.get(anyString())).thenReturn(req);
+        when(webClient.post(anyString())).thenReturn(bufferReq);
 
         connectionCountCache = mock(AsyncCache.class);
         when(connectionCountCache.get(anyString(), any(BiFunction.class))).then(invocation -> {
@@ -131,6 +131,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         tracer = TracingMockSupport.mockTracer(span);
 
         config = new PrometheusBasedResourceLimitChecksConfig();
+        config.setQueryTimeout(QUERY_TIMEOUT);
 
         limitChecksImpl = new PrometheusBasedResourceLimitChecks(
                 webClient,
@@ -170,8 +171,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request).basicAuthentication(eq("hono"), eq("hono-secret"));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        verify(bufferReq).basicAuthentication(eq("hono"), eq("hono-secret"));
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -193,7 +194,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request, never()).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -216,7 +217,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request, never()).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -239,10 +240,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedConnectionNumberQuery(tenant));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionNumberQuery(tenant), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -265,10 +264,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedConnectionNumberQuery(tenant));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionNumberQuery(tenant), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -291,10 +288,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedConnectionNumberQuery(tenant));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionNumberQuery(tenant), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -324,10 +319,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -360,10 +353,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         // THEN the limit is reported as being exceeded
                         assertTrue(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -392,7 +383,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                         // AND the span is not marked as erroneous
                         verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
@@ -527,7 +518,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request, never()).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -560,7 +551,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(exceeded -> {
                     ctx.verify(() -> {
                         assertTrue(exceeded);
-                        verify(request, never()).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest, never()).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -592,7 +583,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -621,10 +612,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -653,10 +642,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -682,7 +669,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -712,10 +699,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
-                        verify(req).addQueryParam(
-                                "query",
-                                getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config));
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                         // AND the span is not marked as erroneous
                         verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
@@ -743,7 +728,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        verify(request).send(VertxMockSupport.anyHandler());
+                        verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
                 }));
@@ -769,7 +754,7 @@ public class PrometheusBasedResourceLimitChecksTest {
             when(response.body()).thenReturn(createPrometheusResponse(value));
             responseHandler.handle(Future.succeededFuture(response));
             return null;
-        }).when(request).send(VertxMockSupport.anyHandler());
+        }).when(jsonRequest).send(VertxMockSupport.anyHandler());
     }
 
     private void givenFailResponseWithTimeoutException() {
@@ -777,7 +762,7 @@ public class PrometheusBasedResourceLimitChecksTest {
             final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
             responseHandler.handle(Future.failedFuture(new TimeoutException()));
             return null;
-        }).when(request).send(VertxMockSupport.anyHandler());
+        }).when(jsonRequest).send(VertxMockSupport.anyHandler());
     }
 
     private static JsonObject createPrometheusResponse(final Integer value) {
@@ -822,5 +807,15 @@ public class PrometheusBasedResourceLimitChecksTest {
         return String.format(
                 "sum(hono_connections_authenticated{tenant=\"%1$s\"})",
                 tenant.getTenantId());
+    }
+
+    private static void assertRequestParamsSet(
+            final HttpRequest<?> request,
+            final String expectedQuery,
+            final int expectedQueryTimeoutMillis,
+            final long expectedRequestTimeoutMillis) {
+        verify(request).addQueryParam(eq("query"), eq(expectedQuery));
+        verify(request).addQueryParam(eq("timeout"), eq(String.valueOf(expectedQueryTimeoutMillis) + "ms"));
+        verify(request).timeout(expectedRequestTimeoutMillis);
     }
 }
