@@ -1351,8 +1351,12 @@ components:
                                  In this case the id field must be set instead.
                  "pwd-hash":
                     type: string
-                    format: byte
-                    description: The Base64 encoding of the password hash created using the `hash-function` and (optional) `salt`.
+                    description: The password hash as a string, either the output of applying the Bcrypt hash function
+                                 to the clear text password if the `hash-function` is `bcrypt`, or otherwise the Base64 encoding
+                                 of the bytes resulting from applying the hash function to the byte array consisting of the salt bytes
+                                 (if a salt is used) and the UTF-8 encoding of the clear text password.
+                                 For detail regarding different hash functions and the required encoding refer to the
+                                 [Credentials API](https://www.eclipse.org/hono/docs/api/credentials/#hashed-password).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
