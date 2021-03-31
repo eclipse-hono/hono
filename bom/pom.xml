@@ -60,7 +60,7 @@
     <mockito.version>3.7.7</mockito.version>
     <mongodb-image.name>mongo:4.2.13</mongodb-image.name>
     <mongodb-driver.version>3.10.1</mongodb-driver.version>
-    <netty.version>4.1.49.Final</netty.version>
+    <netty.version>4.1.62.Final</netty.version>
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
