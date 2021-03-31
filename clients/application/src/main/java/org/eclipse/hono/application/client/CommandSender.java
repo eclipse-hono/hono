@@ -22,9 +22,9 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A client for sending commands.
+ * A client for sending commands and receiving command responses.
  *
- * @param <T> The type of context that messages are being received in.
+ * @param <T> The type of context that command response messages are being received in.
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/"> Command &amp; Control API for AMQP 1.0
  *      Specification</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/"> Command &amp; Control API for Kafka

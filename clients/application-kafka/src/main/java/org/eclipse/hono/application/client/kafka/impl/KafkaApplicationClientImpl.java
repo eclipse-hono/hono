@@ -81,7 +81,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
             final KafkaProducerFactory<String, Buffer> producerFactory,
             final KafkaProducerConfigProperties producerConfig,
             final Tracer tracer) {
-        super(producerFactory, producerConfig, tracer);
+        super(vertx, consumerConfig, producerFactory, producerConfig, tracer);
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(consumerConfig);
