@@ -371,7 +371,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
         kafkaConsumer.commit(offsetsToBeCommitted, completionHandler);
         return completionHandler.future()
                 .map(committedOffsets -> {
-                    LOG.debug("successfully committed offsets");
+                    LOG.trace("successfully committed offsets");
                     offsetsToBeCommitted.clear();
                     return null;
                 });

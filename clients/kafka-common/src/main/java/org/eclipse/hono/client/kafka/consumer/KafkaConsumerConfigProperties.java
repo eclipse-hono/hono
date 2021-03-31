@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.kafka.consumer;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -85,7 +84,7 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
         Objects.requireNonNull(consumerName);
 
         if (commonClientConfig == null && consumerConfig == null) {
-            return Collections.emptyMap();
+            return new HashMap<>();
         }
 
         final Map<String, String> newConfig = new HashMap<>();
