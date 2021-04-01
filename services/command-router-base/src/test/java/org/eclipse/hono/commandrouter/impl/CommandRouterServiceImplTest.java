@@ -55,6 +55,7 @@ class CommandRouterServiceImplTest {
 
     private CommandRouterServiceImpl service;
     private CommandConsumerFactory commandConsumerFactory;
+    private Context context;
 
     /**
      * Sets up the fixture.
@@ -71,7 +72,7 @@ class CommandRouterServiceImplTest {
         final MessagingClient<CommandConsumerFactory> factories = new MessagingClient<>();
         factories.setClient(MessagingType.amqp, commandConsumerFactory);
         final Vertx vertx = mock(Vertx.class);
-        final Context context = VertxMockSupport.mockContext(vertx);
+        context = VertxMockSupport.mockContext(vertx);
         service = new CommandRouterServiceImpl(
                 new CommandRouterServiceConfigProperties(),
                 registrationClient,
@@ -84,7 +85,7 @@ class CommandRouterServiceImplTest {
 
     @Test
     void testEnableCommandRoutingCreatesCommandConsumers() {
-        final Context ctx = mock(Context.class);
+
         final AtomicReference<Handler<Void>> firstHandler = new AtomicReference<>();
         doAnswer(invocation -> {
             final Handler<Void> codeToRun = invocation.getArgument(0);
@@ -94,11 +95,11 @@ class CommandRouterServiceImplTest {
                 codeToRun.handle(null);
                 return null;
             }
-        }).when(ctx).runOnContext(VertxMockSupport.anyHandler());
-        service.setContext(ctx);
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
+
 
         final List<String> firstTenants = List.of("tenant1", "tenant2", "tenant3");
-        final List<String> secondTenants = List.of("tenant4", "tenant5");
+        final List<String> secondTenants = List.of("tenant3", "tenant4");
         // WHEN submitting the first list of tenants to enable
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
         assertThat(firstHandler.get()).isNotNull();
@@ -111,7 +112,9 @@ class CommandRouterServiceImplTest {
         // but when the handler for creating the initial tenant is being run
         firstHandler.get().handle(null);
         // THEN a command consumer is being created once for each tenant
-        firstTenants.forEach(tenant -> verify(commandConsumerFactory).createCommandConsumer(eq(tenant), any()));
-        secondTenants.forEach(tenant -> verify(commandConsumerFactory).createCommandConsumer(eq(tenant), any()));
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant2"), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant3"), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant4"), any());
     }
 }
