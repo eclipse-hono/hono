@@ -62,11 +62,11 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
          */
         DISCONNECT("disconnect"),
         /**
-         * Ignore errors, send PUB_ACK if QoS is 0.
+         * Ignore errors, send PUB_ACK if QoS is 1.
          */
         IGNORE("ignore"),
         /**
-         * Ignore errors and don't send PUB_ACK if QoS is 0.
+         * Ignore errors and don't send PUB_ACK if QoS is 1.
          */
         SKIP_ACK("skip-ack"),
         /**
