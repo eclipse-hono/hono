@@ -8,6 +8,12 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### New Features
 
+* Apache Kafka is now supported as a messaging system for command messages.
+  This can be enabled by configuring protocol adapters to use Hono's new Kafka-based
+  client. Please refer to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration/" %}})
+  for details. The new [Command &amp; Control API for Kafka]({{% doclink "/api/command-and-control-kafka/" %}}) defines
+  how applications can use Apache Kafka to send command messages to devices.
+  Note that support for Kafka base messaging is still considered an **experimental** feature.
 * The Device Registry Management API has been extended now to support an optional unique identifier
   for trust anchors belonging to a tenant. The file, JDBC and MongoDB based device registries
   support this feature. Please refer to the
