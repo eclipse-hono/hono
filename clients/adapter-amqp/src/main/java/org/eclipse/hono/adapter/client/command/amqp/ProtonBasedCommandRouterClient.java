@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.client.command.amqp;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -42,6 +43,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -249,5 +251,36 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
                 })
                 .onComplete(v -> currentSpan.finish())
                 .mapEmpty();
+    }
+
+    @Override
+    public Future<Void> enableCommandRouting(final List<String> tenantIds, final SpanContext context) {
+
+        Objects.requireNonNull(tenantIds);
+        if (tenantIds.isEmpty()) {
+            return Future.succeededFuture();
+        }
+        final Span currentSpan = newChildSpan(context, "enable command routing");
+        currentSpan.log(Map.of("no_of_tenants", tenantIds.size()));
+        final JsonArray payload = new JsonArray(tenantIds);
+        final Future<RequestResponseResult<JsonObject>> resultTracker = getOrCreateClient(tenantIds.get(0))
+                .compose(client -> client.createAndSendRequest(
+                        CommandRouterConstants.CommandRouterAction.ENABLE_COMMAND_ROUTING.getSubject(),
+                        null,
+                        payload.toBuffer(),
+                        MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
+                        this::getRequestResponseResult,
+                        currentSpan));
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    log.info("successfully enabled routing of commands for {} tenants in Command Router", tenantIds.size());
+                    return null;
+                default:
+                    final ServiceInvocationException e = StatusCodeMapper.from(result);
+                    log.info("failed to enable routing of commands in Command Router", e);
+                    throw e;
+            }
+        }, currentSpan).mapEmpty();
     }
 }

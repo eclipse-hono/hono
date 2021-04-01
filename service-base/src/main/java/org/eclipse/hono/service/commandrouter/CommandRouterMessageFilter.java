@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,7 +32,7 @@ public final class CommandRouterMessageFilter extends BaseMessageFilter {
     }
 
     /**
-     * Checks whether a given command router message contains all required properties.
+     * Checks whether a given command router message contains all properties required by all operations.
      *
      * @param linkTarget The resource path to check the message's properties against for consistency.
      * @param msg The AMQP 1.0 message to perform the checks on.
@@ -42,9 +42,7 @@ public final class CommandRouterMessageFilter extends BaseMessageFilter {
 
         final Object correlationId = MessageHelper.getCorrelationId(msg);
 
-        if (!hasValidDeviceId(linkTarget, msg)) {
-            return false;
-        } else if (correlationId == null) {
+        if (correlationId == null) {
             LOG.trace("message has neither a message-id nor correlation-id");
             return false;
         } else if (msg.getSubject() == null) {

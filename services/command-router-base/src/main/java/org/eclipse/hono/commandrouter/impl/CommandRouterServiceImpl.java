@@ -16,11 +16,16 @@ package org.eclipse.hono.commandrouter.impl;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.client.util.ServiceClient;
@@ -30,15 +35,20 @@ import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.References;
 import io.opentracing.Span;
+import io.opentracing.Tracer;
+import io.opentracing.log.Fields;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 
@@ -54,6 +64,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
     private final MessagingClient<CommandConsumerFactory> commandConsumerFactories;
+    private final Tracer tracer;
+    private final Deque<String> tenantsToEnable = new LinkedList<>();
+
     /**
      * Vert.x context that this service has been started in.
      */
@@ -68,6 +81,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      * @param tenantClient The tenant client.
      * @param deviceConnectionInfo The client for accessing device connection data.
      * @param commandConsumerFactories The factories to use for creating clients to receive commands.
+     * @param tracer The Open Tracing tracer to use for tracking processing of requests.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public CommandRouterServiceImpl(
@@ -75,20 +89,35 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final DeviceRegistrationClient registrationClient,
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,
-            final MessagingClient<CommandConsumerFactory> commandConsumerFactories) {
+            final MessagingClient<CommandConsumerFactory> commandConsumerFactories,
+            final Tracer tracer) {
 
         this.config = Objects.requireNonNull(config);
         this.registrationClient = Objects.requireNonNull(registrationClient);
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
         this.commandConsumerFactories = Objects.requireNonNull(commandConsumerFactories);
+        this.tracer = Objects.requireNonNull(tracer);
+    }
+
+    /**
+     * Sets the vert.x context to run on.
+     * <p>
+     * If not set explicitly, the context is determined during startup.
+     *
+     * @param context The context.
+     */
+    void setContext(final Context context) {
+        this.context = Objects.requireNonNull(context);
     }
 
     @Override
     public Future<Void> start() {
-        context = Vertx.currentContext();
         if (context == null) {
-            return Future.failedFuture(new IllegalStateException("Service must be started in a Vert.x context"));
+            context = Vertx.currentContext();
+            if (context == null) {
+                return Future.failedFuture(new IllegalStateException("Service must be started in a Vert.x context"));
+            }
         }
         if (!commandConsumerFactories.containsImplementations()) {
             return Future.failedFuture("no command consumer factories set");
@@ -174,6 +203,59 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 })
                 .map(v -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> CommandRouterResult.from(ServiceInvocationException.extractStatusCode(t)));
+    }
+
+    @Override
+    public Future<CommandRouterResult> enableCommandRouting(final List<String> tenantIds, final Span span) {
+        Objects.requireNonNull(tenantIds);
+        final boolean isProcessingRequired = tenantsToEnable.isEmpty();
+        tenantsToEnable.addAll(tenantIds);
+        if (isProcessingRequired) {
+            final Span processingSpan = tracer.buildSpan("re-enable command routing for tenants")
+                    .addReference(References.FOLLOWS_FROM, span.context())
+                    .start();
+            processTenantQueue(new ConcurrentHashSet<>(), processingSpan);
+        }
+        return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
+    }
+
+    private void processTenantQueue(final Set<String> processedTenants, final Span parentSpan) {
+        final String tenantId = tenantsToEnable.poll();
+        if (tenantId == null) {
+            parentSpan.finish();
+            return;
+        }
+        context.runOnContext(go -> {
+            if (processedTenants.contains(tenantId)) {
+                parentSpan.log(Map.of(
+                        Fields.MESSAGE, "skipping tenant, already processed ...",
+                        TracingHelper.TAG_TENANT_ID.getKey(), tenantId));
+            } else {
+                final Span span = tracer.buildSpan("re-enable command routing for tenant")
+                        .addReference(References.CHILD_OF, parentSpan.context())
+                        .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                        .start();
+                tenantClient.get(tenantId, span.context())
+                    .map(tenantObject -> commandConsumerFactories.getClient(tenantObject))
+                    .map(factory -> factory.createCommandConsumer(tenantId, span.context()))
+                    .onSuccess(ok -> {
+                        span.log("successfully created command consumer");
+                        processedTenants.add(tenantId);
+                    })
+                    .onFailure(t -> {
+                        TracingHelper.logError(span, "failed to create command consumer", t);
+                        if (t instanceof ServerErrorException) {
+                            // add to end of queue in order to retry at a later time
+                            span.log("marking tenant for later re-try to create command consumer");
+                            tenantsToEnable.add(tenantId);
+                        }
+                    })
+                    .onComplete(r -> {
+                        span.finish();
+                    });
+            }
+            processTenantQueue(processedTenants, parentSpan);
+        });
     }
 
     @Override

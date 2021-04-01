@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.commandrouter;
 
 import java.time.Duration;
+import java.util.List;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -85,4 +86,27 @@ public interface CommandRouterService {
      */
     Future<CommandRouterResult> unregisterCommandConsumer(String tenantId, String deviceId, String adapterInstanceId, Span span);
 
+    /**
+     * Adds tenants for which command routing should be enabled.
+     * <p>
+     * Providing tenant identifiers using this method simply allows the command router service to receive commands
+     * of the given tenants for routing from downstream applications. Successful routing of a specific command
+     * to its target device is still subject to being able to map the (target) device ID to a corresponding adapter
+     * instance.
+     * <p>
+     * This method is mainly intended to be used by protocol adapters after they have experienced a loss of their
+     * connection to the Command Routing service. After re-establishment of the connection, the adapters should
+     * use this method to (re-)enable routing of commands for the devices that are connected to the adapters.
+     *
+     * @param tenantIds The identifiers of the tenants.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status</em> will be <em>204 No Content</em> if the identifiers have been accepted for
+     *         processing. Not that this does not necessarily mean that commands for devices of the given
+     *         tenants will immediately be routed (again).
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<CommandRouterResult> enableCommandRouting(List<String> tenantIds, Span span);
 }

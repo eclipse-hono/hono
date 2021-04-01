@@ -47,6 +47,10 @@ public final class CommandRouterConstants extends RequestResponseApiConstants {
          */
         UNREGISTER_COMMAND_CONSUMER("unregister-command-consumer"),
         /**
+         * The <em>enable command routing</em> operation.
+         */
+        ENABLE_COMMAND_ROUTING("enable-command-routing"),
+        /**
          * The <em>unknown</em> operation.
          */
         UNKNOWN("unknown");
