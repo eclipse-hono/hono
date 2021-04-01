@@ -36,13 +36,11 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.HonoProtonHelper;
@@ -691,49 +689,36 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
         final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
 
-        final VertxTestContext commandClientCreation = new VertxTestContext();
-        final Future<CommandClient> commandClient = helper.applicationClientFactory
-                .getOrCreateCommandClient(tenantId, "test-client")
-                .onSuccess(c -> c.setRequestTimeout(commandTimeout))
-                .onComplete(commandClientCreation.completing());
-
-        assertThat(commandClientCreation.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
-        if (commandClientCreation.failed()) {
-            ctx.failNow(commandClientCreation.causeOfFailure());
-            return;
-        }
-
         while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand(commandTargetDeviceId, "setValue", "text/plain",
-                        msg, null);
-                sendCmdFuture.onComplete(sendAttempt -> {
-                    if (sendAttempt.succeeded()) {
-                        log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
-                    } else {
-                        if (sendAttempt.cause() instanceof ClientErrorException
-                                && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
-                                && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
-                            log.debug("sending command {} failed as expected: {}", commandsSent.get(),
-                                    sendAttempt.cause().toString());
-                            lastReceivedTimestamp.set(System.currentTimeMillis());
-                            commandsFailed.countDown();
-                            if (commandsFailed.getCount() % 20 == 0) {
-                                log.info("commands failed as expected: {}",
-                                        totalNoOfCommandsToSend - commandsFailed.getCount());
+                helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", msg, null, commandTimeout)
+                        .onComplete(sendAttempt -> {
+                            if (sendAttempt.succeeded()) {
+                                log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
+                            } else {
+                                if (sendAttempt.cause() instanceof ClientErrorException
+                                        && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
+                                        && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
+                                    log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                            sendAttempt.cause().toString());
+                                    lastReceivedTimestamp.set(System.currentTimeMillis());
+                                    commandsFailed.countDown();
+                                    if (commandsFailed.getCount() % 20 == 0) {
+                                        log.info("commands failed as expected: {}",
+                                                totalNoOfCommandsToSend - commandsFailed.getCount());
+                                    }
+                                } else {
+                                    log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
+                                            sendAttempt.cause());
+                                }
                             }
-                        } else {
-                            log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
-                                    sendAttempt.cause());
-                        }
-                    }
-                    if (commandsSent.get() % 20 == 0) {
-                        log.info("commands sent: " + commandsSent.get());
-                    }
-                    commandSent.countDown();
-                });
+                            if (commandsSent.get() % 20 == 0) {
+                                log.info("commands sent: " + commandsSent.get());
+                            }
+                            commandSent.countDown();
+                        });
             });
 
             commandSent.await();
@@ -787,48 +772,35 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
         final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
 
-        final VertxTestContext commandClientCreation = new VertxTestContext();
-        final Future<CommandClient> commandClient = helper.applicationClientFactory
-                .getOrCreateCommandClient(tenantId, "test-client")
-                .onSuccess(c -> c.setRequestTimeout(commandTimeout))
-                .onComplete(commandClientCreation.completing());
-
-        assertThat(commandClientCreation.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
-        if (commandClientCreation.failed()) {
-            ctx.failNow(commandClientCreation.causeOfFailure());
-            return;
-        }
-
         while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand(commandTargetDeviceId, "setValue", "text/plain",
-                        msg, null);
-                sendCmdFuture.onComplete(sendAttempt -> {
-                    if (sendAttempt.succeeded()) {
-                        log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
-                    } else {
-                        if (sendAttempt.cause() instanceof ServerErrorException
-                                && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
-                            log.debug("sending command {} failed as expected: {}", commandsSent.get(),
-                                    sendAttempt.cause().toString());
-                            lastReceivedTimestamp.set(System.currentTimeMillis());
-                            commandsFailed.countDown();
-                            if (commandsFailed.getCount() % 20 == 0) {
-                                log.info("commands failed as expected: {}",
-                                        totalNoOfCommandsToSend - commandsFailed.getCount());
+                helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", msg, null, commandTimeout)
+                        .onComplete(sendAttempt -> {
+                            if (sendAttempt.succeeded()) {
+                                log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
+                            } else {
+                                if (sendAttempt.cause() instanceof ServerErrorException
+                                        && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+                                    log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                            sendAttempt.cause().toString());
+                                    lastReceivedTimestamp.set(System.currentTimeMillis());
+                                    commandsFailed.countDown();
+                                    if (commandsFailed.getCount() % 20 == 0) {
+                                        log.info("commands failed as expected: {}",
+                                                totalNoOfCommandsToSend - commandsFailed.getCount());
+                                    }
+                                } else {
+                                    log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
+                                            sendAttempt.cause());
+                                }
                             }
-                        } else {
-                            log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
-                                    sendAttempt.cause());
-                        }
-                    }
-                    if (commandsSent.get() % 20 == 0) {
-                        log.info("commands sent: " + commandsSent.get());
-                    }
-                    commandSent.countDown();
-                });
+                            if (commandsSent.get() % 20 == 0) {
+                                log.info("commands sent: " + commandsSent.get());
+                            }
+                            commandSent.countDown();
+                        });
             });
 
             commandSent.await();
