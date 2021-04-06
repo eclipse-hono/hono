@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
@@ -135,12 +134,12 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             }
 
             @Override
-            public Future<ResponseCode> handlePost(final CoapContext ctx) {
+            public Future<?> handlePost(final CoapContext ctx) {
                 return uploadTelemetryMessage(ctx);
             }
 
             @Override
-            public Future<ResponseCode> handlePut(final CoapContext ctx) {
+            public Future<?> handlePut(final CoapContext ctx) {
                 return uploadTelemetryMessage(ctx);
             }
         });
@@ -158,12 +157,12 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             }
 
             @Override
-            public Future<ResponseCode> handlePost(final CoapContext ctx) {
+            public Future<?> handlePost(final CoapContext ctx) {
                 return uploadEventMessage(ctx);
             }
 
             @Override
-            public Future<ResponseCode> handlePut(final CoapContext ctx) {
+            public Future<?> handlePut(final CoapContext ctx) {
                 return uploadEventMessage(ctx);
             }
         });
@@ -180,12 +179,12 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             }
 
             @Override
-            public Future<ResponseCode> handlePost(final CoapContext ctx) {
+            public Future<?> handlePost(final CoapContext ctx) {
                 return uploadCommandResponseMessage(ctx);
             }
 
             @Override
-            public Future<ResponseCode> handlePut(final CoapContext ctx) {
+            public Future<?> handlePut(final CoapContext ctx) {
                 return uploadCommandResponseMessage(ctx);
             }
         });

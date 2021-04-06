@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,9 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
@@ -24,6 +26,8 @@ import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -41,16 +45,6 @@ import io.vertx.core.Future;
  * A CoAP resource that supports the tracking of request processing using <em>OpenTracing</em>.
  * <p>
  * This resource supports processing of {@code POST} and {@code PUT} requests only.
- * For each request, a new OpenTracing {@code Span} is created. The {@code Span} context is
- * associated with the {@link CoapContext} that is created via {@link #createCoapContextForPost(CoapExchange, Span)}
- * or {@link #createCoapContextForPut(CoapExchange, Span)}. The {@link CoapContext} is
- * then passed in to the {@link #handlePost(CoapContext)} or {@link #handlePut(CoapContext)}
- * method.
- * <p>
- * If the request contains the {@link CoapOptionInjectExtractAdapter#OPTION_TRACE_CONTEXT} option, its value
- * is expected to be a binary encoded trace context and the {@link CoapOptionInjectExtractAdapter}
- * is used to extract a {@code SpanContext} which is then used as the parent for the newly created
- * {@code Span}.
  */
 public abstract class TracingSupportingHonoResource extends CoapResource {
 
@@ -108,65 +102,108 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
 
     /**
      * {@inheritDoc}
+     * <p>
+     * This implementation handles POST and PUT requests only.
+     * All other request codes result in a 4.05 response code.
+     * <p>
+     * For each request, a new OpenTracing {@code Span} is created. The {@code Span} context is
+     * associated with the {@link CoapContext} that is created by the <em>createCoapContextForXXX</em>
+     * method matching the request code. The {@link CoapContext} is then passed in to the corresponding
+     * <em>handleXXXX</em> method.
+     * <p>
+     * If the request contains the {@link CoapOptionInjectExtractAdapter#OPTION_TRACE_CONTEXT} option, its value
+     * is expected to be a binary encoded trace context and the {@link CoapOptionInjectExtractAdapter}
+     * is used to extract a {@code SpanContext} which is then used as the parent of the newly created
+     * {@code Span}.
      */
     @Override
     public void handleRequest(final Exchange exchange) {
 
         final Span currentSpan = newSpan(exchange);
-        final CoapExchange coapExchange = new CoapExchange(exchange, this);
-        final Future<ResponseCode> responseCode;
+        final AtomicReference<ResponseCode> responseCode = new AtomicReference<>(null);
+        final CoapExchange coapExchange = new CoapExchange(exchange, this) {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public void respond(final Response response) {
+                super.respond(response);
+                responseCode.set(response.getCode());
+            }
+        };
+
+        final Future<?> result;
         switch (exchange.getRequest().getCode()) {
         case POST:
-            responseCode = createCoapContextForPost(coapExchange, currentSpan)
-                    .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
-                    .compose(this::handlePost);
+            result = createCoapContextForPost(coapExchange, currentSpan)
+                .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
+                .compose(this::handlePost);
             break;
         case PUT:
-            responseCode = createCoapContextForPut(coapExchange, currentSpan)
-                    .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
-                    .compose(this::handlePut);
+            result = createCoapContextForPut(coapExchange, currentSpan)
+                .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
+                .compose(this::handlePut);
             break;
         default:
-            final Response response = CoapErrorResponse.respond("unsupported method", ResponseCode.METHOD_NOT_ALLOWED);
-            coapExchange.respond(response);
-            responseCode = Future.succeededFuture(response.getCode());
+            result = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_METHOD));
             break;
         }
-        responseCode.otherwise(t -> {
+        result.map(ok -> {
+            if (responseCode.get() == null) {
+                 throw new ServerErrorException(
+                         HttpURLConnection.HTTP_INTERNAL_ERROR,
+                         "no CoAP response sent");
+            } else {
+                return responseCode.get();
+            }
+        })
+        .otherwise(t -> {
             log.debug("error handling request", t);
             TracingHelper.logError(currentSpan, t);
-            final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
+            final Response response = CoapErrorResponse.newResponse(t, ResponseCode.INTERNAL_SERVER_ERROR);
             coapExchange.respond(response);
             return response.getCode();
         })
+        .onSuccess(code -> {
+            log.debug("response code: {}", code);
+            currentSpan.setTag("coap.response_code", code.toString());
+        })
         .onComplete(r -> {
-            log.debug("response: {}", r.result());
-            currentSpan.setTag("coap.response_code", r.result().toString());
             currentSpan.finish();
         });
     }
 
     /**
      * Creates a CoAP context for an incoming POST request.
+     * <p>
+     * This default implementation always returns a future that is failed with a
+     * {@link ServerErrorException} with status code {@value HttpURLConnection#HTTP_NOT_IMPLEMENTED}.
      *
      * @param coapExchange The CoAP exchange to process.
      * @param span The <em>OpenTracing</em> root span that is used to track the processing of the created context.
      * @return A future indicating the outcome of processing the request.
      *         The future will be succeeded with the created CoAP context,
-     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ClientErrorException}.
+     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected abstract Future<CoapContext> createCoapContextForPost(CoapExchange coapExchange, Span span);
+    protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange, final Span span) {
+        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+    }
 
     /**
      * Creates a CoAP context for an incoming PUT request.
+     * <p>
+     * This default implementation always returns a future that is failed with a
+     * {@link ServerErrorException} with status code {@value HttpURLConnection#HTTP_NOT_IMPLEMENTED}.
      *
      * @param coapExchange The CoAP exchange to process.
      * @param span The <em>OpenTracing</em> root span that is used to track the processing of the created context.
      * @return A future indicating the outcome of processing the request.
      *         The future will be succeeded with the created CoAP context,
-     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ClientErrorException}.
+     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected abstract Future<CoapContext> createCoapContextForPut(CoapExchange coapExchange, Span span);
+    protected Future<CoapContext> createCoapContextForPut(final CoapExchange coapExchange, final Span span) {
+        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+    }
 
     /**
      * Applies the trace sampling priority configured for the tenant associated with the
@@ -197,13 +234,12 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *
      * @param coapContext The CoAP context of the current request.
      * @return A future indicating the outcome of processing the request.
-     *         The future will be succeeded with the CoAP response code sent back to the client,
-     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     *         The future will be succeeded if the request has been processed successfully
+     *         and a CoAP response has been sent back to the client.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<ResponseCode> handlePost(final CoapContext coapContext) {
-        final Response response = CoapErrorResponse.respond("not implemented", ResponseCode.NOT_IMPLEMENTED);
-        coapContext.respond(response);
-        return Future.succeededFuture(response.getCode());
+    protected Future<?> handlePost(final CoapContext coapContext) {
+        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
     /**
@@ -214,13 +250,12 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *
      * @param coapContext The CoAP context of the current request.
      * @return A future indicating the outcome of processing the request.
-     *         The future will be succeeded with the CoAP response code sent back to the client,
-     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     *         The future will be succeeded if the request has been processed successfully
+     *         and a CoAP response has been sent back to the client.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<ResponseCode> handlePut(final CoapContext coapContext) {
-        final Response response = CoapErrorResponse.respond("not implemented", ResponseCode.NOT_IMPLEMENTED);
-        coapContext.respond(response);
-        return Future.succeededFuture(response.getCode());
+    protected Future<?> handlePut(final CoapContext coapContext) {
+        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
     // --------------- unsupported operations ---------------
@@ -251,7 +286,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * Always throws {@link UnsupportedOperationException}.
      */
     @Override
-    public void handleGET(final CoapExchange exchange) {
+    public final void handleGET(final CoapExchange exchange) {
         throw new UnsupportedOperationException("not implemented");
     }
 
@@ -261,7 +296,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * Always throws {@link UnsupportedOperationException}.
      */
     @Override
-    public void handleIPATCH(final CoapExchange exchange) {
+    public final void handleIPATCH(final CoapExchange exchange) {
         throw new UnsupportedOperationException("not implemented");
     }
 
@@ -271,7 +306,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * Always throws {@link UnsupportedOperationException}.
      */
     @Override
-    public void handlePATCH(final CoapExchange exchange) {
+    public final void handlePATCH(final CoapExchange exchange) {
         throw new UnsupportedOperationException("not implemented");
     }
 
@@ -281,7 +316,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * Always throws {@link UnsupportedOperationException}.
      */
     @Override
-    public void handlePOST(final CoapExchange exchange) {
+    public final void handlePOST(final CoapExchange exchange) {
         throw new UnsupportedOperationException("not implemented");
     }
 
@@ -291,7 +326,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * Always throws {@link UnsupportedOperationException}.
      */
     @Override
-    public void handlePUT(final CoapExchange exchange) {
+    public final void handlePUT(final CoapExchange exchange) {
         throw new UnsupportedOperationException("not implemented");
     }
 }

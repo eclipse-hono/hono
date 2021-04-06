@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,8 +49,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     private final CoapExchange exchange;
     private final Device originDevice;
     private final String authId;
-    private final AtomicBoolean acceptTimerFlag = new AtomicBoolean();
-    private final AtomicBoolean acceptFlag = new AtomicBoolean();
+    private final AtomicBoolean acceptTimerFlag = new AtomicBoolean(false);
+    private final AtomicBoolean acceptFlag = new AtomicBoolean(false);
     private Sample timer;
 
     private CoapContext(
@@ -339,8 +339,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Sends a response with the response code to the device.
-     *
+     * Sends a response to the device.
+     * <p>
      * This also accepts the exchange.
      *
      * @param responseCode The code to set in the response.
@@ -350,8 +350,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Sends a response with the response code to the device.
-     *
+     * Sends a response to the device.
+     * <p>
      * This also accepts the exchange.
      *
      * @param responseCode The code to set in the response.
@@ -369,11 +369,11 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * Sends a response to the device.
-     *
+     * <p>
      * This also accepts the exchange.
      *
-     * @param response The response to sent.
-     * @return the sent response code
+     * @param response The response to send.
+     * @return The response code from the response.
      */
     public ResponseCode respond(final Response response) {
         acceptFlag.set(true);

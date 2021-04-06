@@ -42,7 +42,7 @@ class VertxCoapResource implements Resource {
     private static final Logger LOG = LoggerFactory.getLogger(VertxCoapResource.class);
 
     /**
-     * Vertx context to forward requests.
+     * Vert.x context to process requests on.
      */
     private final Context adapterContext;
     private final Resource resource;

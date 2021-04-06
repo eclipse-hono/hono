@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,9 +16,11 @@ package org.eclipse.hono.adapter.coap;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.RETURNS_SELF;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -26,11 +28,14 @@ import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.stream.Stream;
 
+import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.coap.CoAP.Code;
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.core.coap.Response;
+import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
@@ -41,6 +46,8 @@ import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -68,6 +75,15 @@ public class TracingSupportingHonoResourceTest {
     private SpanBuilder spanBuilder;
     private TracingSupportingHonoResource resource;
     private TenantClient tenantClient;
+    private Endpoint endpoint;
+
+    private static Stream<Code> supportedRequestCodes() {
+        return Stream.of(Code.POST, Code.PUT);
+    }
+
+    private static Stream<Code> unsupportedRequestCodes() {
+        return Stream.of(Code.CUSTOM_30, Code.DELETE, Code.FETCH, Code.GET, Code.IPATCH, Code.PATCH);
+    }
 
     /**
      * Sets up the fixture.
@@ -85,6 +101,8 @@ public class TracingSupportingHonoResourceTest {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
+        endpoint = mock(Endpoint.class);
+
         resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantClient) {
 
             @Override
@@ -97,16 +115,21 @@ public class TracingSupportingHonoResourceTest {
                 return Future.succeededFuture(createCoapContext(coapExchange, span));
             }
 
-            @Override
-            protected Future<ResponseCode> handlePost(final CoapContext coapContext) {
-                return Future.succeededFuture(ResponseCode.CHANGED);
+            private CoapContext createCoapContext(final CoapExchange coapExchange, final Span span) {
+                return CoapContext.fromRequest(coapExchange, new Device(TENANT_ID, DEVICE_ID),
+                        new Device(TENANT_ID, AUTHENTICATED_DEVICE_ID), AUTH_ID, span);
             }
         };
     }
 
-    private CoapContext createCoapContext(final CoapExchange coapExchange, final Span span) {
-        return CoapContext.fromRequest(coapExchange, new Device(TENANT_ID, DEVICE_ID),
-                new Device(TENANT_ID, AUTHENTICATED_DEVICE_ID), AUTH_ID, span);
+    private Exchange newExchange(final Request request) {
+        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        exchange.setEndpoint(endpoint);
+        doAnswer(invocation -> {
+            exchange.setResponse(invocation.getArgument(1));
+            return null;
+        }).when(endpoint).sendResponse(eq(exchange), any(Response.class));
+        return exchange;
     }
 
     /**
@@ -121,7 +144,7 @@ public class TracingSupportingHonoResourceTest {
 
         final Request request = new Request(Code.POST);
         request.getOptions().addOption(new Option(CoapOptionInjectExtractAdapter.OPTION_TRACE_CONTEXT));
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
 
         verify(tracer).buildSpan(eq(Code.POST.toString()));
@@ -137,7 +160,7 @@ public class TracingSupportingHonoResourceTest {
     public void testExtractFromEmptyOptionSet() {
 
         final Request request = new Request(Code.POST);
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
 
         verify(tracer, never()).extract(eq(Format.Builtin.BINARY), any(Binary.class));
@@ -160,7 +183,7 @@ public class TracingSupportingHonoResourceTest {
         when(tenantClient.get(anyString(), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantObject));
 
         final Request request = new Request(Code.POST);
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
 
         verify(tracer).buildSpan(eq(Code.POST.toString()));
@@ -185,7 +208,7 @@ public class TracingSupportingHonoResourceTest {
         when(tenantClient.get(anyString(), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantObject));
 
         final Request request = new Request(Code.POST);
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
 
         verify(tracer).buildSpan(eq(Code.POST.toString()));
@@ -194,5 +217,40 @@ public class TracingSupportingHonoResourceTest {
         // verify sampling prio has been set to 1 (corresponding to TracingSamplingMode.ALL)
         verify(span).setTag(eq(Tags.SAMPLING_PRIORITY.getKey()), eq(1));
         verify(span).setBaggageItem(eq(Tags.SAMPLING_PRIORITY.getKey()), eq("1"));
+    }
+
+    /**
+     * Verifies that the resource returns a 4.05 for request codes other than PUT or POST.
+     *
+     * @param requestCode The CoAP request code to verify.
+     */
+    @ParameterizedTest
+    @MethodSource("unsupportedRequestCodes")
+    public void testUnsupportedRequestCodesResultInMethodNotAllowed(final Code requestCode) {
+
+        final Request request = new Request(requestCode);
+        final Exchange exchange = newExchange(request);
+        resource.handleRequest(exchange);
+        verify(endpoint).sendResponse(eq(exchange), argThat(response -> response.getCode() == CoAP.ResponseCode.METHOD_NOT_ALLOWED));
+    }
+
+    /**
+     * Verifies that the resource returns a 5.01 for request codes PUT and POST.
+     *
+     * @param requestCode The CoAP request code to verify.
+     */
+    @ParameterizedTest
+    @MethodSource("supportedRequestCodes")
+    public void testDefaultHandlersResultInNotImplemented(final Code requestCode) {
+
+        final TenantObject tenantObject = TenantObject.from(TENANT_ID, true);
+        final TenantTracingConfig tracingConfig = new TenantTracingConfig();
+        tenantObject.setTracingConfig(tracingConfig);
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantObject));
+
+        final Request request = new Request(requestCode);
+        final Exchange exchange = newExchange(request);
+        resource.handleRequest(exchange);
+        verify(endpoint).sendResponse(eq(exchange), argThat(response -> response.getCode() == CoAP.ResponseCode.NOT_IMPLEMENTED));
     }
 }

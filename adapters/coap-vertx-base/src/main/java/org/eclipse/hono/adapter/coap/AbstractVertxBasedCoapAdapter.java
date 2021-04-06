@@ -616,35 +616,41 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
+     * Forwards a telemetry message to a downstream consumer.
      *
-     * @param context The context representing the request to be processed.
-     * @return A future containing the response code that has been returned to
-     *         the device.
+     * @param context The context representing the telemetry message to be forwarded.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the telemetry message has been forwarded successfully.
+     *         In this case one of the context's <em>respond</em> methods will have been invoked to send a CoAP response
+     *         back to the device.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if context is {@code null}.
      */
-    public final Future<ResponseCode> uploadTelemetryMessage(final CoapContext context) {
+    public final Future<?> uploadTelemetryMessage(final CoapContext context) {
 
         return doUploadMessage(context, MetricsTags.EndpointType.TELEMETRY);
     }
 
     /**
-     * Forwards the body of a CoAP request to the south bound Event API of the AMQP 1.0 Messaging Network.
+     * Forwards an event to a downstream consumer.
      *
-     * @param context The context representing the request to be processed.
-     * @return A future containing the response code that has been returned to
-     *         the device.
+     * @param context The context representing the event to be forwarded.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the event has been forwarded successfully.
+     *         In this case one of the context's <em>respond</em> methods will have been invoked to send a CoAP response
+     *         back to the device.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if context is {@code null}.
      */
-    public final Future<ResponseCode> uploadEventMessage(
-            final CoapContext context) {
+    public final Future<?> uploadEventMessage(final CoapContext context) {
 
         Objects.requireNonNull(context);
         if (context.isConfirmable()) {
             return doUploadMessage(context, MetricsTags.EndpointType.EVENT);
         } else {
-            context.respondWithCode(ResponseCode.BAD_REQUEST, "event endpoint supports confirmable request messages only");
-            return Future.succeededFuture(ResponseCode.BAD_REQUEST);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "event endpoint supports confirmable request messages only"));
         }
     }
 
@@ -654,11 +660,15 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Depending on the outcome of the attempt to upload the message, the CoAP response code is set as
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
-     * @param endpoint message destination endpoint
-     * @return A succeeded future containing the CoAP status code that has been returned to the device.
+     * @param endpoint The type of API endpoint to forward the message to.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the message has been forwarded successfully.
+     *         In this case one of the context's <em>respond</em> methods will have been invoked to send a CoAP response
+     *         back to the device.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    private Future<ResponseCode> doUploadMessage(
+    private Future<?> doUploadMessage(
             final CoapContext context,
             final MetricsTags.EndpointType endpoint) {
 
@@ -669,11 +679,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Buffer payload = context.getPayload();
 
         if (contentType == null) {
-            context.respondWithCode(ResponseCode.BAD_REQUEST, "request message must contain content-format option");
-            return Future.succeededFuture(ResponseCode.BAD_REQUEST);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "request message must contain content-format option"));
         } else if (payload.length() == 0 && !context.isEmptyNotification()) {
-            context.respondWithCode(ResponseCode.BAD_REQUEST, "request contains no body but is not marked as empty notification");
-            return Future.succeededFuture(ResponseCode.BAD_REQUEST);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "request contains no body but is not marked as empty notification"));
         } else {
             final String gatewayId = context.getGatewayId();
             final String tenantId = context.getOriginDevice().getTenantId();
@@ -791,9 +803,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             getTtdStatus(context),
                             context.getTimer());
 
-                    context.getExchange().respond(response);
+                    context.respond(response);
                     commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
-                    return response.getCode();
+                    return null;
 
                 }).recover(t -> {
 
@@ -820,10 +832,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             getTtdStatus(context),
                             context.getTimer());
                     TracingHelper.logError(currentSpan, t);
-                    final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
-                    final ResponseCode responseCode = context.respond(response);
                     commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
-                    return Future.succeededFuture(responseCode);
+                    return Future.failedFuture(t);
                 });
         }
     }
@@ -1104,21 +1114,26 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Uploads a command response message to Hono.
+     * Forwards a command response to a downstream application.
      *
-     * @param context The context representing the request to be processed.
-     * @return A succeeded future containing the CoAP status code that has been returned to the device.
+     * @param context The context representing the command response to be forwarded.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the message has been forwarded successfully.
+     *         In this case one of the context's <em>respond</em> methods will have been invoked to send a CoAP response
+     *         back to the device.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if context is {@code null}.
      */
-    public final Future<ResponseCode> uploadCommandResponseMessage(final CoapContext context) {
+    public final Future<?> uploadCommandResponseMessage(final CoapContext context) {
         Objects.requireNonNull(context);
 
         final Device device = context.getOriginDevice();
         final Device authenticatedDevice = context.getAuthenticatedDevice();
 
         if (!context.isConfirmable()) {
-            context.respondWithCode(ResponseCode.BAD_REQUEST, "command response endpoint supports confirmable request messages only");
-            return Future.succeededFuture(ResponseCode.BAD_REQUEST);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "command response endpoint supports confirmable request messages only"));
         }
 
         final Buffer payload = context.getPayload();
@@ -1167,13 +1182,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker);
                 })
-                .compose(ok -> sendCommandResponse(commandResponseTracker.result(), tenantTracker.result(),
+                .compose(ok -> sendCommandResponse(
+                        commandResponseTracker.result(),
+                        tenantTracker.result(),
                         currentSpan.context()))
-                .map(delivery -> {
-                    log.trace("delivered command response [command-request-id: {}] to application",
+                .onSuccess(ok -> {
+                    log.trace("forwarded command response [command-request-id: {}] to downstream application",
                             commandRequestId);
-                    currentSpan.log("delivered command response to application");
-                    currentSpan.finish();
+                    currentSpan.log("forwarded command response to application");
                     metrics.reportCommand(
                             Direction.RESPONSE,
                             device.getTenantId(),
@@ -1182,13 +1198,11 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             payload.length(),
                             context.getTimer());
                     context.respondWithCode(ResponseCode.CHANGED);
-                    return ResponseCode.CHANGED;
                 })
-                .otherwise(t -> {
+                .onFailure(t -> {
                     log.debug("could not send command response [command-request-id: {}] to application",
                             commandRequestId, t);
                     TracingHelper.logError(currentSpan, t);
-                    currentSpan.finish();
                     metrics.reportCommand(
                             Direction.RESPONSE,
                             device.getTenantId(),
@@ -1196,8 +1210,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             ProcessingOutcome.from(t),
                             payload.length(),
                             context.getTimer());
-                    final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
-                    return context.respond(response);
-                });
+                })
+                .onComplete(r -> currentSpan.finish());
     }
 }

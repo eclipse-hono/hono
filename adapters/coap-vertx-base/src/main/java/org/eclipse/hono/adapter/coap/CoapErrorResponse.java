@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,48 +14,56 @@
 package org.eclipse.hono.adapter.coap;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.MessageFormatException;
 import org.eclipse.californium.core.coap.Response;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 /**
  * Utility to prepare response with an error.
  */
-public class CoapErrorResponse {
+public final class CoapErrorResponse {
 
     private CoapErrorResponse() {
 
     }
 
     /**
-     * Check, if reported error cause indicates a temporary error.
+     * Checks if an error's cause is temporary only.
      *
-     * @param cause reported error cause
-     * @return {@code true}, if error is temporary and the client may retry its action, {@code false}, otherwise, when
-     *         the client should not repeat this action.
+     * @param error The error to check.
+     * @return {@code true} if the cause is temporary only.
      */
-    public static boolean isTemporaryError(final Throwable cause) {
-        if (ServiceInvocationException.class.isInstance(cause)) {
-            return ((ServiceInvocationException) cause).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE;
-        }
-        return false;
+    public static boolean isTemporaryError(final Throwable error) {
+        return ServiceInvocationException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE;
     }
 
     /**
-     * Create response with the provide error cause.
+     * Creates a CoAP response for an error.
      *
-     * @param cause error cause
-     * @param defaultCode default response code, if a more specific response code is not available.
-     * @return The CoAP response.
+     * @param cause The cause of the error.
+     * @param fallbackCode The response code to fall back to, if a more specific response code can not be determined
+     *                     from the root cause.
+     * @return The CoAP response containing the determined response code and error message.
      */
-    public static Response respond(final Throwable cause, final ResponseCode defaultCode) {
+    public static Response newResponse(final Throwable cause, final ResponseCode fallbackCode) {
 
-        final String message = cause == null ? null : cause.getMessage();
-        final ResponseCode code = toCoapCode(cause, defaultCode);
-        final Response response = respond(message, code);
+        final String message = Optional.ofNullable(cause)
+                .map(t -> {
+                    if (t instanceof ServerErrorException) {
+                        return ((ServerErrorException) t).getClientFacingMessage();
+                    } else {
+                        return t.getMessage();
+                    }
+                })
+                .orElse(null);
+        final ResponseCode code = toCoapCode(cause, fallbackCode);
+        final Response response = newResponse(code, message);
         switch (code) {
         case SERVICE_UNAVAILABLE:
             // delay retry by 2 seconds, see http adapter, HttpUtils.serviceUnavailable(ctx, 2)
@@ -68,13 +76,16 @@ public class CoapErrorResponse {
     }
 
     /**
-     * Create response with provide response code.
+     * Creates a CoAP response for a message and a response code.
      *
-     * @param message error message sent as payload.
-     * @param code response code.
+     * @param code The response code to use.
+     * @param message The message to set as payload.
      * @return The CoAP response.
+     * @throws NullPointerException if code is {@code null}.
      */
-    public static Response respond(final String message, final ResponseCode code) {
+    public static Response newResponse(final ResponseCode code, final String message) {
+
+        Objects.requireNonNull(code);
         final Response response = new Response(code);
         response.setPayload(message);
         response.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
@@ -84,11 +95,15 @@ public class CoapErrorResponse {
     /**
      * Gets a CoAP response code for an error.
      *
-     * @param cause The cause of the error.
-     * @param defaultCode The default CoAP response code to use if the error cannot be mapped.
-     * @return The CoAP response code.
+     * @param cause The cause of the error (may be {@code null}).
+     * @param fallbackCode The response code to fall back to if a more specific response code can not be determined
+     *                     from the cause.
+     * @return The CoAP response code determined from the cause.
+     * @throws NullPointerException if fallback code is {@code null}.
      */
-    public static ResponseCode toCoapCode(final Throwable cause, final ResponseCode defaultCode) {
+    public static ResponseCode toCoapCode(final Throwable cause, final ResponseCode fallbackCode) {
+
+        Objects.requireNonNull(fallbackCode);
 
         if (ServiceInvocationException.class.isInstance(cause)) {
             final int statusCode = ((ServiceInvocationException) cause).getErrorCode();
@@ -103,6 +118,6 @@ public class CoapErrorResponse {
                 }
             }
         }
-        return defaultCode;
+        return fallbackCode;
     }
 }
