@@ -15,8 +15,11 @@ title = "Release Notes"
 * A failed connection attempt in the default `org.eclipse.hono.connection.ConnectionFactory` implementation could
   have led to the AMQP connection not getting closed, occupying connection resources. This has been fixed.
 * Validation of MQTT topics containing property bags has been improved, preventing unhandled exceptions.
-
-## 1.6.0
+* The protocol adapters might have run into a situation where devices connected to adapters did no longer receive
+  commands when using the Command Router service. The problem occurred when a Command Router service instance had been
+  restarted while one or more protocol adapters where connected to it. This has been fixed.
+ 
+ ## 1.6.0
 
 ### New Features
 

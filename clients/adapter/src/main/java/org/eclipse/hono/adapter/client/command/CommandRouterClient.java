@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.client.command;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.eclipse.hono.util.Lifecycle;
 
@@ -89,4 +90,29 @@ public interface CommandRouterClient extends Lifecycle {
      */
     Future<Void> unregisterCommandConsumer(String tenantId, String deviceId, String adapterInstanceId, SpanContext context);
 
+    /**
+     * Adds tenants for which command routing should be enabled.
+     * <p>
+     * Providing tenant identifiers using this method simply allows the Command Router service to receive commands
+     * of the given tenants for routing from downstream applications. Successful routing of a specific command
+     * to its target device is still subject to being able to map the (target) device ID to a corresponding adapter
+     * instance.
+     * <p>
+     * This method is mainly intended to be used by protocol adapters after they have experienced a loss of their
+     * connection to the Command Routing service. After re-establishment of the connection, the adapters should
+     * use this method to (re-)enable routing of commands for the devices that are connected to the adapters.
+     *
+     * @param tenantIds The identifiers of the tenants.
+     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
+     *            An implementation should use this as the parent for any span it creates for tracing
+     *            the execution of this operation.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the identifiers have been accepted for processing.
+     *         Not that this does not necessarily mean that commands for devices of the given
+     *         tenants will immediately be routed (again).
+     *         Otherwise the future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}.
+     * @throws NullPointerException if tenant IDs is {@code null}.
+     */
+    Future<Void> enableCommandRouting(List<String> tenantIds, SpanContext context);
 }

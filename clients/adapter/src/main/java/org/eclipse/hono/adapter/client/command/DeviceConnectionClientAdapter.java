@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@
 package org.eclipse.hono.adapter.client.command;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.util.ServiceClient;
@@ -79,6 +80,17 @@ public final class DeviceConnectionClientAdapter implements CommandRouterClient,
             final String gatewayId,
             final SpanContext context) {
         return deviceConnectionClient.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, context);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> enableCommandRouting(
+            final List<String> tenantIds,
+            final SpanContext context) {
+        // no need to enable command routing in Device Connection service
+        return Future.succeededFuture();
     }
 
     /**

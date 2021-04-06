@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,10 @@ package org.eclipse.hono.service.commandrouter;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -28,7 +31,11 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 
 /**
  * An {@code AmqpEndpoint} for managing command router information.
@@ -44,6 +51,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
     private static final String SPAN_NAME_SET_LAST_GATEWAY = "set last known gateway";
     private static final String SPAN_NAME_REGISTER_COMMAND_CONSUMER = "register command consumer";
     private static final String SPAN_NAME_UNREGISTER_COMMAND_CONSUMER = "unregister command consumer";
+    private static final String SPAN_NAME_ENABLE_COMMAND_ROUTING = "enable command routing";
 
     /**
      * Creates an endpoint for a service instance.
@@ -69,6 +77,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             return processRegisterCommandConsumer(requestMessage, targetAddress, spanContext);
         case UNREGISTER_COMMAND_CONSUMER:
             return processUnregisterCommandConsumer(requestMessage, targetAddress, spanContext);
+        case ENABLE_COMMAND_ROUTING:
+            return processEnableCommandRouting(requestMessage, targetAddress, spanContext);
         default:
             return processCustomOperationMessage(requestMessage, spanContext);
         }
@@ -100,7 +110,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            log.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
+            logger.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
 
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
@@ -151,7 +161,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespan.getSeconds());
-            log.debug("register command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}, lifespan: {}s]",
+            logger.debug("register command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}, lifespan: {}s]",
                     tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
             resultFuture = getService().registerCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, span)
@@ -195,7 +205,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-            log.debug("unregister command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}]",
+            logger.debug("unregister command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}]",
                     tenantId, deviceId, adapterInstanceId);
 
             resultFuture = getService().unregisterCommandConsumer(tenantId, deviceId, adapterInstanceId, span)
@@ -207,6 +217,57 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                     );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
+    }
+
+    /**
+     * Processes an <em>enable command request</em> request message.
+     *
+     * @param request The request message.
+     * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
+     * @return The response to send to the client via the event bus.
+     */
+    protected Future<Message> processEnableCommandRouting(
+            final Message request,
+            final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
+
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                spanContext,
+                SPAN_NAME_ENABLE_COMMAND_ROUTING,
+                getClass().getSimpleName()
+        ).start();
+
+        final Future<Message> response = parseTenantIdentifiers(request)
+            .compose(tenantIds -> {
+                span.log(Map.of("no_of_tenants", tenantIds.size()));
+                return getService().enableCommandRouting(tenantIds, span);
+            })
+            .map(result -> CommandRouterConstants.getAmqpReply(targetAddress.getEndpoint(), null, request, result));
+
+        return finishSpanOnFutureCompletion(span, response);
+    }
+
+    private Future<List<String>> parseTenantIdentifiers(final Message request) {
+        final Buffer payload = MessageHelper.getPayload(request);
+        if (payload == null) {
+            return Future.succeededFuture(List.of());
+        }
+        final Promise<List<String>> result = Promise.promise();
+        try {
+            final JsonArray array = payload.toJsonArray();
+            final List<String> tenantIds = array.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .collect(Collectors.toList());
+            result.complete(tenantIds);
+        } catch (final DecodeException e) {
+            result.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "payload must contain JSON array of tenant identifiers"));
+        }
+        return result.future();
     }
 
     /**
@@ -223,7 +284,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
      * @return A future indicating the outcome of the service invocation.
      */
     protected Future<Message> processCustomOperationMessage(final Message request, final SpanContext spanContext) {
-        log.debug("invalid operation in request message [{}]", request.getSubject());
+        logger.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 

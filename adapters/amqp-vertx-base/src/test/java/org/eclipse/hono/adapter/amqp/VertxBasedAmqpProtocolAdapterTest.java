@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,10 +49,6 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
-import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
-import org.eclipse.hono.adapter.amqp.AmqpContext;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
