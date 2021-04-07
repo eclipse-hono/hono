@@ -35,14 +35,27 @@
   </modules>
 
   <properties>
+    <!-- 
+      this property prevents the Nexus Staging Maven Plugin to
+      deploy this module's artifacts to Maven Central' staging repo
+     -->
+    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+    <!-- 
+      this property prevents the Nexus Staging Maven Plugin to
+      deploy this module's artifacts to the configured project repository
+     -->
+    <skipStaging>true</skipStaging>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.deploy.skip>true</maven.deploy.skip>
-    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
     <gpg.skip>true</gpg.skip>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>

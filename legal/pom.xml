@@ -1,5 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -10,21 +11,32 @@
    
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-bom</artifactId>
+    <artifactId>hono-parent</artifactId>
     <version>1.8.0-SNAPSHOT</version>
-    <relativePath>../bom</relativePath>
   </parent>
   <artifactId>hono-legal</artifactId>
   <name>Legal Documents</name>
   <description>The set of documents required to fulfill the attributions of Hono's dependencies.</description>
 
   <properties>
+    <!-- 
+      this property prevents the Nexus Staging Maven Plugin to
+      deploy this module's artifacts to Maven Central' staging repo
+     -->
+    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+    <!-- 
+      this property prevents the Nexus Staging Maven Plugin to
+      deploy this module's artifacts to the configured project repository
+     -->
+    <skipStaging>true</skipStaging>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
+    <gpg.skip>true</gpg.skip>
   </properties>
 
   <build>

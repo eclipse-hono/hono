@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -110,7 +110,7 @@ spec:
                     userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
 
           echo "building and deploying nightly artifacts ..."
-          sh 'mvn -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true'
+          sh 'mvn deploy -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true'
 
           echo "recording JUnit test results ..."
           junit '**/surefire-reports/*.xml'

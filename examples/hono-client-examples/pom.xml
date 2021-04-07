@@ -31,15 +31,15 @@
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-    </dependency>
-    <dependency>
-    	<groupId>org.eclipse.hono</groupId>
-    	<artifactId>hono-legal</artifactId>
     </dependency>
     <dependency>
       <groupId>org.yaml</groupId>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -25,15 +25,11 @@
   <artifactId>hono-example</artifactId>
   <packaging>pom</packaging>
   <name>Hono Examples</name>
-  <description>Example code for Hono.</description>
+  <description>Example code illustrating usage of Hono APIs</description>
   <url>https://www.eclipse.org/hono</url>
 
   <modules>
     <module>hono-client-examples</module>
     <module>protocol-gateway-example</module>
   </modules>
-
-  <properties>
-    <maven.compiler.release>11</maven.compiler.release>
-  </properties>
 </project>

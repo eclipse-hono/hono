@@ -25,7 +25,7 @@
   <packaging>bundle</packaging>
 
   <name>Hono Core</name>
-  <description>Basic classes used by all other modules.</description>
+  <description>Base classes used by all other modules</description>
   <inceptionYear>2016</inceptionYear>
   <url>https://www.eclipse.org/hono</url>
 
@@ -34,10 +34,6 @@
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-legal</artifactId>
-    </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
