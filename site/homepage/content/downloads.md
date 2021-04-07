@@ -21,7 +21,7 @@ for installation instructions.
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download from
 
-* [Eclipse Hono 1.6.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.6.0-exec.jar)
+* [Eclipse Hono 1.7.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.7.0-exec.jar)
 
 The client requires a Java 11 runtime environment to run.
 
@@ -39,6 +39,5 @@ For a list of the changes in this release, take a look at the [release notes]({{
 
 ## Previous versions
 
-* [Eclipse Hono 1.5.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.5.2-exec.jar)
-* [Eclipse Hono 1.5.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.5.1-exec.jar)
-* [Eclipse Hono 1.5.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.5.0-exec.jar)
+* [Eclipse Hono 1.6.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.6.1-exec.jar)
+* [Eclipse Hono 1.6.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.6.0-exec.jar)
