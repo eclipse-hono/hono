@@ -233,49 +233,53 @@ public class ApplicationConfig {
     /**
      * Provider a new device backing store for the adapter facing service.
      *
+     * @param devicesProperties The device registry service properties.
      * @return A new store instance.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public TableAdapterStore devicesAdapterStore() throws IOException {
-        return DeviceStores.store(vertx(), tracer(), devicesProperties(), JdbcDeviceStoreProperties::getAdapter, DeviceStores.adapterStoreFactory());
+    public TableAdapterStore devicesAdapterStore(final JdbcDeviceStoreProperties devicesProperties) throws IOException {
+        return DeviceStores.store(vertx(), tracer(), devicesProperties, JdbcDeviceStoreProperties::getAdapter, DeviceStores.adapterStoreFactory());
     }
 
     /**
      * Provider a new tenant backing store for the adapter facing service.
      *
+     * @param tenantsProperties The tenant service properties.
      * @return A new store instance.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER + " & " + Profiles.PROFILE_TENANT_SERVICE)
-    public AdapterStore tenantAdapterStore() throws IOException {
-        return Stores.adapterStore(vertx(), tracer(), tenantsProperties().getAdapter());
+    public AdapterStore tenantAdapterStore(final JdbcTenantStoreProperties tenantsProperties) throws IOException {
+        return Stores.adapterStore(vertx(), tracer(), tenantsProperties.getAdapter());
     }
 
     /**
      * Provider a new device backing store for the management facing service.
      *
+     * @param devicesProperties The device registry service properties.
      * @return A new store instance.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
-    public TableManagementStore devicesManagementStore() throws IOException {
-        return DeviceStores.store(vertx(), tracer(), devicesProperties(), JdbcDeviceStoreProperties::getManagement, DeviceStores.managementStoreFactory());
+    public TableManagementStore devicesManagementStore(final JdbcDeviceStoreProperties devicesProperties) throws IOException {
+        return DeviceStores.store(vertx(), tracer(), devicesProperties, JdbcDeviceStoreProperties::getManagement, DeviceStores.managementStoreFactory());
     }
 
     /**
      * Provider a new tenant backing store for the management facing service.
      *
+     * @param tenantsProperties The tenant service properties.
      * @return A new store instance.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT + " & " + Profiles.PROFILE_TENANT_SERVICE)
-    public ManagementStore tenantManagementStore() throws IOException {
-        return Stores.managementStore(vertx(), tracer(), tenantsProperties().getManagement());
+    public ManagementStore tenantManagementStore(final JdbcTenantStoreProperties tenantsProperties) throws IOException {
+        return Stores.managementStore(vertx(), tracer(), tenantsProperties.getManagement());
     }
 
     //
@@ -424,21 +428,24 @@ public class ApplicationConfig {
     /**
      * Provide a registration service.
      *
+     * @param tenantService The tenant service.
+     * @param devicesAdapterStore The device backing store for the adapter facing service.
+     * @param registrationManagementService The registration management service.
      * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public RegistrationService registrationService() throws IOException {
+    public RegistrationService registrationService(final TenantService tenantService,
+            final TableAdapterStore devicesAdapterStore, final DeviceManagementService registrationManagementService) {
 
-        final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore());
+        final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore);
 
         final var tenantInformationService = new AutowiredTenantInformationService();
-        tenantInformationService.setService(tenantService());
+        tenantInformationService.setService(tenantService);
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
-        autoProvisioner.setDeviceManagementService(registrationManagementService());
+        autoProvisioner.setDeviceManagementService(registrationManagementService);
         autoProvisioner.setVertx(vertx());
         autoProvisioner.setTracer(tracer());
         autoProvisioner.setEventSenders(eventSenders());
@@ -452,105 +459,105 @@ public class ApplicationConfig {
     /**
      * Provide a credentials service.
      *
+     * @param devicesAdapterStore The device backing store for the adapter facing service.
      * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public CredentialsService credentialsService() throws IOException {
-        return new CredentialsServiceImpl(devicesAdapterStore(), deviceRegistryServiceProperties());
+    public CredentialsService credentialsService(final TableAdapterStore devicesAdapterStore) {
+        return new CredentialsServiceImpl(devicesAdapterStore, deviceRegistryServiceProperties());
     }
 
     /**
      * Provide a tenant service.
      *
+     * @param tenantAdapterStore The tenant backing store for the adapter facing service.
      * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER + " & " + Profiles.PROFILE_TENANT_SERVICE)
-    public TenantService tenantService() throws IOException {
-        return new TenantServiceImpl(tenantAdapterStore(), tenantServiceProperties());
+    public TenantService tenantService(final AdapterStore tenantAdapterStore) {
+        return new TenantServiceImpl(tenantAdapterStore, tenantServiceProperties());
     }
 
     /**
      * Provide a registration management service.
      *
+     * @param devicesManagementStore The device backing store for the management facing service.
      * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
-    public DeviceManagementService registrationManagementService() throws IOException {
-        return new DeviceManagementServiceImpl(devicesManagementStore(), deviceRegistryServiceProperties());
+    public DeviceManagementService registrationManagementService(final TableManagementStore devicesManagementStore) {
+        return new DeviceManagementServiceImpl(devicesManagementStore, deviceRegistryServiceProperties());
     }
 
     /**
      * Provide a credentials management service.
      *
+     * @param devicesManagementStore The device backing store for the management facing service.
      * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
-    public CredentialsManagementService credentialsManagementService() throws IOException {
-        return new CredentialsManagementServiceImpl(vertx(), passwordEncoder(), devicesManagementStore(), deviceRegistryServiceProperties());
+    public CredentialsManagementService credentialsManagementService(final TableManagementStore devicesManagementStore) {
+        return new CredentialsManagementServiceImpl(vertx(), passwordEncoder(), devicesManagementStore, deviceRegistryServiceProperties());
     }
 
     /**
      * Provide a tenant management service.
      *
+     * @param tenantManagementStore The device backing store for the management facing service.
      * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT + " & " + Profiles.PROFILE_TENANT_SERVICE)
-    public TenantManagementService tenantManagementService() throws IOException {
-        return new TenantManagementServiceImpl(tenantManagementStore());
+    public TenantManagementService tenantManagementService(final ManagementStore tenantManagementStore) {
+        return new TenantManagementServiceImpl(tenantManagementStore);
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
+     * @param registrationService The registration service.
      * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(RegistrationService.class)
-    public AmqpEndpoint registrationAmqpEndpoint() throws IOException {
-        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService());
+    public AmqpEndpoint registrationAmqpEndpoint(final RegistrationService registrationService) {
+        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService);
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
      *
+     * @param credentialsService The credentials service.
      * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(CredentialsService.class)
-    public AmqpEndpoint credentialsAmqpEndpoint() throws IOException {
-        return new DelegatingCredentialsAmqpEndpoint<>(vertx(), credentialsService());
+    public AmqpEndpoint credentialsAmqpEndpoint(final CredentialsService credentialsService) {
+        return new DelegatingCredentialsAmqpEndpoint<>(vertx(), credentialsService);
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> API.
      *
+     * @param tenantService The tenant service.
      * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(TenantService.class)
-    public AmqpEndpoint tenantAmqpEndpoint() throws IOException {
-        return new DelegatingTenantAmqpEndpoint<>(vertx(), tenantService());
+    public AmqpEndpoint tenantAmqpEndpoint(final TenantService tenantService) {
+        return new DelegatingTenantAmqpEndpoint<>(vertx(), tenantService);
     }
 
     //
@@ -600,35 +607,38 @@ public class ApplicationConfig {
     /**
      * Provide an auth provider, backed by vert.x {@link JDBCAuth}.
      *
+     * @param devicesProperties The tenant service properties.
      * @return The auth provider instance.
      */
     @Bean
     @Scope("prototype")
-    public AuthProvider authProvider() {
-        final JDBCClient client = JdbcProperties.dataSource(vertx(), devicesProperties().getManagement());
+    public AuthProvider authProvider(final JdbcTenantStoreProperties devicesProperties) {
+        final JDBCClient client = JdbcProperties.dataSource(vertx(), devicesProperties.getManagement());
         return JDBCAuth.create(vertx(), client);
     }
 
     /**
-     * Creates a new instance of an auth handler to provide basic authentication for the 
+     * Creates a new instance of an auth handler to provide basic authentication for the
      * HTTP based Device Registry Management endpoint.
      * <p>
      * This method creates a {@link BasicAuthHandler} using the auth provider returned by
-     * {@link #authProvider()} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
-     * is set to {@code true}.
+     * {@link #authProvider(JdbcTenantStoreProperties)} if the property corresponding to
+     * {@link HttpServiceConfigProperties#isAuthenticationRequired()} is set to {@code true}.
      *
      * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
      *                                    management endpoint.
+     * @param authProvider The auth provider.
      * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
      *         is {@code true} or {@code null} otherwise.
      * @see <a href="https://vertx.io/docs/vertx-auth-jdbc/java/">JDBC Auth Provider docs</a>
      */
     @Bean
     @Scope("prototype")
-    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
+    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties,
+            final AuthProvider authProvider) {
         if (httpServiceConfigProperties != null && httpServiceConfigProperties.isAuthenticationRequired()) {
             return BasicAuthHandler.create(
-                    authProvider(),
+                    authProvider,
                     httpServerProperties().getRealm());
         }
         return null;
@@ -638,41 +648,41 @@ public class ApplicationConfig {
      * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
      * of Hono's Device Registry Management API's.
      *
+     * @param registrationManagementService The registration management service.
      * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(DeviceManagementService.class)
-    public HttpEndpoint deviceHttpEndpoint() throws IOException {
-        return new DelegatingDeviceManagementHttpEndpoint<>(vertx(), registrationManagementService());
+    public HttpEndpoint deviceHttpEndpoint(final DeviceManagementService registrationManagementService) {
+        return new DelegatingDeviceManagementHttpEndpoint<>(vertx(), registrationManagementService);
     }
 
     /**
      * Creates a new instance of an HTTP protocol handler for the <em>credentials</em> resources
      * of Hono's Device Registry Management API's.
      *
+     * @param credentialsManagementService The credentials management service.
      * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(CredentialsManagementService.class)
-    public HttpEndpoint credentialsHttpEndpoint() throws IOException {
-        return new DelegatingCredentialsManagementHttpEndpoint<>(vertx(),  credentialsManagementService());
+    public HttpEndpoint credentialsHttpEndpoint(final CredentialsManagementService credentialsManagementService) {
+        return new DelegatingCredentialsManagementHttpEndpoint<>(vertx(), credentialsManagementService);
     }
 
     /**
      * Creates a new instance of an HTTP protocol handler for the <em>tenants</em> resources
      * of Hono's Device Registry Management API's.
      *
+     * @param tenantManagementService The tenant management service.
      * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(TenantManagementService.class)
-    public HttpEndpoint tenantHttpEndpoint() throws IOException {
-        return new DelegatingTenantManagementHttpEndpoint<>(vertx(), tenantManagementService());
+    public HttpEndpoint tenantHttpEndpoint(final TenantManagementService tenantManagementService) {
+        return new DelegatingTenantManagementHttpEndpoint<>(vertx(), tenantManagementService);
     }
 }
