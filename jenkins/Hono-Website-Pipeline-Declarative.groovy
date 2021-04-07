@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,7 @@ spec:
         memory: "512Mi"
         cpu: "1"
   - name: hugo
-    image: eclipsecbi/hugo:0.58.3
+    image: eclipsecbi/hugo:0.81.0
     command:
     - cat
     tty: true
