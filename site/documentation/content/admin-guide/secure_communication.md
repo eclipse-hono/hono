@@ -173,33 +173,33 @@ The following steps a re necessary in order to configure the protocol adapters w
 
 1. Create Server Certificate(s)
 
-   When a device establishes a connection to one of Hono's protocol adapters using one of its *virtual* domain names, then it includes the domain name in
-   its TLS *hello* message by means of the SNI extension. The server can then use this information to determine the matching server certificate and
-   corresponding private key that is required to perform the TLS handshake.
-
-   It is therefore necessary to create a private key and certificate for each *virtual* server to be hosted.
-   The *virtual* server's domain name needs to be added to the certificate's *Subject Alternative Name* (SAN) list in order for Hono to be able to
-   determine the key/certificate pair to use for the TLS handshake with the device.
-   Please refer to the [vert.x SNI guide](https://vertx.io/docs/vertx-core/java/#_server_name_indication_sni) for details on how this works under the hood.
-
-   Hono's protocol adapters then need to be configured with the server certificates and keys. In order to do so, the certificates and corresponding private
-   keys need to be added to a *key store*. Hono supports the *JKS* and *PKCS12* key store formats for that purpose.
-   Once the key store has been created, Hono's protocol adapters need to be configured with the path to the key store by means of the adapters'
-   `KEY_STORE_PATH` configuration variable. Please refer to the [protocol adapter admin guides]({{< relref "admin-guide" >}}) for details on how to
-   configure the key store path.
+    When a device establishes a connection to one of Hono's protocol adapters using one of its *virtual* domain names, then it includes the domain name in
+    its TLS *hello* message by means of the SNI extension. The server can then use this information to determine the matching server certificate and
+    corresponding private key that is required to perform the TLS handshake.
+    
+    It is therefore necessary to create a private key and certificate for each *virtual* server to be hosted.
+    The *virtual* server's domain name needs to be added to the certificate's *Subject Alternative Name* (SAN) list in order for Hono to be able to
+    determine the key/certificate pair to use for the TLS handshake with the device.
+    Please refer to the [vert.x SNI guide](https://vertx.io/docs/vertx-core/java/#_server_name_indication_sni) for details on how this works under the hood.
+    
+    Hono's protocol adapters then need to be configured with the server certificates and keys. In order to do so, the certificates and corresponding private
+    keys need to be added to a *key store*. Hono supports the *JKS* and *PKCS12* key store formats for that purpose.
+    Once the key store has been created, Hono's protocol adapters need to be configured with the path to the key store by means of the adapters'
+    `KEY_STORE_PATH` configuration variable. Please refer to the [protocol adapter admin guides]({{< relref "admin-guide" >}}) for details on how to
+    configure the key store path.
 
 2. Enable SNI for Hono's Protocol Adapters
 
-   Hono's protocol adapters can be configured to support SNI by means of the `SNI` configuration variable. Please refer to the
-   [protocol adapter admin guides]({{< relref "admin-guide" >}}) for details on how to set this variable.
+    Hono's protocol adapters can be configured to support SNI by means of the `SNI` configuration variable. Please refer to the
+    [protocol adapter admin guides]({{< relref "admin-guide" >}}) for details on how to set this variable.
 
 3. Verify Configuration
 
-   The setup can be verified by means of the command line tools that are part of [OpenSSL](https://www.openssl.org/).
-   Assuming that the MQTT protocol adapter's IP address is `10.100.84.23`, its secure endpoint is bound to port 31884 and it has
-   been configured with a certificate using domain name *my-hono.eclipse.org*, then the following command can be used to test
-   if a TLS secured connection with the adapter using that virtual host name can be established successfully:
-
-   ```sh 
-   openssl s_client -connect 10.100.84.23:31884 -servername my-hono.eclipse.org
-   ```
+    The setup can be verified by means of the command line tools that are part of [OpenSSL](https://www.openssl.org/).
+    Assuming that the MQTT protocol adapter's IP address is `10.100.84.23`, its secure endpoint is bound to port 31884 and it has
+    been configured with a certificate using domain name *my-hono.eclipse.org*, then the following command can be used to test
+    if a TLS secured connection with the adapter using that virtual host name can be established successfully:
+    
+    ```sh 
+    openssl s_client -connect 10.100.84.23:31884 -servername my-hono.eclipse.org
+    ```
