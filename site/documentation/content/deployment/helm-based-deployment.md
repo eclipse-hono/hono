@@ -92,10 +92,17 @@ In any case the build process can be started using the following command:
 # in base directory of Hono working tree:
 mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
 ~~~
+
+To obtain the used Hono version and write it in a variable, use:
+~~~sh
+# in base directory of Hono working tree:
+HONO_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+~~~
+
 The newly built images can then be deployed using Helm:
 
 ~~~sh
-helm install --dependency-update -n hono eclipse-hono eclipse-iot/hono
+helm install --dependency-update -n hono --set honoImagesTag=$HONO_VERSION eclipse-hono eclipse-iot/hono
 ~~~
 
 
