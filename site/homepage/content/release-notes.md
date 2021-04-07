@@ -42,6 +42,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   been documented as `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME_MILLIS`, accepting an integer representing the duration as
   number of milliseconds. However, the correct property is named `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME` and accepts an
   ISO-8601 Duration string instead of an integer.
+* The MQTT adapter failed to handle a command response message if the corresponding tenant object wasn't available
+  in the cache. This has been fixed.
+* A failed connection attempt in the default `org.eclipse.hono.connection.ConnectionFactory` implementation could
+  have led to the AMQP connection not getting closed, occupying connection resources. This has been fixed.
+* Validation of MQTT topics containing property bags has been improved, preventing unhandled exceptions.
 * The hugo themes for the Hono website and the documentation have been updated to the latest versions respectively.
   In order for the site module build to succeed with the `hugo` binary installed locally, the
   `site/homepage/themes/hugo-universal-theme` and `site/documentation/themes/hugo-theme-learn` folders need to be deleted.
@@ -85,6 +90,23 @@ description = "Information about changes in recent Hono releases. Includes new f
 
   Activating the `build-docker-image` profile by default can easily be achieved by adding `-Pbuild-docker-image` to
   the *MAVEN_OPTS* environment variable instead.
+
+## 1.6.1
+
+### Fixes & Enhancements
+
+* The common configuration property for setting the vert.x instance's max-event-loop-execute-time had erroneously
+  been documented as `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME_MILLIS`, accepting an integer representing the duration as
+  number of milliseconds. However, the correct property is named `HONO_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME` and accepts an
+  ISO-8601 Duration string instead of an integer.
+* The MQTT adapter failed to handle a command response message if the corresponding tenant object wasn't available
+  in the cache. This has been fixed.
+* A failed connection attempt in the default `org.eclipse.hono.connection.ConnectionFactory` implementation could
+  have led to the AMQP connection not getting closed, occupying connection resources. This has been fixed.
+* Validation of MQTT topics containing property bags has been improved, preventing unhandled exceptions.
+* The protocol adapters might have run into a situation where devices connected to adapters did no longer receive
+  commands when using the Command Router service. The problem occurred when a Command Router service instance had been
+  restarted while one or more protocol adapters where connected to it. This has been fixed.
 
 ## 1.6.0
 
