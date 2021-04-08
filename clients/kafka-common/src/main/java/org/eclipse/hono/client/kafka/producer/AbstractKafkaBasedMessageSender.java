@@ -57,6 +57,8 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
     private final KafkaProducerFactory<String, Buffer> producerFactory;
     private final String producerName;
 
+    private boolean stopped = false;
+
     /**
      * Creates a new Kafka-based message sender.
      *
@@ -89,6 +91,7 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
      */
     @Override
     public Future<Void> start() {
+        stopped = false;
         getOrCreateProducer();
         return Future.succeededFuture();
     }
@@ -100,6 +103,7 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
      */
     @Override
     public Future<Void> stop() {
+        stopped = true;
         return producerFactory.closeProducer(producerName);
     }
 
@@ -212,6 +216,9 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
 
     private Future<Void> send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
             final List<KafkaHeader> headers, final Span span) {
+        if (stopped) {
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
+        }
         final KafkaProducerRecord<String, Buffer> record = KafkaProducerRecord.create(topic, deviceId, payload);
         final Promise<RecordMetadata> sendPromise = Promise.promise();
 
