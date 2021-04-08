@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -177,8 +176,7 @@ public final class DeferredConnectionCheckHandler {
             timerId = vertx.setTimer(timeout, id -> {
                 LOG.debug("canceling connection check after {}ms", timeout);
                 timerId = null;
-                tryCompleteAndCancelTimer(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
+                promise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
                 if (postExpirationOperation != null) {
                     postExpirationOperation.accept(null);
                 }
