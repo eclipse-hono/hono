@@ -103,7 +103,7 @@ import io.vertx.ext.web.handler.BasicAuthHandler;
  * Spring Boot configuration for the JDBC based device registry application.
  */
 @Configuration
-@Import(PrometheusSupport.class)
+@Import({ PrometheusSupport.class, InMemoryDbConfig.class, PersistentDbConfig.class })
 public class ApplicationConfig {
 
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
@@ -207,28 +207,6 @@ public class ApplicationConfig {
     // JDBC store properties
     //
     //
-
-    /**
-     * Expose JDBC device registry service properties.
-     *
-     * @return The properties.
-     */
-    @Bean
-    @ConfigurationProperties("hono.registry.jdbc")
-    public JdbcDeviceStoreProperties devicesProperties() {
-        return new JdbcDeviceStoreProperties();
-    }
-
-    /**
-     * Expose JDBC tenant service properties.
-     *
-     * @return The properties.
-     */
-    @Bean
-    @ConfigurationProperties("hono.tenant.jdbc")
-    public JdbcTenantStoreProperties tenantsProperties() {
-        return new JdbcTenantStoreProperties();
-    }
 
     /**
      * Provider a new device backing store for the adapter facing service.
