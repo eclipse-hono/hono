@@ -949,7 +949,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<>() {
 
             @Override
-            protected String getTypeName() {
+            public String getTypeName() {
                 return ADAPTER_TYPE;
             }
 

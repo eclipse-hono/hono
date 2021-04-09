@@ -15,11 +15,6 @@ package org.eclipse.hono.adapter.coap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -27,7 +22,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.HttpURLConnection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -36,53 +30,27 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP.Code;
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
-import org.eclipse.californium.core.coap.CoAP.Type;
-import org.eclipse.californium.core.coap.MediaTypeRegistry;
-import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
-import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.CommandResponse;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
-import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
-import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.metric.MetricsTags.Direction;
-import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
-import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
-import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.Adapter;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
-import io.micrometer.core.instrument.Timer.Sample;
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -94,14 +62,11 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSupport<CoapAdapterProperties, AbstractVertxBasedCoapAdapter<CoapAdapterProperties>> {
 
-    private static final String ADAPTER_TYPE = "coap";
-
     private static final Vertx vertx = Vertx.vertx();
 
     private CommandConsumer commandConsumer;
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
-    private Span span;
     private CoapServer server;
     private Handler<Void> startupHandler;
 
@@ -113,23 +78,15 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         startupHandler = VertxMockSupport.mockHandler();
         metrics = mock(CoapAdapterMetrics.class);
-
-        span = TracingMockSupport.mockSpan();
-
         this.properties = givenDefaultConfigurationProperties();
+
         createClients();
         prepareClients();
 
         commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
-                .thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
     /**
@@ -186,7 +143,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         givenAnAdapter(properties);
         // and a set of resources
         final Resource resource = mock(Resource.class);
-        adapter.setResources(Set.of(resource));
+        adapter.addResources(Set.of(resource));
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
@@ -226,7 +183,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
             }
         };
 
-        adapter.setResources(Set.of(resource));
+        adapter.addResources(Set.of(resource));
         adapter.init(vertx, context);
 
         final Promise<Void> startupTracker = Promise.promise();
@@ -295,752 +252,6 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         }));
     }
 
-    /**
-     * Verifies that the adapter fails the upload of an event with a 4.03 result if the device belongs to a tenant for
-     * which the adapter is disabled.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadTelemetryFailsForDisabledTenant(final VertxTestContext ctx) {
-
-        // GIVEN an adapter
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-        // which is disabled for tenant "my-tenant"
-        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
-        myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
-        when(tenantClient.get(eq("my-tenant"), any(SpanContext.class))).thenReturn(Future.succeededFuture(myTenantConfig));
-
-        // WHEN a device that belongs to "my-tenant" publishes a telemetry message
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
-
-        adapter.uploadTelemetryMessage(context)
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    // THEN the device gets a response with code 4.03
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN));
-
-                    // and the message has not been forwarded downstream
-                    assertNoTelemetryMessageHasBeenSentDownstream();
-                    verify(metrics).reportTelemetry(
-                            eq(MetricsTags.EndpointType.TELEMETRY),
-                            eq("my-tenant"),
-                            any(),
-                            eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
-                            eq(MetricsTags.QoS.AT_MOST_ONCE),
-                            eq(payload.length()),
-                            eq(TtdStatus.NONE),
-                            any());
-                });
-                ctx.completeNow();
-            }));
-
-    }
-
-    /**
-     * Verifies that the adapter fails the upload of an event with a 4.00 result
-     * if the request body is not empty but doesn't contain a content-format option.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadTelemetryFailsForMissingContentFormat(final VertxTestContext ctx) {
-
-        // GIVEN an adapter
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-
-        // WHEN a device publishes a non-empty message that lacks a content-format option
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, (Integer) null);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
-
-        adapter.uploadTelemetryMessage(context)
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    // THEN the device gets a response with code 4.00
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
-
-                    // and the message has not been forwarded downstream
-                    assertNoTelemetryMessageHasBeenSentDownstream();
-                    verify(metrics, never()).reportTelemetry(
-                            any(MetricsTags.EndpointType.class),
-                            anyString(),
-                            any(),
-                            any(MetricsTags.ProcessingOutcome.class),
-                            any(MetricsTags.QoS.class),
-                            anyInt(),
-                            any(TtdStatus.class),
-                            any());
-                });
-                ctx.completeNow();
-            }));
-
-    }
-
-    /**
-     * Verifies that the adapter fails the upload of an event with a 4.00 result
-     * if the request body is empty but is not marked as an empty notification.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadTelemetryFailsForEmptyBody(final VertxTestContext ctx) {
-
-        // GIVEN an adapter
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-
-        // WHEN a device publishes an empty message that doesn't contain
-        // a URI-query option
-        final CoapExchange coapExchange = newCoapExchange(null, Type.NON, MediaTypeRegistry.UNDEFINED);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
-
-        adapter.uploadTelemetryMessage(context)
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    // THEN the device gets a response with code 4.00
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
-
-                    // and the message has not been forwarded downstream
-                    assertNoTelemetryMessageHasBeenSentDownstream();
-                    verify(metrics, never()).reportTelemetry(
-                            any(MetricsTags.EndpointType.class),
-                            anyString(),
-                            any(),
-                            any(MetricsTags.ProcessingOutcome.class),
-                            any(MetricsTags.QoS.class),
-                            anyInt(),
-                            any(TtdStatus.class),
-                            any());
-                });
-                ctx.completeNow();
-            }));
-
-    }
-
-    /**
-     * Verifies that the adapter forwards an empty notification downstream.
-     */
-    @Test
-    public void testUploadEmptyNotificationSucceeds() {
-
-        // GIVEN an adapter
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-
-        // WHEN a device publishes an empty message that is marked as an empty notification
-        final OptionSet options = new OptionSet();
-        options.addUriQuery(CoapContext.PARAM_EMPTY_CONTENT);
-        final CoapExchange coapExchange = newCoapExchange(null, Type.NON, options);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
-
-        adapter.uploadTelemetryMessage(context);
-
-        // THEN the device gets a response indicating success
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        // and the message has been forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(
-                QoS.AT_MOST_ONCE,
-                "my-tenant",
-                "the-device",
-                EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        verify(metrics).reportTelemetry(
-                eq(MetricsTags.EndpointType.TELEMETRY),
-                eq("my-tenant"),
-                any(),
-                eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                eq(MetricsTags.QoS.AT_MOST_ONCE),
-                eq(0),
-                eq(TtdStatus.NONE),
-                any());
-    }
-
-    /**
-     * Verifies that the adapter immediately responds with a 2.04 status if a
-     * device publishes telemetry data using a NON message.
-     */
-    @Test
-    public void testUploadTelemetryWithQoS0() {
-
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-
-        // WHEN a device publishes an telemetry message
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        adapter.uploadTelemetryMessage(context);
-
-        // THEN the device gets a response indicating success
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        // and the message has been forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(
-                QoS.AT_MOST_ONCE,
-                "tenant",
-                "device",
-                "text/plain");
-        verify(metrics).reportTelemetry(
-                eq(MetricsTags.EndpointType.TELEMETRY),
-                eq("tenant"),
-                any(),
-                eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                eq(MetricsTags.QoS.AT_MOST_ONCE),
-                eq(payload.length()),
-                eq(TtdStatus.NONE),
-                any());
-    }
-
-    /**
-     * Verifies that the adapter waits for a the AMQP Messaging Network to accept a
-     * forwarded telemetry message that has been published using a CON message,
-     * before responding with a 2.04 status to the device.
-     */
-    @Test
-    public void testUploadTelemetryWithQoS1() {
-
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        final Promise<Void> outcome = Promise.promise();
-        givenATelemetrySenderForAnyTenant(outcome);
-
-        // WHEN a device publishes an telemetry message with QoS 1
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        adapter.uploadTelemetryMessage(context);
-
-        // THEN the message is being forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(
-                QoS.AT_LEAST_ONCE,
-                "tenant",
-                "device",
-                "text/plain");
-        // and the device does not get a response
-        verify(coapExchange, never()).respond(any(Response.class));
-        // until the telemetry message has been accepted
-        outcome.complete();
-
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        verify(metrics).reportTelemetry(
-                eq(MetricsTags.EndpointType.TELEMETRY),
-                eq("tenant"),
-                any(),
-                eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                eq(payload.length()),
-                eq(TtdStatus.NONE),
-                any());
-    }
-
-    /**
-     * Verifies that the adapter waits for an event being send with wait for outcome before responding with a 2.04
-     * status to the device.
-     */
-    @Test
-    public void testUploadEventWaitsForAcceptedOutcome() {
-
-        // GIVEN an adapter with a downstream event consumer attached
-        givenAnAdapter(properties);
-        final Promise<Void> outcome = Promise.promise();
-        givenAnEventSenderForAnyTenant(outcome);
-
-        // WHEN a device publishes an event
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        adapter.uploadEventMessage(context);
-
-        // THEN the message is being forwarded downstream
-        assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
-        // but the device does not get a response
-        verify(coapExchange, never()).respond(any(Response.class));
-
-        // until the event has been accepted
-        outcome.complete();
-
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        verify(metrics).reportTelemetry(
-                eq(MetricsTags.EndpointType.EVENT),
-                eq("tenant"),
-                any(),
-                eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                eq(payload.length()),
-                eq(TtdStatus.NONE),
-                any());
-    }
-
-    /**
-     * Verifies that the adapter fails the upload of an event with a 4.00 result if it is rejected by the downstream
-     * peer.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadEventFailsForRejectedOutcome(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream event consumer attached
-        givenAnAdapter(properties);
-        final Promise<Void> outcome = Promise.promise();
-        givenAnEventSenderForAnyTenant(outcome);
-
-        // WHEN a device publishes an event that is not accepted by the peer
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        final Future<?> result = adapter.uploadEventMessage(context);
-
-        assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
-        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
-
-        // THEN the device gets a 4.00
-        result.onComplete(ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(result.cause()).isInstanceOfSatisfying(ClientErrorException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
-                verify(metrics).reportTelemetry(
-                        eq(MetricsTags.EndpointType.EVENT),
-                        eq("tenant"),
-                        any(),
-                        eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
-                        eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                        eq(payload.length()),
-                        eq(TtdStatus.NONE),
-                        any());
-            });
-            ctx.completeNow();
-        }));
-
-    }
-
-    /**
-     * Verifies that the adapter includes a command in the response to a telemetry request.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadTelemetryWithOneWayCommand(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-
-        // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
-        final Sample commandTimer = mock(Sample.class);
-        final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
-        when(commandContext.get(anyString())).thenReturn(commandTimer);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), VertxMockSupport.anyHandler(), any(), any()))
-            .thenAnswer(invocation -> {
-                final Handler<CommandContext> consumer = invocation.getArgument(2);
-                consumer.handle(commandContext);
-                return Future.succeededFuture(commandConsumer);
-            });
-
-        // WHEN a device publishes a telemetry message with a hono-ttd parameter
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        adapter.uploadTelemetryMessage(context)
-            .onComplete(ctx.succeeding(ok -> {
-                ctx.verify(() -> {
-                    // THEN the message is being forwarded downstream
-                    assertTelemetryMessageHasBeenSentDownstream(
-                            QoS.AT_LEAST_ONCE,
-                            "tenant",
-                            "device",
-                            "text/plain");
-                    // correctly reported
-                    verify(metrics).reportTelemetry(
-                            eq(MetricsTags.EndpointType.TELEMETRY),
-                            eq("tenant"),
-                            any(),
-                            eq(ProcessingOutcome.FORWARDED),
-                            eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                            eq(payload.length()),
-                            eq(TtdStatus.COMMAND),
-                            any());
-                    // and the device gets a response which contains a (one-way) command
-                    verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()
-                            && CommandConstants.COMMAND_ENDPOINT.equals(res.getOptions().getLocationPathString())
-                            && res.getOptions().getLocationQueryString().endsWith("=doThis")
-                            && res.getPayloadSize() == 0));
-                    verify(metrics).reportCommand(
-                            eq(Direction.ONE_WAY),
-                            eq("tenant"),
-                            any(),
-                            eq(ProcessingOutcome.FORWARDED),
-                            eq(0),
-                            eq(commandTimer));
-                });
-                ctx.completeNow();
-            }));
-    }
-
-    /**
-     * Verifies that the adapter releases an incoming command if the forwarding of the preceding telemetry
-     * message did not succeed.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadTelemetryReleasesCommandForFailedDownstreamSender(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        final Promise<Void> sendTelemetryOutcome = Promise.promise();
-        givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
-
-        // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
-        final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), VertxMockSupport.anyHandler(), any(), any()))
-            .thenAnswer(invocation -> {
-                final Handler<CommandContext> consumer = invocation.getArgument(2);
-                consumer.handle(commandContext);
-                return Future.succeededFuture(commandConsumer);
-            });
-
-        // WHEN a device publishes a telemetry message with a hono-ttd parameter
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        final Future<?> result = adapter.uploadTelemetryMessage(context);
-
-        // THEN the message is being forwarded downstream
-        assertTelemetryMessageHasBeenSentDownstream(
-                QoS.AT_LEAST_ONCE,
-                "tenant",
-                "device",
-                "text/plain");
-        // with no response being sent to the device yet
-        verify(coapExchange, never()).respond(any(Response.class));
-
-        // WHEN the telemetry message delivery gets failed with an exception representing a "released" delivery outcome
-        sendTelemetryOutcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
-
-        result.onComplete(ctx.failing(t -> {
-            ctx.verify(() -> {
-                // THEN the device gets a response with code SERVICE_UNAVAILABLE
-                assertThat(t).isInstanceOfSatisfying(ServerErrorException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
-                verify(metrics).reportTelemetry(
-                        eq(MetricsTags.EndpointType.TELEMETRY),
-                        eq("tenant"),
-                        any(),
-                        eq(ProcessingOutcome.UNDELIVERABLE),
-                        eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                        eq(payload.length()),
-                        eq(TtdStatus.COMMAND),
-                        any());
-                // and the command delivery is released
-                verify(commandContext).release();
-            });
-            ctx.completeNow();
-        }));
-    }
-
-    /**
-     * Verifies that the adapter waits for a command response being successfully sent
-     * downstream before responding with a 2.04 status to the device.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadCommandResponseWaitsForAcceptedOutcome(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream application attached
-        givenAnAdapter(properties);
-        final Promise<Void> outcome = Promise.promise();
-        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
-
-        // WHEN a device publishes an command response
-        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
-        options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        final Future<?> result = adapter.uploadCommandResponseMessage(context);
-
-        // THEN the command response is being forwarded downstream
-        verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
-        // but the device does not get a response
-        verify(coapExchange, never()).respond(any(Response.class));
-        // and the response has not been reported as forwarded
-        verify(metrics, never()).reportCommand(
-                eq(Direction.RESPONSE),
-                eq("tenant"),
-                any(),
-                eq(ProcessingOutcome.FORWARDED),
-                anyInt(),
-                any());
-
-        // until the message has been accepted
-        outcome.complete();
-
-        result.onComplete(ctx.succeeding(code -> {
-            ctx.verify(() -> {
-                verify(coapExchange).respond(argThat((Response res) -> res.getCode() == ResponseCode.CHANGED));
-                verify(metrics).reportCommand(
-                        eq(Direction.RESPONSE),
-                        eq("tenant"),
-                        any(),
-                        eq(ProcessingOutcome.FORWARDED),
-                        eq(payload.length()),
-                        any());
-            });
-            ctx.completeNow();
-        }));
-    }
-
-    /**
-     * Verifies that the adapter fails the upload of a command response with a 4.00
-     * response code if it is rejected by the downstream peer.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadCommandResponseFailsForRejectedOutcome(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream application attached
-        final Promise<Void> outcome = Promise.promise();
-        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
-        givenAnAdapter(properties);
-
-        // WHEN a device publishes an command response
-        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
-        options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        final Future<?> result = adapter.uploadCommandResponseMessage(context);
-        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
-
-        result.onComplete(ctx.failing(t -> {
-            ctx.verify(() -> {
-                // THEN the command response is being forwarded downstream
-                verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
-                // and the device gets a 4.00 response
-                assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
-                // and the response has not been reported as forwarded
-                verify(metrics, never()).reportCommand(
-                        eq(Direction.RESPONSE),
-                        eq("tenant"),
-                        any(),
-                        eq(ProcessingOutcome.FORWARDED),
-                        anyInt(),
-                        any());
-            });
-            ctx.completeNow();
-        }));
-    }
-
-    /**
-     * Verifies that the adapter fails the upload of a command response with a 4.03
-     * if the adapter is disabled for the device's tenant.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadCommandResponseFailsForDisabledTenant(final VertxTestContext ctx) {
-
-        // GIVEN an adapter that is not enabled for a device's tenant
-        final TenantObject to = TenantObject.from("tenant", true);
-        to.addAdapter(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP).setEnabled(Boolean.FALSE));
-        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
-
-        final Promise<Void> outcome = Promise.promise();
-        final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
-        givenAnAdapter(properties);
-
-        // WHEN a device publishes an command response
-        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
-        options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        adapter.uploadCommandResponseMessage(context)
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    // THEN the command response has not been forwarded downstream
-                    verify(sender, never()).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
-                    // and the device gets a 4.03 response
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN));
-                    // and the response has not been reported as forwarded
-                    verify(metrics, never()).reportCommand(
-                            eq(Direction.RESPONSE),
-                            eq("tenant"),
-                            any(),
-                            eq(ProcessingOutcome.FORWARDED),
-                            anyInt(),
-                            any());
-                });
-                ctx.completeNow();
-            }));
-
-    }
-
-    /**
-     * Verifies that a telemetry message is rejected due to the limit exceeded.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testMessageLimitExceededForATelemetryMessage(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-
-        // WHEN a device that belongs to a tenant for which the message limit is exceeded
-        // publishes a telemetry message
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
-            .thenReturn(Future.succeededFuture(Boolean.TRUE));
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-        adapter.uploadTelemetryMessage(context)
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    // THEN the message is not being forwarded downstream
-                    assertNoTelemetryMessageHasBeenSentDownstream();
-                    // and the device gets a 4.29
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(429));
-                    verify(metrics).reportTelemetry(
-                            eq(MetricsTags.EndpointType.TELEMETRY),
-                            eq("tenant"),
-                            any(),
-                            eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
-                            eq(MetricsTags.QoS.AT_MOST_ONCE),
-                            eq(payload.length()),
-                            eq(TtdStatus.NONE),
-                            any());
-                });
-                ctx.completeNow();
-            }));
-
-    }
-
-    /**
-     * Verifies that an event message is rejected due to the limit exceeded.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testMessageLimitExceededForAnEventMessage(final VertxTestContext ctx) {
-
-        // GIVEN an adapter with a downstream event consumer attached
-        givenAnAdapter(properties);
-        givenAnEventSenderForAnyTenant();
-
-        // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
-                .thenReturn(Future.succeededFuture(Boolean.TRUE));
-
-        // WHEN a device publishes an event message
-        final Buffer payload = Buffer.buffer("some payload");
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-        adapter.uploadEventMessage(context)
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> {
-                    // THEN the message is not being forwarded downstream
-                    assertNoEventHasBeenSentDownstream();
-                    // and the device gets a 4.29
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(429));
-                    verify(metrics).reportTelemetry(
-                            eq(MetricsTags.EndpointType.EVENT),
-                            eq("tenant"),
-                            any(),
-                            eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
-                            eq(MetricsTags.QoS.AT_LEAST_ONCE),
-                            eq(payload.length()),
-                            eq(TtdStatus.NONE),
-                            any());
-                });
-                ctx.completeNow();
-            }));
-    }
-
-    private static CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final Integer contentFormat) {
-
-        final OptionSet options = new OptionSet();
-        Optional.ofNullable(contentFormat).ifPresent(options::setContentFormat);
-        return newCoapExchange(payload, requestType, options);
-    }
-
-    private static CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final OptionSet options) {
-
-        final Request request = mock(Request.class);
-        when(request.getType()).thenReturn(requestType);
-        when(request.isConfirmable()).thenReturn(requestType == Type.CON);
-        when(request.getOptions()).thenReturn(options);
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
-        final CoapExchange coapExchange = mock(CoapExchange.class);
-        when(coapExchange.advanced()).thenReturn(exchange);
-        Optional.ofNullable(payload).ifPresent(b -> when(coapExchange.getRequestPayload()).thenReturn(b.getBytes()));
-        when(coapExchange.getRequestOptions()).thenReturn(options);
-        when(coapExchange.getQueryParameter(anyString())).thenAnswer(invocation -> {
-            final String key = invocation.getArgument(0);
-            return options.getUriQuery().stream()
-                    .map(param -> param.split("=", 2))
-                    .filter(keyValue -> key.equals(keyValue[0]))
-                    .findFirst()
-                    .map(keyValue -> keyValue.length < 2 ? Boolean.TRUE.toString() : keyValue[1])
-                    .orElse(null);
-        });
-        return coapExchange;
-    }
-
     private CoapServer getCoapServer(final boolean startupShouldFail) {
 
         final CoapServer server = mock(CoapServer.class);
@@ -1095,8 +306,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = new AbstractVertxBasedCoapAdapter<>() {
 
             @Override
-            protected String getTypeName() {
-                return ADAPTER_TYPE;
+            public String getTypeName() {
+                return Constants.PROTOCOL_ADAPTER_TYPE_COAP;
             }
 
             @Override

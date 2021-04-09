@@ -79,7 +79,7 @@ import io.vertx.ext.healthchecks.Status;
  *
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties> extends AbstractServiceBase<T> {
+public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties> extends AbstractServiceBase<T> implements ProtocolAdapter {
 
     /**
      * The <em>application/octet-stream</em> content type.
@@ -149,6 +149,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @return The client.
      */
+    @Override
     public final TenantClient getTenantClient() {
         return tenantClient;
     }
@@ -178,24 +179,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         this.messagingClients = messagingClients;
     }
 
-    /**
-     * Gets the client being used for sending telemetry messages downstream.
-     *
-     * @param tenant The tenant for which to send telemetry messages.
-     * @return The sender.
-     */
+    @Override
     public final TelemetrySender getTelemetrySender(final TenantObject tenant) {
         return messagingClients.getTelemetrySender(tenant);
     }
 
-    /**
-     * Gets the client being used for sending events downstream.
-     *
-     * @param tenant The tenant for which to send events.
-     * @return The sender.
-     */
+    @Override
     public final EventSender getEventSender(final TenantObject tenant) {
         return messagingClients.getEventSender(tenant);
+    }
+
+    @Override
+    public final CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
+        return messagingClients.getCommandResponseSender(tenant);
     }
 
     /**
@@ -262,45 +258,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets this adapter's type name.
-     * <p>
-     * The name should be unique among all protocol adapters that are part of a Hono installation. There is no specific
-     * scheme to follow but it is recommended to include the adapter's origin and the protocol that the adapter supports
-     * in the name and to use lower case letters only.
-     * <p>
-     * Based on this recommendation, Hono's standard HTTP adapter for instance might report <em>hono-http</em> as its
-     * type name.
-     * <p>
-     * The name returned by this method is added to message that are forwarded to downstream consumers.
-     *
-     * @return The adapter's name.
-     */
-    protected abstract String getTypeName();
-
-    /**
-     * Gets the number of seconds after which this protocol adapter should give up waiting for an upstream command for a
-     * device of a given tenant.
-     * <p>
-     * Protocol adapters may override this method to e.g. use a static value for all tenants.
-     *
-     * @param tenant The tenant that the device belongs to.
-     * @param deviceTtd The TTD value provided by the device in seconds.
-     * @return A succeeded future that contains {@code null} if device TTD is {@code null}, or otherwise the lesser of
-     *         device TTD and the value returned by {@link TenantObject#getMaxTimeUntilDisconnect(String)}.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    protected Future<Integer> getTimeUntilDisconnect(final TenantObject tenant, final Integer deviceTtd) {
-
-        Objects.requireNonNull(tenant);
-
-        if (deviceTtd == null) {
-            return Future.succeededFuture();
-        } else {
-            return Future.succeededFuture(Math.min(tenant.getMaxTimeUntilDisconnect(getTypeName()), deviceTtd));
-        }
-    }
-
-    /**
      * Sets the factory to use for creating clients to receive commands.
      *
      * @param factory The factory.
@@ -310,11 +267,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         this.commandConsumerFactory = Objects.requireNonNull(factory);
     }
 
-    /**
-     * Gets the factory used for creating clients to receive commands.
-     *
-     * @return The factory.
-     */
+    @Override
     public final CommandConsumerFactory getCommandConsumerFactory() {
         return this.commandConsumerFactory;
     }
@@ -475,16 +428,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         stopPromise.complete();
     }
 
-    /**
-     * Checks if this adapter is enabled for a given tenant, requiring the tenant itself to be enabled as well.
-     *
-     * @param tenantConfig The tenant to check for.
-     * @return A succeeded future if the given tenant and this adapter are enabled.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}
-     *         containing the 403 Forbidden status code.
-     * @throws NullPointerException if tenant config is {@code null}.
-     */
-    protected final Future<TenantObject> isAdapterEnabled(final TenantObject tenantConfig) {
+    @Override
+    public final Future<TenantObject> isAdapterEnabled(final TenantObject tenantConfig) {
 
         Objects.requireNonNull(tenantConfig);
 
@@ -551,25 +496,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 messageLimitCheckResult).mapEmpty();
     }
 
-    /**
-     * Checks if a tenant's message limit will be exceeded by a given payload.
-     * <p>
-     * This default implementation uses the
-     * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject, long, SpanContext)} method
-     * to verify if the tenant's message limit has been reached.
-     *
-     * @param tenantConfig The tenant to check the message limit for.
-     * @param payloadSize  The size of the message payload in bytes.
-     * @param spanContext The currently active OpenTracing span context that is used to
-     *                    trace the limits verification or {@code null}
-     *                    if no span is currently active.
-     * @return A succeeded future if the message limit has not been reached yet
-     *         or if the limits could not be checked.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}
-     *         containing the 429 Too many requests status code.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    protected Future<Void> checkMessageLimit(final TenantObject tenantConfig, final long payloadSize,
+    @Override
+    public Future<Void> checkMessageLimit(final TenantObject tenantConfig, final long payloadSize,
             final SpanContext spanContext) {
 
         Objects.requireNonNull(tenantConfig);
@@ -740,7 +668,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      * @return Result of the receiver creation.
      */
-    protected final Future<CommandConsumer> createCommandConsumer(
+    public final Future<CommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
@@ -785,27 +713,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return sender.sendCommandResponse(response, context);
     }
 
-    /**
-     * Gets an assertion of a device's registration status.
-     * <p>
-     * Note that this method will also update the last gateway associated with
-     * the given device (if applicable).
-     *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to get the assertion for.
-     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
-     *            <p>
-     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
-     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
-     *            acting on behalf of the device.
-     * @param context The currently active OpenTracing span that is used to
-     *                trace the retrieval of the assertion.
-     * @return A succeeded future containing the assertion or a future
-     *         failed with a {@link ServiceInvocationException} if the
-     *         device's registration status could not be asserted.
-     * @throws NullPointerException if any of tenant or device ID are {@code null}.
-     */
-    protected final Future<RegistrationAssertion> getRegistrationAssertion(
+    @Override
+    public final Future<RegistrationAssertion> getRegistrationAssertion(
             final String tenantId,
             final String deviceId,
             final Device authenticatedDevice,
@@ -968,7 +877,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets default properties for downstream telemetry and event messages.
+     * {@inheritDoc}
      * <p>
      * The returned properties are the properties returned by
      * {@link TelemetryExecutionContext#getDownstreamMessageProperties()} plus
@@ -977,7 +886,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param context The execution context for processing the downstream message.
      * @return The properties.
      */
-    protected final Map<String, Object> getDownstreamMessageProperties(final TelemetryExecutionContext context) {
+    @Override
+    public final Map<String, Object> getDownstreamMessageProperties(final TelemetryExecutionContext context) {
         final Map<String, Object> props = Objects.requireNonNull(context).getDownstreamMessageProperties();
         props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         return props;
@@ -1152,22 +1062,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return sendTtdEvent(tenant, deviceId, authenticatedDevice, 0, context);
     }
 
-    /**
-     * Sends an <em>empty notification</em> containing a given <em>time until disconnect</em> for
-     * a device.
-     *
-     * @param tenant The tenant that the device belongs to, who owns the device.
-     * @param deviceId The device for which the TTD is reported.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param ttd The time until disconnect (seconds).
-     * @param context The currently active OpenTracing span that is used to
-     *                trace the sending of the event.
-     * @return A future indicating the outcome of the operation. The future will be
-     *         succeeded if the TTD event has been sent downstream successfully.
-     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
-     */
-    protected final Future<?> sendTtdEvent(
+    @Override
+    public final Future<?> sendTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,

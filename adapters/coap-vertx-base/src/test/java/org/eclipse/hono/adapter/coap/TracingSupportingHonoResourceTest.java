@@ -76,6 +76,7 @@ public class TracingSupportingHonoResourceTest {
     private TracingSupportingHonoResource resource;
     private TenantClient tenantClient;
     private Endpoint endpoint;
+    private CoapProtocolAdapter adapter;
 
     private static Stream<Code> supportedRequestCodes() {
         return Stream.of(Code.POST, Code.PUT);
@@ -102,8 +103,11 @@ public class TracingSupportingHonoResourceTest {
         });
 
         endpoint = mock(Endpoint.class);
+        adapter = mock(CoapProtocolAdapter.class);
+        when(adapter.getTenantClient()).thenReturn(tenantClient);
+        when(adapter.getTypeName()).thenReturn("adapter");
 
-        resource = new TracingSupportingHonoResource(tracer, "test", "adapter", tenantClient) {
+        resource = new TracingSupportingHonoResource(adapter, tracer, "test") {
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange, final Span span) {

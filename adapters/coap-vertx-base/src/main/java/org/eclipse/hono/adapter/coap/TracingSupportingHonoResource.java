@@ -15,6 +15,7 @@
 package org.eclipse.hono.adapter.coap;
 
 import java.net.HttpURLConnection;
+import java.security.Principal;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -25,7 +26,8 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
@@ -39,6 +41,7 @@ import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 
 /**
@@ -49,28 +52,24 @@ import io.vertx.core.Future;
 public abstract class TracingSupportingHonoResource extends CoapResource {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    final Tracer tracer;
-    final String adapterName;
-    final TenantClient tenantClient;
+    private final Tracer tracer;
+    private final CoapProtocolAdapter adapter;
 
     /**
      * Creates a new resource that supports tracing of request processing.
      *
+     * @param adapter The protocol adapter that this resource is part of.
      * @param tracer The OpenTracing tracer.
      * @param resourceName The resource name.
-     * @param adapterName The name of the protocol adapter that this resource is exposed on.
-     * @param tenantClient The client to use for accessing the Tenant service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public TracingSupportingHonoResource(
+            final CoapProtocolAdapter adapter,
             final Tracer tracer,
-            final String resourceName,
-            final String adapterName,
-            final TenantClient tenantClient) {
+            final String resourceName) {
         super(resourceName);
+        this.adapter = Objects.requireNonNull(adapter);
         this.tracer = Objects.requireNonNull(tracer);
-        this.adapterName = Objects.requireNonNull(adapterName);
-        this.tenantClient = Objects.requireNonNull(tenantClient);
     }
 
     /**
@@ -81,6 +80,71 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     @Override
     public Resource getChild(final String name) {
         return this;
+    }
+
+    /**
+     * Gets the tracer to use for tracking the processing of requests.
+     *
+     * @return The tracer.
+     */
+    protected Tracer getTracer() {
+        return tracer;
+    }
+
+    /**
+     * Gets the protocol adapter that this resource is part of.
+     *
+     * @return The adapter.
+     */
+    protected CoapProtocolAdapter getAdapter() {
+        return adapter;
+    }
+
+    /**
+     * Gets an authenticated device's identity for a CoAP request.
+     *
+     * @param exchange The CoAP exchange with the authenticated device's principal.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the authenticated device can be determined from the CoAP exchange,
+     *         otherwise the future will be failed with a {@link ClientErrorException}.
+     */
+    public static Future<Device> getAuthenticatedDevice(final CoapExchange exchange) {
+
+        final Promise<Device> result = Promise.promise();
+        final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
+        if (peerIdentity instanceof ExtensiblePrincipal) {
+            final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
+            final Device authenticatedDevice = extPrincipal.getExtendedInfo()
+                    .get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_DEVICE, Device.class);
+            if (authenticatedDevice != null) {
+                result.complete(authenticatedDevice);
+            } else {
+                result.fail(new ClientErrorException(
+                        HttpURLConnection.HTTP_UNAUTHORIZED,
+                        "DTLS session does not contain authenticated Device"));
+            }
+        } else {
+            result.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "DTLS session does not contain ExtensiblePrincipal"));
+
+        }
+        return result.future();
+    }
+
+    /**
+     * Gets the authentication identifier of a CoAP request.
+     *
+     * @param exchange The CoAP exchange with the authenticated device's principal.
+     * @return The authentication identifier or {@code null} if it could not be determined.
+     */
+    public static String getAuthId(final CoapExchange exchange) {
+        final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
+        if (!(peerIdentity instanceof ExtensiblePrincipal)) {
+            return null;
+        }
+        final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
+        return extPrincipal.getExtendedInfo().get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
     }
 
     private SpanContext extractSpanContextFromRequest(final OptionSet requestOptions) {
@@ -94,7 +158,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
                 tracer,
                 extractSpanContextFromRequest(exchange.getRequest().getOptions()),
                 exchange.getRequest().getCode().toString(),
-                adapterName)
+                adapter.getTypeName())
                 .withTag("coap.type", exchange.getRequest().getType().name())
                 .withTag(Tags.HTTP_URL.getKey(), exchange.getRequest().getOptions().getUriString())
                 .start();
@@ -214,7 +278,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @return A succeeded future with the given CoAP context.
      */
     protected final Future<CoapContext> applyTraceSamplingPriority(final CoapContext ctx, final Span span) {
-        return tenantClient.get(ctx.getTenantId(), span.context())
+        return adapter.getTenantClient().get(ctx.getTenantId(), span.context())
                 .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, ctx.getAuthId());
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, ctx.getAuthId(), span);

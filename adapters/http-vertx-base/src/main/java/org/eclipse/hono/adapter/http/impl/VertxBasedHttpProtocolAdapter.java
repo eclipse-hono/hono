@@ -93,7 +93,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_HTTP}
      */
     @Override
-    protected String getTypeName() {
+    public String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_HTTP;
     }
 

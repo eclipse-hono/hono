@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_KURA}
      */
     @Override
-    protected String getTypeName() {
+    public String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_KURA;
     }
 

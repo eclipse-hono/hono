@@ -52,7 +52,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_MQTT}
      */
     @Override
-    protected String getTypeName() {
+    public String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_MQTT;
     }
 

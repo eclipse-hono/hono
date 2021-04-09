@@ -126,7 +126,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     @Override
-    protected String getTypeName() {
+    public String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_LORA;
     }
 

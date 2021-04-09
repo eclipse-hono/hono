@@ -135,7 +135,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * {@inheritDoc}
      */
     @Override
-    protected String getTypeName() {
+    public String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_AMQP;
     }
 

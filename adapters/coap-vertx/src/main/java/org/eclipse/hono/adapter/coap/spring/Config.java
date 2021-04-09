@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,14 @@
 package org.eclipse.hono.adapter.coap.spring;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
+import org.eclipse.hono.adapter.coap.CommandResponseResource;
+import org.eclipse.hono.adapter.coap.EventResource;
 import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
+import org.eclipse.hono.adapter.coap.TelemetryResource;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
@@ -79,6 +83,10 @@ public class Config extends AbstractAdapterConfig {
         setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
+        adapter.addResources(Set.of(
+                new TelemetryResource(adapter, getTracer(), vertx()),
+                new EventResource(adapter, getTracer(), vertx()),
+                new CommandResponseResource(adapter, getTracer(), vertx())));
         return adapter;
     }
 

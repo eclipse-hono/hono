@@ -1405,7 +1405,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = new AbstractVertxBasedMqttProtocolAdapter<>() {
 
             @Override
-            protected String getTypeName() {
+            public String getTypeName() {
                 return ADAPTER_TYPE;
             }
 
