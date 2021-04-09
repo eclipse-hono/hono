@@ -12,5 +12,21 @@
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
 
-mvn dependency:list -DexcludeGroupIds=org.eclipse -Pjaeger,metrics-prometheus,build-docker-image,build-native-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > legal/src/main/resources/legal/hono-maven.deps
+DASH_LICENSE_JAR=$1
 
+if [ ! -f "$DASH_LICENSE_JAR" ]; then
+  echo "This script can be used to update the DEPENDENCIES"
+  echo "file with the result of checking the Hono maven"
+  echo "dependencies using the Dash License Tool."
+  echo ""
+  echo "Usage: $0 <org.eclipse.dash.licenses jar path>"
+  exit 1
+fi
+
+HONO_MAVEN_DEPS="legal/src/main/resources/legal/hono-maven.deps"
+DEPENDENCIES="legal/src/main/resources/legal/DEPENDENCIES"
+
+mvn dependency:list -DexcludeGroupIds=org.eclipse -Pjaeger,metrics-prometheus,build-docker-image,build-native-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > $HONO_MAVEN_DEPS
+
+java -jar $DASH_LICENSE_JAR -summary $DEPENDENCIES $HONO_MAVEN_DEPS
+sort -o $DEPENDENCIES $DEPENDENCIES

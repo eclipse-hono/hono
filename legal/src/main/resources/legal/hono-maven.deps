@@ -120,8 +120,8 @@ jakarta.json:jakarta.json-api:jar:1.1.6
 jakarta.transaction:jakarta.transaction-api:jar:1.3.3
 javax.annotation:javax.annotation-api:jar:1.3.2
 javax.xml.bind:jaxb-api:jar:2.2.12
-net.bytebuddy:byte-buddy-agent:jar:1.10.18
-net.bytebuddy:byte-buddy:jar:1.10.18
+net.bytebuddy:byte-buddy-agent:jar:1.10.19
+net.bytebuddy:byte-buddy:jar:1.10.19
 net.i2p.crypto:eddsa:jar:0.3.0
 org.apache.kafka:kafka-clients:jar:2.6.0
 org.apache.logging.log4j:log4j-api:jar:2.13.3
@@ -130,7 +130,7 @@ org.apache.qpid:proton-j:jar:0.33.8
 org.apache.sshd:sshd-common:jar:2.3.0
 org.apache.thrift:libthrift:jar:0.13.0
 org.apiguardian:apiguardian-api:jar:1.1.0
-org.assertj:assertj-core:jar:3.17.2
+org.assertj:assertj-core:jar:3.19.0
 org.checkerframework:checker-qual:jar:2.5.2
 org.graalvm.sdk:graal-sdk:jar:20.3.1
 org.hdrhistogram:HdrHistogram:jar:2.1.12
@@ -151,13 +151,12 @@ org.jetbrains:annotations:jar:13.0
 org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.4.20
 org.jetbrains.kotlin:kotlin-stdlib:jar:1.4.20
 org.jgroups:jgroups:jar:4.2.9.Final
-org.junit.jupiter:junit-jupiter-api:jar:5.7.0
-org.junit.jupiter:junit-jupiter-engine:jar:5.7.0
+org.junit.jupiter:junit-jupiter-engine:jar:5.7.1
 org.junit.platform:junit-platform-commons:jar:1.7.0
 org.junit.platform:junit-platform-engine:jar:1.7.0
 org.latencyutils:LatencyUtils:jar:2.0.3
 org.lz4:lz4-java:jar:1.7.1
-org.mockito:mockito-core:jar:3.6.28
+org.mockito:mockito-core:jar:3.7.7
 org.mongodb:bson:jar:3.10.1
 org.mongodb:mongodb-driver-async:jar:3.10.1
 org.mongodb:mongodb-driver-core:jar:3.10.1
