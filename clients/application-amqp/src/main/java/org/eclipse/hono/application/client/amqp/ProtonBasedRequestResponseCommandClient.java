@@ -165,12 +165,19 @@ final class ProtonBasedRequestResponseCommandClient extends
                 });
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method has been overridden as it is defined as abstract in the parent class and not to be used.
+     *
+     * @throws UnsupportedOperationException if this method is invoked.
+     */
     @Override
     protected RequestResponseResult<DownstreamMessage<AmqpMessageContext>> getResult(final int status,
             final String contentType, final Buffer payload, final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
         // This method is not used but need to be overridden as it is defined as abstract in the parent class
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     private Future<RequestResponseClient<RequestResponseResult<DownstreamMessage<AmqpMessageContext>>>> getOrCreateClient(
