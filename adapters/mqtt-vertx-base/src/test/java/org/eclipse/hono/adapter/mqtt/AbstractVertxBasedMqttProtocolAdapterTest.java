@@ -127,7 +127,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         metrics = mock(MqttAdapterMetrics.class);
 
         this.properties = givenDefaultConfigurationProperties();
-        createClientFactories();
+        createClients();
         prepareClients();
 
         authHandler = mock(AuthHandler.class);

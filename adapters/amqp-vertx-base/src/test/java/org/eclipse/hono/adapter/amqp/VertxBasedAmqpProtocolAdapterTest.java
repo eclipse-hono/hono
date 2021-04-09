@@ -140,7 +140,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         span = TracingMockSupport.mockSpan();
 
         this.properties = givenDefaultConfigurationProperties();
-        createClientFactories();
+        createClients();
         prepareClients();
 
         connectionLimitManager = mock(ConnectionLimitManager.class);

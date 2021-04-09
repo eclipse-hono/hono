@@ -108,13 +108,13 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         when(metrics.startTimer()).thenReturn(Timer.start());
 
         this.properties = givenDefaultConfigurationProperties();
-        createClientFactories();
+        createClients();
 
         adapter = new VertxBasedHttpProtocolAdapter();
         adapter.setConfig(properties);
-        setServiceClients(adapter);
         adapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
         adapter.setMetrics(metrics);
+        setServiceClients(adapter);
 
         vertx.deployVerticle(adapter, ctx.succeeding(deploymentId -> {
             final WebClientOptions options = new WebClientOptions()
@@ -135,7 +135,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         LOG.info("running test case [{}]", testInfo.getDisplayName());
 
+        createClients();
         prepareClients();
+        setServiceClients(adapter);
 
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
@@ -245,6 +247,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testPostTelemetrySucceedsForValidCredentials(final VertxTestContext ctx) {
 
+        givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
         httpClient.post("/telemetry")

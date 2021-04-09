@@ -17,7 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -33,9 +35,7 @@ import java.util.Set;
 
 import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
@@ -46,10 +46,8 @@ import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandEndpoint;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -101,7 +99,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         context = VertxMockSupport.mockContext(vertx);
 
         this.properties = givenDefaultConfigurationProperties();
-        createClientFactories();
+        createClients();
         prepareClients();
 
         currentSpan = mock(Span.class);
@@ -141,16 +139,14 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         givenATelemetrySenderForAnyTenant();
 
         final LoraProvider providerMock = getLoraProviderMock();
-        final HttpContext httpContext = newHttpContext();
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        final CommandConsumerFactory commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(request.getHeader(eq(Constants.HEADER_QOS_LEVEL))).thenReturn(null);
+        final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
+
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
@@ -158,9 +154,9 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         @SuppressWarnings("unchecked")
         final ArgumentCaptor<Map<String, Object>> props = ArgumentCaptor.forClass(Map.class);
         verify(telemetrySender).sendTelemetry(
-                any(TenantObject.class),
-                any(RegistrationAssertion.class),
-                any(QoS.class),
+                argThat(tenant -> TEST_TENANT_ID.equals(tenant.getTenantId())),
+                argThat(assertion -> TEST_DEVICE_ID.equals(assertion.getDeviceId())),
+                eq(QoS.AT_MOST_ONCE),
                 eq(LoraConstants.CONTENT_TYPE_LORA_BASE + TEST_PROVIDER),
                 eq(Buffer.buffer(TEST_PAYLOAD)),
                 props.capture(),
@@ -183,20 +179,21 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         givenATelemetrySenderForAnyTenant();
 
         final LoraProvider providerMock = getLoraProviderMock();
-        final HttpContext httpContext = newHttpContext();
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        final CommandConsumerFactory commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(request.getHeader(eq(Constants.HEADER_QOS_LEVEL))).thenReturn(null);
+        final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.handleProviderRoute(httpContext, providerMock);
 
-        verify(commandConsumerFactory).createCommandConsumer(eq("myTenant"), eq("myLoraGateway"),
-            VertxMockSupport.anyHandler(), eq(null), any());
+        verify(commandConsumerFactory).createCommandConsumer(
+                eq("myTenant"),
+                eq("myLoraGateway"),
+                VertxMockSupport.anyHandler(),
+                isNull(),
+                any());
     }
 
     /**
@@ -209,63 +206,60 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         givenATelemetrySenderForAnyTenant();
 
         final LoraProvider providerMock = getLoraProviderMock();
-        final HttpContext httpContext = newHttpContext();
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        final CommandConsumerFactory commandConsumerFactory = mock(CommandConsumerFactory.class);
-        final TenantClient tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(eq(TEST_TENANT_ID), any())).thenReturn(Future.succeededFuture(mock(TenantObject.class)));
-        when(request.getHeader(eq(Constants.HEADER_QOS_LEVEL))).thenReturn(null);
+
+        final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
+
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
-        adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.handleProviderRoute(httpContext, providerMock);
-        adapter.setTenantClient(tenantClient);
 
         final ArgumentCaptor<Handler<CommandContext>> handlerArgumentCaptor = VertxMockSupport.argumentCaptorHandler();
 
-        verify(commandConsumerFactory).createCommandConsumer(eq(TEST_TENANT_ID),
-            eq(TEST_GATEWAY_ID), handlerArgumentCaptor.capture(), eq(null), any());
+        verify(commandConsumerFactory).createCommandConsumer(
+                eq(TEST_TENANT_ID),
+                eq(TEST_GATEWAY_ID),
+                handlerArgumentCaptor.capture(),
+                isNull(),
+                any());
 
         final Handler<CommandContext> commandHandler = handlerArgumentCaptor.getValue();
         final Command command = mock(Command.class);
         when(command.getTenant()).thenReturn(TEST_TENANT_ID);
         when(command.getDeviceId()).thenReturn(TEST_DEVICE_ID);
         when(command.getGatewayId()).thenReturn(TEST_GATEWAY_ID);
-        when(command.getPayload()).thenReturn(Buffer.buffer("bumlux".getBytes(StandardCharsets.UTF_8)));
+        when(command.getPayload()).thenReturn(Buffer.buffer("bumlux"));
         when(command.isValid()).thenReturn(true);
 
         final CommandContext commandContext = mock(CommandContext.class);
         when(commandContext.getCommand()).thenReturn(command);
         when(commandContext.getTracingSpan()).thenReturn(currentSpan);
 
-        final RegistrationAssertion gatewayRegistration = new RegistrationAssertion(TEST_GATEWAY_ID);
         final CommandEndpoint commandEndpoint = new CommandEndpoint();
         commandEndpoint.setHeaders(Map.of("my-header", "my-header-value"));
         commandEndpoint.setUri("https://my-server.com/commands/{{deviceId}}/send");
+
+        final RegistrationAssertion gatewayRegistration = new RegistrationAssertion(TEST_GATEWAY_ID);
         gatewayRegistration.setCommandEndpoint(commandEndpoint);
 
-        final JsonObject json = new JsonObject();
-        json.put("my-payload", "bumlux");
+        final JsonObject json = new JsonObject().put("my-payload", "bumlux");
         final LoraCommand loraCommand = new LoraCommand(json, "https://my-server.com/commands/deviceId/send");
         when(providerMock.getCommand(any(), any(), any())).thenReturn(loraCommand);
         when(providerMock.getDefaultHeaders()).thenReturn(Map.of("my-provider-header", "my-provider-header-value"));
 
-        final HttpClient httpClient = mock(HttpClient.class);
-        when(vertx.createHttpClient()).thenReturn(httpClient);
-
-        final HttpClientRequest httpClientRequest = mock(HttpClientRequest.class);
-        when(httpClient.postAbs(anyString())).thenReturn(httpClientRequest);
-        when(httpClientRequest.handler(any())).thenReturn(httpClientRequest);
-        when(httpClientRequest.exceptionHandler(any())).thenReturn(httpClientRequest);
-
+        final HttpClientRequest httpClientRequest = mock(HttpClientRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
         doAnswer(invocation -> {
-            final Handler<AsyncResult> callback = invocation.getArgument(1);
+            final Handler<AsyncResult<Void>> callback = invocation.getArgument(1);
             callback.handle(Future.succeededFuture());
             return null;
-        }).when(httpClientRequest).write(anyString(), any(Handler.class));
+        }).when(httpClientRequest).write(anyString(), VertxMockSupport.anyHandler());
+
+        final HttpClient httpClient = mock(HttpClient.class);
+        when(httpClient.postAbs(anyString())).thenReturn(httpClientRequest);
+        when(vertx.createHttpClient()).thenReturn(httpClient);
 
         when(registrationClient.assertRegistration(eq(LoraProtocolAdapterTest.TEST_TENANT_ID),
             eq(LoraProtocolAdapterTest.TEST_GATEWAY_ID), eq(null), any())).thenReturn(Future.succeededFuture(gatewayRegistration));
@@ -276,7 +270,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpClient, times(1)).postAbs("https://my-server.com/commands/deviceId/send");
         verify(httpClientRequest, times(1)).putHeader("my-header", "my-header-value");
         verify(httpClientRequest, times(1)).putHeader("my-provider-header", "my-provider-header-value");
-        verify(httpClientRequest, times(1)).end(eq(json.encode()), any(Handler.class));
+        verify(httpClientRequest, times(1)).end(eq(json.encode()), VertxMockSupport.anyHandler());
     }
 
     /**

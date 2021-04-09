@@ -112,7 +112,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         metrics = mock(HttpAdapterMetrics.class);
 
         this.properties = givenDefaultConfigurationProperties();
-        createClientFactories();
+        createClients();
         prepareClients();
 
         commandConsumer = mock(CommandConsumer.class);

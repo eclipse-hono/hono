@@ -117,7 +117,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         span = TracingMockSupport.mockSpan();
 
         this.properties = givenDefaultConfigurationProperties();
-        createClientFactories();
+        createClients();
         prepareClients();
 
         commandConsumer = mock(CommandConsumer.class);
@@ -1111,7 +1111,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         adapter.setResourceLimitChecks(resourceLimitChecks);
 
         adapter.setTenantClient(tenantClient);
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClients(createMessagingClients());
         adapter.setRegistrationClient(registrationClient);
         if (complete) {
             adapter.setCredentialsClient(credentialsClient);
