@@ -158,7 +158,7 @@ Note that the command given above does not contain the environment variables and
 
 When the Auth Server starts up, it will look for a working variant of tcnative on its classpath and (if found) use it for establishing TLS connections. The service's log file will indicate whether the JVM's default SSL engine or OpenSSL is used.
 
-Using a Docker *volume* instead of a *bind mount* works the same way but requires the use of `volume` as the *type* of the `--mount` parameter. Please refer to the [Docker reference documentation](https://docs.docker.com/edge/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems) for details.
+Using a Docker *volume* instead of a *bind mount* works the same way but requires the use of `volume` as the *type* of the `--mount` parameter. Please refer to the [Docker reference documentation](https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems) for details.
 
 ## Server Name Indication (SNI)
 

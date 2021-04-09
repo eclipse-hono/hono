@@ -141,5 +141,5 @@ For example, you can use other topic names or structures, or you can transform, 
 
 ### Example Code
 
-Hono's [*examples* module](https://github.com/eclipse/hono/tree/master/examples/protocol-adapter-example) contains code for
+Hono's [*examples* module](https://github.com/eclipse/hono/tree/master/examples/protocol-gateway-example) contains code for
 a simple protocol gateway illustrating how devices using a binary TCP based protocol can be connected to Hono's AMQP adapter.

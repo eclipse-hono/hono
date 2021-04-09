@@ -13,7 +13,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   client. Please refer to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration/" %}})
   for details. The new [Command &amp; Control API for Kafka]({{% doclink "/api/command-and-control-kafka/" %}}) defines
   how applications can use Apache Kafka to send command messages to devices.
-  Note that support for Kafka base messaging is still considered an **experimental** feature.
+  Note that support for Kafka based messaging is still considered an **experimental** feature.
 * The Device Registry Management API has been extended now to support an optional unique identifier
   for trust anchors belonging to a tenant. The file, JDBC and MongoDB based device registries
   support this feature. Please refer to the
@@ -23,7 +23,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Added (experimental) Quarkus based variant of the Authentication service.
 * Added (experimental) Quarkus based variant of the CoAP protocol adapter.
 * Added (experimental) Quarkus based variant of the Command Router protocol adapter.
-* The container images for the (experimental) Quarkus based variant of Hono compenents are now being published on
+* The container images for the (experimental) Quarkus based variant of Hono components are now being published on
   Docker Hub as well. The JVM based image names contain a `-quarkus` suffix whereas the native image names contain a
   `-quarkus-native` suffix. Note that the Quarkus based protocol adapter images do **not** support using the Device
   Connection service but require a connection to the Command Router service being configured instead.
@@ -63,7 +63,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Prometheus based resource limit checks can now be configured with a time out for establishing the TCP connection
   to the Prometheus server. This is useful to limit the time it takes to invoke the Prometheus Query API.
   Please refer to the
-  [Protocol Adapter Common Configuration guide]({{% doclink "/adming-guide/common-config/#resource-limits-checker-configuration" %}})
+  [Protocol Adapter Common Configuration guide]({{% doclink "/admin-guide/common-config/#resource-limits-checker-configuration" %}})
   for details.
 
 ### API Changes
@@ -482,7 +482,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `hono-core` module no longer embeds any external classes by default.
   This includes the *OpenTracing API* and *Spring Crypto* classes. You can still
   embed the classes, as in Hono versions 1.2.x and before, by enabling the
-  Maven profile `embed-dependencies` (e.g using the command line switch
+  Maven profile `embed-dependencies` (e.g. using the command line switch
   `-Pembed-dependencies`). By default this profile is not active.
 * The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
   because the Device Registration API does not define a corresponding operation.
@@ -770,7 +770,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### New Features
 
-* A tenant can now be configured with a *max-ttl* which is used as a upper boundary for default
+* A tenant can now be configured with a *max-ttl* which is used as an upper boundary for default
   TTL values configured for devices/tenants. Please refer to the [Tenant API]
   ({{% doclink "/api/tenant#resource-limits-configuration-format" %}}) for details.
   The AMQP, HTTP, MQTT and Kura protocol adapters consider this property when setting a TTL on

@@ -44,7 +44,7 @@ If the *current* time is *after* the *expiration* time, the device should be ass
 
 While it seems to be natural that a device itself indicates when it is ready to receive a command, it may not always be
 possible or desirable to do so.
-A device could e.g. be not capable to specify the value for *ttd* in it's message, or all devices of a particular setup
+A device could e.g. be not capable to specify the value for *ttd* in its message, or all devices of a particular setup
 would always use the same value for *ttd*, so it would not make much sense to provide this value always again.
 Additionally different protocols may or may not let a sender set specific values for a message, so a device using a 
 specific protocol may not be able to provide a value for the *ttd* property at all.

@@ -53,7 +53,7 @@ This chapter describes how Hono can be deployed on Microsoft Azure. It includes:
 - Helm based deployment of Hono to [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
 - Push Hono docker images to an [Azure Container Registry (ACR)](https://azure.microsoft.com/en-us/services/container-registry/).
 - Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as
-  broker for the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}})
+  broker for the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-10-messaging-network" >}})
   instead of a self hosted ActiveMQ Artemis.
 - [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview)
   ensure protected communication between AKS and Azure Service Bus.
@@ -111,7 +111,7 @@ az group deployment create --name HonoBasicInfrastructure --resource-group $reso
 Notes:
 
 - add the following parameter in case you want to opt for the Azure Service Bus as broker in the
-  [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of
+  [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-10-messaging-network" >}}) instead of
   deploying a (self-hosted) ActiveMQ Artemis into AKS: *serviceBus=true*
 - add the following parameter to define the k8s version of the AKS cluster. The default as defined in the
   template [might not be supported](https://docs.microsoft.com/en-us/azure/aks/supported-kubernetes-versions) in your
