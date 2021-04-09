@@ -584,7 +584,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
 
     CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
-        log.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
+        log.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 CommandRouterCommandConsumerFactory.class.getName());
         return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
     }

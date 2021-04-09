@@ -460,7 +460,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}}]",
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 CommandRouterCommandConsumerFactory.class.getName());
         return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
     }

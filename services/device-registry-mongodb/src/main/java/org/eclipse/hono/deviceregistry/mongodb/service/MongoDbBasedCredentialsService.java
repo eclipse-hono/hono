@@ -524,7 +524,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                 resourceVersion,
                                 getCredentialsDto(deviceKey));
                     } else {
-                        LOG.debug("successfully updated credentials for device [tenant: {}, device-id: {}}]",
+                        LOG.debug("successfully updated credentials for device [tenant: {}, device-id: {}]",
                                 deviceKey.getTenantId(), deviceKey.getDeviceId());
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("new document in DB: {}{}", System.lineSeparator(), result.encodePrettily());

@@ -90,7 +90,7 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
     Integer getTimeTillDisconnect();
 
     /**
-     * Gets the identifier to use for correlating a response to it's command.
+     * Gets the identifier to use for correlating a response to its command.
      *
      * @return The identifier or {@code null} if not set.
      */

@@ -8,7 +8,7 @@ environment variables and/or command line options.
 
 {{% note title="Tech preview" %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production. 
-The implementation as well as it's APIs may change with the next version. 
+The implementation as well as its APIs may change with the next version. 
 {{% /note %}}
 
 ## Configure for Kafka based Messaging

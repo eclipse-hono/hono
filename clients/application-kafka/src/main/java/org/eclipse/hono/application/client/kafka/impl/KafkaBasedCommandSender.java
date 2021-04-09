@@ -338,7 +338,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         /**
          * Starts a timer so that after the given timeout value, this promise shall get failed if not completed already.
          *
-         * @param correlationId The identifier to use for correlating a command with it's response.
+         * @param correlationId The identifier to use for correlating a command with its response.
          * @param timeout The timeout duration to use for the timer.
          * @param timeOutHandler The operation to run after this promise got failed as part of a timeout.
          * @param span The active OpenTracing span for this operation. It is not to be closed in this method!

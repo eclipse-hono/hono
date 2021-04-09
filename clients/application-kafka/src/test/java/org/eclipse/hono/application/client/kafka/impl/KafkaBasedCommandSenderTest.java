@@ -163,7 +163,7 @@ public class KafkaBasedCommandSenderTest {
         final String responsePayload = "success";
         final int responseStatus = HttpURLConnection.HTTP_OK;
 
-        // This correlation id is used for both command and it's response.
+        // This correlation id is used for both command and its response.
         commandSender.setCorrelationIdSupplier(() -> correlationId);
 
         //start a command response consumer

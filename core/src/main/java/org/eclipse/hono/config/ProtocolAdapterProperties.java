@@ -227,7 +227,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * timeout.
      *
      * @param tenantIdleTimeout The duration to wait for idle tenants.
-     * @throws NullPointerException if parameter is {@code null}.
+     * @throws NullPointerException if tenantIdleTimeout is {@code null}.
      */
     public void setTenantIdleTimeout(final Duration tenantIdleTimeout) {
         this.tenantIdleTimeout = Objects.requireNonNull(tenantIdleTimeout);
@@ -239,7 +239,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * Setting this property to an empty hashMap will disable mapping for this adapter.
      *
      * @param mapperEndpoints The new hashMap with mapper endpoints
-     * @throws NullPointerException if parameter is {@code null}.
+     * @throws NullPointerException if mapperEndpoints is {@code null}.
      */
     public final void setMapperEndpoints(final Map<String, MapperEndpoint> mapperEndpoints) {
         Objects.requireNonNull(mapperEndpoints);

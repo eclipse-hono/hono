@@ -117,7 +117,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
                     ctx.completeNow();
                 }));
 
-        // VERIFY that the command has been sent and it's properties
+        // VERIFY that the command has been sent and its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
         assertThat(sentMessage.getReplyTo()).endsWith(replyId);
