@@ -12,7 +12,7 @@ corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-
 The adapter supports the following standard configuration options:
 
 * [Common Java VM Options]({{< relref "common-config.md/#java-vm-options" >}})
-* [Common vert.x Options]({{< relref "common-config.md/#vert-x-options" >}})
+* [Common vert.x Options]({{< relref "common-config.md/#vertx-options" >}})
 * [Common Protocol Adapter Options]({{< relref "common-config.md/#protocol-adapter-options" >}})
 * [Monitoring Options]({{< relref "monitoring-tracing-config.md" >}})
 
@@ -23,7 +23,7 @@ The following table provides an overview of the configuration variables and corr
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
 | `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
-| `HONO_HTTP_AUTHENTICATION_REQUIRED`<br>`--hono.http.authenticationRequired` | no | `true` | If set to `true` the protocol adapter requires devices to authenticate when connecting to the adapter. The credentials provided by the device are verified using the configured [Credentials Service]({{< relref "#credentials-service-connection-configuration" >}}). Devices that have failed to authenticate are not allowed to publish any data. |
+| `HONO_HTTP_AUTHENTICATION_REQUIRED`<br>`--hono.http.authenticationRequired` | no | `true` | If set to `true` the protocol adapter requires devices to authenticate when connecting to the adapter. The credentials provided by the device are verified using the configured [Credentials Service]({{< relref "/admin-guide/common-config/#credentials-service-connection-configuration" >}}). Devices that have failed to authenticate are not allowed to publish any data. |
 | `HONO_HTTP_BIND_ADDRESS`<br>`--hono.http.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_HTTP_CERT_PATH`<br>`--hono.http.certPath` | no | - | The absolute path to the PEM file containing the certificate that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_HTTP_KEY_PATH`.<br>Alternatively, the `HONO_HTTP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_HTTP_DEFAULTS_ENABLED`<br>`--hono.http.defaultsEnabled` | no | `true` | If set to `true` the protocol adapter uses *default values* registered for a device to augment messages published by the device with missing information like a content type. In particular, the protocol adapter adds default values registered for the device as (application) properties with the same name to the AMQP 1.0 messages it sends downstream to the AMQP Messaging Network. |

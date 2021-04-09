@@ -11,5 +11,5 @@ type = "page"
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
 YourKit, LLC is the creator of innovative and intelligent tools for profiling Java and .NET applications.
-Take a look at YourKit's leading software products: [YourKit Java Profiler](http://www.yourkit.com/java/profiler/index.jsp)
-and [YourKit .NET Profiler](http://www.yourkit.com/.net/profiler/index.jsp).
+Take a look at YourKit's leading software products: [YourKit Java Profiler](https://www.yourkit.com/java/profiler/)
+and [YourKit .NET Profiler](https://www.yourkit.com/.net/profiler/).

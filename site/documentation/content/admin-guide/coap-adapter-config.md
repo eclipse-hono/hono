@@ -13,7 +13,7 @@ the CoAP protocol handling. It can be run either directly from the command line 
 The adapter supports the following standard configuration options:
 
 * [Common Java VM Options]({{< relref "common-config.md/#java-vm-options" >}})
-* [Common vert.x Options]({{< relref "common-config.md/#vert-x-options" >}})
+* [Common vert.x Options]({{< relref "common-config.md/#vertx-options" >}})
 * [Common Protocol Adapter Options]({{< relref "common-config.md/#protocol-adapter-options" >}})
 * [Monitoring Options]({{< relref "monitoring-tracing-config.md" >}})
 
@@ -24,7 +24,7 @@ The following table provides an overview of the configuration variables and corr
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |
 | :------------------------------------------ | :-------: | :------ | :---------- |
 | `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
-| `HONO_COAP_AUTHENTICATION_REQUIRED`<br>`--hono.coap.authenticationRequired` | no | `true` | If set to `true` the protocol adapter requires devices to authenticate when connecting to the adapter. The credentials provided by the device are verified using the configured [Credentials Service]({{< relref "#credentials-service-connection-configuration" >}}). Devices that fail to authenticate are not allowed to connect to the adapter. |
+| `HONO_COAP_AUTHENTICATION_REQUIRED`<br>`--hono.coap.authenticationRequired` | no | `true` | If set to `true` the protocol adapter requires devices to authenticate when connecting to the adapter. The credentials provided by the device are verified using the configured [Credentials Service]({{< relref "/admin-guide/common-config/#credentials-service-connection-configuration" >}}). Devices that fail to authenticate are not allowed to connect to the adapter. |
 | `HONO_COAP_BIND_ADDRESS`<br>`--hono.coap.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_COAP_CERT_PATH`<br>`--hono.coap.certPath` | no | - | The absolute path to the PEM file containing the certificate that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_COAP_KEY_PATH`.<br>Alternatively, the `HONO_COAP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_COAP_COAP_THREADS`<br>`--hono.coap.coapThreads` | no | 2 | The number of threads to use for processing CoAP message exchanges at the protocol layer. |

@@ -17,7 +17,7 @@ The Command Router component is implemented as a Spring Boot application. It can
 The adapter supports the following standard configuration options:
 
 * [Common Java VM Options]({{< relref "common-config.md/#java-vm-options" >}})
-* [Common vert.x Options]({{< relref "common-config.md/#vert-x-options" >}})
+* [Common vert.x Options]({{< relref "common-config.md/#vertx-options" >}})
 * [Monitoring Options]({{< relref "monitoring-tracing-config.md" >}})
 
 ## Service Configuration

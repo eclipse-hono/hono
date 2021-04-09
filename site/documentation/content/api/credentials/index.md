@@ -50,7 +50,7 @@ The body of the request MUST consist of a single *Data* section containing a UTF
 | :--------------- | :-------: | :--------- | :---------- |
 | *type*           | *yes*     | *string*   | The type of credentials to look up. Potential values include (but are not limited to) `psk`, `x509-cert`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   | The authentication identifier to look up credentials for. |
-| *client-certificate* | *no*  | *string*   | The client certificate the device authenticated with. If present, it MUST be the DER encoding of the (validated) X.509 client certificate as a Base64 encoded byte array and it's subject DN MUST match the *auth-id*. |
+| *client-certificate* | *no*  | *string*   | The client certificate the device authenticated with. If present, it MUST be the DER encoding of the (validated) X.509 client certificate as a Base64 encoded byte array and its subject DN MUST match the *auth-id*. |
 
 The *client-certificate* property MAY be used by the service implementation for auto-provisioning of devices. 
 To do so, the device registry needs to create credentials (and registration data) for the device if they do not already exist. 
