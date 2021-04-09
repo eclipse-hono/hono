@@ -13,12 +13,16 @@
 
 package org.eclipse.hono.adapter.client.command.kafka;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.CommandHandlerWrapper;
@@ -38,12 +42,11 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.admin.KafkaAdminClient;
-import io.vertx.kafka.admin.NewTopic;
 import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -57,16 +60,16 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedInternalCommandConsumer.class);
 
     private static final int NUM_PARTITIONS = 1;
-    private static final short REPLICATION_FACTOR = 1; // TODO use value from adapter configuration instead.
     private static final String CLIENT_NAME = "internal-cmd";
 
     private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
     private final String adapterInstanceId;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
-    private final KafkaAdminClient adminClient;
+    private final Admin adminClient;
 
     private KafkaConsumer<String, Buffer> consumer;
+    private Context context;
 
     /**
      * Creates a consumer.
@@ -94,7 +97,9 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         this.tracer = Objects.requireNonNull(tracer);
 
         final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
-        adminClient = KafkaAdminClient.create(vertx, adminClientConfig);
+        // Vert.x KafkaAdminClient doesn't support creating topics using the broker default replication factor,
+        // therefore use Kafka Admin client directly here
+        adminClient = Admin.create(new HashMap<>(adminClientConfig));
 
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig(CLIENT_NAME);
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
@@ -108,6 +113,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
      * <p>
      * To be used for unit tests.
      *
+     * @param context The vert.x context to run on.
      * @param kafkaAdminClient The Kafka admin client to use.
      * @param kafkaConsumer The Kafka consumer to use.
      * @param adapterInstanceId The adapter instance id.
@@ -116,11 +122,13 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     KafkaBasedInternalCommandConsumer(
-            final KafkaAdminClient kafkaAdminClient,
+            final Context context,
+            final Admin kafkaAdminClient,
             final KafkaConsumer<String, Buffer> kafkaConsumer,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
+        this.context = Objects.requireNonNull(context);
         this.adminClient = Objects.requireNonNull(kafkaAdminClient);
         this.consumer = Objects.requireNonNull(kafkaConsumer);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
@@ -131,6 +139,12 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
     @Override
     public Future<Void> start() {
+        if (context == null) {
+            context = Vertx.currentContext();
+            if (context == null) {
+                return Future.failedFuture(new IllegalStateException("Consumer must be started in a Vert.x context"));
+            }
+        }
         // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
         consumer = consumerCreator.get();
         // trigger creation of adapter specific topic and consumer
@@ -140,7 +154,14 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private Future<Void> createTopic() {
         final Promise<Void> promise = Promise.promise();
         final String topicName = getTopicName();
-        adminClient.createTopics(List.of(new NewTopic(topicName, NUM_PARTITIONS, REPLICATION_FACTOR)), promise.future());
+
+        // create topic with unspecified replication factor - broker "default.replication.factor" should be used
+        final NewTopic newTopic = new NewTopic(topicName, Optional.of(NUM_PARTITIONS), Optional.empty());
+        adminClient.createTopics(List.of(newTopic))
+                .all()
+                .whenComplete((v, ex) -> {
+                    context.runOnContext(v1 -> Optional.ofNullable(ex).ifPresentOrElse(promise::fail, promise::complete));
+                });
         return promise.future()
                 .onSuccess(v -> LOG.debug("created topic [{}]", topicName))
                 .onFailure(thr -> LOG.error("error creating topic [{}]", topicName, thr));
@@ -188,12 +209,17 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         final String topicName = getTopicName();
         final Promise<Void> adminClientClosePromise = Promise.promise();
         LOG.debug("stop: delete topic [{}]", topicName);
-        adminClient.deleteTopics(List.of(topicName), ar -> {
-            if (ar.failed()) {
-                LOG.warn("error deleting topic [{}]", topicName, ar.cause());
-            }
-            adminClient.close(adminClientClosePromise);
-        });
+        adminClient.deleteTopics(List.of(topicName))
+                .all()
+                .whenComplete((v, ex) -> {
+                    if (ex != null) {
+                        LOG.warn("error deleting topic [{}]", topicName, ex);
+                    }
+                    context.executeBlocking(future -> {
+                        adminClient.close();
+                        future.complete();
+                    }, adminClientClosePromise);
+                });
         adminClientClosePromise.future().onComplete(ar -> LOG.debug("admin client closed"));
 
         final Promise<Void> consumerClosePromise = Promise.promise();

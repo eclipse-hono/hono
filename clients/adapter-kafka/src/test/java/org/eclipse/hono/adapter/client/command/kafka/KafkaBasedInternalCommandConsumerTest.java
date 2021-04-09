@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.kafka.clients.admin.Admin;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.CommandHandlers;
 import org.eclipse.hono.client.kafka.HonoTopic;
@@ -37,7 +38,6 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.admin.KafkaAdminClient;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
@@ -57,20 +57,21 @@ public class KafkaBasedInternalCommandConsumerTest {
      */
     @BeforeEach
     public void setUp() {
-        final KafkaAdminClient kafkaAdminClient = mock(KafkaAdminClient.class);
+        final Admin kafkaAdminClient = mock(Admin.class);
         @SuppressWarnings("unchecked")
         final KafkaConsumer<String, Buffer> kafkaConsumer = mock(KafkaConsumer.class);
         final String adapterInstanceId = "adapterInstanceId";
         final Span span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
+        context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers = new CommandHandlers();
         internalCommandConsumer = new KafkaBasedInternalCommandConsumer(
+                context,
                 kafkaAdminClient,
                 kafkaConsumer,
                 adapterInstanceId,
                 commandHandlers,
                 tracer);
-        context = VertxMockSupport.mockContext(mock(Vertx.class));
     }
 
     /**
