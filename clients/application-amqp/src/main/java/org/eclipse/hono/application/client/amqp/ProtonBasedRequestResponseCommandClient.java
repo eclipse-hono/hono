@@ -12,12 +12,16 @@
  */
 package org.eclipse.hono.application.client.amqp;
 
+import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -27,15 +31,19 @@ import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AddressHelper;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * A vertx-proton based client for sending and receiving commands synchronously.
@@ -43,9 +51,9 @@ import io.vertx.core.buffer.Buffer;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">
  *      Command &amp; Control API for AMQP 1.0 Specification</a>
  */
-final class ProtonBasedRequestResponseCommandClient
-        extends AbstractRequestResponseServiceClient<Buffer, BufferResult> {
-
+final class ProtonBasedRequestResponseCommandClient extends
+        AbstractRequestResponseServiceClient<DownstreamMessage<AmqpMessageContext>, RequestResponseResult<DownstreamMessage<AmqpMessageContext>>> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProtonBasedRequestResponseCommandClient.class);
     private int messageCounter;
 
     /**
@@ -68,15 +76,6 @@ final class ProtonBasedRequestResponseCommandClient
     @Override
     protected String getKey(final String tenantId) {
         return String.format("%s-%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected BufferResult getResult(final int status, final String contentType, final Buffer payload,
-            final CacheDirective cacheDirective, final ApplicationProperties applicationProperties) {
-        return BufferResult.from(status, contentType, payload, applicationProperties);
     }
 
     /**
@@ -107,8 +106,14 @@ final class ProtonBasedRequestResponseCommandClient
      *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      */
-    public Future<BufferResult> sendCommand(final String tenantId, final String deviceId, final String command,
-            final String contentType, final Buffer data, final String replyId, final Map<String, Object> properties,
+    public Future<DownstreamMessage<AmqpMessageContext>> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String replyId,
+            final Map<String, Object> properties,
             final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
@@ -119,28 +124,64 @@ final class ProtonBasedRequestResponseCommandClient
 
         return getOrCreateClient(tenantId, replyId)
                 .compose(client -> {
-                    final String messageTargetAddress = AddressHelper
-                            .getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId,
-                                    connection.getConfig());
+                    final String messageTargetAddress = AddressHelper.getTargetAddress(
+                            CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId,
+                            connection.getConfig());
                     return client.createAndSendRequest(command, messageTargetAddress, properties, data, contentType,
-                            this::getRequestResponseResult, currentSpan);
+                            this::mapCommandResponse, currentSpan);
                 })
                 .recover(error -> {
                     Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(error));
                     TracingHelper.logError(currentSpan, error);
                     return Future.failedFuture(error);
                 })
-                .map(bufferResult -> {
-                    setTagsForResult(currentSpan, bufferResult);
-                    if (bufferResult != null && bufferResult.isError()) {
-                        throw StatusCodeMapper.from(bufferResult);
+                .map(result -> {
+                    if (result == null) {
+                        throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST);
+                    } else {
+                        setTagsForResult(currentSpan, result);
+                        if (result.isError()) {
+                            throw StatusCodeMapper.from(result);
+                        }
+                        return result.getPayload();
                     }
-                    return bufferResult;
                 })
                 .onComplete(r -> currentSpan.finish());
     }
 
-    private Future<RequestResponseClient<BufferResult>> getOrCreateClient(final String tenantId, final String replyId) {
+    private RequestResponseResult<DownstreamMessage<AmqpMessageContext>> mapCommandResponse(final Message message,
+            final ProtonDelivery delivery) {
+        final DownstreamMessage<AmqpMessageContext> downStreamMessage = ProtonBasedDownstreamMessage.from(message, delivery);
+
+        return Optional
+                .ofNullable(MessageHelper.getStatus(message))
+                .map(status -> new RequestResponseResult<>(status, downStreamMessage,
+                        CacheDirective.from(MessageHelper.getCacheDirective(message)), null))
+                .orElseGet(() -> {
+                    LOGGER.trace(
+                            "response message has no status code application property [reply-to: {}, correlation ID: {}]",
+                            message.getReplyTo(), message.getCorrelationId());
+                    return null;
+                });
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method has been overridden as it is defined as abstract in the parent class and not to be used.
+     *
+     * @throws UnsupportedOperationException if this method is invoked.
+     */
+    @Override
+    protected RequestResponseResult<DownstreamMessage<AmqpMessageContext>> getResult(final int status,
+            final String contentType, final Buffer payload, final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        // This method is not used but need to be overridden as it is defined as abstract in the parent class
+        throw new UnsupportedOperationException();
+    }
+
+    private Future<RequestResponseClient<RequestResponseResult<DownstreamMessage<AmqpMessageContext>>>> getOrCreateClient(
+            final String tenantId, final String replyId) {
 
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> clientFactory.getOrCreateClient(

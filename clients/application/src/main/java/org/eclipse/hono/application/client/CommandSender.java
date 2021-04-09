@@ -15,7 +15,6 @@ package org.eclipse.hono.application.client;
 import java.util.Map;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Lifecycle;
 
 import io.opentracing.SpanContext;
@@ -25,12 +24,13 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A client for sending commands.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">
- *      Command &amp; Control API for AMQP 1.0 Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">
- *      Command &amp; Control API for Kafka Specification</a>
+ * @param <T> The type of context that messages are being received in.
+ * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/"> Command &amp; Control API for AMQP 1.0
+ *      Specification</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/"> Command &amp; Control API for Kafka
+ *      Specification</a>
  */
-public interface CommandSender extends Lifecycle {
+public interface CommandSender<T extends MessageContext> extends Lifecycle {
 
     /**
      * Sends an async command to a device, i.e. there is no immediate response expected from the device, but
@@ -234,7 +234,7 @@ public interface CommandSender extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      */
-    default Future<BufferResult> sendCommand(
+    default Future<DownstreamMessage<T>> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,
@@ -265,7 +265,7 @@ public interface CommandSender extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      */
-    default Future<BufferResult> sendCommand(
+    default Future<DownstreamMessage<T>> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,
@@ -303,7 +303,7 @@ public interface CommandSender extends Lifecycle {
      *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      */
-    Future<BufferResult> sendCommand(
+    Future<DownstreamMessage<T>> sendCommand(
             String tenantId,
             String deviceId,
             String command,

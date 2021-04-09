@@ -63,7 +63,6 @@ import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.test.VertxTools;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -1030,7 +1029,7 @@ public final class IntegrationTestSupport {
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
      */
-    public Future<BufferResult> sendCommand(
+    public Future<DownstreamMessage<?>> sendCommand(
             final TimeUntilDisconnectNotification notification,
             final String command,
             final String contentType,
@@ -1060,7 +1059,7 @@ public final class IntegrationTestSupport {
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
      */
-    public Future<BufferResult> sendCommand(
+    public Future<DownstreamMessage<?>> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,
@@ -1075,7 +1074,7 @@ public final class IntegrationTestSupport {
 
         LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
         // send the command upstream to the device and receive the command response
-        final Future<BufferResult> sendCommandTracker = applicationClient
+        final Future<? extends DownstreamMessage<?>> sendCommandTracker = applicationClient
                 .sendCommand(tenantId, deviceId, command, contentType, payload, properties)
                 .onComplete(ar -> {
                     vertx.cancelTimer(timerId);
@@ -1083,13 +1082,16 @@ public final class IntegrationTestSupport {
                 });
 
         return CompositeFuture.all(sendCommandTracker, timeOutTracker.future())
-                .map(r -> sendCommandTracker.result())
-                .onSuccess(result -> {
-                    LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
-                            command, payload, result);
-                })
-                .onFailure(error -> {
+                .recover(error -> {
                     LOGGER.debug("could not send command or did not receive a response: {}", error.getMessage());
+                    return Future.failedFuture(error);
+                })
+                .map(ok -> {
+                    final DownstreamMessage<?> response = sendCommandTracker.result();
+                    LOGGER.debug(
+                            "successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
+                            command, payload, response.getPayload());
+                    return response;
                 });
     }
 

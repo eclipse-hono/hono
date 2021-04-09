@@ -63,7 +63,6 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -795,8 +794,8 @@ public abstract class CoapTestBase {
                                     .map(response -> {
                                         ctx.verify(() -> {
                                             assertThat(response.getContentType()).isEqualTo("text/plain");
-                                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
-                                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
+                                            assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
+                                            assertThat(response.getTenantId()).isEqualTo(tenantId);
                                         });
                                         return response;
                                     });

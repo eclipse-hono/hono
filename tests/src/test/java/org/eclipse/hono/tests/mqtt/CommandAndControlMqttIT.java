@@ -39,7 +39,6 @@ import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -257,8 +256,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     IntegrationTestSupport.getSendCommandTimeout())
                     .map(response -> {
                         ctx.verify(() -> {
-                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
-                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
+                            assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
+                            assertThat(response.getTenantId()).isEqualTo(tenantId);
                         });
                         return response;
                     });

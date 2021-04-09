@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -78,7 +79,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      */
     private final String replyToAddress;
     private final SendMessageSampler sampler;
-    private final Map<Object, TriTuple<Promise<R>, Function<Message, R>, Span>> replyMap = new HashMap<>();
+    private final Map<Object, TriTuple<Promise<R>, BiFunction<Message, ProtonDelivery, R>, Span>> replyMap = new HashMap<>();
     private final String requestEndPointName;
     private final String responseEndPointName;
     private final String tenantId;
@@ -339,16 +340,17 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
 
         // the tuple from the reply map contains
         // 1. the handler for processing the response and
-        // 2. the function for mapping the raw AMQP message to the response type
+        // 2. the function for mapping the raw AMQP message and the proton delivery to the response type
         // 3. the Opentracing span covering the execution
-        final TriTuple<Promise<R>, Function<Message, R>, Span> handler = replyMap.remove(message.getCorrelationId());
+        final TriTuple<Promise<R>, BiFunction<Message, ProtonDelivery, R>, Span> handler = replyMap
+                .remove(message.getCorrelationId());
 
         if (handler == null) {
             LOG.debug("discarding unexpected response [reply-to: {}, correlation ID: {}]",
                     replyToAddress, message.getCorrelationId());
             ProtonHelper.rejected(delivery, true);
         } else {
-            final R response = handler.two().apply(message);
+            final R response = handler.two().apply(message, delivery);
             final Span span = handler.three();
             if (response == null) {
                 LOG.debug("discarding malformed response [reply-to: {}, correlation ID: {}]",
@@ -363,7 +365,10 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                     span.log("response from peer accepted");
                 }
                 handler.one().handle(Future.succeededFuture(response));
-                ProtonHelper.accepted(delivery, true);
+                if (!delivery.isSettled()) {
+                    LOG.debug("client provided response handler did not settle message, auto-accepting ...");
+                    ProtonHelper.accepted(delivery, true);
+                }
             }
         }
     }
@@ -503,6 +508,52 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
             final Function<Message, R> responseMapper,
             final Span currentSpan) {
 
+        Objects.requireNonNull(responseMapper);
+
+        return createAndSendRequest(
+                action,
+                address,
+                properties,
+                payload,
+                contentType,
+                (message, delivery) -> responseMapper.apply(message),
+                currentSpan);
+    }
+
+    /**
+     * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method first checks if the sender has any credit left. If not, a failed future is returned immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the returned future,
+     * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
+     * <p>
+     * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
+     * However, the span is never finished by this method.
+     *
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param address The address to send the message to.
+     * @param properties The headers to include in the request message as AMQP application properties.
+     * @param payload The payload to include in the request message as an AMQP Value section.
+     * @param contentType The content type of the payload.
+     * @param responseMapper A function mapping a raw AMQP message and a proton delivery to the response type.
+     * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be failed with a {@link ServerErrorException} if the request cannot be sent to
+     *         the remote service, e.g. because there is no connection to the service or there are no credits
+     *         available for sending the request or the request timed out.
+     * @throws NullPointerException if any of action, response mapper or currentSpan is {@code null}.
+     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     */
+    public final Future<R> createAndSendRequest(
+            final String action,
+            final String address,
+            final Map<String, Object> properties,
+            final Buffer payload,
+            final String contentType,
+            final BiFunction<Message, ProtonDelivery, R> responseMapper,
+            final Span currentSpan) {
+
         Objects.requireNonNull(action);
         Objects.requireNonNull(currentSpan);
         Objects.requireNonNull(responseMapper);
@@ -512,7 +563,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
             MessageHelper.setPayload(request, contentType, payload);
             return sendRequest(request, responseMapper, currentSpan);
         } else {
-             return Future.failedFuture(new ServerErrorException(
+            return Future.failedFuture(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open"));
         }
     }
@@ -527,7 +578,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      * The given span is never finished by this method.
      *
      * @param request The message to send.
-     * @param responseMapper A function mapping a raw AMQP message to the response type.
+     * @param responseMapper A function mapping a raw AMQP message and a proton delivery to the response type.
      * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
      * @return A future indicating the outcome of the operation.
      *         The future will be failed with a {@link ServerErrorException} if the request cannot be sent to
@@ -536,7 +587,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      */
     private Future<R> sendRequest(
             final Message request,
-            final Function<Message, R> responseMapper,
+            final BiFunction<Message, ProtonDelivery, R> responseMapper,
             final Span currentSpan) {
 
         final String requestTargetAddress = Optional.ofNullable(request.getAddress()).orElse(linkTargetAddress);
@@ -568,7 +619,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                 details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
                 currentSpan.log(details);
 
-                final TriTuple<Promise<R>, Function<Message, R>, Span> handler = TriTuple.of(res, responseMapper, currentSpan);
+                final TriTuple<Promise<R>, BiFunction<Message, ProtonDelivery, R>, Span> handler = TriTuple.of(res, responseMapper, currentSpan);
                 TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
                 replyMap.put(correlationId, handler);
 
