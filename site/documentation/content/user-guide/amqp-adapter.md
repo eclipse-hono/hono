@@ -175,11 +175,11 @@ All other combinations are not supported by the adapter and will result in the m
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
-     * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
-     * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
-     * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
-        tenant that the client belongs to.
-     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
+       tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 When a device publishes data to the `telemetry` address, the AMQP adapter automatically determines the device's identity
 and tenant during the authentication process.
@@ -219,11 +219,11 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.p
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
-     * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
-     * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
-     * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
-        tenant that the client belongs to.
-     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
+       tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
 adapter's `HONO_AMQP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -277,11 +277,11 @@ All other combinations are not supported by the adapter and result in the messag
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
-     * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
-     * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
-     * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
-        tenant that the client belongs to.
-     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
+       tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter has been
 configured to require devices to authenticate (which is the default).
@@ -314,11 +314,11 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.u
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
-     * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
-     * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
-     * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
-        tenant that the client belongs to.
-     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
+       tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
 adapter's `HONO_AMQP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -424,11 +424,11 @@ for uploading command responses. All other combinations are not supported by the
   * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
     some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
     be processed. Possible error conditions include:
-     * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
-     * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
-     * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
-        tenant that the client belongs to.
-     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has failed for the
+       tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 ### Examples
 

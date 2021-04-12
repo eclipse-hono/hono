@@ -6,7 +6,7 @@ weight = 329
 The CoAP protocol adapter exposes CoAP based endpoints for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application using [Eclipse Californium&trade;](https://www.eclipse.org/californium) for implementing
+The adapter is implemented as a Spring Boot application using [Eclipse Californium&trade;](https://www.eclipse.org/californium/) for implementing
 the CoAP protocol handling. It can be run either directly from the command line or by means of starting the corresponding
 [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx/) created from it.
 
@@ -81,8 +81,8 @@ The secure port will mostly be required for production scenarios. However, it mi
 In any case, the non-secure port needs to be explicitly enabled by
 
 * explicitly setting `HONO_COAP_AUTHENTICATION_REQUIRED` to `false` and either
-    * explicitly setting `HONO_COAP_INSECURE_PORT` to a valid port number or
-    * implicitly configuring the default insecure CoAP port (5683) by setting `HONO_COAP_INSECURE_PORT_ENABLED` to `true`.
+  * explicitly setting `HONO_COAP_INSECURE_PORT` to a valid port number or
+  * implicitly configuring the default insecure CoAP port (5683) by setting `HONO_COAP_INSECURE_PORT_ENABLED` to `true`.
 
 The protocol adapter issues a warning on the console if `HONO_COAP_INSECURE_PORT` is set to the default secure CoAP port (5684).
 
