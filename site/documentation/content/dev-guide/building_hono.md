@@ -11,7 +11,9 @@ This page provides step by step instructions for getting the source code and bui
 
 #### Docker
 
-Creating Hono's container images using the Hono build process requires a [Docker](http://www.docker.com) daemon running either locally or on another host you have access to. Please follow the instructions on the [Docker web site](http://www.docker.com) to install Docker on your platform.
+Creating Hono's container images using the Hono build process requires a [Docker](https://www.docker.com/) daemon
+running either locally or on another host you have access to.
+Please follow the instructions on the [Docker web site](https://www.docker.com/) to install Docker on your platform.
 
 #### Java
 

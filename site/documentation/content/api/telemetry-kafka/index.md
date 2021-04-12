@@ -81,8 +81,8 @@ The following table provides an overview of the headers a client needs to set on
 
 | Name            | Mandatory       | Type        | Description |
 | :-------------- | :-------------: | :---------- | :---------- |
-| *content-type*  | yes             | *string*    | A content type indicating the type and characteristics of the data contained in the message value as a valid MIME type, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. The value may be set to `application/octet-stream` if the message message value is to be considered *opaque* binary data. See [RFC 2046](http://www.ietf.org/rfc/rfc2046.txt) for details. |
-| *content-encoding* | no           | *string*    | The content encoding as defined in section 3.5 of [RFC 2616](http://www.ietf.org/rfc/rfc2616.txt). |
+| *content-type*  | yes             | *string*    | A content type indicating the type and characteristics of the data contained in the message value as a valid MIME type, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. The value may be set to `application/octet-stream` if the message message value is to be considered *opaque* binary data. See [RFC 2046](https://www.ietf.org/rfc/rfc2046.txt) for details. |
+| *content-encoding* | no           | *string*    | The content encoding as defined in section 3.5 of [RFC 2616](https://www.ietf.org/rfc/rfc2616.txt). |
 | *creation-time* | no              | *long*      | The instant in time (milliseconds since the Unix epoch) when the message has been created. This header is mandatory if *ttd* or *ttl* is set, otherwise, it is optional. |
 | *device_id*     | yes             | *string*    | The identifier of the device that the data in the message value is originating from. |
 | *qos*           | no              | *int*       | The quality of service level of the message. Supported values are `0` for AT MOST ONCE and `1` for AT LEAST ONCE. |

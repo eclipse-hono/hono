@@ -44,7 +44,7 @@ https://www.eclipse.org/projects/handbook/#resources-commit
 
 ## Making your Changes
 
-1. [Fork the repository on GitHub](https://github.com/eclipse/hono#fork-destination-box).
+1. [Fork the repository on GitHub](https://github.com/eclipse/hono/fork).
 2. Create a new *feature branch* for your changes.
 3. Make your changes.
 4. Make sure your code complies with the formatting rules defined by the settings files in the `eclipse` folder.

@@ -196,8 +196,8 @@ Protocol adapters MUST comply with the following rules when verifying credential
 * Credentials that have their *enabled* property set to `false` MUST NOT be used for authentication.
 * Adapters MUST only consider secrets for authentication which
 
-   * have their *not-before* property set to either `null` or the current or a past point in time **and**
-   * have their *not-after* property set to either `null` or the current or a future point in time.
+  * have their *not-before* property set to either `null` or the current or a past point in time **and**
+  * have their *not-after* property set to either `null` or the current or a future point in time.
 
 ## Standard Credential Types
 

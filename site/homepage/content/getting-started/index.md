@@ -438,6 +438,6 @@ In this case you can send a new command or restart the Command Line Client with 
     
 Congratulations. Now you have successfully sent commands to a device and responded to them. 
 For more information on Command &amp; Control refer to [Commands using HTTP]({{% doclink "/user-guide/http-adapter/#specifying-the-time-a-device-will-wait-for-a-response" %}}) 
-and [Commands using MQTT]({{% doclink "/user-guide/mqtt-adapter/#command-control" %}}).
+and [Commands using MQTT]({{% doclink "/user-guide/mqtt-adapter/#command--control" %}}).
 The [Command and Control Concepts]({{% doclink "/concepts/command-and-control/" %}}) page contains sequence diagrams that
 explain this in more detail.
