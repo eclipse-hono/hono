@@ -137,7 +137,7 @@ The `demo-certs/certs` folder contains the following demo keys to be used with c
 
 Hono's individual services are implemented in Java and therefore, by default, use the SSL/TLS engine that comes with the Java Virtual Machine that the services are running on. In case of the Docker images provided by Hono this is the SSL engine of OpenJDK. While the standard SSL engine has the advantage of being a part of the JVM itself and thus being available on every operating system that the JVM is running on without further installation, it provides only limited performance and throughput when compared to native TLS implementations like [OpenSSL](https://www.openssl.org/).
 
-In order to address this problem, the Netty networking library that is used in Hono's components can be configured to employ the OpenSSL instead of the JVM's SSL engine by means of Netty's [Forked Tomcat Native](http://netty.io/wiki/forked-tomcat-native.html) (tcnative) module.
+In order to address this problem, the Netty networking library that is used in Hono's components can be configured to employ the OpenSSL instead of the JVM's SSL engine by means of Netty's [Forked Tomcat Native](https://netty.io/wiki/forked-tomcat-native.html) (tcnative) module.
 
 The tcnative module comes in several flavors, corresponding to the way that the OpenSSL library has been linked in. The statically linked versions include a specific version of OpenSSL (or [BoringSSL](https://boringssl.googlesource.com/) for that matter) and is therefore most easy to use on supported platforms, regardless of whether another version of OpenSSL is already installed or not. In contrast, the dynamically linked variants depend on a particular version of OpenSSL being already installed on the operating system. Both approaches have their pros and cons and Hono therefore does not include tcnative in its Docker images by default, i.e. Hono's services will use the JVM's default SSL engine by default.
 
@@ -146,7 +146,7 @@ The tcnative module comes in several flavors, corresponding to the way that the 
 When starting up any of Hono's Docker images as a container, the JVM will look for additional jar files to include in its classpath in the container's `/opt/hono/extensions` folder. Thus, using a specific variant of tcnative is just a matter of configuring the container to mount a volume or binding a host folder at that location and putting the desired variant of tcnative into the corresponding volume or host folder.r
 Assuming that the Auth Server should be run with the statically linked, BoringSSL based tcnative variant, the following steps are necessary:
 
-1. [Download tcnative](http://netty.io/wiki/forked-tomcat-native.html#how-to-download-netty-tcnative-boringssl-static) matching the platform architecture (*linux-x86_64*).
+1. [Download tcnative](https://netty.io/wiki/forked-tomcat-native.html#how-to-download-netty-tcnative-boringssl-static) matching the platform architecture (*linux-x86_64*).
 2. Put the jar file to a folder on the Docker host, e.g. `/tmp/tcnative`.
 3. Start the Auth Server Docker image mounting the host folder:
 

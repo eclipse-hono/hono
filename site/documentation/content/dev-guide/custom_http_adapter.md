@@ -47,7 +47,7 @@ The route for telemetry data parses the HTTP request, extracts the *tenant* and 
 request URL path, and forwards the message payload to the method `uploadTelemetryMessage()`, provided by the base class.
 
 **NB** Note the Vert.x place holder indicators `:` inside the URL path pattern `/telemetry/:%s/:%s`. Vert.x makes matching 
-place holders available as request parameters. See [Capturing path parameters](http://vertx.io/docs/vertx-web/java/#_capturing_path_parameters) in the Vert.x documentation.
+place holders available as request parameters. See [Capturing path parameters](https://vertx.io/docs/vertx-web/java/#_capturing_path_parameters) in the Vert.x documentation.
 
 The route for events looks very similar to the route for telemetry data. It forwards the event message payload to the `uploadEventMessage()` method.
 
