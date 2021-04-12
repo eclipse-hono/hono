@@ -14,7 +14,10 @@
 package org.eclipse.hono.adapter.client.command.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,12 +28,14 @@ import org.apache.kafka.clients.admin.Admin;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.CommandHandlers;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -83,8 +88,11 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String tenantId = "myTenant";
         final String deviceId = "4711";
 
-        final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId),
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
+        final List<KafkaHeader> headers = List.of(
+                KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId),
+                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
+                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_PARTITION, 0),
+                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_OFFSET, 0L));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
@@ -111,7 +119,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String subject = "subject";
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
-                getHeaders(tenantId, deviceId, subject));
+                getHeaders(tenantId, deviceId, subject, 0L));
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -125,6 +133,39 @@ public class KafkaBasedInternalCommandConsumerTest {
     }
 
     /**
+     * Verifies that the consumer doesn't invoke a matching command handler if the command record
+     * has a partition offset smaller or equal to one of a command that was already handled.
+     */
+    @Test
+    void testHandleDuplicateCommandMessage() {
+        final String tenantId = "myTenant";
+        final String deviceId = "4711";
+        final String subject = "subject";
+
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
+                getHeaders(tenantId, deviceId, subject, 10L));
+
+        // 2nd command - with smaller offset, indicating it is a duplicate
+        final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(deviceId,
+                getHeaders(tenantId, deviceId, subject, 5L));
+
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
+
+        internalCommandConsumer.handleCommandMessage(commandRecord);
+        internalCommandConsumer.handleCommandMessage(commandRecord2);
+
+        final InOrder inOrder = inOrder(commandHandler);
+        final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
+        // first invocation
+        inOrder.verify(commandHandler).handle(commandContextCaptor.capture());
+        assertThat(commandContextCaptor.getValue()).isNotNull();
+        assertThat(commandContextCaptor.getValue().getCommand().isValid()).isTrue();
+        // verify there was no second invocation
+        inOrder.verify(commandHandler, never()).handle(any());
+    }
+
+    /**
      * Verifies that the consumer handles a valid message, targeted at a gateway, by invoking the matching command
      * handler.
      */
@@ -135,7 +176,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String gatewayId = "gw-1";
         final String subject = "subject";
 
-        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(tenantId, deviceId, subject));
+        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(tenantId, deviceId, subject, 0L));
         headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
@@ -166,7 +207,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String subject = "subject";
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
-                getHeaders(tenantId, deviceId, subject));
+                getHeaders(tenantId, deviceId, subject, 0L));
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandHandlers.putCommandHandler(tenantId, deviceId, gatewayId, commandHandler, context);
@@ -182,11 +223,13 @@ public class KafkaBasedInternalCommandConsumerTest {
         assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
 
-    private List<KafkaHeader> getHeaders(final String tenantId, final String deviceId, final String subject) {
+    private List<KafkaHeader> getHeaders(final String tenantId, final String deviceId, final String subject, final long originalPartitionOffset) {
         return List.of(
                 KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId),
                 KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject)
+                KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject),
+                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_PARTITION, 0),
+                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_OFFSET, originalPartitionOffset)
         );
     }
 

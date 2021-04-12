@@ -67,6 +67,10 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final Admin adminClient;
+    /**
+     * Key is the tenant id, value is a Map with partition index as key and offset as value.
+     */
+    private final Map<String, Map<Integer, Long>> lastHandledPartitionOffsetsPerTenant = new HashMap<>();
 
     private KafkaConsumer<String, Buffer> consumer;
     private Context context;
@@ -232,17 +236,30 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
     void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
 
+        // get partition/offset of the command record - related to the tenant-based topic the command was originally received in
+        final Integer commandPartition = KafkaRecordHelper
+                .getHeaderValue(record.headers(), KafkaRecordHelper.HEADER_ORIGINAL_PARTITION, Integer.class)
+                .orElse(null);
+        final Long commandOffset = KafkaRecordHelper
+                .getHeaderValue(record.headers(), KafkaRecordHelper.HEADER_ORIGINAL_OFFSET, Long.class)
+                .orElse(null);
+        if (commandPartition == null || commandOffset == null) {
+            LOG.warn("command record is invalid - missing required original partition/offset headers");
+            return;
+        }
+
         final KafkaBasedCommand command;
         try {
             command = KafkaBasedCommand.fromRoutedCommandRecord(record);
         } catch (final IllegalArgumentException e) {
-            LOG.debug("command record is invalid [tenant-id: {}, device-id: {}]",
+            LOG.warn("command record is invalid [tenant-id: {}, device-id: {}]",
                     KafkaRecordHelper
                             .getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_TENANT_ID, String.class)
                             .orElse(""),
                     KafkaRecordHelper
                             .getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)
-                            .orElse(""), e);
+                            .orElse(""),
+                    e);
             return;
         }
         final CommandHandlerWrapper commandHandler = commandHandlers.getCommandHandler(command.getTenant(),
@@ -260,9 +277,22 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan);
 
         if (commandHandler != null) {
-            LOG.trace("using [{}] for received command [{}]", commandHandler, command);
-            // command.isValid() check not done here - it is to be done in the command handler
-            commandHandler.handleCommand(commandContext);
+            // partition index and offset here are related to the *tenant-based* topic the command was originally received in
+            // therefore they are stored with the tenant as key
+            final Map<Integer, Long> lastHandledPartitionOffsets = lastHandledPartitionOffsetsPerTenant
+                    .computeIfAbsent(command.getTenant(), k -> new HashMap<>());
+            final Long lastHandledOffset = lastHandledPartitionOffsets.get(commandPartition);
+            if (lastHandledOffset != null && commandOffset <= lastHandledOffset) {
+                LOG.debug("ignoring command - record partition offset {} <= last handled offset {} [{}]", commandOffset,
+                        lastHandledOffset, command);
+                TracingHelper.logError(currentSpan, "command record already handled before");
+                commandContext.release();
+            } else {
+                lastHandledPartitionOffsets.put(commandPartition, commandOffset);
+                LOG.trace("using [{}] for received command [{}]", commandHandler, command);
+                // command.isValid() check not done here - it is to be done in the command handler
+                commandHandler.handleCommand(commandContext);
+            }
         } else {
             LOG.info("no command handler found for command [{}]", command);
             TracingHelper.logError(currentSpan, "no command handler found for command");
