@@ -19,6 +19,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -30,6 +31,7 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.core.network.config.NetworkConfig.Keys;
+import org.eclipse.californium.core.observe.ObservationStore;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
@@ -40,8 +42,7 @@ import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.hono.util.Lifecycle;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -67,20 +68,15 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     private static final int MEMORY_PER_CONNECTION = 10_000; // 10KB: expected avg. memory consumption per connection
 
-    /**
-     * A logger shared with subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(getClass());
-
     private final Set<Resource> resourcesToAdd = new HashSet<>();
 
     private CoapServer server;
+    private ObservationStore observationStore;
     private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
     private ApplicationLevelInfoSupplier honoDeviceResolver;
     private AdvancedPskStore pskStore;
-
-    private volatile Endpoint secureEndpoint;
-    private volatile Endpoint insecureEndpoint;
+    private Endpoint secureEndpoint;
+    private Endpoint insecureEndpoint;
 
     /**
      * Sets the service to use for resolving an authenticated CoAP client to a Hono device.
@@ -99,6 +95,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     public final void setPskStore(final AdvancedPskStore pskStore) {
         this.pskStore = Objects.requireNonNull(pskStore);
+    }
+
+    /**
+     * Sets the component to use for storing meta information about the CoAP server's observations.
+     * <p>
+     * If not set, a default in-memory implementation will be used when creating the CoAP server during startup.
+     * @param observationStore The store to use.
+     */
+    public final void setObservationStore(final ObservationStore observationStore) {
+        this.observationStore = observationStore;
     }
 
     /**
@@ -302,8 +308,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         resourcesToAdd.forEach(resource -> {
             log.info("adding resource to CoAP server [name: {}]", resource.getName());
             startingServer.add(new VertxCoapResource(resource, context));
+            if (resource instanceof Lifecycle) {
+                ((Lifecycle) resource).start();
+            }
         });
-        resourcesToAdd.clear();
     }
 
     private void addIdentity(final DtlsConnectorConfig.Builder dtlsConfig) {
@@ -368,6 +376,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
             builder.setNetworkConfig(config);
             builder.setConnector(dtlsConnector);
+            builder.setObservationStore(observationStore);
             return Future.succeededFuture(builder.build());
 
         } catch (final IllegalStateException ex) {
@@ -387,6 +396,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     builder.setInetSocketAddress(new InetSocketAddress(
                             getConfig().getInsecurePortBindAddress(),
                             getConfig().getInsecurePort(getInsecurePortDefaultValue())));
+                    builder.setObservationStore(observationStore);
                     return builder.build();
                 });
     }
@@ -501,12 +511,20 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             log.error("error in preShutdown", e);
         }
 
-        Futures.executeBlocking(vertx, () -> {
-            if (server != null) {
-                server.stop();
-            }
-            return (Void) null;
-        })
+        @SuppressWarnings("rawtypes")
+        final List<Future> stopFutures = resourcesToAdd.stream()
+                .filter(Lifecycle.class::isInstance)
+                .map(Lifecycle.class::cast)
+                .map(Lifecycle::stop)
+                .collect(Collectors.toList());
+        CompositeFuture.join(stopFutures)
+            .otherwiseEmpty()
+            .compose(ok -> Futures.executeBlocking(vertx, () -> {
+                if (server != null) {
+                    server.stop();
+                }
+                return (Void) null;
+            }))
         .compose(ok -> postShutdown())
         .onComplete(stopPromise);
     }

@@ -33,6 +33,7 @@ import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
+import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.auth.Device;
@@ -229,7 +230,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         resource.handlePost(context);
 
         // THEN the device gets a response indicating success
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()));
         // and the message has been forwarded downstream
         assertTelemetryMessageHasBeenSentDownstream(
                 QoS.AT_MOST_ONCE,
@@ -268,7 +269,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         resource.handlePost(context);
 
         // THEN the device gets a response indicating success
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()));
         // and the message has been forwarded downstream
         assertTelemetryMessageHasBeenSentDownstream(
                 QoS.AT_MOST_ONCE,
@@ -315,11 +316,11 @@ public class TelemetryResourceTest extends ResourceTestBase {
                 "device",
                 "text/plain");
         // and the device does not get a response
-        verify(coapExchange, never()).respond(any(Response.class));
+        verify(secureEndpoint, never()).sendResponse(any(Exchange.class), any(Response.class));
         // until the telemetry message has been accepted
         outcome.complete();
 
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()));
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
@@ -485,7 +486,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
                 "device",
                 "text/plain");
         // with no response being sent to the device yet
-        verify(coapExchange, never()).respond(any(Response.class));
+        verify(secureEndpoint, never()).sendResponse(any(Exchange.class), any(Response.class));
 
         // WHEN the telemetry message delivery gets failed with an exception representing a "released" delivery outcome
         sendTelemetryOutcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));

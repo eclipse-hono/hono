@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class TelemetryCoapIT extends CoapTestBase {
+public class TelemetryCoapIT extends CoapPublishTestBase {
 
     private static final String POST_URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;
     private static final String PUT_URI_TEMPLATE = POST_URI + "/%s/%s";

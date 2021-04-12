@@ -30,6 +30,7 @@ import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.Response;
+import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -84,12 +85,12 @@ public class EventResourceTest extends ResourceTestBase {
         // THEN the message is being forwarded downstream
         assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
         // but the device does not get a response
-        verify(coapExchange, never()).respond(any(Response.class));
+        verify(secureEndpoint, never()).sendResponse(any(Exchange.class), any(Response.class));
 
         // until the event has been accepted
         outcome.complete();
 
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()));
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.EVENT),
                 eq("tenant"),

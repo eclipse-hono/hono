@@ -23,7 +23,10 @@ import org.eclipse.hono.adapter.coap.CommandResponseResource;
 import org.eclipse.hono.adapter.coap.EventResource;
 import org.eclipse.hono.adapter.coap.TelemetryResource;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
+import org.eclipse.hono.adapter.coap.lwm2m.LeshanBasedLwM2MRegistrationStore;
+import org.eclipse.hono.adapter.coap.lwm2m.LwM2MResourceDirectory;
 import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
+import org.eclipse.leshan.server.californium.registration.InMemoryRegistrationStore;
 
 /**
  * The Hono CoAP adapter main application class.
@@ -58,6 +61,15 @@ public class Application extends AbstractProtocolAdapterApplication<CoapAdapterP
                 new TelemetryResource(adapter, tracer, vertx),
                 new EventResource(adapter, tracer, vertx),
                 new CommandResponseResource(adapter, tracer, vertx)));
+        if (protocolAdapterProperties.isLwm2mEnabled()) {
+            final var observationStore = new InMemoryRegistrationStore();
+            adapter.setObservationStore(observationStore);
+            final var store = new LeshanBasedLwM2MRegistrationStore(
+                    observationStore,
+                    adapter,
+                    tracer);
+            adapter.addResources(Set.of(new LwM2MResourceDirectory(adapter, store, tracer)));
+        }
         return adapter;
     }
 }

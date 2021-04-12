@@ -45,7 +45,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class EventCoapIT extends CoapTestBase {
+public class EventCoapIT extends CoapPublishTestBase {
 
     private static final String POST_URI = "/" + EventConstants.EVENT_ENDPOINT;
     private static final String PUT_URI_TEMPLATE = POST_URI + "/%s/%s";

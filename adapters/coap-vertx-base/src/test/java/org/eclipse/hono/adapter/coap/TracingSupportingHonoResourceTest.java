@@ -79,11 +79,11 @@ public class TracingSupportingHonoResourceTest {
     private CoapProtocolAdapter adapter;
 
     private static Stream<Code> supportedRequestCodes() {
-        return Stream.of(Code.POST, Code.PUT);
+        return Stream.of(Code.POST, Code.PUT, Code.DELETE);
     }
 
     private static Stream<Code> unsupportedRequestCodes() {
-        return Stream.of(Code.CUSTOM_30, Code.DELETE, Code.FETCH, Code.GET, Code.IPATCH, Code.PATCH);
+        return Stream.of(Code.CUSTOM_30, Code.FETCH, Code.GET, Code.IPATCH, Code.PATCH);
     }
 
     /**

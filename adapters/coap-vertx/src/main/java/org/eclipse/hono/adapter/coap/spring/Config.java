@@ -23,11 +23,14 @@ import org.eclipse.hono.adapter.coap.EventResource;
 import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.TelemetryResource;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
+import org.eclipse.hono.adapter.coap.lwm2m.LeshanBasedLwM2MRegistrationStore;
+import org.eclipse.hono.adapter.coap.lwm2m.LwM2MResourceDirectory;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.leshan.server.californium.registration.InMemoryRegistrationStore;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -87,6 +90,15 @@ public class Config extends AbstractAdapterConfig {
                 new TelemetryResource(adapter, getTracer(), vertx()),
                 new EventResource(adapter, getTracer(), vertx()),
                 new CommandResponseResource(adapter, getTracer(), vertx())));
+        if (adapterProperties().isLwm2mEnabled()) {
+            final var observationStore = new InMemoryRegistrationStore();
+            adapter.setObservationStore(observationStore);
+            final var store = new LeshanBasedLwM2MRegistrationStore(
+                    observationStore,
+                    adapter,
+                    getTracer());
+            adapter.addResources(Set.of(new LwM2MResourceDirectory(adapter, store, getTracer())));
+        }
         return adapter;
     }
 

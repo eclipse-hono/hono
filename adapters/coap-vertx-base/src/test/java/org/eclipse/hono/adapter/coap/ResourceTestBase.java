@@ -21,7 +21,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 
@@ -32,6 +34,8 @@ import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.californium.elements.EndpointContext;
+import org.eclipse.californium.elements.auth.PreSharedKeyIdentity;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.test.ProtocolAdapterMockSupport;
 import org.eclipse.hono.test.TracingMockSupport;
@@ -42,6 +46,7 @@ import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -52,14 +57,15 @@ import io.vertx.core.buffer.Buffer;
 /**
  * Base class for implementing CoAP resource tests.
  */
-abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
+public abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
 
-    CommandConsumer commandConsumer;
-    CoapAdapterMetrics metrics;
-    Span span;
-    CoapProtocolAdapter adapter;
-    CoapAdapterProperties properties;
-    Vertx vertx;
+    protected CommandConsumer commandConsumer;
+    protected CoapAdapterMetrics metrics;
+    protected Span span;
+    protected CoapProtocolAdapter adapter;
+    protected CoapAdapterProperties properties;
+    protected Vertx vertx;
+    protected Endpoint secureEndpoint;
 
     /**
      * Sets up common fixture.
@@ -69,8 +75,10 @@ abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
 
         vertx = mock(Vertx.class);
         metrics = mock(CoapAdapterMetrics.class);
+        when(metrics.startTimer()).thenReturn(mock(Sample.class));
 
         span = TracingMockSupport.mockSpan();
+        secureEndpoint = mock(Endpoint.class);
 
         createClients();
         prepareClients();
@@ -87,20 +95,47 @@ abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
         properties.setAuthenticationRequired(false);
     }
 
-    static CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final Integer contentFormat) {
+    /**
+     * Creates a new CoAP exchange.
+     *
+     * @param payload The payload contained in the CoAP request.
+     * @param requestType The request type.
+     * @param contentFormat The payload's content format.
+     * @return The exchange.
+     */
+    protected CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final Integer contentFormat) {
 
         final OptionSet options = new OptionSet();
         Optional.ofNullable(contentFormat).ifPresent(options::setContentFormat);
         return newCoapExchange(payload, requestType, options);
     }
 
-    static CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final OptionSet options) {
+    /**
+     * Creates a new CoAP exchange.
+     *
+     * @param payload The payload contained in the CoAP request.
+     * @param requestType The request type.
+     * @param options The request options.
+     * @return The exchange.
+     * @throws NullPointerException if request type is {@code null}-
+     */
+    protected CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final OptionSet options) {
+
+        Objects.requireNonNull(requestType);
+
+        final EndpointContext epContext = mock(EndpointContext.class);
+        when(epContext.getPeerAddress()).thenReturn(InetSocketAddress.createUnresolved("localhost", 15000));
+        when(epContext.getPeerIdentity()).thenReturn(new PreSharedKeyIdentity("identity"));
 
         final Request request = mock(Request.class);
         when(request.getType()).thenReturn(requestType);
         when(request.isConfirmable()).thenReturn(requestType == Type.CON);
-        when(request.getOptions()).thenReturn(options);
+        when(request.getOptions()).thenReturn(Optional.ofNullable(options).orElseGet(OptionSet::new));
+        when(request.getSourceContext()).thenReturn(epContext);
+        Optional.ofNullable(payload).ifPresent(b -> when(request.getPayload()).thenReturn(b.getBytes()));
+
         final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        exchange.setEndpoint(secureEndpoint);
         final CoapExchange coapExchange = mock(CoapExchange.class);
         when(coapExchange.advanced()).thenReturn(exchange);
         Optional.ofNullable(payload).ifPresent(b -> when(coapExchange.getRequestPayload()).thenReturn(b.getBytes()));
@@ -117,7 +152,15 @@ abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
         return coapExchange;
     }
 
-    CoapProtocolAdapter givenAnAdapter(final CoapAdapterProperties configuration) {
+    /**
+     * Creates an adapter based on the mock service clients.
+     * <p>
+     * The returned adapter will also be assigned to the <em> adapter</em> field.
+     *
+     * @param configuration The adapter's configuration properties.
+     * @return The adapter.
+     */
+    protected CoapProtocolAdapter givenAnAdapter(final CoapAdapterProperties configuration) {
 
         adapter = mock(CoapProtocolAdapter.class);
         when(adapter.checkMessageLimit(any(TenantObject.class), anyLong(), any())).thenReturn(Future.succeededFuture());
@@ -126,7 +169,7 @@ abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
         when(adapter.getConfig()).thenReturn(configuration);
         when(adapter.getDownstreamMessageProperties(any(TelemetryExecutionContext.class))).thenReturn(new HashMap<>());
         when(adapter.getEventSender(any(TenantObject.class))).thenReturn(eventSender);
-        when(adapter.getInsecureEndpoint()).thenReturn(mock(Endpoint.class));
+        when(adapter.getInsecureEndpoint()).thenReturn(null);
         when(adapter.getMetrics()).thenReturn(metrics);
         when(adapter.getRegistrationAssertion(anyString(), anyString(), any(), (SpanContext) any()))
             .thenAnswer(invocation -> {
@@ -134,7 +177,7 @@ abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
                 final RegistrationAssertion regAssertion = new RegistrationAssertion(deviceId);
                 return Future.succeededFuture(regAssertion);
             });
-        when(adapter.getSecureEndpoint()).thenReturn(mock(Endpoint.class));
+        when(adapter.getSecureEndpoint()).thenReturn(secureEndpoint);
         when(adapter.getTelemetrySender(any(TenantObject.class))).thenReturn(telemetrySender);
         when(adapter.getTenantClient()).thenReturn(tenantClient);
         when(adapter.getTimeUntilDisconnect(any(TenantObject.class), any())).thenCallRealMethod();

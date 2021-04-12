@@ -71,6 +71,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int exchangeLifetime = DEFAULT_EXCHANGE_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
     private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
+    private boolean lwm2mEnabled = false;
 
     /**
      * Gets the regular expression used for splitting up
@@ -387,5 +388,29 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
             throw new IllegalArgumentException("timeout to ack must be at least -1");
         }
         this.timeoutToAck = timeoutToAck;
+    }
+
+    /**
+     * Enables or disables the adapter's support for LwM2M.
+     * <p>
+     * Support for LwM2M is an experimental feature. The exact extent to which LwM2M is supported
+     * may change without prior notice.
+     *
+     * @param enabled {@code true} if the adapter should support LwM2M.
+     */
+    public void setLwm2mEnabled(final boolean enabled) {
+        this.lwm2mEnabled = enabled;
+    }
+
+    /**
+     * Checks if the adapter supports LwM2M.
+     * <p>
+     * Support for LwM2M is an experimental feature. The exact extent to which LwM2M is supported
+     * may change without prior notice.
+     *
+     * @return {@code true} if the adapter supports LwM2M.
+     */
+    public final boolean isLwm2mEnabled() {
+        return lwm2mEnabled;
     }
 }

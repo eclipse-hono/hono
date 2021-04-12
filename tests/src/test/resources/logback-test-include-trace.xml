@@ -27,8 +27,10 @@
   <logger name="org.eclipse.hono.tests.CrudHttpClient" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.amqp" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.coap" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.coap.lwm2m" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.http" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.jms" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.mqtt" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.registry" level="TRACE"/>
+  <logger name="org.eclipse.leshan" level="TRACE"/>
 </included>

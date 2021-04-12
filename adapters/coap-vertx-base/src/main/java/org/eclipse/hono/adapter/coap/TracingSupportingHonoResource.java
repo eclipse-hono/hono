@@ -47,7 +47,7 @@ import io.vertx.core.Promise;
 /**
  * A CoAP resource that supports the tracking of request processing using <em>OpenTracing</em>.
  * <p>
- * This resource supports processing of {@code POST} and {@code PUT} requests only.
+ * This resource supports processing of {@code POST}, {@code PUT} and {@code DELETE} requests only.
  */
 public abstract class TracingSupportingHonoResource extends CoapResource {
 
@@ -168,7 +168,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     /**
      * {@inheritDoc}
      * <p>
-     * This implementation handles POST and PUT requests only.
+     * This implementation handles POST, PUT and DELETE requests only.
      * All other request codes result in a 4.05 response code.
      * <p>
      * For each request, a new OpenTracing {@code Span} is created. The {@code Span} context is
@@ -208,6 +208,11 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             result = createCoapContextForPut(coapExchange, currentSpan)
                 .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
                 .compose(this::handlePut);
+            break;
+        case DELETE:
+            result = createCoapContextForDelete(coapExchange, currentSpan)
+                .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
+                .compose(this::handleDelete);
             break;
         default:
             result = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_METHOD));
@@ -271,6 +276,22 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     }
 
     /**
+     * Creates a CoAP context for an incoming DELETE request.
+     * <p>
+     * This default implementation always returns a future that is failed with a
+     * {@link ServerErrorException} with status code {@value HttpURLConnection#HTTP_NOT_IMPLEMENTED}.
+     *
+     * @param coapExchange The CoAP exchange to process.
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of the created context.
+     * @return A future indicating the outcome of processing the request.
+     *         The future will be succeeded with the created CoAP context,
+     *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     */
+    protected Future<CoapContext> createCoapContextForDelete(final CoapExchange coapExchange, final Span span) {
+        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+    }
+
+    /**
      * Applies the trace sampling priority configured for the tenant associated with the
      * given CoAP context to the given span.
      *
@@ -320,6 +341,22 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     protected Future<?> handlePut(final CoapContext coapContext) {
+        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+    }
+
+    /**
+     * Invoked for an incoming DELETE request.
+     * <p>
+     * This default implementation sends a response back to the client
+     * with response code {@link ResponseCode#NOT_IMPLEMENTED}.
+     *
+     * @param coapContext The CoAP context of the current request.
+     * @return A future indicating the outcome of processing the request.
+     *         The future will be succeeded if the request has been processed successfully
+     *         and a CoAP response has been sent back to the client.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     */
+    protected Future<?> handleDelete(final CoapContext coapContext) {
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 

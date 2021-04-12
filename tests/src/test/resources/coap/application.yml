@@ -15,6 +15,7 @@ hono:
     insecurePort: 5683
     maxConnections: 100
     maxPayloadSize: 2048
+    lwm2mEnabled: true
   messaging:
     name: 'Hono CoAP Adapter'
     host: ${hono.amqp-network.host}
@@ -90,6 +91,10 @@ quarkus:
         level: INFO
       "org.eclipse.hono.adapter":
         level: INFO
+      "org.eclipse.hono.adapter.coap":
+        level: INFO
+      "org.eclipse.hono.adapter.coap.lwm2m":
+        level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
     prefer-native-transport: true
