@@ -10,6 +10,12 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
 
+### Deprecations
+
+* The `org.eclipse.hono.client.ApplicationClientFactory`, `org.eclipse.hono.client.AsyncCommandClient` and
+  `org.eclipse.hono.client.CommandClient` are deprecated.
+  Use `org.eclipse.hono.application.client.ApplicationClient` instead.
+
 ## 1.7.0
 
 ### New Features

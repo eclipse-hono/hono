@@ -23,7 +23,10 @@ import io.vertx.core.buffer.Buffer;
  * A client for sending asynchronous request response commands.
  * <p>
  * An instance of this interface is always scoped to a specific tenant and device.
+ *
+ * @deprecated Use {@code org.eclipse.hono.application.client.ApplicationClient} instead.
  */
+@Deprecated
 public interface AsyncCommandClient extends MessageSender {
 
     /**
