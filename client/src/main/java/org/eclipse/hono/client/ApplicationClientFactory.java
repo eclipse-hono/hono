@@ -25,7 +25,10 @@ import io.vertx.proton.ProtonDelivery;
 
 /**
  * A factory for creating clients for Hono's north bound APIs.
+ *
+ * @deprecated Use {@code org.eclipse.hono.application.client.ApplicationClient} instead.
  */
+@Deprecated
 public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
@@ -66,9 +69,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         The future will fail if the link cannot be established, e.g. because this factory
      *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @deprecated Use {@code org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory} instead.
      */
-    @Deprecated
     Future<MessageConsumer> createTelemetryConsumer(
             String tenantId,
             BiConsumer<ProtonDelivery, Message> telemetryConsumer,
@@ -88,9 +89,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         The future will fail if the link cannot be established, e.g. because this factory
      *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @deprecated Use {@code org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory} instead.
      */
-    @Deprecated
     Future<MessageConsumer> createTelemetryConsumer(
             String tenantId,
             Consumer<Message> telemetryConsumer,
@@ -111,9 +110,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         The future will fail if the link cannot be established, e.g. because this factory
      *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @deprecated Use {@code org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory} instead.
      */
-    @Deprecated
     Future<MessageConsumer> createEventConsumer(
             String tenantId,
             BiConsumer<ProtonDelivery, Message> eventConsumer,
@@ -134,9 +131,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         The future will fail if the link cannot be established, e.g. because this factory
      *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @deprecated Use {@code org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory} instead.
      */
-    @Deprecated
     Future<MessageConsumer> createEventConsumer(
             String tenantId,
             BiConsumer<ProtonDelivery, Message> eventConsumer,
@@ -155,9 +150,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
      *         The future will fail if the link cannot be established, e.g. because this factory
      *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @deprecated Use {@code org.eclipse.hono.application.client.amqp.AmqpApplicationClientFactory} instead.
      */
-    @Deprecated
     Future<MessageConsumer> createEventConsumer(
             String tenantId,
             Consumer<Message> eventConsumer,

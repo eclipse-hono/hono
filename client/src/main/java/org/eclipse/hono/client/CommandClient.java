@@ -25,7 +25,10 @@ import io.vertx.core.buffer.Buffer;
  * <p>
  * An instance of this interface is always scoped to a specific tenant.
  * </p>
+ *
+ * @deprecated Use {@code org.eclipse.hono.application.client.ApplicationClient} instead.
  */
+@Deprecated
 public interface CommandClient extends RequestResponseClient {
 
     /**
