@@ -788,7 +788,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 tenantTracker.result(),
                                 ProcessingOutcome.FORWARDED,
                                 commandContext.getCommand().getPayloadSize(),
-                                context.getTimer());
+                                getMicrometerSample(commandContext));
                     }
 
                     log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",

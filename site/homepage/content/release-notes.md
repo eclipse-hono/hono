@@ -4,6 +4,12 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.8.0 (not released yet)
+
+### Fixes & Enhancements
+
+* The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
+
 ## 1.7.0
 
 ### New Features
