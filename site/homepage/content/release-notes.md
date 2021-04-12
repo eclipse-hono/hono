@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 1.6.2 (not yet released)
+
+### Fixes & Enhancements
+
+* The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
+
 ## 1.6.1
 
 ### Fixes & Enhancements

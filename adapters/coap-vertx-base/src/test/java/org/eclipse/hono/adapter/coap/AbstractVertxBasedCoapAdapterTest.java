@@ -74,6 +74,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Context;
@@ -598,6 +599,74 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
                 any());
+    }
+
+    /**
+     * Verifies that the adapter includes a command in the response to a telemetry request.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadTelemetryWithOneWayCommand(final VertxTestContext ctx) {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        givenAnAdapter(properties);
+        givenATelemetrySenderForAnyTenant();
+
+        // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
+        final Sample commandTimer = mock(Sample.class);
+        final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
+        when(commandContext.get(anyString())).thenReturn(commandTimer);
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), VertxMockSupport.anyHandler(), any(), any()))
+            .thenAnswer(invocation -> {
+                final Handler<CommandContext> consumer = invocation.getArgument(2);
+                consumer.handle(commandContext);
+                return Future.succeededFuture(commandConsumer);
+            });
+
+        // WHEN a device publishes a telemetry message with a hono-ttd parameter
+        final Buffer payload = Buffer.buffer("some payload");
+        final OptionSet options = new OptionSet();
+        options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
+        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
+
+        adapter.uploadTelemetryMessage(context)
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> {
+                    // THEN the message is being forwarded downstream
+                    assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_LEAST_ONCE,
+                            "tenant",
+                            "device",
+                            "text/plain");
+                    // correctly reported
+                    verify(metrics).reportTelemetry(
+                            eq(MetricsTags.EndpointType.TELEMETRY),
+                            eq("tenant"),
+                            any(),
+                            eq(ProcessingOutcome.FORWARDED),
+                            eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                            eq(payload.length()),
+                            eq(TtdStatus.COMMAND),
+                            any());
+                    // and the device gets a response which contains a (one-way) command
+                    verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()
+                            && CommandConstants.COMMAND_ENDPOINT.equals(res.getOptions().getLocationPathString())
+                            && res.getOptions().getLocationQueryString().endsWith("=doThis")
+                            && res.getPayloadSize() == 0));
+                    verify(metrics).reportCommand(
+                            eq(Direction.ONE_WAY),
+                            eq("tenant"),
+                            any(),
+                            eq(ProcessingOutcome.FORWARDED),
+                            eq(0),
+                            eq(commandTimer));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
