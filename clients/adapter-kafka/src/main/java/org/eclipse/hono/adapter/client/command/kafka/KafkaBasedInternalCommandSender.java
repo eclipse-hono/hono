@@ -94,6 +94,10 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
                 .ifPresent(id -> headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA,
                         command.getGatewayId())));
 
+        headers.add(KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_PARTITION,
+                command.getRecord().partition()));
+        headers.add(KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_OFFSET,
+                command.getRecord().offset()));
         return headers;
     }
 }

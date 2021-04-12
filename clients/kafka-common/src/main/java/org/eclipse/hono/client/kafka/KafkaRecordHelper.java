@@ -37,6 +37,16 @@ public final class KafkaRecordHelper {
      * The name of the boolean Kafka record header that defines whether a response is required for the command.
      */
     public static final String HEADER_RESPONSE_REQUIRED = "response-required";
+    /**
+     * The name of the Integer Kafka record header that contains the index of the tenant topic partition
+     * that a command record was originally stored in.
+     */
+    public static final String HEADER_ORIGINAL_PARTITION = "orig-partition";
+    /**
+     * The name of the Long Kafka record header that contains the offset in the tenant topic partition
+     * that a command record was originally stored in.
+     */
+    public static final String HEADER_ORIGINAL_OFFSET = "orig-offset";
 
     private KafkaRecordHelper() {
     }
