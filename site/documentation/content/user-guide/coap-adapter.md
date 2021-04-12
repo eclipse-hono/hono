@@ -17,7 +17,7 @@ The adapter tries to authenticate the device using these mechanisms in the follo
 ### PSK
 
 The *identity* provided in the ClientKeyExchange must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
-The adapter performs the handshake using the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config/#credentials-service-connection-configuration" >}})
+The adapter performs the handshake using the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
 has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record
 with the *tenant* and *auth-id* provided by the device in the *identity* and `psk` as the *type* of secret as query parameters.
 

@@ -25,7 +25,7 @@ The AMQP adapter supports authenticating clients using a *username* and *passwor
 when connecting to the AMQP adapter. The *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`.
 
 The adapter verifies the credentials provided by the client against the credentials that the
-[configured Credentials service]({{< relref "/admin-guide/common-config/#credentials-service-connection-configuration" >}}) has on record for the client.
+[configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}}) has on record for the client.
 If the credentials match, the client device can proceed to publish messages to Hono.
 
 The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords.

@@ -36,7 +36,7 @@ request payload.
 When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet
 it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
 The adapter verifies the credentials provided by the client against the credentials that the
-[configured Credentials service]({{< relref "/admin-guide/common-config/#credentials-service-connection-configuration" >}}) has on record for the client.
+[configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}}) has on record for the client.
 The adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the *tenant* and *auth-id* provided
 by the client in the *username*, `hashed-password` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
 
