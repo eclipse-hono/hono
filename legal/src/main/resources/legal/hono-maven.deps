@@ -132,6 +132,7 @@ org.apache.thrift:libthrift:jar:0.13.0
 org.apiguardian:apiguardian-api:jar:1.1.0
 org.assertj:assertj-core:jar:3.19.0
 org.checkerframework:checker-qual:jar:2.5.2
+org.flywaydb:flyway-core:jar:7.3.2
 org.graalvm.sdk:graal-sdk:jar:20.3.1
 org.hdrhistogram:HdrHistogram:jar:2.1.12
 org.infinispan:infinispan-client-hotrod:jar:11.0.9.Final
