@@ -248,12 +248,9 @@ public class KafkaBasedCommandSenderTest {
 
         // This correlation id is used for both command and its response.
         commandSender.setCorrelationIdSupplier(() -> correlationId);
+        commandSender.setKafkaConsumerSupplier(config -> KafkaConsumer.create(vertx, mockConsumer));
 
         context.runOnContext(v -> {
-            // start a command response consumer
-            commandSender.setCommandResponseConsumerFactory((msgHandler) -> KafkaBasedDownstreamMessageConsumer
-                    .create(tenantId, HonoTopic.Type.COMMAND_RESPONSE, KafkaConsumer.create(vertx, mockConsumer),
-                            consumerConfig, msgHandler, t -> {}));
             // Send a command to the device
             commandSender.sendCommand(tenantId, deviceId, command, null, Buffer.buffer("test"), headerProperties)
                     .onComplete(ar -> {

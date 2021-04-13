@@ -69,15 +69,17 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
 
     private final KafkaConsumerConfigProperties consumerConfig;
-    private Function<Handler<DownstreamMessage<KafkaMessageContext>>, Future<MessageConsumer>> commandResponseConsumerFactory;
-    // The tenant identifiers are stored as keys in the map. The message consumers which are used to receive command
-    // responses for the tenant mentioned in the key are stored as values.
+    /**
+     * Key is the tenant identifier, value the corresponding message consumer for receiving the command responses.
+     */
     private final ConcurrentHashMap<String, MessageConsumer> commandResponseSubscriptions = new ConcurrentHashMap<>();
-    // The tenant identifiers are stored as keys in the map. The value is an another map with correlation ids as keys
-    // and expiring command promises as values. This correlation ids are used to correlate the response messages with 
-    // that of the command.
+    /**
+     * Key is the tenant identifier, value is a map with correlation ids as keys and expiring command promises as values.
+     * These correlation ids are used to correlate the response messages with the sent commands.
+     */
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, ExpiringCommandPromise>> pendingCommandResponses = new ConcurrentHashMap<>();
     private Supplier<String> correlationIdSupplier = () -> UUID.randomUUID().toString();
+    private Function<Map<String, String>, KafkaConsumer<String, Buffer>> kafkaConsumerSupplier;
     private final Vertx vertx;
 
     /**
@@ -101,6 +103,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         super(producerFactory, "command-sender", producerConfig, tracer);
         this.vertx = Objects.requireNonNull(vertx);
         this.consumerConfig = Objects.requireNonNull(consumerConfig);
+        kafkaConsumerSupplier = config -> KafkaConsumer.create(vertx, config);
     }
 
     @SuppressWarnings("rawtypes")
@@ -226,16 +229,20 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                 .onComplete(o -> span.finish());
     }
 
-    // visible for testing
-    void setCommandResponseConsumerFactory(
-            final Function<Handler<DownstreamMessage<KafkaMessageContext>>, Future<MessageConsumer>> commandResponseConsumerFactory) {
-        this.commandResponseConsumerFactory = commandResponseConsumerFactory;
+    /**
+     * To be used for unit tests.
+     * @param kafkaConsumerSupplier The KafkaConsumer supplier with the configuration as parameter.
+     */
+    void setKafkaConsumerSupplier(final Function<Map<String, String>, KafkaConsumer<String, Buffer>> kafkaConsumerSupplier) {
+        this.kafkaConsumerSupplier = Objects.requireNonNull(kafkaConsumerSupplier);
     }
 
-    // visible for testing
+    /**
+     * To be used for unit tests.
+     * @param correlationIdSupplier The supplier of a correlation id.
+     */
     void setCorrelationIdSupplier(final Supplier<String> correlationIdSupplier) {
-        Objects.requireNonNull(correlationIdSupplier);
-        this.correlationIdSupplier = correlationIdSupplier;
+        this.correlationIdSupplier = Objects.requireNonNull(correlationIdSupplier);
     }
 
     private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
@@ -270,16 +277,22 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
 
     private Handler<DownstreamMessage<KafkaMessageContext>> getCommandResponseHandler(final String tenantId) {
         return message -> {
-            if (message.getCorrelationId() != null) {
+            if (message.getCorrelationId() == null) {
+                LOGGER.trace("ignoring received command response - no correlation id set [tenant: {}]", tenantId);
+                return;
+            }
+            final var pendingResponsesForTenant = pendingCommandResponses.get(tenantId);
+            if (pendingResponsesForTenant != null && !pendingResponsesForTenant.isEmpty()) {
                 // if the correlation id of the received response matches with that of the command
-                Optional.ofNullable(pendingCommandResponses.get(tenantId))
-                        .map(ids -> ids.remove(message.getCorrelationId()))
+                Optional.ofNullable(pendingResponsesForTenant.remove(message.getCorrelationId()))
                         .ifPresentOrElse(
                                 expiringCommandPromise -> expiringCommandPromise
                                         .tryCompleteAndCancelTimer(mapResponseResult(message)),
-                                () -> LOGGER.trace(
-                                        "ignoring received command response [correlation-id: {}] as there is no matching correlation id found",
-                                        message.getCorrelationId()));
+                                () -> LOGGER.trace("ignoring received command response - no response pending for correlation id [{}], tenant [{}]",
+                                        message.getCorrelationId(), tenantId));
+            } else {
+                LOGGER.trace("ignoring received command response - no responses pending for tenant [correlation-id: {}, tenant: {}]",
+                        message.getCorrelationId(), tenantId);
             }
         };
     }
@@ -308,47 +321,41 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     }
 
     private Future<Void> subscribeForCommandResponse(final String tenantId, final Span span) {
-        final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler = getCommandResponseHandler(tenantId);
-
         if (commandResponseSubscriptions.get(tenantId) != null) {
             LOGGER.debug("command response consumer already exists for tenant [{}]", tenantId);
             span.log("command response consumer already exists");
             return Future.succeededFuture();
-        } else {
-            final Map<String, String> consumerConfig = this.consumerConfig
-                    .getConsumerConfig(HonoTopic.Type.COMMAND_RESPONSE.toString());
-            final String autoOffsetResetConfigValue = consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG);
-            //Ensure that 'auto.offset.reset' is always set to 'latest'.
-            if (autoOffsetResetConfigValue != null && !autoOffsetResetConfigValue.equals("latest")) {
-                LOGGER.warn("[auto.offset.reset] value is set to other than [latest]. It will be ignored and internally set to [latest]");
-            }
-            consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-            // Use a unique group-id so that all command responses for this tenant are received by this consumer.
-            // Thereby the responses can be correlated with the command that has been sent.
-            consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, tenantId + "-" + UUID.randomUUID());
-
-            return Optional.ofNullable(commandResponseConsumerFactory)
-                    .map(t -> t.apply(messageHandler))
-                    .orElseGet(
-                            () -> KafkaBasedDownstreamMessageConsumer.create(
-                                    tenantId,
-                                    HonoTopic.Type.COMMAND_RESPONSE,
-                                    KafkaConsumer.create(vertx, consumerConfig),
-                                    this.consumerConfig,
-                                    messageHandler,
-                                    t -> LOGGER.debug("closed consumer for tenant [{}]", tenantId)))
-                    .recover(error -> {
-                        LOGGER.debug("error creating command response consumer for tenant [{}]", tenantId, error);
-                        TracingHelper.logError(span, "error creating command response consumer", error);
-                        return Future.failedFuture(error);
-                    })
-                    .map(consumer -> {
-                        LOGGER.debug("created command response consumer for tenant [{}]", tenantId);
-                        span.log("created command response consumer");
-                        commandResponseSubscriptions.put(tenantId, consumer);
-                        return null;
-                    });
         }
+        final Map<String, String> consumerConfig = this.consumerConfig
+                .getConsumerConfig(HonoTopic.Type.COMMAND_RESPONSE.toString());
+        final String autoOffsetResetConfigValue = consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG);
+        //Ensure that 'auto.offset.reset' is always set to 'latest'.
+        if (autoOffsetResetConfigValue != null && !autoOffsetResetConfigValue.equals("latest")) {
+            LOGGER.warn("[auto.offset.reset] value is set to other than [latest]. It will be ignored and internally set to [latest]");
+        }
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        // Use a unique group-id so that all command responses for this tenant are received by this consumer.
+        // Thereby the responses can be correlated with the command that has been sent.
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, tenantId + "-" + UUID.randomUUID());
+
+        return KafkaBasedDownstreamMessageConsumer
+                .create(tenantId,
+                        HonoTopic.Type.COMMAND_RESPONSE,
+                        kafkaConsumerSupplier.apply(consumerConfig),
+                        this.consumerConfig,
+                        getCommandResponseHandler(tenantId),
+                        t -> LOGGER.debug("closed consumer for tenant [{}]", tenantId))
+                .recover(error -> {
+                    LOGGER.debug("error creating command response consumer for tenant [{}]", tenantId, error);
+                    TracingHelper.logError(span, "error creating command response consumer", error);
+                    return Future.failedFuture(error);
+                })
+                .map(consumer -> {
+                    LOGGER.debug("created command response consumer for tenant [{}]", tenantId);
+                    span.log("created command response consumer");
+                    commandResponseSubscriptions.put(tenantId, consumer);
+                    return null;
+                });
     }
 
     /**
