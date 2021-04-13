@@ -26,14 +26,16 @@ import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
-import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -42,26 +44,34 @@ import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Context;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
+import io.vertx.kafka.client.serialization.BufferSerializer;
 
 /**
  * Tests verifying behavior of {@link KafkaBasedCommandSender}.
  *
  */
 @ExtendWith(VertxExtension.class)
-// Sending command (request/response pattern) requires slightly higher timeout in slower environments.
-@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class KafkaBasedCommandSenderTest {
+
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandSenderTest.class);
+
     private KafkaBasedCommandSender commandSender;
     private KafkaConsumerConfigProperties consumerConfig;
+    private KafkaProducerConfigProperties producerConfig;
     private MockProducer<String, Buffer> mockProducer;
     private MockConsumer<String, Buffer> mockConsumer;
     private String tenantId;
@@ -76,18 +86,18 @@ public class KafkaBasedCommandSenderTest {
      */
     @BeforeEach
     void setUp(final Vertx vertx) {
-        final KafkaProducerConfigProperties producerConfig;
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory;
-
         this.vertx = vertx;
         consumerConfig = new KafkaConsumerConfigProperties();
         mockConsumer = new MockConsumer<>(OffsetResetStrategy.LATEST);
         producerConfig = new KafkaProducerConfigProperties();
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
-        mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        producerFactory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
 
-        commandSender = new KafkaBasedCommandSender(vertx, consumerConfig, producerFactory, producerConfig,
+        mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        commandSender = new KafkaBasedCommandSender(
+                vertx,
+                consumerConfig,
+                KafkaClientUnitTestHelper.newProducerFactory(mockProducer),
+                producerConfig,
                 NoopTracerFactory.create());
         tenantId = UUID.randomUUID().toString();
         deviceId = UUID.randomUUID().toString();
@@ -157,44 +167,68 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendCommandAndReceiveResponse(final VertxTestContext ctx) {
+        final Context context = vertx.getOrCreateContext();
+        final Promise<Void> onProducerRecordSentPromise = Promise.promise();
+        mockProducer = new MockProducer<>(true, new StringSerializer(), new BufferSerializer()) {
+            @Override
+            public synchronized java.util.concurrent.Future<RecordMetadata> send(final ProducerRecord<String, Buffer> record,
+                    final Callback callback) {
+                return super.send(record, (metadata, exception) -> {
+                    callback.onCompletion(metadata, exception);
+                    context.runOnContext(v -> { // decouple from current execution in order to run after the "send" result handler
+                        onProducerRecordSentPromise.complete();
+                    });
+                });
+            }
+        };
+        commandSender = new KafkaBasedCommandSender(
+                vertx,
+                consumerConfig,
+                KafkaClientUnitTestHelper.newProducerFactory(mockProducer),
+                producerConfig,
+                NoopTracerFactory.create());
+
         final Map<String, Object> headerProperties = new HashMap<>();
         final String command = "setVolume";
         final String correlationId = UUID.randomUUID().toString();
         headerProperties.put("appKey", "appValue");
         final String responsePayload = "success";
         final int responseStatus = HttpURLConnection.HTTP_OK;
+        final ConsumerRecord<String, Buffer> commandResponseRecord = commandResponseRecord(tenantId,
+                deviceId, correlationId, responseStatus, Buffer.buffer(responsePayload));
+        final String responseTopic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
+        final TopicPartition responseTopicPartition = new TopicPartition(responseTopic, 0);
+        onProducerRecordSentPromise.future().onComplete(ar -> {
+            LOG.debug("producer record sent, add command response record to mockConsumer");
+            // Send a command response with the same correlation id as that of the command
+            mockConsumer.updateBeginningOffsets(Map.of(responseTopicPartition, 0L));
+            mockConsumer.updateEndOffsets(Map.of(responseTopicPartition, 0L));
+            mockConsumer.rebalance(Collections.singletonList(responseTopicPartition));
+            mockConsumer.addRecord(commandResponseRecord);
+        });
 
         // This correlation id is used for both command and its response.
         commandSender.setCorrelationIdSupplier(() -> correlationId);
 
-        //start a command response consumer
-        commandSender.setCommandResponseConsumerFactory((msgHandler) -> KafkaBasedDownstreamMessageConsumer
-                        .create(tenantId, HonoTopic.Type.COMMAND_RESPONSE, KafkaConsumer.create(vertx, mockConsumer),
-                                consumerConfig, msgHandler, t -> {})
-                        .onSuccess(ok -> {
-                            // Send a command response with the same correlation id as that of the command
-                            final ConsumerRecord<String, Buffer> commandResponseRecord = commandResponseRecord(tenantId,
-                                    deviceId, correlationId, responseStatus, Buffer.buffer(responsePayload));
-                            final String responseTopic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
-                            final TopicPartition responseTopicPartition = new TopicPartition(responseTopic, 0);
-                            mockConsumer.updateBeginningOffsets(Map.of(responseTopicPartition, 0L));
-                            mockConsumer.updateEndOffsets(Map.of(responseTopicPartition, 0L));
-                            mockConsumer.rebalance(Collections.singletonList(responseTopicPartition));
-                            mockConsumer.addRecord(commandResponseRecord);
-                        }));
-        // Send a command to the device
-        commandSender.sendCommand(tenantId, deviceId, command, null, Buffer.buffer("test"), headerProperties)
-                .onComplete(ctx.succeeding(response -> {
-                    ctx.verify(() -> {
-                        // Verify the command response that has been received
-                        assertThat(response.getDeviceId()).isEqualTo(deviceId);
-                        assertThat(response.getStatus()).isEqualTo(responseStatus);
-                        assertThat(response.getPayload().toString()).isEqualTo(responsePayload);
-                    });
-                    ctx.completeNow();
-                    mockConsumer.close();
-                    commandSender.stop();
-                }));
+        context.runOnContext(v -> {
+            // start a command response consumer
+            commandSender.setCommandResponseConsumerFactory((msgHandler) -> KafkaBasedDownstreamMessageConsumer
+                    .create(tenantId, HonoTopic.Type.COMMAND_RESPONSE, KafkaConsumer.create(vertx, mockConsumer),
+                            consumerConfig, msgHandler, t -> {}));
+            // Send a command to the device
+            commandSender.sendCommand(tenantId, deviceId, command, null, Buffer.buffer("test"), headerProperties)
+                    .onComplete(ctx.succeeding(response -> {
+                        ctx.verify(() -> {
+                            // Verify the command response that has been received
+                            assertThat(response.getDeviceId()).isEqualTo(deviceId);
+                            assertThat(response.getStatus()).isEqualTo(responseStatus);
+                            assertThat(response.getPayload().toString()).isEqualTo(responsePayload);
+                        });
+                        ctx.completeNow();
+                        mockConsumer.close();
+                        commandSender.stop();
+                    }));
+        });
     }
 
     private ConsumerRecord<String, Buffer> commandResponseRecord(final String tenantId, final String deviceId,
