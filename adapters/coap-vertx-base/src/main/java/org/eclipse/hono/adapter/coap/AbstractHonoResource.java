@@ -45,6 +45,8 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -68,6 +70,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
     private static final String KEY_TIMER_ID = "timerId";
     private static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoResource.class);
 
     private final Vertx vertx;
 
@@ -353,7 +356,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 getMicrometerSample(commandContext));
                     }
 
-                    log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                    LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                             tenantId, deviceId, endpoint.getCanonicalName());
                     getAdapter().getMetrics().reportTelemetry(
                             endpoint,
@@ -371,7 +374,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
                 }).recover(t -> {
 
-                    log.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                    LOG.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
                             tenantId, deviceId, endpoint.getCanonicalName(), t);
                     final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
                             ? commandConsumerTracker.result().close(currentSpan.context())
@@ -425,7 +428,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
         }
 
         currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
-        log.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
+        LOG.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                 command.getName(), command.getRequestId(), command.getTenant(), command.getGatewayOrDeviceId());
         commandContext.getTracingSpan().log("forwarding command to device in CoAP response");
 
@@ -536,7 +539,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 responseReady.handle(Future.succeededFuture());
                             });
                 } else {
-                    log.debug("waiting time for command has elapsed or another command has already been processed [tenantId: {}, deviceId: {}]",
+                    LOG.debug("waiting time for command has elapsed or another command has already been processed [tenantId: {}, deviceId: {}]",
                             tenantObject.getTenantId(), deviceId);
                     getAdapter().getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -558,7 +561,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                         ProcessingOutcome.UNPROCESSABLE,
                         command.getPayloadSize(),
                         commandSample);
-                log.debug("command message is invalid: {}", command);
+                LOG.debug("command message is invalid: {}", command);
                 commandContext.reject("malformed command message");
             }
         };
@@ -635,7 +638,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
         final Long timerId = vertx.setTimer(delaySecs * 1000L, id -> {
 
-            log.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
+            LOG.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
 
             if (requestProcessed.compareAndSet(false, true)) {
                 // no command to be sent,
@@ -645,11 +648,11 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                 responseReady.handle(Future.succeededFuture());
             } else {
                 // a command has been sent to the device already
-                log.trace("response already sent, nothing to do ...");
+                LOG.trace("response already sent, nothing to do ...");
             }
         });
 
-        log.trace("adding command reception timer [id: {}]", timerId);
+        LOG.trace("adding command reception timer [id: {}]", timerId);
 
         context.put(KEY_TIMER_ID, timerId);
     }
@@ -659,9 +662,9 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
         final Long timerId = context.get(KEY_TIMER_ID);
         if (timerId != null && timerId >= 0) {
             if (vertx.cancelTimer(timerId)) {
-                log.trace("Cancelled timer id {}", timerId);
+                LOG.trace("Cancelled timer id {}", timerId);
             } else {
-                log.debug("Could not cancel timer id {}", timerId);
+                LOG.debug("Could not cancel timer id {}", timerId);
             }
         }
     }

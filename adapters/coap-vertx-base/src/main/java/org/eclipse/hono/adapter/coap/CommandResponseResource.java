@@ -29,6 +29,8 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -43,6 +45,8 @@ import io.vertx.core.buffer.Buffer;
  *
  */
 public class CommandResponseResource extends AbstractHonoResource {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CommandResponseResource.class);
 
     /**
      * Creates a new resource.
@@ -116,7 +120,7 @@ public class CommandResponseResource extends AbstractHonoResource {
         final String contentType = context.getContentType();
         final String commandRequestId = context.getCommandRequestId();
         final Integer responseStatus = context.getCommandResponseStatus();
-        log.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
+        LOG.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 device.getTenantId(), device.getDeviceId(), commandRequestId, responseStatus);
 
         final Span currentSpan = TracingHelper
@@ -161,7 +165,7 @@ public class CommandResponseResource extends AbstractHonoResource {
                 .compose(ok -> getAdapter().getCommandResponseSender(tenantTracker.result())
                         .sendCommandResponse(commandResponseTracker.result(), currentSpan.context()))
                 .onSuccess(ok -> {
-                    log.trace("forwarded command response [command-request-id: {}] to downstream application",
+                    LOG.trace("forwarded command response [command-request-id: {}] to downstream application",
                             commandRequestId);
                     currentSpan.log("forwarded command response to application");
                     getAdapter().getMetrics().reportCommand(
@@ -174,7 +178,7 @@ public class CommandResponseResource extends AbstractHonoResource {
                     context.respondWithCode(ResponseCode.CHANGED);
                 })
                 .onFailure(t -> {
-                    log.debug("could not send command response [command-request-id: {}] to application",
+                    LOG.debug("could not send command response [command-request-id: {}] to application",
                             commandRequestId, t);
                     TracingHelper.logError(currentSpan, t);
                     getAdapter().getMetrics().reportCommand(

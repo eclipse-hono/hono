@@ -51,7 +51,8 @@ import io.vertx.core.Promise;
  */
 public abstract class TracingSupportingHonoResource extends CoapResource {
 
-    protected final Logger log = LoggerFactory.getLogger(getClass());
+    private static final Logger LOG = LoggerFactory.getLogger(TracingSupportingHonoResource.class);
+
     private final Tracer tracer;
     private final CoapProtocolAdapter adapter;
 
@@ -222,14 +223,14 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             }
         })
         .otherwise(t -> {
-            log.debug("error handling request", t);
+            LOG.debug("error handling request", t);
             TracingHelper.logError(currentSpan, t);
             final Response response = CoapErrorResponse.newResponse(t, ResponseCode.INTERNAL_SERVER_ERROR);
             coapExchange.respond(response);
             return response.getCode();
         })
         .onSuccess(code -> {
-            log.debug("response code: {}", code);
+            LOG.debug("finished processing of request [response code: {}]", code);
             currentSpan.setTag("coap.response_code", code.toString());
         })
         .onComplete(r -> {
