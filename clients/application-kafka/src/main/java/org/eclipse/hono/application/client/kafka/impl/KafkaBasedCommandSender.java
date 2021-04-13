@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.application.client.kafka.impl;
 
+import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +31,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
@@ -274,12 +276,35 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                         .map(ids -> ids.remove(message.getCorrelationId()))
                         .ifPresentOrElse(
                                 expiringCommandPromise -> expiringCommandPromise
-                                        .tryCompleteAndCancelTimer(Future.succeededFuture(message)),
+                                        .tryCompleteAndCancelTimer(mapResponseResult(message)),
                                 () -> LOGGER.trace(
                                         "ignoring received command response [correlation-id: {}] as there is no matching correlation id found",
                                         message.getCorrelationId()));
             }
         };
+    }
+
+    /**
+     * Maps the status according to
+     * {@link CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, SpanContext)}.
+     *
+     * @param message The received command response.
+     * @return The outcome: a succeeded future if the message contains a 2xx status and a failed future otherwise.
+     */
+    private Future<DownstreamMessage<KafkaMessageContext>> mapResponseResult(
+            final DownstreamMessage<KafkaMessageContext> message) {
+
+        final int status = Optional.ofNullable(message.getStatus()).orElseGet(() -> {
+            LOGGER.warn("response message has no status code header [tenant ID: {}, device ID: {}, correlation ID: {}]",
+                    message.getTenantId(), message.getDeviceId(), message.getCorrelationId());
+            return HttpURLConnection.HTTP_INTERNAL_ERROR;
+        });
+
+        if (status >= 200 && status < 300) {
+            return Future.succeededFuture(message);
+        } else {
+            return Future.failedFuture(StatusCodeMapper.from(status, null));
+        }
     }
 
     private Future<Void> subscribeForCommandResponse(final String tenantId, final Span span) {
