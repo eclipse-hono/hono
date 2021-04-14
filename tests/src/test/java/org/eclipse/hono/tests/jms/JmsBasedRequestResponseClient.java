@@ -259,7 +259,7 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
             try {
                 final int status = message.getIntProperty(MessageHelper.APP_PROPERTY_STATUS);
 
-                if (status >= 200 && status < 300) {
+                if (StatusCodeMapper.isSuccessful(status)) {
                     handleSuccess(message, status, resultHandler.one(), resultHandler.two());
                 } else {
                     handleFailure(message, status, resultHandler.one());

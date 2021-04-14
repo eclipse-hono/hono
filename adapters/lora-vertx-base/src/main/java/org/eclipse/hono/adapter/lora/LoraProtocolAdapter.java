@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.IntPredicate;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
@@ -38,6 +37,7 @@ import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
@@ -345,8 +345,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final HttpClientRequest request = getHttpClient().postAbs(loraCommand.getUri())
                 .handler(httpClientResponse -> {
                     Tags.HTTP_STATUS.set(commandContext.getTracingSpan(), httpClientResponse.statusCode());
-                    final IntPredicate successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
-                    if (successfulStatus.test(httpClientResponse.statusCode())) {
+                    if (StatusCodeMapper.isSuccessful(httpClientResponse.statusCode())) {
                         sendPromise.tryComplete();
                     } else {
                         sendPromise.tryFail(httpClientResponse.statusMessage());

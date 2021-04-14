@@ -20,9 +20,9 @@ import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.function.IntPredicate;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -176,13 +176,11 @@ public class HonoHttpDevice {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
 
-        final IntPredicate successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
-
         final HttpClientRequest req = httpClient
                 .post(request.isEvent ? "/event" : "/telemetry")
                 .handler(response -> {
                     System.out.println(response.statusCode() + " " + response.statusMessage());
-                    if (successfulStatus.test(response.statusCode())) {
+                    if (StatusCodeMapper.isSuccessful(response.statusCode())) {
                         final MultiMap resultMap = response.headers();
                         resultMap.entries().stream().forEach(entry -> {
                             System.out.println(String.format("%s: %s", entry.getKey(), entry.getValue()));
