@@ -13,6 +13,7 @@
 package org.eclipse.hono.application.client.amqp;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -70,9 +71,6 @@ final class ProtonBasedRequestResponseCommandClient extends
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen), null);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected String getKey(final String tenantId) {
         return String.format("%s-%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId);
@@ -99,7 +97,7 @@ final class ProtonBasedRequestResponseCommandClient extends
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device.
-     *         If the response has no payload, the future will complete with {@code null}.
+     *         If the response has no payload, the future will complete with a DownstreamMessage that has a {@code null} payload.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at 
@@ -135,15 +133,19 @@ final class ProtonBasedRequestResponseCommandClient extends
                     TracingHelper.logError(currentSpan, error);
                     return Future.failedFuture(error);
                 })
-                .map(result -> {
+                .compose(result -> {
                     if (result == null) {
-                        throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST);
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
                     } else {
+                        final DownstreamMessage<AmqpMessageContext> commandResponseMessage = result.getPayload();
                         setTagsForResult(currentSpan, result);
                         if (result.isError()) {
-                            throw StatusCodeMapper.from(result);
+                            final String detailMessage = commandResponseMessage.getPayload() != null && commandResponseMessage.getPayload().length() > 0
+                                    ? commandResponseMessage.getPayload().toString(StandardCharsets.UTF_8)
+                                    : null;
+                            return Future.failedFuture(StatusCodeMapper.from(result.getStatus(), detailMessage));
                         }
-                        return result.getPayload();
+                        return Future.succeededFuture(commandResponseMessage);
                     }
                 })
                 .onComplete(r -> currentSpan.finish());

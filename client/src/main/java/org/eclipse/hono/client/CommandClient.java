@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,7 @@ public interface CommandClient extends RequestResponseClient {
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device.
-     *         If the response has no payload, the future will complete with {@code null}.
+     *         If the response has no payload, the future will complete with a BufferResult that has a {@code null} payload.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at
@@ -68,7 +68,8 @@ public interface CommandClient extends RequestResponseClient {
      * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future indicating the result of the operation.
      *         <p>
-     *         The future will succeed if a response with status 2xx has been received from the device. If the response has no payload, the future will complete with {@code null}.
+     *         The future will succeed if a response with status 2xx has been received from the device.
+     *         If the response has no payload, the future will complete with a BufferResult that has a {@code null} payload.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.

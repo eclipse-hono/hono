@@ -13,6 +13,7 @@
 package org.eclipse.hono.application.client.kafka.impl;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -151,9 +152,6 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties, true, context);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> sendOneWayCommand(
             final String tenantId,
@@ -316,7 +314,10 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         if (StatusCodeMapper.isSuccessful(status)) {
             return Future.succeededFuture(message);
         } else {
-            return Future.failedFuture(StatusCodeMapper.from(status, null));
+            final String detailMessage = message.getPayload() != null && message.getPayload().length() > 0
+                    ? message.getPayload().toString(StandardCharsets.UTF_8)
+                    : null;
+            return Future.failedFuture(StatusCodeMapper.from(status, detailMessage));
         }
     }
 

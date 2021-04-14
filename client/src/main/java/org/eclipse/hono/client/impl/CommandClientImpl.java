@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 
@@ -171,11 +172,13 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         return mapResultAndFinishSpan(
                 resultTracker.future(),
                 result -> {
-                    if (result.isOk()) {
-                        return result;
-                    } else {
-                        throw StatusCodeMapper.from(result);
+                    if (result.isError()) {
+                        final String detailMessage = result.getPayload() != null && result.getPayload().length() > 0
+                                ? result.getPayload().toString(StandardCharsets.UTF_8)
+                                : null;
+                        throw StatusCodeMapper.from(result.getStatus(), detailMessage);
                     }
+                    return result;
                 },
                 currentSpan);
     }

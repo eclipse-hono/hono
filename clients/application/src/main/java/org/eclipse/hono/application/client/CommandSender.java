@@ -227,7 +227,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device.
-     *         If the response has no payload, the future will complete with {@code null}.
+     *         If the response has no payload, the future will complete with a DownstreamMessage that has a {@code null} payload.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at
@@ -258,7 +258,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device.
-     *         If the response has no payload, the future will complete with {@code null}.
+     *         If the response has no payload, the future will complete with a DownstreamMessage that has a {@code null} payload.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at 
@@ -296,7 +296,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device.
-     *         If the response has no payload, the future will complete with {@code null}.
+     *         If the response has no payload, the future will complete with a DownstreamMessage that has a {@code null} payload.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at 
