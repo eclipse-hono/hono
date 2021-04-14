@@ -48,12 +48,13 @@ import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.MessageProperties;
-import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -492,12 +493,6 @@ public final class IntegrationTestSupport {
     public DeviceRegistryHttpClient registry;
     /**
      * A client for connecting to Hono's north bound APIs
-     * via the AMQP Messaging Network using the legacy client.
-     * Required as long as Command and Control is not fully implemented for Kafka.
-     */
-    public IntegrationTestApplicationClientFactory applicationClientFactory;
-    /**
-     * A client for connecting to Hono's north bound APIs
      * depending on the configured messaging network.
      */
     public ApplicationClient<?> applicationClient;
@@ -506,6 +501,7 @@ public final class IntegrationTestSupport {
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
     private final boolean gatewayModeSupported;
+    private HonoConnection protonBasedHonoConnection;
 
     /**
      * Creates a new helper instance.
@@ -746,23 +742,12 @@ public final class IntegrationTestSupport {
     public Future<?> init(final ClientConfigProperties downstreamProps) {
 
         initRegistryClient();
-        applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
-        final AmqpApplicationClient protonBasedApplicationClientFactory =
-                new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, downstreamProps));
-        applicationClient = protonBasedApplicationClientFactory;
+        protonBasedHonoConnection = HonoConnection.newConnection(vertx, downstreamProps);
+        applicationClient = new ProtonBasedApplicationClient(protonBasedHonoConnection);
 
-        return CompositeFuture.all(
-                applicationClientFactory.connect()
-                    .onSuccess(con -> {
-                        LOGGER.info("connected to AMQP Messaging Network using legacy client [{}:{}]",
-                                downstreamProps.getHost(), downstreamProps.getPort());
-                    }),
-                protonBasedApplicationClientFactory.connect()
-                    .onSuccess(ok -> {
-                        LOGGER.info("connected to AMQP Messaging Network using new client [{}:{}]",
-                                downstreamProps.getHost(), downstreamProps.getPort());
-                    }))
-                .mapEmpty();
+        return applicationClient.start()
+                .onSuccess(connected -> LOGGER.info("connected to AMQP Messaging Network [{}:{}]",
+                        downstreamProps.getHost(), downstreamProps.getPort()));
     }
 
     /**
@@ -898,27 +883,13 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Closes the connections to the AMQP 1.0 Messaging Network.
+     * Closes the connections to the Messaging Network.
      *
      * @return A future indicating the outcome of the operation.
      */
     public Future<?> disconnect() {
-
-        final Promise<Void> legacyClientResult = Promise.promise();
-        if (applicationClientFactory != null) {
-            applicationClientFactory.disconnect(legacyClientResult);
-        } else {
-            legacyClientResult.complete();
-        }
-
-        final Future<Void> stopResult = applicationClient.stop();
-
-        return CompositeFuture.all(
-                legacyClientResult.future()
-                    .onSuccess(ok -> LOGGER.info("legacy client's connection to AMQP Messaging Network closed")),
-                stopResult
-                    .onSuccess(ok -> LOGGER.info("new client's connection to messaging network closed")))
-                .mapEmpty();
+        return applicationClient.stop()
+                .onSuccess(ok -> LOGGER.info("connection to messaging network closed"));
     }
 
     /**
@@ -1445,6 +1416,37 @@ public final class IntegrationTestSupport {
                     },
                     close -> {}))
             .mapEmpty();
+    }
+
+    /**
+     * Creates a new AMQP sender link for publishing messages.
+     *
+     * @param endpoint The endpoint to send messages to.
+     * @param tenantId The tenant identifier.
+     * @return A future indicating the outcome.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws UnsupportedOperationException if the messaging network type is other than AMQP.
+     */
+    public Future<GenericSenderLink> createGenericAmqpMessageSender(final String endpoint, final String tenantId) {
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(tenantId);
+
+        if (protonBasedHonoConnection != null) {
+            return GenericSenderLink.create(
+                    protonBasedHonoConnection,
+                    endpoint,
+                    tenantId,
+                    SendMessageSampler.noop(),
+                    s -> {
+                    })
+                    .onSuccess(ok -> LOGGER.info("created proton based message sender [endpoint: {}, tenant: {}]",
+                            endpoint, tenantId))
+                    .onFailure(
+                            error -> LOGGER.error("error creating proton based message sender [endpoint: {}, tenant: {}]", 
+                            endpoint, tenantId, error));
+        } else {
+            throw new UnsupportedOperationException("messaging network type should be AMQP");
+        }
     }
 
     private static String getRegistrationStatus(final DownstreamMessage<? extends MessageContext> msg) {
