@@ -158,7 +158,7 @@ final class ProtonBasedRequestResponseCommandClient extends
                 .map(status -> new RequestResponseResult<>(status, downStreamMessage,
                         CacheDirective.from(MessageHelper.getCacheDirective(message)), null))
                 .orElseGet(() -> {
-                    LOGGER.trace(
+                    LOGGER.warn(
                             "response message has no status code application property [reply-to: {}, correlation ID: {}]",
                             message.getReplyTo(), message.getCorrelationId());
                     return null;

@@ -36,6 +36,9 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -167,6 +170,45 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendCommandAndReceiveResponse(final VertxTestContext ctx) {
+        final String correlationId = UUID.randomUUID().toString();
+        final int responseStatus = HttpURLConnection.HTTP_OK;
+
+        sendCommandAndReceiveResponse(ctx, correlationId, responseStatus, "success", true, responseStatus);
+    }
+
+    /**
+     * Verifies that
+     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, Map)}
+     * fails if the response status indicates a failure.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSendFailingCommandAndReceiveResponse(final VertxTestContext ctx) {
+        final String correlationId = UUID.randomUUID().toString();
+        final int responseStatus = HttpURLConnection.HTTP_FORBIDDEN;
+
+        sendCommandAndReceiveResponse(ctx, correlationId, responseStatus, "failure", false, responseStatus);
+    }
+
+    /**
+     * Verifies that
+     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, Map)}
+     * fails if the response does not contain a status header.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSendCommandAndReceiveResponseWithoutStatus(final VertxTestContext ctx) {
+        final String correlationId = UUID.randomUUID().toString();
+
+        sendCommandAndReceiveResponse(ctx, correlationId, null, "failure", false, 500);
+    }
+
+    private void sendCommandAndReceiveResponse(final VertxTestContext ctx, final String correlationId,
+            final Integer responseStatus, final String responsePayload, final boolean expectSuccess,
+            final int expectedStatusCode) {
+
         final Context context = vertx.getOrCreateContext();
         final Promise<Void> onProducerRecordSentPromise = Promise.promise();
         mockProducer = new MockProducer<>(true, new StringSerializer(), new BufferSerializer()) {
@@ -190,10 +232,7 @@ public class KafkaBasedCommandSenderTest {
 
         final Map<String, Object> headerProperties = new HashMap<>();
         final String command = "setVolume";
-        final String correlationId = UUID.randomUUID().toString();
         headerProperties.put("appKey", "appValue");
-        final String responsePayload = "success";
-        final int responseStatus = HttpURLConnection.HTTP_OK;
         final ConsumerRecord<String, Buffer> commandResponseRecord = commandResponseRecord(tenantId,
                 deviceId, correlationId, responseStatus, Buffer.buffer(responsePayload));
         final String responseTopic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
@@ -217,28 +256,40 @@ public class KafkaBasedCommandSenderTest {
                             consumerConfig, msgHandler, t -> {}));
             // Send a command to the device
             commandSender.sendCommand(tenantId, deviceId, command, null, Buffer.buffer("test"), headerProperties)
-                    .onComplete(ctx.succeeding(response -> {
+                    .onComplete(ar -> {
                         ctx.verify(() -> {
-                            // Verify the command response that has been received
-                            assertThat(response.getDeviceId()).isEqualTo(deviceId);
-                            assertThat(response.getStatus()).isEqualTo(responseStatus);
-                            assertThat(response.getPayload().toString()).isEqualTo(responsePayload);
+                            if (expectSuccess) {
+                                assertThat(ar.succeeded()).isTrue(); // assert that send operation succeeded
+
+                                // Verify the command response that has been received
+                                final DownstreamMessage<KafkaMessageContext> response = ar.result();
+                                assertThat(response.getDeviceId()).isEqualTo(deviceId);
+                                assertThat(response.getStatus()).isEqualTo(responseStatus);
+                                assertThat(response.getPayload().toString()).isEqualTo(responsePayload);
+                            } else {
+                                assertThat(ar.succeeded()).isFalse(); // assert that send operation failed
+                                assertThat(ar.cause()).isInstanceOf(ServiceInvocationException.class);
+                                assertThat(((ServiceInvocationException) ar.cause()).getErrorCode())
+                                        .isEqualTo(expectedStatusCode);
+                            }
                         });
                         ctx.completeNow();
                         mockConsumer.close();
                         commandSender.stop();
-                    }));
+                    });
         });
     }
 
     private ConsumerRecord<String, Buffer> commandResponseRecord(final String tenantId, final String deviceId,
-            final String correlationId, final int status, final Buffer payload) {
+            final String correlationId, final Integer status, final Buffer payload) {
         final List<Header> headers = new ArrayList<>();
 
         headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId.getBytes()));
         headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));
         headers.add(new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-        headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_STATUS, String.valueOf(status).getBytes()));
+        if (status != null) {
+            headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_STATUS, String.valueOf(status).getBytes()));
+        }
         return new ConsumerRecord<>(new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString(), 0, 0, -1L,
                 TimestampType.NO_TIMESTAMP_TYPE, -1L, -1, -1, deviceId,
                 payload, new RecordHeaders(headers.toArray(Header[]::new)));
