@@ -348,6 +348,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     /**
      * Verifies that the adapter rejects malformed command messages sent by applications.
+     * <p>
+     * This test is applicable only if the messaging network type is AMQP.
      *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
@@ -356,7 +358,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
+    @AssumeMessagingSystem(type = MessagingType.amqp)
     public void testSendCommandFailsForMalformedMessage(
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -385,8 +387,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             // all commands should get rejected because they fail to pass the validity check
             ctx.failNow(new IllegalStateException("should not have received command"));
         }, endpointConfig, MqttQoS.AT_MOST_ONCE))
-        .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(
-                endpointConfig.getNorthboundEndpoint(), tenantId))
+        .compose(ok -> helper.createGenericAmqpMessageSender(endpointConfig.getNorthboundEndpoint(), tenantId))
         .onComplete(setup.succeeding(genericSender -> {
             LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
             sender.set(genericSender);
