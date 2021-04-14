@@ -268,6 +268,7 @@ public class KafkaBasedCommandSenderTest {
                                 assertThat(ar.cause()).isInstanceOf(ServiceInvocationException.class);
                                 assertThat(((ServiceInvocationException) ar.cause()).getErrorCode())
                                         .isEqualTo(expectedStatusCode);
+                                assertThat(ar.cause().getMessage()).isEqualTo(responsePayload);
                             }
                         });
                         ctx.completeNow();

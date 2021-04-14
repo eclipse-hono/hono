@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
@@ -130,6 +131,49 @@ public class ProtonBasedRequestResponseCommandClientTest {
         MessageHelper.addDeviceId(response, deviceId);
         MessageHelper.addStatus(response, commandStatus);
         MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, Buffer.buffer(responsePayload));
+        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(protonDelivery, response);
+    }
+
+    /**
+     * Verifies that sending a command results in a failed Future if the command response contains an error status.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSendCommandFailsForErrorStatusResponse(final VertxTestContext ctx) {
+        final String subject = "setVolume";
+        final String replyId = UUID.randomUUID().toString();
+        final Map<String, Object> properties = Map.of("appKey", "appValue");
+        final int commandStatus = HttpURLConnection.HTTP_BAD_REQUEST;
+        final String responsePayload = "Unsupported command";
+
+        // WHEN sending a command with some application properties and payload
+        requestResponseCommandClient
+                .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), replyId,
+                        properties, NoopSpan.INSTANCE.context())
+                .onComplete(ctx.failing(thr -> {
+                    ctx.verify(() -> {
+                        // VERIFY the returned exception
+                        assertThat(thr).isInstanceOf(ServiceInvocationException.class);
+                        assertThat(((ServiceInvocationException) thr).getErrorCode()).isEqualTo(commandStatus);
+                        assertThat(thr.getMessage()).isEqualTo(responsePayload);
+                    });
+                    ctx.completeNow();
+                }));
+
+        // VERIFY that the command has been sent and its properties
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+        assertThat(sentMessage.getSubject()).isEqualTo(subject);
+        assertThat(sentMessage.getReplyTo()).endsWith(replyId);
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(), "appKey", String.class))
+                .isEqualTo("appValue");
+
+        final Message response = ProtonHelper.message();
+        response.setCorrelationId(sentMessage.getMessageId());
+        MessageHelper.addTenantId(response, tenantId);
+        MessageHelper.addDeviceId(response, deviceId);
+        MessageHelper.addStatus(response, commandStatus);
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(responsePayload));
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(protonDelivery, response);
     }
 
