@@ -300,7 +300,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             return HttpURLConnection.HTTP_INTERNAL_ERROR;
         });
 
-        if (status >= 200 && status < 300) {
+        if (StatusCodeMapper.isSuccessful(status)) {
             return Future.succeededFuture(message);
         } else {
             return Future.failedFuture(StatusCodeMapper.from(status, null));
