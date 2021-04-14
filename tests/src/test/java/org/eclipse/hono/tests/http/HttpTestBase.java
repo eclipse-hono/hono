@@ -39,14 +39,12 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -1109,7 +1107,6 @@ import io.vertx.junit5.VertxTestContext;
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testUploadMessagesWithTtdThatReplyWithCommand(
             final HttpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {

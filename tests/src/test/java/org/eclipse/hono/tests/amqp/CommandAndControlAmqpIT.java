@@ -386,7 +386,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
     public void testSendCommandSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -579,7 +578,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
+    @AssumeMessagingSystem(type = MessagingType.amqp)
     public void testSendCommandFailsWhenNoCredit(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -667,7 +666,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
+    @AssumeMessagingSystem(type = MessagingType.amqp)
     public void testSendCommandFailsForCommandRejectedByDevice(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -749,7 +748,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp) // TODO remove when Kafka C&C is implemented!
+    @AssumeMessagingSystem(type = MessagingType.amqp)
     public void testSendCommandFailsForCommandNotAcknowledgedByDevice(
             final VertxTestContext ctx) throws InterruptedException {
 
