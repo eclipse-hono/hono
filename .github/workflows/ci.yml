@@ -26,21 +26,26 @@ jobs:
       matrix:
         device-registry: [file,jdbc,mongodb]
         include:
-          # let the file based registry test-run use the command router and Spring Boot based components
+          # let the file based registry test-run use the command router, Quarkus based components (running on JVM)
+          # and AMQP 1.0 messaging network.
           - device-registry: file
             commandrouting-mode: command-router
-            component-type: spring-boot
-          # let the jdbc test-run use the device connection service component (instead of the command router)
-          # and Spring Boot based components
+            component-type: quarkus-jvm
+            messaging-type: amqp
+          # let the jdbc test-run use the device connection service component (instead of the command router),
+          # Spring Boot based components and AMQP 1.0 messaging network.
           - device-registry: jdbc
             commandrouting-mode: dev-con-service
             component-type: spring-boot
-          # let the mongodb test-run use the command router and Quarkus based components (running on JVM)
+            messaging-type: amqp
+          # let the mongodb test-run use the command router, Spring Boot based components and Kafka
+          # as the messaging system.
           - device-registry: mongodb
             commandrouting-mode: command-router
-            component-type: quarkus-jvm
+            component-type: spring-boot
+            messaging-type: kafka
 
-    name: Use ${{ matrix.device-registry }}-registry [${{ matrix.component-type }}, ${{ matrix.commandrouting-mode }}]
+    name: Use ${{ matrix.device-registry }}-registry, [${{ matrix.messaging-type }}, ${{ matrix.component-type }}, ${{ matrix.commandrouting-mode }}]
     steps:
     - uses: actions/checkout@v2
     - name: Cache local Maven repository
@@ -55,4 +60,4 @@ jobs:
       with:
         java-version: '11'
     - name: Build all components (incl. unit tests) and run integration tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.components.type=${{ matrix.component-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.components.type=${{ matrix.component-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dhono.messaging.type=${{ matrix.messaging-type }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
