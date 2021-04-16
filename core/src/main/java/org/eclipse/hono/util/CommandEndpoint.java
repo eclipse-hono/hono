@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -106,6 +107,7 @@ public class CommandEndpoint {
      *
      * @return true when the uri is not null and the uri can be converted without exceptions.
      */
+    @JsonIgnore
     public boolean isUriValid() {
         if (uri == null) {
             return false;
@@ -125,6 +127,7 @@ public class CommandEndpoint {
      * @return the fully formatted uri.
      * @throws NullPointerException If deviceId is {@code null}.
      */
+    @JsonIgnore
     public String getFormattedUri(final String deviceId) {
         Objects.requireNonNull(deviceId);
         return uri.replaceAll("\\{\\{deviceId}}", deviceId);

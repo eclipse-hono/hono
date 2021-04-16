@@ -9,6 +9,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### Fixes & Enhancements
 
 * The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
+* The downstream mapping endpoint was not correctly serialized which resulted in not being able to send commands using the downstream mapping endpoint. This has been fixed.
 
 ## 1.7.0
 
