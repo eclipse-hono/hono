@@ -16,14 +16,14 @@ package org.eclipse.hono.cli.app;
 import java.net.HttpURLConnection;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.util.BufferResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -55,72 +55,51 @@ public class Commander extends AbstractApplicationClient {
     @PostConstruct
     void start() {
         workerExecutor = vertx.createSharedWorkerExecutor("user-input-pool", 3, TimeUnit.HOURS.toNanos(1));
-        clientFactory.connect().onComplete(connectAttempt -> {
-            if (connectAttempt.succeeded()) {
-                clientFactory.addReconnectListener(this::startCommandClient);
-                startCommandClient(connectAttempt.result());
-            } else {
-                close(connectAttempt.cause());
-            }
-        });
+        client.start()
+                .onSuccess(v -> {
+                    if (client instanceof AmqpApplicationClient) {
+                        ((AmqpApplicationClient) client).addReconnectListener(c -> startCommandClient());
+                    }
+                })
+                .compose(v -> startCommandClient())
+                .onFailure(this::close);
     }
 
-    private void startCommandClient(final HonoConnection connection) {
-        getCommandFromUser()
-        .compose(this::processCommand)
-        .onComplete(sendAttempt -> startCommandClient(connection));
+    private Future<Void> startCommandClient() {
+        return getCommandFromUser()
+                .compose(this::processCommand)
+                .onComplete(sendAttempt -> startCommandClient());
     }
 
     private Future<Void> processCommand(final Command command) {
 
-        final Future<CommandClient> commandClient = clientFactory.getOrCreateCommandClient(tenantId);
-        return commandClient
-                .map(this::setRequestTimeOut)
-                .compose(c -> {
-                    if (command.isOneWay()) {
-                        log.info("Command sent to device");
-                        return c.sendOneWayCommand(deviceId, command.getName(), command.getContentType(),
-                                Buffer.buffer(command.getPayload()), null)
-                                .map(ok -> c);
-                    } else {
-                        log.info("Command sent to device... [waiting for response for max. {} seconds]",
-                                requestTimeoutInSecs);
-                        return c.sendCommand(deviceId, command.getName(), command.getContentType(),
-                                Buffer.buffer(command.getPayload()), null)
-                                .map(this::printResponse)
-                                .map(ok -> c);
-                    }
-                })
-                .map(this::closeCommandClient)
-                .otherwise(error -> {
-                    if (ServerErrorException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE) {
-                        log.error(
-                                "Error sending command (error code 503). Is the device really waiting for a command? (device [{}] in tenant [{}])",
-                                deviceId, tenantId);
-                    } else {
-                        log.error("Error sending command: {}", error.getMessage());
-                    }
-                    if (commandClient.succeeded()) {
-                        return closeCommandClient(commandClient.result());
-                    } else {
-                        return null;
-                    }
-                });
-    }
+        // TODO set request timeout
+        final Future<Void> sendResult;
+        if (command.isOneWay()) {
+            log.info("Command sent to device");
+            sendResult = client.sendOneWayCommand(tenantId, deviceId, command.getName(), command.getContentType(),
+                    Buffer.buffer(command.getPayload()), null, null);
+        } else {
+            log.info("Command sent to device... [waiting for response for max. {} seconds]",
+                    requestTimeoutInSecs);
+            sendResult = client.sendCommand(tenantId, deviceId, command.getName(), command.getContentType(),
+                    Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null, null)
+                    .map(this::printResponse);
+        }
 
-    private CommandClient setRequestTimeOut(final CommandClient commandClient) {
-        commandClient.setRequestTimeout(TimeUnit.SECONDS.toMillis(requestTimeoutInSecs));
-        return commandClient;
-    }
-
-    private Void closeCommandClient(final CommandClient commandClient) {
-        log.trace("Close command connection to device [{}:{}]", tenantId, deviceId);
-        commandClient.close(closeHandler -> {
+        return sendResult.otherwise(error -> {
+            if (ServerErrorException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE) {
+                log.error(
+                        "Error sending command (error code 503). Is the device really waiting for a command? (device [{}] in tenant [{}])",
+                        deviceId, tenantId);
+            } else {
+                log.error("Error sending command: {}", error.getMessage());
+            }
+            return null;
         });
-        return null;
     }
 
-    private Void printResponse(final BufferResult result) {
+    private Void printResponse(final DownstreamMessage<?> result) {
         log.info("Received Command response : {}",
                 Optional.ofNullable(result.getPayload()).orElseGet(Buffer::buffer));
         return null;
@@ -149,6 +128,7 @@ public class Commander extends AbstractApplicationClient {
     private void close(final Throwable t) {
         workerExecutor.close();
         vertx.close();
+        client.stop();
         log.error("Error: {}", t.getMessage());
     }
 

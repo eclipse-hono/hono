@@ -43,8 +43,9 @@ spring:
 
 hono:
   kafka:
-    consumerConfig:
+    commonClientConfig:
       bootstrap.servers: localhost:9092
+    consumerConfig:
       group.id: hono-cli
 
 ---
@@ -90,6 +91,7 @@ spring:
 hono:
   client:
     port: 15671
+    requestTimeout: 60000 # 60 seconds -> TODO remove once command.timeoutInSeconds is taken into account
 
 command:
   timeoutInSeconds: 60

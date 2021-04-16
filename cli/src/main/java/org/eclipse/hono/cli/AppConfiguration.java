@@ -18,7 +18,6 @@ import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
-import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
@@ -113,26 +112,15 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes a factory for creating clients for Hono's northbound APIs as a Spring bean.
-     *
-     * @return The factory.
-     */
-    // TODO remove this client factory once org.eclipse.hono.application.client.ApplicationClient supports C&C
-    @Bean
-    public ApplicationClientFactory clientFactory() {
-        return ApplicationClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()));
-    }
-
-    /**
      * Exposes a client for Hono's AMQP-based northbound APIs as a Spring bean.
      *
-     * @return The factory.
      * @param vertx The vertx instance to be used.
      * @param clientConfig The client configuration properties.
+     * @return The client.
      */
     @Profile("!kafka")
     @Bean
-    public ApplicationClient<AmqpMessageContext> AmqpApplicationClient(
+    public ApplicationClient<AmqpMessageContext> amqpApplicationClient(
             final Vertx vertx, final ClientConfigProperties clientConfig) {
         return new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, clientConfig));
     }
