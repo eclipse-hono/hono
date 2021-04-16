@@ -15,8 +15,9 @@ package org.eclipse.hono.cli.app;
 
 import java.util.Objects;
 
+import org.eclipse.hono.application.client.ApplicationClient;
+import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.cli.AbstractCliClient;
-import org.eclipse.hono.client.ApplicationClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -33,10 +34,16 @@ abstract class AbstractApplicationClient extends AbstractCliClient {
     protected String deviceId;
     @Value(value = "${connection.retryInterval}")
     protected int connectionRetryInterval;
-    protected ApplicationClientFactory clientFactory;
+    protected ApplicationClient<? extends MessageContext> client;
 
+    /**
+     * Sets the application client to communicate with Hono's northbound API.
+     *
+     * @param client The client for the messaging system in use.
+     * @throws NullPointerException if the client is {@code null}
+     */
     @Autowired
-    public final void setApplicationClientFactory(final ApplicationClientFactory factory) {
-        this.clientFactory = Objects.requireNonNull(factory);
+    public final void setApplicationClient(final ApplicationClient<? extends MessageContext> client) {
+        this.client = Objects.requireNonNull(client);
     }
 }

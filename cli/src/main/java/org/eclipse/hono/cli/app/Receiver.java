@@ -19,11 +19,9 @@ import java.util.function.BiConsumer;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -60,15 +58,6 @@ public class Receiver extends AbstractApplicationClient {
      * Bi consumer to handle messages based on endpoint.
      */
     private BiConsumer<String, DownstreamMessage<? extends MessageContext>> messageHandler = this::handleMessage;
-
-    // TODO remove the client from here and use the one from parent once
-    //  org.eclipse.hono.application.client.ApplicationClient supports C&C
-    private ApplicationClient<? extends MessageContext> client;
-
-    @Autowired
-    public final void setApplicationClient(final ApplicationClient<? extends MessageContext> client) {
-        this.client = Objects.requireNonNull(client);
-    }
 
     /**
      * Set message handler for processing adaption.
