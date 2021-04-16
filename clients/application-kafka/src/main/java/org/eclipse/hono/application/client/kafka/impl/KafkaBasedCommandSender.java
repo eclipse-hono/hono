@@ -202,26 +202,31 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         final ExpiringCommandPromise expiringCommandPromise = new ExpiringCommandPromise(
                 correlationId,
                 COMMAND_TIMEOUT,
-                // Remove the correlation id if times out
-                x -> Optional.ofNullable(pendingCommandResponses.get(tenantId))
-                        .ifPresent(ids -> ids.remove(correlationId)),
+                // Remove the corresponding pending response entry if times out
+                x -> removePendingCommandResponse(tenantId, correlationId),
                 span);
 
         subscribeForCommandResponse(tenantId, span)
-                .compose(ok -> sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties,
-                        true, span.context())
-                                .onSuccess(sent -> {
-                                    //Store the correlation id and the expiring command promise
-                                    pendingCommandResponses.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
-                                            .put(correlationId, expiringCommandPromise);
-                                    LOGGER.debug("sent command [correlation-id: {}] and waiting for response", correlationId);
-                                    span.log("sent command and waiting for response");
-                                })
-                                .onFailure(error -> {
-                                    LOGGER.debug("error sending command", error);
-                                    TracingHelper.logError(span, "error sending command", error);
-                                    expiringCommandPromise.tryCompleteAndCancelTimer(Future.failedFuture(error));
-                                }));
+                .compose(ok -> {
+                    // Store the correlation id and the expiring command promise
+                    pendingCommandResponses.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
+                            .put(correlationId, expiringCommandPromise);
+                    return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties,
+                            true, span.context())
+                                    .onSuccess(sent -> {
+                                        LOGGER.debug("sent command [correlation-id: {}] and waiting for response", correlationId);
+                                        span.log("sent command and waiting for response");
+                                    })
+                                    .onFailure(error -> {
+                                        LOGGER.debug("error sending command", error);
+                                        // To ensure that the span is not already finished.
+                                        if (!expiringCommandPromise.future().isComplete()) {
+                                            TracingHelper.logError(span, "error sending command", error);
+                                        }
+                                        removePendingCommandResponse(tenantId, correlationId);
+                                        expiringCommandPromise.tryCompleteAndCancelTimer(Future.failedFuture(error));
+                                    });
+                });
 
         return expiringCommandPromise.future()
                 .onComplete(o -> span.finish());
@@ -279,19 +284,11 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                 LOGGER.trace("ignoring received command response - no correlation id set [tenant: {}]", tenantId);
                 return;
             }
-            final var pendingResponsesForTenant = pendingCommandResponses.get(tenantId);
-            if (pendingResponsesForTenant != null && !pendingResponsesForTenant.isEmpty()) {
-                // if the correlation id of the received response matches with that of the command
-                Optional.ofNullable(pendingResponsesForTenant.remove(message.getCorrelationId()))
-                        .ifPresentOrElse(
-                                expiringCommandPromise -> expiringCommandPromise
-                                        .tryCompleteAndCancelTimer(mapResponseResult(message)),
-                                () -> LOGGER.trace("ignoring received command response - no response pending for correlation id [{}], tenant [{}]",
-                                        message.getCorrelationId(), tenantId));
-            } else {
-                LOGGER.trace("ignoring received command response - no responses pending for tenant [correlation-id: {}, tenant: {}]",
-                        message.getCorrelationId(), tenantId);
-            }
+            removePendingCommandResponse(tenantId, message.getCorrelationId())
+                    .ifPresentOrElse(expiringCommandPromise -> expiringCommandPromise
+                            .tryCompleteAndCancelTimer(mapResponseResult(message)),
+                            () -> LOGGER.trace("ignoring received command response - no response pending [tenant: {}, correlation-id: {}]",
+                                    tenantId, message.getCorrelationId()));
         };
     }
 
@@ -319,6 +316,12 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                     : null;
             return Future.failedFuture(StatusCodeMapper.from(status, detailMessage));
         }
+    }
+
+    private Optional<ExpiringCommandPromise> removePendingCommandResponse(final String tenantId,
+            final String correlationId) {
+        return Optional.ofNullable(pendingCommandResponses.get(tenantId))
+                .map(ids -> ids.remove(correlationId));
     }
 
     private Future<Void> subscribeForCommandResponse(final String tenantId, final Span span) {
@@ -386,11 +389,12 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
 
             this.span = span;
             timerId = vertx.setTimer(timeout.toMillis(), id -> {
+                final long timeOutInMs = timeout.toMillis();
                 final SendMessageTimeoutException error = new SendMessageTimeoutException(
-                        "send command/wait for response timed out after " + timeout + "ms");
+                        "send command/wait for response timed out after " + timeOutInMs + "ms");
                 timerId = null;
                 LOGGER.debug("cancelling sending command [correlation-id: {}] and waiting for response after {} ms",
-                        correlationId, timeout);
+                        correlationId, timeOutInMs);
                 TracingHelper.logError(span, error);
                 promise.tryFail(error);
                 Optional.ofNullable(timeOutHandler)
