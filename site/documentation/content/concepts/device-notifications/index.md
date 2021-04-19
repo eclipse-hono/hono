@@ -64,8 +64,8 @@ Alternatively the default property values for devices from the Device Registry c
 ### Hono's MQTT protocol adapter
 
 The MQTT protocol adapter automatically sends a *Time until disconnect notification* with a *ttd* value of `-1`
-for a device that subscribes to the appropriate command topic (refer to the [MQTT Adapter user guide]
-({{< relref "/user-guide/mqtt-adapter.md" >}}) for details).
+for a device that subscribes to the appropriate command topic (refer to the [MQTT Adapter user guide]({{< relref "/user-guide/mqtt-adapter.md" >}})
+for details).
 
 When a device unsubscribes again, the adapter automatically sends a *Time until disconnect notification* with a *ttd* value of `0`.
 

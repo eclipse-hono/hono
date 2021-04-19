@@ -95,7 +95,7 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
 * the messages published by the client comply with the format defined by the Telemetry API.
 
-The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the incoming telemetry message cannot be processed, the connection to the client is closed.
+The protocol adapter checks the configured [message limit]({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the incoming telemetry message cannot be processed, the connection to the client is closed.
 
 The devices can optionally indicate the content type of the payload by setting the *content-type* property explicitly in the `property-bag`. The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by `&`. For example, a property bag containing two properties *seqNo* and *importance* looks like this: `/topic/name/?seqNo=10034&importance=high`.
 
@@ -174,7 +174,7 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process events for the client's tenant and
 * the events published by the client comply with the format defined by the Event API.
 
-The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded or the incoming event message cannot be processed, the connection to the client is closed.
+The protocol adapter checks the configured [message limit]({{< relref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded or the incoming event message cannot be processed, the connection to the client is closed.
 
 The devices can optionally indicate a *time-to-live* duration for event messages and the content type of the payload by setting the *hono-ttl* and *content-type* properties explicitly in the `property-bag`. The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by `&`. For example, a property bag containing two properties *seqNo* and *importance* looks like this: `/topic/name/?seqNo=10034&importance=high`.
 
@@ -258,7 +258,7 @@ Commands can be sent following a *request/response* pattern or being *one-way*.
 
 For *Request/Response* commands, devices send their responses to commands by means of sending an MQTT *PUBLISH* message to a topic that is specific to the command that has been executed. The MQTT adapter accepts responses being published using either QoS 0 or QoS 1.
 
-The MQTT adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. And for the incoming command responses from devices, the Adapter rejects the message and closes the connection to the client. 
+The MQTT adapter checks the configured [message limit]({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. And for the incoming command responses from devices, the Adapter rejects the message and closes the connection to the client. 
 
 The following sections define the topic filters/names to use for subscribing to and responding to commands. The following *shorthand* versions of topic path segments are supported:
 
@@ -568,8 +568,7 @@ from the persistent store if no consumer has attached to receive the event befor
 
 In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the MQTT protocol adapter supports setting a
 downstream event message's *ttl* property based on the *hono-ttl* property set as *property-bag* at the end of the event topic.
-Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]
-({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
+Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
 
 
 ## Tenant specific Configuration

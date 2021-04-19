@@ -123,8 +123,7 @@ In most cases the AMQP Messaging Network can be configured with a maximum *time-
 from the persistent store if no consumer has attached to receive the event before the message expires.
 
 In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the protocol adapter supports setting a
-downstream event message's *ttl* property based on the default *ttl* and *max-ttl* values configured for a tenant/device as described in the [Tenant API]
-({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
+downstream event message's *ttl* property based on the default *ttl* and *max-ttl* values configured for a tenant/device as described in the [Tenant API]({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
 
 
 ## Tenant specific Configuration
