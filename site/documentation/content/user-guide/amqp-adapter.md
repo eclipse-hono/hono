@@ -353,7 +353,7 @@ When a device has successfully opened a receiver link for commands, the adapter 
 
 Devices send their responses to commands by means of sending an AMQP message with properties specific to the command that has been executed. The AMQP adapter accepts responses being published using either *at most once* (QoS 0) or *at least once* (QoS 1) delivery semantics. The device must send the command response messages using the same (sender) link that it uses for sending telemetry data and events.
 
-The AMQP adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications or the command responses from devices, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. 
+The AMQP adapter checks the configured [message limit]({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications or the command responses from devices, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. 
 
 ### Receiving Commands
 

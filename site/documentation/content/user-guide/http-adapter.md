@@ -619,8 +619,7 @@ from the persistent store if no consumer has attached to receive the event befor
 
 In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the protocol adapter supports setting a
 downstream event message's *ttl* property based on the *hono-ttl* property set as a header or a query parameter in the event requests by the devices.
-Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]
-({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
+Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
 
 
 ## Tenant specific Configuration
