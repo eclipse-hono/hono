@@ -10,6 +10,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
 * The downstream mapping endpoint was not correctly serialized which resulted in not being able to send commands using the downstream mapping endpoint. This has been fixed.
+* When using Kafka as messaging system, the Command Router now creates the internal Command & Control topic with the
+  replication factor defined in the broker `default.replication.factor` setting.
 
 ## 1.7.0
 
