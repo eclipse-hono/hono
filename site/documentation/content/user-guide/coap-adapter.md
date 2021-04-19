@@ -647,8 +647,7 @@ connection establishment with the protocol adapter are used to authenticate the 
 to identify the device that the gateway publishes data for.
 
 The protocol adapter checks the gateway's authority to send responses to a command on behalf of the device implicitly by means of
-retrieving a *registration assertion* for the device from the [configured Device Registration service]
-({{< relref "/admin-guide/common-config#device-registration-service-connection-configuration" >}}).
+retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "/admin-guide/common-config#device-registration-service-connection-configuration" >}}).
 
 **Examples**
 
@@ -689,8 +688,7 @@ from the persistent store if no consumer has attached to receive the event befor
 
 In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the protocol adapter supports setting a
 downstream event message's *ttl* property based on the *hono-ttl* property set as a query parameter in the event requests by the devices.
-Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]
-({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
+Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
 
 
 ## Tenant specific Configuration

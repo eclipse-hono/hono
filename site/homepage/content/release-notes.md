@@ -783,8 +783,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### New Features
 
 * A tenant can now be configured with a *max-ttl* which is used as an upper boundary for default
-  TTL values configured for devices/tenants. Please refer to the [Tenant API]
-  ({{% doclink "/api/tenant#resource-limits-configuration-format" %}}) for details.
+  TTL values configured for devices/tenants. Please refer to the [Tenant API]({{% doclink "/api/tenant#resource-limits-configuration-format" %}})
+  for details.
   The AMQP, HTTP, MQTT and Kura protocol adapters consider this property when setting a TTL on
   downstream event messages.
 * A protocol adapter can now be configured with a timeout for idle tenants. When there has been no 
@@ -795,12 +795,12 @@ description = "Information about changes in recent Hono releases. Includes new f
   for details.
 * The accounting period for the *message limit* checks can now be configured as `monthly`.
   In this case the data usage for a tenant is calculated from the beginning till the end of the 
-  (Gregorian) calendar month. Refer [resource limits] ({{% doclink "/concepts/resource-limits/" %}})
+  (Gregorian) calendar month. Refer [resource limits]({{% doclink "/concepts/resource-limits/" %}})
   for more information.
 * The devices can now indicate a *time-to-live* duration for event messages published using 
   the HTTP and MQTT adapters by setting the *hono-ttl* property in requests explicitly. Please refer to the
   [HTTP Adapter]({{% doclink "/user-guide/http-adapter/#publish-an-event-authenticated-device" %}})
-  and [MQTT Adapter] ({{% doclink "/user-guide/mqtt-adapter/#publishing-events" %}}) for details.
+  and [MQTT Adapter]({{% doclink "/user-guide/mqtt-adapter/#publishing-events" %}}) for details.
 * The device registry HTTP management API now properly implements *cross-origin resource sharing (CORS)* support,
   by allowing the service to be exposed to configured domains (by default, it's exposed to all domains).
 * The `org.eclipse.hono.util.MessageHelper` now provides convenience factory methods for creating
@@ -830,8 +830,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The interface `ResourceLimitChecks` and its implementation classes have been moved to
   package `org.eclipse.hono.service.resourcelimits` from `org.eclipse.hono.service.plan`.
   Also the configuration parameters for the resource limits were renamed from `hono.plan`
-  to `hono.resourceLimits`. Please refer to the protocol adapter [configuration guides]
-  ({{% doclink "/admin-guide/" %}}) for more information.
+  to `hono.resourceLimits`. Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}})
+  for more information.
 * The response payload of the *get Tenant* operation of the Tenant API has been changed to contain
   a list of trusted certificate authorities instead of just a single one. This way, protocol
   adapters can now authenticate devices based on client certificates signed by one of multiple
@@ -859,8 +859,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * A data grid based implementation of the Device Connection API has been added to Hono. This implementation
   can be used in production environments using a highly scalable data grid for storing device connection
   information. The service can be used instead of the simple implementation provided by the example Device
-  Registry by means of setting a configuration property when [deploying using the Helm chart]
-  ({{% doclink "/deployment/helm-based-deployment/#using-the-device-connection-service" %}}).
+  Registry by means of setting a configuration property when [deploying using the Helm chart]({{% doclink "/deployment/helm-based-deployment/#using-the-device-connection-service" %}}).
 * A tenant can now be configured so that *all* OpenTracing spans created when processing messages for that
   specific tenant will be recorded in the tracing backend (overriding the default sampling strategy that
   might only record a certain percentage of traces). See 
@@ -882,8 +881,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### Deprecations
 
 * The deprecated Kura adapter is no longer deployed by default by the Helm chart.
-  However, it can still be deployed by means of [setting a configuration property]
-  ({{% doclink "/deployment/helm-based-deployment/#deploying-optional-adapters" %}}).
+  However, it can still be deployed by means of [setting a configuration property]({{% doclink "/deployment/helm-based-deployment/#deploying-optional-adapters" %}}).
 
 ## 1.0-M6
 
@@ -908,7 +906,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   refer to the [Hono Client Configuration guide]({{% doclink "/admin-guide/hono-client-configuration/" %}})
   for details regarding these new variables.
 * The *message limit* checks is now extended to include command and control messages.
-  Please refer to the [resource limits] ({{% doclink "/concepts/resource-limits/" %}}) for details.
+  Please refer to the [resource limits]({{% doclink "/concepts/resource-limits/" %}}) for details.
 * The health check server endpoint will now bind to a default port value of 8088 if no values
   are set explicitly in the configuration. It is also possible to start both a secure and an insecure
   server (using different ports)
