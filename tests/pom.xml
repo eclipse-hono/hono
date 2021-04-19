@@ -351,6 +351,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.kafka.disabled>false</hono.kafka.disabled>
         <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
         <request.timeout>4000</request.timeout>
+        <!--The max memory command router is increased to 500 MB-->
+        <hono.command-router.max-mem>524288000</hono.command-router.max-mem>
       </properties>
       <build>
         <plugins>
