@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -104,33 +103,21 @@ public class HonoExampleApplicationBase {
     protected void consumeData() throws Exception {
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final Promise<MessageConsumer> consumerPromise = Promise.promise();
 
-        consumerPromise.future()
-        .onComplete(result -> {
-            if (!result.succeeded()) {
-                LOG.error("clientFactory could not create downstream consumer for [{}:{}]",
+        final Future<MessageConsumer> startFuture = clientFactory.connect()
+                .onSuccess(connectedClient -> {
+                    clientFactory.addDisconnectListener(c -> LOG.info("lost connection to Hono, trying to reconnect ..."));
+                    clientFactory.addReconnectListener(c -> LOG.info("reconnected to Hono"));
+                })
+                .compose(con -> createConsumer())
+                .onFailure(cause -> LOG.error("clientFactory could not create downstream consumer for [{}:{}]",
                         HonoExampleConstants.HONO_AMQP_CONSUMER_HOST,
-                        HonoExampleConstants.HONO_AMQP_CONSUMER_PORT, result.cause());
-            }
-            latch.countDown();
-        });
-
-        clientFactory.connect()
-        .compose(connectedClient -> {
-            clientFactory.addDisconnectListener(c -> {
-                LOG.info("lost connection to Hono, trying to reconnect ...");
-            });
-            clientFactory.addReconnectListener(c -> {
-                LOG.info("reconnected to Hono");
-            });
-            return createConsumer();
-        })
-        .onComplete(consumerPromise);
+                        HonoExampleConstants.HONO_AMQP_CONSUMER_PORT, cause))
+                .onComplete(ar -> latch.countDown());
 
         latch.await();
 
-        if (consumerPromise.future().succeeded()) {
+        if (startFuture.succeeded()) {
             System.in.read();
         }
         vertx.close();
