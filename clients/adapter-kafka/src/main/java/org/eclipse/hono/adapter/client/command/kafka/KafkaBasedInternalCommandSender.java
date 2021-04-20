@@ -26,8 +26,6 @@ import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.MessageHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -40,8 +38,6 @@ import io.vertx.kafka.client.producer.KafkaHeader;
  * Protocol adapters consume commands by subscribing to this topic.
  */
 public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSender implements InternalCommandSender {
-
-    private static final Logger log = LoggerFactory.getLogger(KafkaBasedInternalCommandSender.class);
 
     /**
      * Creates a new Kafka based internal command sender.
@@ -56,30 +52,27 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
         super(producerFactory, "internal-cmd-sender", producerConfig, tracer);
     }
 
-
     @Override
     public Future<Void> sendCommand(final CommandContext commandContext, final String adapterInstanceId) {
         Objects.requireNonNull(commandContext);
         Objects.requireNonNull(adapterInstanceId);
 
         final Command command = commandContext.getCommand();
-        if (command instanceof KafkaBasedCommand) {
-            final KafkaBasedCommand kafkaBasedCommand = (KafkaBasedCommand) command;
-
-            send(getInternalCommandTopic(adapterInstanceId),
-                    kafkaBasedCommand.getTenant(),
-                    kafkaBasedCommand.getDeviceId(),
-                    kafkaBasedCommand.getPayload(),
-                    getHeaders(kafkaBasedCommand),
-                    commandContext.getTracingContext());
-            commandContext.accept();
-
-            return Future.succeededFuture();
-        } else {
+        if (!(command instanceof KafkaBasedCommand)) {
             commandContext.release();
             log.error("command is not an instance of KafkaBasedCommand");
             throw new IllegalArgumentException("command is not an instance of KafkaBasedCommand");
         }
+
+        return sendAndWaitForOutcome(
+                getInternalCommandTopic(adapterInstanceId),
+                command.getTenant(),
+                command.getDeviceId(),
+                command.getPayload(),
+                getHeaders((KafkaBasedCommand) command),
+                commandContext.getTracingContext())
+                        .onSuccess(v -> commandContext.accept())
+                        .onFailure(thr -> commandContext.release());
     }
 
     private static String getInternalCommandTopic(final String adapterInstanceId) {
@@ -91,8 +84,7 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
 
         headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant()));
         Optional.ofNullable(command.getGatewayId())
-                .ifPresent(id -> headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA,
-                        command.getGatewayId())));
+                .ifPresent(id -> headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA, id)));
 
         return headers;
     }
