@@ -27,11 +27,13 @@
     </root>
 
     <springProfile name="trace">
+        <logger name="org.eclipse.hono.application.client" level="TRACE"/>
         <logger name="org.eclipse.hono.cli" level="TRACE"/>
         <logger name="org.eclipse.hono.client" level="TRACE"/>
     </springProfile>
 
     <springProfile name="dev">
+        <logger name="org.eclipse.hono.application.client" level="DEBUG"/>
         <logger name="org.eclipse.hono.cli" level="DEBUG"/>
         <logger name="org.eclipse.hono.client" level="DEBUG"/>
     </springProfile>
