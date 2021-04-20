@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.client.command.kafka;
 
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MapBasedExecutionContext;
@@ -32,7 +31,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandContext.class);
 
-    private final Command command;
+    private final KafkaBasedCommand command;
 
     /**
      * Creates a new command context.
@@ -52,7 +51,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
     }
 
     @Override
-    public Command getCommand() {
+    public KafkaBasedCommand getCommand() {
         return command;
     }
 

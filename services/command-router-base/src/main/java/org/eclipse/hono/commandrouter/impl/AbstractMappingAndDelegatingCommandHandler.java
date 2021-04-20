@@ -82,9 +82,10 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * and delegates the command to the resulting protocol adapter instance.
      *
      * @param commandContext The context of the command to send.
+     * @return A future indicating the output of the operation.
      * @throws NullPointerException if the commandContext is {@code null}.
      */
-    protected final void mapAndDelegateIncomingCommand(final CommandContext commandContext) {
+    protected final Future<Void> mapAndDelegateIncomingCommand(final CommandContext commandContext) {
         final Command command = commandContext.getCommand();
 
         // determine last used gateway device id
@@ -92,7 +93,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
 
         final Future<TenantObject> tenantObjectFuture = tenantClient
                 .get(command.getTenant(), commandContext.getTracingContext());
-        tenantObjectFuture
+        return tenantObjectFuture
                 .map(tenantObject -> {
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, null,
                             commandContext.getTracingSpan());
@@ -100,26 +101,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                 })
                 .compose(tenantObject -> commandTargetMapper.getTargetGatewayAndAdapterInstance(command.getTenant(),
                         command.getDeviceId(), commandContext.getTracingContext()))
-                .onSuccess(result -> {
-                    final String targetAdapterInstanceId = result
-                            .getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
-                    final String targetDeviceId = result.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
-                    final String targetGatewayId = targetDeviceId.equals(command.getDeviceId()) ? null : targetDeviceId;
-
-                    if (Objects.isNull(targetGatewayId)) {
-                        log.trace("command not mapped to gateway, use original device id [{}]", command.getDeviceId());
-                    } else {
-                        command.setGatewayId(targetGatewayId);
-                        log.trace("determined target gateway [{}] for device [{}]", targetGatewayId,
-                                command.getDeviceId());
-                        commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
-                    }
-
-                    log.trace("delegate command to target adapter instance '{}' [command: {}]", targetAdapterInstanceId,
-                            commandContext.getCommand());
-                    internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId);
-                })
-                .onFailure(cause -> {
+                .recover(cause -> {
                     final String errorMsg;
 
                     if (tenantObjectFuture.failed()) {
@@ -128,12 +110,47 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                         errorMsg = "no target adapter instance found for command with device id "
                                 + command.getDeviceId();
                     } else {
-                        errorMsg = "error getting target gateway and adapter instance for command with device id"
+                        errorMsg = "error getting target gateway and adapter instance for command with device id "
                                 + command.getDeviceId();
                     }
                     log.debug(errorMsg, cause);
                     TracingHelper.logError(commandContext.getTracingSpan(), errorMsg, cause);
                     commandContext.release();
+                    return Future.failedFuture(cause);
+                })
+                .compose(result -> {
+                    final String targetAdapterInstanceId = result
+                            .getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
+                    final String targetDeviceId = result.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
+                    final String targetGatewayId = targetDeviceId.equals(command.getDeviceId()) ? null : targetDeviceId;
+
+                    if (Objects.isNull(targetGatewayId)) {
+                        log.trace("determined target adapter instance [{}] for [{}] (command not mapped to gateway)",
+                                targetAdapterInstanceId, command);
+                    } else {
+                        command.setGatewayId(targetGatewayId);
+                        log.trace("determined target gateway [{}] and adapter instance [{}] for [{}]", targetGatewayId,
+                                targetAdapterInstanceId, command);
+                        commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
+                    }
+                    return sendCommand(commandContext, targetAdapterInstanceId);
                 });
+    }
+
+    /**
+     * Sends the given command to the internal Command and Control API endpoint provided by protocol adapters,
+     * adhering to the specification of {@link InternalCommandSender#sendCommand(CommandContext, String)}.
+     * <p>
+     * This default implementation just invokes the {@link InternalCommandSender#sendCommand(CommandContext, String)}
+     * method.
+     * <p>
+     * Subclasses may override this method to do further checks before actually sending the command.
+     *
+     * @param commandContext Context of the command to send.
+     * @param targetAdapterInstanceId The target protocol adapter instance id.
+     * @return A future indicating the output of the operation.
+     */
+    protected Future<Void> sendCommand(final CommandContext commandContext, final String targetAdapterInstanceId) {
+        return internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId);
     }
 }
