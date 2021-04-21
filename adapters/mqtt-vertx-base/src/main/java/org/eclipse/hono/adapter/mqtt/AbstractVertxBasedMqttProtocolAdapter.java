@@ -407,7 +407,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             connectionClosedPrematurely.set(true);
         });
 
-        handleConnectionRequest(endpoint, span)
+        handleConnectionRequest(endpoint, connectionClosedPrematurely, span)
             .compose(authenticatedDevice -> handleConnectionRequestResult(endpoint, authenticatedDevice, connectionClosedPrematurely, span))
             .onSuccess(authenticatedDevice -> {
                 // we NEVER maintain session state
@@ -418,12 +418,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null));
             })
             .onFailure(t -> {
-                log.debug("rejecting connection request from client [clientId: {}], cause:",
-                        endpoint.clientIdentifier(), t);
+                if (!connectionClosedPrematurely.get()) {
+                    log.debug("rejecting connection request from client [clientId: {}], cause:",
+                            endpoint.clientIdentifier(), t);
 
-                final MqttConnectReturnCode code = getConnectReturnCode(t);
-                rejectConnectionRequest(endpoint, code, span);
-                TracingHelper.logError(span, t);
+                    final MqttConnectReturnCode code = getConnectReturnCode(t);
+                    rejectConnectionRequest(endpoint, code, span);
+                    TracingHelper.logError(span, t);
+                }
                 reportFailedConnectionAttempt(t);
             })
             .onComplete(result -> span.finish());
@@ -438,7 +440,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         metrics.reportConnectionAttempt(AbstractProtocolAdapterBase.getOutcome(error), tenantId);
     }
 
-    private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
+    private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint,
+            final AtomicBoolean connectionClosedPrematurely, final Span currentSpan) {
 
         // the ConnectionLimitManager is null in some unit tests
         if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
@@ -447,7 +450,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         if (getConfig().isAuthenticationRequired()) {
-            return handleEndpointConnectionWithAuthentication(endpoint, currentSpan);
+            return handleEndpointConnectionWithAuthentication(endpoint, connectionClosedPrematurely, currentSpan);
         } else {
             return handleEndpointConnectionWithoutAuthentication(endpoint);
         }
@@ -471,7 +474,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             log.debug("abort handling connection request, connection already closed [clientId: {}]",
                     endpoint.clientIdentifier());
             currentSpan.log("abort connection request processing, connection already closed");
-            result.fail(new IllegalStateException("connection already closed"));
+            result.fail("connection already closed");
         } else {
             sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
                 .map(authenticatedDevice)
@@ -527,7 +530,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
-            final Span currentSpan) {
+            final AtomicBoolean connectionClosedPrematurely, final Span currentSpan) {
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, currentSpan);
 
@@ -540,10 +543,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                         checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(authenticatedDevice))
-                .map(authenticatedDevice -> {
+                .compose(authenticatedDevice -> {
+                    if (connectionClosedPrematurely.get()) { // check whether client disconnected during credentials validation
+                        return Future.failedFuture("connection already closed");
+                    }
                     registerEndpointHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority());
                     metrics.incrementConnections(authenticatedDevice.getTenantId());
-                    return (Device) authenticatedDevice;
+                    return Future.succeededFuture((Device) authenticatedDevice);
                 })
                 .recover(t -> {
                     if (authAttempt.failed()) {
