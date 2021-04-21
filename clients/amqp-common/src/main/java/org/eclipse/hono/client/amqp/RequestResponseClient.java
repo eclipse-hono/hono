@@ -374,24 +374,41 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
      *
      * @param correlationId The identifier of the request to cancel.
      * @param result The result to pass to the result handler registered for the correlation ID.
+     * @return {@code true} if a request with the given identifier was found and cancelled.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @throws IllegalArgumentException if the result is succeeded.
      */
-    private void cancelRequest(final Object correlationId, final AsyncResult<R> result) {
-
+    private boolean cancelRequest(final Object correlationId, final AsyncResult<R> result) {
         Objects.requireNonNull(correlationId);
         Objects.requireNonNull(result);
 
         if (result.succeeded()) {
             throw new IllegalArgumentException("result must be failed");
-        } else {
-            Optional.ofNullable(replyMap.remove(correlationId))
-                .ifPresent(handler -> {
-                    LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
-                            linkTargetAddress, correlationId, result.cause().getMessage());
-                    handler.one().handle(result);
-                });
         }
+        return cancelRequest(correlationId, result::cause);
+    }
+
+    /**
+     * Cancels an outstanding request with a given failure exception.
+     *
+     * @param correlationId The identifier of the request to cancel.
+     * @param exceptionSupplier The supplier of the failure exception.
+     * @return {@code true} if a request with the given identifier was found and cancelled.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    private boolean cancelRequest(final Object correlationId, final Supplier<Throwable> exceptionSupplier) {
+        Objects.requireNonNull(correlationId);
+        Objects.requireNonNull(exceptionSupplier);
+
+        return Optional.ofNullable(replyMap.remove(correlationId))
+                .map(handler -> {
+                    final Throwable throwable = exceptionSupplier.get();
+                    LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
+                            linkTargetAddress, correlationId, throwable.getMessage());
+                    handler.one().fail(throwable);
+                    return true;
+                })
+                .orElse(false);
     }
 
     /**
@@ -627,9 +644,10 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                 });
                 if (requestTimeoutMillis > 0) {
                     connection.getVertx().setTimer(requestTimeoutMillis, tid -> {
-                        cancelRequest(correlationId, Future.failedFuture(new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE, "request timed out after " + requestTimeoutMillis + "ms")));
-                        sample.timeout();
+                        if (cancelRequest(correlationId, () -> new ServerErrorException(
+                                HttpURLConnection.HTTP_UNAVAILABLE, "request timed out after " + requestTimeoutMillis + "ms"))) {
+                            sample.timeout();
+                        }
                     });
                 }
                 if (LOG.isDebugEnabled()) {
