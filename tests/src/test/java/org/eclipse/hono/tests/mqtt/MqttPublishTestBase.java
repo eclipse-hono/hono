@@ -656,28 +656,27 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
     private Future<Void> subscribeToErrorTopic(final String errorTopic) {
         final Promise<Void> result = Promise.promise();
-        final AtomicReference<Integer> subMessageIdRef = new AtomicReference<>();
-        mqttClient.subscribeCompletionHandler(subAckMsg -> {
-            final List<Integer> ackQoSLevels = subAckMsg.grantedQoSLevels();
-
-            try {
-                if (ackQoSLevels.size() == 1 && ackQoSLevels.get(0) == 0 && subAckMsg.messageId() == subMessageIdRef.get()) {
+        context.runOnContext(go -> {
+            final int qos = 0;
+            final AtomicReference<Integer> subMessageIdRef = new AtomicReference<>();
+            mqttClient.subscribeCompletionHandler(subAckMsg -> {
+                final List<Integer> ackQoSLevels = subAckMsg.grantedQoSLevels();
+                if (subMessageIdRef.get() != null && subAckMsg.messageId() == subMessageIdRef.get()
+                        && ackQoSLevels.size() == 1 && ackQoSLevels.get(0) == qos) {
                     result.complete();
                 } else {
+                    LOGGER.warn("could not process SUBACK packet from MQTT adapter [grantedQoSLevels: {}, SUBACK messageId: {}, SUBSCRIBE messageId: {}]",
+                            ackQoSLevels, subAckMsg.messageId(), subMessageIdRef.get());
                     result.fail("could not subscribe to error topic");
                 }
-            } catch (final Throwable e) {
-                LOGGER.warn("could not process SUBACK packet from MQTT adapter [grantedQoSLevels: {}, messageId: {}",
-                        ackQoSLevels, subAckMsg.messageId(), e);
-                result.fail("could not subscribe to error topic");
-            }
-        });
-        mqttClient.subscribe(Optional.ofNullable(errorTopic).orElse("error///#"), 0, ar -> {
-            if (ar.succeeded()) {
-                subMessageIdRef.set(ar.result());
-            } else {
-                result.fail("could not subscribe to error topic: " + ar.cause().getMessage());
-            }
+            });
+            mqttClient.subscribe(Optional.ofNullable(errorTopic).orElse("error///#"), qos, ar -> {
+                if (ar.succeeded()) {
+                    subMessageIdRef.set(ar.result());
+                } else {
+                    result.fail("could not subscribe to error topic: " + ar.cause().getMessage());
+                }
+            });
         });
         return result.future().onComplete(v -> mqttClient.subscribeCompletionHandler(null));
     }
