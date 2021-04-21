@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,11 +28,15 @@ public class HonoExampleConstants {
     /**
      * The name or IP address of the host to connect to for consuming messages.
      */
-    public static final String HONO_AMQP_CONSUMER_HOST = System.getProperty("consumer.host", HONO_CONTAINER_HOST);
+    public static final String HONO_MESSAGING_HOST = System.getProperty("consumer.host", HONO_CONTAINER_HOST);
     /**
      * Port of the AMQP network where consumers can receive data (in the standard setup this is the port of the qdrouter).
      */
     public static final int HONO_AMQP_CONSUMER_PORT = Integer.parseInt(System.getProperty("consumer.port", "15671"));
+    /**
+     * Port of the Kafka bootstrap server where consumers can receive data.
+     */
+    public static final int HONO_KAFKA_CONSUMER_PORT = Integer.parseInt(System.getProperty("consumer.port", "9092"));
 
     public static final String TENANT_ID = "DEFAULT_TENANT";
 

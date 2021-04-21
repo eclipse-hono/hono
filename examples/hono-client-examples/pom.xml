@@ -35,7 +35,11 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client</artifactId>
+      <artifactId>hono-client-application-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-application-kafka</artifactId>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
