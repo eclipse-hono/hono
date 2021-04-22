@@ -47,7 +47,8 @@ The application waits for messages until you press any key or kill it.
 It is started by
 
 ~~~sh
-# in directory: hono/examples/
+# in directory: hono/examples/hono-client-examples/
+mvn clean package
 mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication
 ~~~
 
@@ -79,3 +80,13 @@ If you want to integrate the code with your own software, please copy the provid
 from the Hono project to the `resources` directory of your project
 and adopt the code pointing to the file location.
 
+### Kafka based Messaging
+
+To use Kafka based messaging instead of an AMQP network, set the property `kafka` to `true` provide the host and port of a bootstrap server:
+
+~~~sh
+mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication -Dconsumer.host=192.168.99.100 -Dconsumer.port=9092 -Dkafka=true
+~~~
+
+Additional properties for the Kafka producers and consumers can be added in the code, for example to enable encrypted communication. 
+For the available configuration options refer to the [Kafka documentation]()https://kafka.apache.org/documentation/#configuration. 
