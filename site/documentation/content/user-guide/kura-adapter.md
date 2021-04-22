@@ -29,7 +29,7 @@ In a second step, the adapter uses the Credentials API's *get* operation to retr
 certificate's *subject DN* as the *auth-id*, `x509-cert` as the *type* of secret and the MQTT client identifier as *client-id* in the
 request payload.
 
-**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
+**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#mqtt-adapter" >}}) in order to support this mechanism.
 
 ### Username/Password
 
@@ -66,7 +66,7 @@ Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) fo
 ### Connection Duration Limits
 
 The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if the
-[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
+[connection duration limit]({{< relref "/concepts/resource-limits#connection-duration-limit" >}}) that has been configured for
 the client's tenant is exceeded.
 
 ### Message Limits
@@ -81,7 +81,7 @@ if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has b
 ## Connection Events
 
 The adapter can emit [Connection Events]({{< relref "/api/event#connection-event" >}}) for client connections being established and/or terminated.
-Please refer to the [common configuration options]({{< relref "/admin-guide/common-config.md#connection-event-producer-configuration" >}})
+Please refer to the [common configuration options]({{< relref "/admin-guide/common-config#connection-event-producer-configuration" >}})
 for details regarding how to enable this behavior.
 
 The adapter includes the *client identifier* from the client's MQTT CONNECT packet as the Connection Event's *remote-id*.

@@ -33,7 +33,7 @@ In a second step, the adapter uses the Credentials API's *get* operation to retr
 certificate's *subject DN* as the *auth-id*, `x509-cert` as the *type* of secret and the MQTT client identifier as *client-id* in the
 request payload.
 
-**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
+**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#mqtt-adapter" >}}) in order to support this mechanism.
 
 ### Username/Password
 
@@ -65,7 +65,7 @@ The adapter rejects a client’s connection attempt with return code
 ### Connection Duration Limits
 
 The adapter rejects a client’s connection attempt with return code `0x05` (*Connection Refused: not authorized*), if the
-[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for the client’s tenant is exceeded.
+[connection duration limit]({{< relref "/concepts/resource-limits#connection-duration-limit" >}}) that has been configured for the client’s tenant is exceeded.
 
 ### Message Limits
 
@@ -80,7 +80,7 @@ if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has b
 ## Connection Events
 
 The adapter can emit [Connection Events]({{< relref "/api/event#connection-event" >}}) for client connections being established and/or terminated.
-Please refer to the [common configuration options]({{< relref "/admin-guide/common-config.md#connection-event-producer-configuration" >}})
+Please refer to the [common configuration options]({{< relref "/admin-guide/common-config#connection-event-producer-configuration" >}})
 for details regarding how to enable this behavior.
 
 The adapter includes the *client identifier* from the client's MQTT CONNECT packet as the Connection Event's *remote-id*.
@@ -127,7 +127,7 @@ Publish some JSON data for device `4711` using a client certificate for authenti
 mosquitto_pub -p 8883 -t telemetry -m '{"temp": 5}' --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem
 ```
 
-**NB** The example above assumes that the MQTT adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) and the secure port is used.
+**NB** The example above assumes that the MQTT adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication#mqtt-adapter" >}}) and the secure port is used.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -398,7 +398,7 @@ Note that the topic in the latter case doesn't contain a request identifier.
 
 ### Receiving Commands (authenticated Gateway)
 
-*Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details.
+*Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config#configuring-gateway-devices" >}}) for details.
 
 An authenticated gateway MUST use one of the following topic filters for subscribing to commands:
 
