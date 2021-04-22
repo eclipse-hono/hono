@@ -158,7 +158,7 @@ public class HonoExampleApplicationBase {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        final Future<MessageConsumer> startFuture = client.start()
+        final Future<CompositeFuture> startFuture = client.start()
                 .onSuccess(v -> {
                     if (client instanceof AmqpApplicationClient) {
                         final AmqpApplicationClient ac = (AmqpApplicationClient) client;
@@ -166,11 +166,7 @@ public class HonoExampleApplicationBase {
                         ac.addReconnectListener(c -> LOG.info("reconnected to Hono"));
                     }
                 })
-                .compose(con -> createEventConsumer())
-                .onSuccess(eventConsumer -> this.eventConsumer = eventConsumer)
-                .compose(con -> createTelemetryConsumer())
-                .onSuccess(telemetryConsumer -> this.telemetryConsumer = telemetryConsumer)
-                .onSuccess(v -> LOG.info("Consumer ready for telemetry and event messages."))
+                .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
                 .onFailure(cause -> LOG.error("{} consumer failed to start [{}:{}]",
                         USE_KAFKA ? "Kafka" : "AMQP", HonoExampleConstants.HONO_MESSAGING_HOST, port, cause))
                 .onComplete(ar -> latch.countDown());
@@ -203,7 +199,8 @@ public class HonoExampleApplicationBase {
                     msg.getTimeUntilDisconnectNotification().ifPresent(this::handleCommandReadinessNotification);
                     handleEventMessage(msg);
                 },
-                cause -> LOG.error("event consumer closed by remote", cause));
+                cause -> LOG.error("event consumer closed by remote", cause))
+                .onSuccess(eventConsumer -> this.eventConsumer = eventConsumer);
     }
 
     /**
@@ -221,7 +218,8 @@ public class HonoExampleApplicationBase {
                     msg.getTimeUntilDisconnectNotification().ifPresent(this::handleCommandReadinessNotification);
                     handleTelemetryMessage(msg);
                 },
-                cause -> LOG.error("telemetry consumer closed by remote", cause));
+                cause -> LOG.error("telemetry consumer closed by remote", cause))
+                .onSuccess(telemetryConsumer -> this.telemetryConsumer = telemetryConsumer);
     }
 
     /**
