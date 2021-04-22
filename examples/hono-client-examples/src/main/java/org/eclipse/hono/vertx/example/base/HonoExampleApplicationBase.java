@@ -62,8 +62,6 @@ public class HonoExampleApplicationBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoExampleApplicationBase.class);
 
-    protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
-
     private final Vertx vertx = Vertx.vertx();
     private final ApplicationClient<? extends MessageContext> client;
     private final int port;
@@ -226,23 +224,6 @@ public class HonoExampleApplicationBase {
                 cause -> LOG.error("telemetry consumer closed by remote", cause));
     }
 
-    private void printMessage(final String tenantId, final DownstreamMessage<? extends MessageContext> msg,
-            final String messageType) {
-        if (LOG.isDebugEnabled()) {
-            final String content = Optional.ofNullable(msg.getPayload()).map(Buffer::toString).orElse(null);
-            final String deviceId = msg.getDeviceId();
-
-            final StringBuilder sb = new StringBuilder("received ").
-                    append(messageType).
-                    append(" [tenant: ").append(tenantId).
-                    append(", device: ").append(deviceId).
-                    append(", content-type: ").append(msg.getContentType()).
-                    append(" ]: [").append(content).append("].");
-
-            LOG.debug(sb.toString());
-        }
-    }
-
     /**
      * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicitly in
      * another message).
@@ -260,7 +241,7 @@ public class HonoExampleApplicationBase {
         if (notification.getTtd() <= 0) {
             handlePermanentlyConnectedCommandReadinessNotification(notification);
         } else {
-            LOG.info("Device is ready to receive a command : [{}].", notification.toString());
+            LOG.info("Device is ready to receive a command : [{}].", notification);
             sendCommand(notification);
         }
     }
@@ -282,23 +263,24 @@ public class HonoExampleApplicationBase {
     private void handlePermanentlyConnectedCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
         final String keyForDevice = notification.getTenantAndDeviceId();
 
-        Optional.ofNullable(pendingTtdNotification.get(keyForDevice)).map(previousNotification -> {
+        final TimeUntilDisconnectNotification previousNotification = pendingTtdNotification.get(keyForDevice);
+        if (previousNotification != null) {
             if (notification.getCreationTime().isAfter(previousNotification.getCreationTime())) {
                 LOG.info("Set new ttd value [{}] of notification for [{}]", notification.getTtd(), notification.getTenantAndDeviceId());
                 pendingTtdNotification.put(keyForDevice, notification);
             } else {
                 LOG.trace("Received notification for [{}] that was already superseded by newer [{}]", notification, previousNotification);
             }
-            return false;
-        }).orElseGet(() -> {
+        } else {
             pendingTtdNotification.put(keyForDevice, notification);
             // there was no notification available already, so start a handler now
             vertx.setTimer(1000, timerId -> {
                 LOG.debug("Handle device notification for [{}].", notification.getTenantAndDeviceId());
                 // now take the notification from the pending map and handle it
-                Optional.ofNullable(pendingTtdNotification.remove(keyForDevice)).map(notificationToHandle -> {
+                final TimeUntilDisconnectNotification notificationToHandle = pendingTtdNotification.remove(keyForDevice);
+                if (notificationToHandle != null) {
                     if (notificationToHandle.getTtd() == -1) {
-                        LOG.info("Device notified as being ready to receive a command until further notice : [{}].", notificationToHandle.toString());
+                        LOG.info("Device notified as being ready to receive a command until further notice : [{}].", notificationToHandle);
 
                         // cancel a still existing timer for this device (if found)
                         cancelPeriodicCommandSender(notification);
@@ -316,16 +298,13 @@ public class HonoExampleApplicationBase {
                                     setPeriodicCommandSenderTimerCanceler(id, notification);
                                 });
                     } else {
-                        LOG.info("Device notified as not being ready to receive a command (anymore) : [{}].", notification.toString());
+                        LOG.info("Device notified as not being ready to receive a command (anymore) : [{}].", notification);
                         cancelPeriodicCommandSender(notificationToHandle);
                         LOG.debug("Device will not receive further commands : [{}].", notification.getTenantAndDeviceId());
                     }
-                    return null;
-                });
+                }
             });
-
-            return true;
-        });
+        }
     }
 
     /**
@@ -370,15 +349,13 @@ public class HonoExampleApplicationBase {
         });
     }
 
-    private boolean cancelPeriodicCommandSender(final TimeUntilDisconnectNotification notification) {
+    private void cancelPeriodicCommandSender(final TimeUntilDisconnectNotification notification) {
         if (isPeriodicCommandSenderActiveForDevice(notification)) {
             LOG.debug("Cancelling periodic sender for {}", notification.getTenantAndDeviceId());
             periodicCommandSenderTimerCancelerMap.get(notification.getTenantAndDeviceId()).handle(null);
-            return true;
         } else {
             LOG.debug("Wanted to cancel periodic sender for {}, but could not find one", notification.getTenantAndDeviceId());
         }
-        return false;
     }
 
     private boolean isPeriodicCommandSenderActiveForDevice(final TimeUntilDisconnectNotification notification) {
@@ -477,7 +454,8 @@ public class HonoExampleApplicationBase {
      * @param msg The message that was received.
      */
     private void handleTelemetryMessage(final DownstreamMessage<? extends MessageContext> msg) {
-        printMessage(HonoExampleConstants.TENANT_ID, msg, "telemetry");
+        LOG.debug("received telemetry data [tenant: {}, device: {}, content-type: {}]: [{}].",
+                msg.getTenantId(), msg.getDeviceId(), msg.getContentType(), msg.getPayload());
     }
 
     /**
@@ -488,6 +466,7 @@ public class HonoExampleApplicationBase {
      * @param msg The message that was received.
      */
     private void handleEventMessage(final DownstreamMessage<? extends MessageContext> msg) {
-        printMessage(HonoExampleConstants.TENANT_ID, msg, "event");
+        LOG.debug("received event [tenant: {}, device: {}, content-type: {}]: [{}].",
+                msg.getTenantId(), msg.getDeviceId(), msg.getContentType(), msg.getPayload());
     }
 }
