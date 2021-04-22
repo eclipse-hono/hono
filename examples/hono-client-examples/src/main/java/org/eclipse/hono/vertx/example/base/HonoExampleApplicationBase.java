@@ -167,6 +167,7 @@ public class HonoExampleApplicationBase {
                     }
                 })
                 .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
+                .onSuccess(v -> LOG.info("Consumer ready for telemetry and event messages."))
                 .onFailure(cause -> LOG.error("{} consumer failed to start [{}:{}]",
                         USE_KAFKA ? "Kafka" : "AMQP", HonoExampleConstants.HONO_MESSAGING_HOST, port, cause))
                 .onComplete(ar -> latch.countDown());
