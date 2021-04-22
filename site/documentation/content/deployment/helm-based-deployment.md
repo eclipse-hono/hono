@@ -113,7 +113,7 @@ The Hono chart can be configured to report tracing information to the [Jaeger tr
 by the components can then be viewed in a web browser.
 
 In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need to be built
-with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]({{< relref "/admin-guide/monitoring-tracing-config.md#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}})
+with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]({{< relref "/admin-guide/monitoring-tracing-config#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}})
 for details.
 The newly built images also need to be made available to the target Kubernetes cluster as described in the two previous sections.
 

@@ -70,7 +70,7 @@ Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) fo
 ### Connection Duration Limits
 
 The adapter immediately closes a newly established connection with an `amqp:unauthorized-access` error if the
-[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
+[connection duration limit]({{< relref "/concepts/resource-limits#connection-duration-limit" >}}) that has been configured for
 the client's tenant is exceeded.
 
 ### Message Limits
@@ -87,7 +87,7 @@ if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has b
 ## Connection Events
 
 The adapter can emit [Connection Events]({{< relref "/api/event#connection-event" >}}) for client connections being established and/or terminated.
-Please refer to the [common configuration options]({{< relref "/admin-guide/common-config.md#connection-event-producer-configuration" >}})
+Please refer to the [common configuration options]({{< relref "/admin-guide/common-config#connection-event-producer-configuration" >}})
 for details regarding how to enable this behavior.
 
 The adapter includes the client's AMQP *container-id* as the Connection Event's *remote-id*.
@@ -377,7 +377,7 @@ Once the link has been established, the adapter will send command messages havin
 | *correlation-id*  | no        | *properties*             | *string*    | This property will be empty for *one-way* commands, otherwise it will contain the identifier used to correlate the response with the command request. |
 | *device_id*       | no        | *application-properties* | *string*    | This property will only be set if an authenticated gateway has connected to the adapter. It will contain the id of the device (connected to the gateway) that the command is targeted at. |
 
-Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details.
+Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config#configuring-gateway-devices" >}}) for details.
 
 A gateway can open a link to receive commands for *all* devices it acts on behalf of. An authenticated gateway can also open a receiver link for commands targeted at a *specific* device.
 

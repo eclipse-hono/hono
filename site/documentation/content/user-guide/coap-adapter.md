@@ -522,7 +522,7 @@ The CoAP adapter enables devices to receive commands that have been sent by busi
 
 ### Commands handled by gateways
 
-Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details.
+Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config#configuring-gateway-devices" >}}) for details.
 
 A gateway can send a request with the `hono-ttd` query parameter on the `/event` or `/telemetry` URI, indicating its readiness to receive a command for *any* device it acts on behalf of. Note that in this case, the business application will be notified with the gateway id in the `device_id` property of the downstream message.
 

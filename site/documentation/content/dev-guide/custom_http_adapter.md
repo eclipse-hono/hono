@@ -63,7 +63,7 @@ If you have Hono running, you can launch your custom HTTP protocol adapter as a 
 You may adopt the Maven profile `build-docker-image` from the Maven POM file of the standard HTTP Adapter into your 
 custom adapter's Maven POM file. 
 
-Follow the guidelines for running the HTTP Adapter in [HTTP Adapter]({{< relref "/admin-guide/http-adapter-config.md" >}}). Don't forget to configure the custom protocol adapter to bind to a different port than the standard HTTP Adapter if you intend to run them both at the same time. See the [Port Configuration section]({{< ref "http-adapter-config.md#port-configuration" >}}) of the HTTP Adapter documentation for details.
+Follow the guidelines for running the HTTP Adapter in [HTTP Adapter]({{< relref "/admin-guide/http-adapter-config.md" >}}). Don't forget to configure the custom protocol adapter to bind to a different port than the standard HTTP Adapter if you intend to run them both at the same time. See the [Port Configuration section]({{< ref "http-adapter-config#port-configuration" >}}) of the HTTP Adapter documentation for details.
 
 ## Using the custom HTTP Protocol Adapter
 
