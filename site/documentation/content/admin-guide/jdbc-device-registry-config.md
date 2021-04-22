@@ -100,7 +100,7 @@ connections on:
 * an insecure port only or
 * both a secure and an insecure port (dual port configuration)
 
-See [Port Configuration]({{< relref "admin-guide/file-based-device-registry-config.md#port-configuration" >}}) for
+See [Port Configuration]({{< relref "file-based-device-registry-config#port-configuration" >}}) for
 more information. 
 
 {{% note %}}
@@ -110,7 +110,7 @@ substituting `_AMQP_` with `_HTTP_`.
 
 ## Authentication Service Connection Configuration
 
-See [Authentication Service Connection Configuration]({{< relref "admin-guide/file-based-device-registry-config.md#authentication-service-connection-configuration" >}})
+See [Authentication Service Connection Configuration]({{< relref "file-based-device-registry-config#authentication-service-connection-configuration" >}})
 for more information.
 
 ## Metrics Configuration

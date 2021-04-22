@@ -16,7 +16,7 @@ The adapter tries to authenticate the device using these mechanisms in the follo
 
 When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of [registering the trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
 
-**NB** The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) in order to support this mechanism.
+**NB** The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#http-adapter" >}}) in order to support this mechanism.
 
 ### HTTP Basic Auth
 
@@ -124,7 +124,7 @@ HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB** The example above assumes that the HTTP adapter is [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) and the secure port is used.
+**NB** The example above assumes that the HTTP adapter is [configured for TLS]({{< relref "/admin-guide/secure_communication#http-adapter" >}}) and the secure port is used.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -464,7 +464,7 @@ content-length: 0
 
 ### Commands handled by gateways
 
-Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details.
+Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config#configuring-gateway-devices" >}}) for details.
 
 A gateway can send a request with the `hono-ttd` header or query parameter on the `/event` or `/telemetry` URI, indicating its readiness to receive a command for *any* device it acts on behalf of. Note that in this case, the business application will be notified with the gateway id in the `device_id` property of the downstream message.
 

@@ -9,7 +9,7 @@ In addition to the above APIs, this Device Registry also exposes HTTP endpoints 
 
 ## Authentication
 
-This Device Registry secures its HTTP Endpoints using basic authentication mechanism. Thereby the clients connecting to the MongoDB based Device Registry are required to authenticate. For more information on how to enable the authentication and configure it, please refer to the `hono.registry.http.authenticationRequired` property in the [MongoDB based Device Registry configuration]({{< relref "/admin-guide/mongodb-device-registry-config.md#service-configuration" >}}).
+This Device Registry secures its HTTP Endpoints using basic authentication mechanism. Thereby the clients connecting to the MongoDB based Device Registry are required to authenticate. For more information on how to enable the authentication and configure it, please refer to the `hono.registry.http.authenticationRequired` property in the [MongoDB based Device Registry configuration]({{< relref "/admin-guide/mongodb-device-registry-config#service-configuration" >}}).
 
 ## Managing Tenants
 
