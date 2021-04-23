@@ -14,6 +14,7 @@
 package org.eclipse.hono.cli.app;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.UUID;
@@ -45,7 +46,7 @@ public class Commander extends AbstractApplicationClient {
 
     private final Scanner scanner = new Scanner(System.in);
     @Value(value = "${command.timeoutInSeconds}")
-    private int requestTimeoutInSecs;
+    private int commandTimeOutInSeconds;
     private WorkerExecutor workerExecutor;
 
     /**
@@ -80,10 +81,10 @@ public class Commander extends AbstractApplicationClient {
             sendResult = client.sendOneWayCommand(tenantId, deviceId, command.getName(), command.getContentType(),
                     Buffer.buffer(command.getPayload()), null, null);
         } else {
-            log.info("Command sent to device... [waiting for response for max. {} seconds]",
-                    requestTimeoutInSecs);
+            log.info("Command sent to device... [waiting for response for max. {} seconds]", commandTimeOutInSeconds);
             sendResult = client.sendCommand(tenantId, deviceId, command.getName(), command.getContentType(),
-                    Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null, null)
+                    Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null,
+                    Duration.ofSeconds(commandTimeOutInSeconds), null)
                     .map(this::printResponse);
         }
 

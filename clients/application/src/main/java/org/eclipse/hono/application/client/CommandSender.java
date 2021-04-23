@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.application.client;
 
+import java.time.Duration;
 import java.util.Map;
 
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -272,7 +273,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             final String contentType,
             final Buffer data,
             final Map<String, Object> properties) {
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, null);
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, null, null);
     }
 
     /**
@@ -291,6 +292,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      *                sent to devices of the tenant. If the messaging network specific Command &amp; Control 
      *                implementation does not require a replyId, the specified value will be ignored.
      * @param properties The headers to include in the command message.
+     * @param timeout The duration after which the send command request times out.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation.
@@ -311,5 +313,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             Buffer data,
             String replyId,
             Map<String, Object> properties,
+            Duration timeout,
             SpanContext context);
 }

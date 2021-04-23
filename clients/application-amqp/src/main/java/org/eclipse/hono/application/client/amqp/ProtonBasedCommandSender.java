@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.application.client.amqp;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -109,10 +110,11 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
             final Buffer data,
             final String replyId,
             final Map<String, Object> properties,
+            final Duration timeout,
             final SpanContext context) {
 
         return requestResponseClient
-                .sendCommand(tenantId, deviceId, command, contentType, data, replyId, properties, context);
+                .sendCommand(tenantId, deviceId, command, contentType, data, replyId, properties, timeout, context);
     }
 
     private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,

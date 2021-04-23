@@ -14,6 +14,7 @@ package org.eclipse.hono.application.client.amqp;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -55,6 +56,7 @@ import io.vertx.proton.ProtonDelivery;
 final class ProtonBasedRequestResponseCommandClient extends
         AbstractRequestResponseServiceClient<DownstreamMessage<AmqpMessageContext>, RequestResponseResult<DownstreamMessage<AmqpMessageContext>>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProtonBasedRequestResponseCommandClient.class);
+    private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
     private int messageCounter;
 
     /**
@@ -92,6 +94,8 @@ final class ProtonBasedRequestResponseCommandClient extends
      *            <em>command_response/${tenantId}/${replyId}</em>. If it is {@code null} then an unique 
      *                identifier generated using {@link UUID#randomUUID()} is used.
      * @param properties The headers to include in the command message as AMQP application properties.
+     * @param timeout The duration after which the send command request times out. If the timeout is {@code null}
+     *                then the default timeout value of {@value DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation.
@@ -112,6 +116,7 @@ final class ProtonBasedRequestResponseCommandClient extends
             final Buffer data,
             final String replyId,
             final Map<String, Object> properties,
+            final Duration timeout,
             final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
@@ -121,6 +126,11 @@ final class ProtonBasedRequestResponseCommandClient extends
         final Span currentSpan = newChildSpan(context, "send command and receive response");
 
         return getOrCreateClient(tenantId, replyId)
+                .map(client -> {
+                    final long timeoutInMs = timeout == null ? DEFAULT_COMMAND_TIMEOUT_IN_MS : timeout.toMillis();
+                    client.setRequestTimeout(timeoutInMs);
+                    return client;
+                })
                 .compose(client -> {
                     final String messageTargetAddress = AddressHelper.getTargetAddress(
                             CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId,
