@@ -33,7 +33,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The LoraWAN protocol adapter now supports command and control for providers *Chirpstack*, *Firefly* and *Loriot*.
 * Added (experimental) Quarkus based variant of the Authentication service.
 * Added (experimental) Quarkus based variant of the CoAP protocol adapter.
-* Added (experimental) Quarkus based variant of the Command Router protocol adapter.
+* Added (experimental) Quarkus based variant of the Command Router component.
 * The container images for the (experimental) Quarkus based variant of Hono components are now being published on
   Docker Hub as well. The JVM based image names contain a `-quarkus` suffix whereas the native image names contain a
   `-quarkus-native` suffix. Note that the Quarkus based protocol adapter images do **not** support using the Device
