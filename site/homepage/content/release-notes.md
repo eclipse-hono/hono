@@ -10,7 +10,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
 * Sending requests using the Hono AMQP request-response client erroneously increased the `hono.downstream.timeout` metric.
-  This has been fixed.  
+  This has been fixed.
+* Support for uplink messages from the Embedded LNS on MultiTech gateways.
 
 ### Deprecations
 
