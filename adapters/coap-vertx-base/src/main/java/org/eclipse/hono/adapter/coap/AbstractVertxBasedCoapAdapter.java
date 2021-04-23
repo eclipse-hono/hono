@@ -35,7 +35,12 @@ import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
+import org.eclipse.californium.scandium.dtls.x509.NewAdvancedCertificateVerifier;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
+import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.util.Constants;
@@ -78,6 +83,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
     private ApplicationLevelInfoSupplier honoDeviceResolver;
     private AdvancedPskStore pskStore;
+    private NewAdvancedCertificateVerifier certificateVerifier;
+    private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
 
     private volatile Endpoint secureEndpoint;
     private volatile Endpoint insecureEndpoint;
@@ -99,6 +106,28 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     public final void setPskStore(final AdvancedPskStore pskStore) {
         this.pskStore = Objects.requireNonNull(pskStore);
+    }
+
+    /**
+     * Sets the service to use for verifying certificates for clients authenticating using x509 based ciphers in a DTLS
+     * handshake.
+     *
+     * @param certificateVerifier The service to use.
+     */
+    public final void setCertificateVerifier(final NewAdvancedCertificateVerifier certificateVerifier) {
+        this.certificateVerifier = Objects.requireNonNull(certificateVerifier);
+    }
+
+    /**
+     * Sets the provider to use for authenticating devices based on a client certificate.
+     * <p>
+     * If not set explicitly using this method, a {@code SubjectDnAuthProvider} will be created during startup.
+     *
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public final void setClientCertAuthProvider(final DeviceCredentialsAuthProvider<SubjectDnCredentials> provider) {
+        this.clientCertAuthProvider = Objects.requireNonNull(provider);
     }
 
     /**
@@ -306,7 +335,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         resourcesToAdd.clear();
     }
 
-    private void addIdentity(final DtlsConnectorConfig.Builder dtlsConfig) {
+    private boolean addIdentity(final DtlsConnectorConfig.Builder dtlsConfig) {
 
         final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
         final PrivateKey pk = keyLoader.getPrivateKey();
@@ -317,10 +346,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 log.info("using private key [{}] and certificate [{}] as server identity",
                         getConfig().getKeyPath(), getConfig().getCertPath());
                 dtlsConfig.setIdentity(pk, certChain);
+                return true;
             } else {
                 log.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
             }
+        } else if (certChain == null) {
+            log.warn("Missing configured certificate");
+        } else if (pk == null) {
+            log.warn("Missing configured private key");
         }
+        return false;
     }
 
     private Future<Endpoint> createSecureEndpoint() {
@@ -329,21 +364,19 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     private Future<Endpoint> createSecureEndpoint(final NetworkConfig config) {
-
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
-                .orElseGet(() -> new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
-                        getCredentialsClient(), getTenantClient()));
+                .orElseGet(() -> new DeviceInfoSupplier());
+
         final AdvancedPskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
-                    if (deviceResolver instanceof AdvancedPskStore) {
-                        return (AdvancedPskStore) deviceResolver;
-                    } else {
-                        return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(),
-                                getCredentialsClient(), getTenantClient());
-                    }
+                    return new PskDeviceResolver(context, tracer,
+                            getTypeName(), getConfig(),
+                            getCredentialsClient(), getTenantClient());
                 });
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        // prevent session resumption
+        dtlsConfig.setNoServerSessionId(true);
         dtlsConfig.setServerOnly(true);
         dtlsConfig.setRecommendedCipherSuitesOnly(true);
         dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
@@ -353,7 +386,19 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         dtlsConfig.setAdvancedPskStore(store);
         dtlsConfig.setRetransmissionTimeout(getConfig().getDtlsRetransmissionTimeout());
         dtlsConfig.setMaxConnections(config.getInt(Keys.MAX_ACTIVE_PEERS));
-        addIdentity(dtlsConfig);
+
+        if (addIdentity(dtlsConfig)) {
+            final NewAdvancedCertificateVerifier verifier = Optional.ofNullable(certificateVerifier)
+                    .orElseGet(() -> {
+                        return new CertificateDeviceResolver(
+                                context, tracer,
+                                getTypeName(), getTenantClient(),
+                                new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
+                                Optional.ofNullable(clientCertAuthProvider).orElseGet(
+                                        () -> new X509AuthProvider(getCredentialsClient(), tracer)));
+                    });
+            dtlsConfig.setAdvancedCertificateVerifier(verifier);
+        }
 
         try {
             final DtlsConnectorConfig dtlsConnectorConfig = dtlsConfig.build();
