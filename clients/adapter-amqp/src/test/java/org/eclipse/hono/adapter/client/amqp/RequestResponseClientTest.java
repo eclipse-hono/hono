@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,9 +31,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -82,6 +85,7 @@ public class RequestResponseClientTest  {
     private ProtonReceiver receiver;
     private ProtonSender sender;
     private RequestResponseClientConfigProperties clientConfig;
+    private SendMessageSampler.Sample sample;
     private Span span;
 
     /**
@@ -99,6 +103,10 @@ public class RequestResponseClientTest  {
         receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         sender = AmqpClientUnitTestHelper.mockProtonSender();
 
+        final SendMessageSampler sampler = mock(SendMessageSampler.class);
+        sample = mock(SendMessageSampler.Sample.class);
+        when(sampler.start(anyString())).thenReturn(sample);
+
         clientConfig = new RequestResponseClientConfigProperties();
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, clientConfig, tracer);
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
@@ -111,7 +119,7 @@ public class RequestResponseClientTest  {
                 connection,
                 "ep",
                 "tenant",
-                SendMessageSampler.noop(),
+                sampler,
                 VertxMockSupport.mockHandler(),
                 VertxMockSupport.mockHandler());
     }
@@ -130,6 +138,17 @@ public class RequestResponseClientTest  {
     private Message verifySenderSend() {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+        return messageCaptor.getValue();
+    }
+
+    private Message verifySenderSendAndUpdateDelivery(final DeliveryState deliveryState) {
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdatedHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(sender).send(messageCaptor.capture(), deliveryUpdatedHandlerCaptor.capture());
+
+        final ProtonDelivery requestDelivery = mock(ProtonDelivery.class);
+        when(requestDelivery.getRemoteState()).thenReturn(deliveryState);
+        deliveryUpdatedHandlerCaptor.getValue().handle(requestDelivery);
         return messageCaptor.getValue();
     }
 
@@ -209,6 +228,44 @@ public class RequestResponseClientTest  {
     }
 
     /**
+     * Verifies that the client configured with a zero request timeout sets no timer for
+     * canceling the request in case of no received response.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateAndSendRequestSetsNoTimerIfRequestTimeoutZero(final VertxTestContext ctx) {
+
+        // WHEN configuring the client with a zero request timeout and sending a request message
+        final JsonObject payload = new JsonObject().put("key", "value");
+        client
+            .map(c -> {
+                c.setRequestTimeout(0);
+                return c;
+            })
+            .onComplete(ctx.succeeding(c -> {
+                c.createAndSendRequest(
+                        "get",
+                        null,
+                        payload.toBuffer(),
+                        "application/json",
+                        SimpleRequestResponseResult::from,
+                        span);
+            }));
+
+        // THEN the message is sent
+        final Message request = verifySenderSend();
+        assertThat(request).isNotNull();
+        assertThat(request.getBody()).isNotNull();
+        assertThat(request.getBody()).isInstanceOf(Data.class);
+        final Buffer body = MessageHelper.getPayload(request);
+        assertThat(body.getBytes()).isEqualTo(payload.toBuffer().getBytes());
+        // and no timer has been set to time out the request
+        verify(vertx, never()).setTimer(anyLong(), VertxMockSupport.anyHandler());
+        ctx.completeNow();
+    }
+
+    /**
      * Verifies that the sender fails with an 503 error code if the peer rejects
      * a message with an "amqp:resource-limit-exceeded" error.
      *
@@ -257,8 +314,13 @@ public class RequestResponseClientTest  {
                 ctx.verify(() -> {
                     // THEN the result handler is failed with the expected error
                     failureAssertions.accept(t);
+                    verify(sample).completed(isA(Rejected.class));
                     // and a timer has been set to time out the request
-                    verify(vertx).setTimer(eq(clientConfig.getRequestTimeout()), VertxMockSupport.anyHandler());
+                    final ArgumentCaptor<Handler<Long>> timeoutHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+                    verify(vertx).setTimer(eq(clientConfig.getRequestTimeout()), timeoutHandlerCaptor.capture());
+                    // triggering the timer now that the request has been handled should not invoke the sampler timeout method
+                    timeoutHandlerCaptor.getValue().handle(1L);
+                    verify(sample, never()).timeout();
                 });
                 ctx.completeNow();
             }));
@@ -282,12 +344,8 @@ public class RequestResponseClientTest  {
     @Test
     public void testCreateAndSendRequestReturnsCorrespondingResponseMessage(final VertxTestContext ctx) {
 
-        // WHEN sending a request message to the peer without a timeout set
+        // WHEN sending a request message to the peer
         client
-            .map(c -> {
-                c.setRequestTimeout(0);
-                return c;
-            })
             .compose(c -> c.createAndSendRequest(
                 "request",
                 null,
@@ -300,14 +358,19 @@ public class RequestResponseClientTest  {
                     // THEN the response is passed to the handler registered with the request
                     assertEquals(200, s.getStatus());
                     assertEquals("payload", s.getPayload().toString());
-                    // and no response time-out handler has been set
-                    verify(vertx, never()).setTimer(anyLong(), VertxMockSupport.anyHandler());
+                    verify(sample).completed(isA(Accepted.class));
+                    // and a timer has been set to time out the request
+                    final ArgumentCaptor<Handler<Long>> timeoutHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
+                    verify(vertx).setTimer(eq(clientConfig.getRequestTimeout()), timeoutHandlerCaptor.capture());
+                    // triggering the timer now that the request has been handled should not invoke the sampler timeout method
+                    timeoutHandlerCaptor.getValue().handle(1L);
+                    verify(sample, never()).timeout();
                 });
                 ctx.completeNow();
             }));
 
         // WHEN a response is received for the request
-        final Message request = verifySenderSend();
+        final Message request = verifySenderSendAndUpdateDelivery(new Accepted());
         final ProtonMessageHandler responseHandler = verifyResponseHandlerSet();
         final Message response = ProtonHelper.message("payload");
         response.setCorrelationId(request.getMessageId());
@@ -343,6 +406,8 @@ public class RequestResponseClientTest  {
                             HttpURLConnection.HTTP_UNAVAILABLE,
                             ((ServerErrorException) t).getErrorCode());
                     verify(span, never()).finish();
+                    verify(sample, never()).completed(any(DeliveryState.class));
+                    verify(sample).timeout();
                 });
                 ctx.completeNow();
             }));

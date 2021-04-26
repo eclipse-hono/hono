@@ -7,6 +7,8 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
+* Sending requests using the Hono AMQP request-response client erroneously increased the `hono.downstream.timeout` metric.
+  This has been fixed.
 
 ## 1.6.1
 
@@ -24,8 +26,8 @@ title = "Release Notes"
 * The protocol adapters might have run into a situation where devices connected to adapters did no longer receive
   commands when using the Command Router service. The problem occurred when a Command Router service instance had been
   restarted while one or more protocol adapters where connected to it. This has been fixed.
- 
- ## 1.6.0
+
+## 1.6.0
 
 ### New Features
 
