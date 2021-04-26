@@ -18,6 +18,17 @@ description = "Information about changes in recent Hono releases. Includes new f
   `org.eclipse.hono.client.CommandClient` are deprecated.
   Use `org.eclipse.hono.application.client.ApplicationClient` instead.
 
+## 1.7.1
+
+### Fixes & Enhancements
+
+* The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
+* The downstream mapping endpoint was not correctly serialized which resulted in not being able to send commands using the downstream mapping endpoint. This has been fixed.
+* When using Kafka as messaging system, the Command Router now creates the internal Command & Control topic with the
+  replication factor defined in the broker `default.replication.factor` setting.
+* Sending requests using the Hono AMQP request-response client erroneously increased the `hono.downstream.timeout` metric.
+  This has been fixed.
+
 ## 1.7.0
 
 ### New Features
@@ -104,6 +115,14 @@ description = "Information about changes in recent Hono releases. Includes new f
 
   Activating the `build-docker-image` profile by default can easily be achieved by adding `-Pbuild-docker-image` to
   the *MAVEN_OPTS* environment variable instead.
+
+## 1.6.2
+
+### Fixes & Enhancements
+
+* The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.
+* Sending requests using the Hono AMQP request-response client erroneously increased the `hono.downstream.timeout` metric.
+  This has been fixed.
 
 ## 1.6.1
 
