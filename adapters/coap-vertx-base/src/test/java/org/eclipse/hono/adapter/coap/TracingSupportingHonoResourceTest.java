@@ -27,7 +27,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 
 import org.eclipse.californium.core.coap.CoAP;
@@ -127,7 +126,7 @@ public class TracingSupportingHonoResourceTest {
     }
 
     private Exchange newExchange(final Request request) {
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Exchange exchange = new Exchange(request, Origin.REMOTE, null);
         exchange.setEndpoint(endpoint);
         doAnswer(invocation -> {
             exchange.setResponse(invocation.getArgument(1));
@@ -236,6 +235,7 @@ public class TracingSupportingHonoResourceTest {
         final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
         verify(endpoint).sendResponse(eq(exchange), argThat(response -> response.getCode() == CoAP.ResponseCode.METHOD_NOT_ALLOWED));
+        verify(span).setTag(eq(CoapConstants.TAG_COAP_RESPONSE_CODE.getKey()), eq("4.05"));
     }
 
     /**
@@ -247,14 +247,10 @@ public class TracingSupportingHonoResourceTest {
     @MethodSource("supportedRequestCodes")
     public void testDefaultHandlersResultInNotImplemented(final Code requestCode) {
 
-        final TenantObject tenantObject = TenantObject.from(TENANT_ID, true);
-        final TenantTracingConfig tracingConfig = new TenantTracingConfig();
-        tenantObject.setTracingConfig(tracingConfig);
-        when(tenantClient.get(anyString(), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantObject));
-
         final Request request = new Request(requestCode);
         final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
         verify(endpoint).sendResponse(eq(exchange), argThat(response -> response.getCode() == CoAP.ResponseCode.NOT_IMPLEMENTED));
+        verify(span).setTag(eq(CoapConstants.TAG_COAP_RESPONSE_CODE.getKey()), eq("5.01"));
     }
 }

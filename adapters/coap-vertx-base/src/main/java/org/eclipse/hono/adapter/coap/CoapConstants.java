@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import io.opentracing.tag.StringTag;
 
 /**
  * Constants used by the CoAP adapter.
@@ -22,13 +23,21 @@ package org.eclipse.hono.adapter.coap;
 public abstract class CoapConstants {
 
     /**
+     * A tag to use for keeping track of a CoAP message type.
+     */
+    public static final StringTag TAG_COAP_MESSAGE_TYPE = new StringTag("coap.message_type");
+    /**
+     * A tag to use for keeping track of a CoAP response code.
+     */
+    public static final StringTag TAG_COAP_RESPONSE_CODE = new StringTag("coap.response_code");
+
+    /**
      * The name of the property that contains the maximum number of milliseconds to wait for an
      * upstream command before responding with an empty ACK message to a client's request.
      *
      * @see CoapAdapterProperties#setTimeoutToAck(int)
      */
     public static final String TIMEOUT_TO_ACK = "timeoutToAck";
-
 
     private CoapConstants() {
         // prevent instantiation

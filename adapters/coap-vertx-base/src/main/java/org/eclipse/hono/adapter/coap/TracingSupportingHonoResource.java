@@ -160,9 +160,10 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
                 extractSpanContextFromRequest(exchange.getRequest().getOptions()),
                 exchange.getRequest().getCode().toString(),
                 adapter.getTypeName())
-                .withTag("coap.type", exchange.getRequest().getType().name())
-                .withTag(Tags.HTTP_URL.getKey(), exchange.getRequest().getOptions().getUriString())
-                .start();
+            .withTag(Tags.HTTP_METHOD, exchange.getRequest().getCode().name())
+            .withTag(Tags.HTTP_URL.getKey(), exchange.getRequest().getOptions().getUriString())
+            .withTag(CoapConstants.TAG_COAP_MESSAGE_TYPE, exchange.getRequest().getType().name())
+            .start();
     }
 
     /**
@@ -231,7 +232,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
         })
         .onSuccess(code -> {
             LOG.debug("finished processing of request [response code: {}]", code);
-            currentSpan.setTag("coap.response_code", code.toString());
+            CoapConstants.TAG_COAP_RESPONSE_CODE.set(currentSpan, code.toString());
         })
         .onComplete(r -> {
             currentSpan.finish();
