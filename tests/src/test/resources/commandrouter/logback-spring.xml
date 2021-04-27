@@ -44,15 +44,23 @@
     <logger name="org.eclipse.hono.adapter.client" level="TRACE"/>
     <logger name="org.eclipse.hono.commandrouter" level="TRACE"/>
     <logger name="org.eclipse.hono" level="DEBUG"/>
+
+    <logger name="org.infinispan" level="DEBUG"/>
+    <logger name="org.apache.kafka" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono" level="DEBUG"/>
     <logger name="org.eclipse.hono.adapter.client" level="DEBUG"/>
+
+    <logger name="org.infinispan" level="DEBUG"/>
+    <logger name="org.apache.kafka" level="INFO"/>
   </springProfile>
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono" level="INFO"/>
+
+    <logger name="org.apache.kafka" level="WARN"/>
   </springProfile>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>

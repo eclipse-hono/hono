@@ -40,6 +40,8 @@
     <logger name="org.eclipse.hono.service.auth" level="TRACE"/>
     <logger name="org.eclipse.hono.service.auth.device" level="TRACE"/>
     <logger name="org.eclipse.hono.util" level="TRACE"/>
+
+    <logger name="org.apache.kafka" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="dev">
@@ -54,10 +56,14 @@
     <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.auth.device" level="DEBUG"/>
     <logger name="org.eclipse.hono.util" level="DEBUG"/>
+
+    <logger name="org.apache.kafka" level="INFO"/>
   </springProfile>
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
+
+    <logger name="org.apache.kafka" level="WARN"/>
   </springProfile>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>

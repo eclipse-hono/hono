@@ -30,4 +30,6 @@
   <logger name="org.eclipse.hono.tests.jms" level="INFO"/>
   <logger name="org.eclipse.hono.tests.mqtt" level="INFO"/>
   <logger name="org.eclipse.hono.tests.registry" level="INFO"/>
+
+  <logger name="org.apache.kafka" level="WARN"/>
 </included>
