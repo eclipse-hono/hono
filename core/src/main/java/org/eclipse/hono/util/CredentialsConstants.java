@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -83,6 +83,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The name of the field that contains the client certificate that is used for authentication.
      */
     public static final String FIELD_CLIENT_CERT                 = "client-certificate";
+    /**
+     * The name of the field that contains if a unregistered device is to be auto-provisioned as a gateway.
+     */
+    public static final String FIELD_AUTO_PROVISION_AS_GATEWAY = "auto-provision-as-gateway";    
     /**
      * The Credential service's endpoint name.
      */

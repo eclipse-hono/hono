@@ -256,6 +256,8 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
         if (tenant.isAutoProvisioningEnabled(issuerDn)) {
             try {
                 authInfo.put(CredentialsConstants.FIELD_CLIENT_CERT, deviceCert.getEncoded());
+                authInfo.put(CredentialsConstants.FIELD_AUTO_PROVISION_AS_GATEWAY,
+                        tenant.isAutoProvisioningAsGatewayEnabled(issuerDn));
             } catch (CertificateEncodingException e) {
                 log.error("Encoding of device certificate failed [subject DN: {}]", subjectDn, e);
                 return Future.failedFuture(e);

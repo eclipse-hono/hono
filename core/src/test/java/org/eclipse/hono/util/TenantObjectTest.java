@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -135,6 +135,7 @@ public class TenantObjectTest {
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
                         .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, true)
+                        .put(TenantConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, true)
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm())));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
@@ -143,6 +144,7 @@ public class TenantObjectTest {
         assertThat(ca.getCA()).isEqualTo(trustedCaCert.getSubjectX500Principal());
         assertThat(ca.getCAPublicKey()).isEqualTo(trustedCaCert.getPublicKey());
         assertThat(tenant.isAutoProvisioningEnabled(ca.getCAName())).isTrue();
+        assertThat(tenant.isAutoProvisioningAsGatewayEnabled(ca.getCAName())).isTrue();
     }
 
     /**
@@ -266,8 +268,8 @@ public class TenantObjectTest {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
-                .addTrustAnchor(caCert1.getPublicKey(), caCert1.getSubjectX500Principal(), true)
-                .addTrustAnchor(caCert2.getPublicKey(), caCert2.getSubjectX500Principal(), false);
+                .addTrustAnchor(caCert1.getPublicKey(), caCert1.getSubjectX500Principal(), true, true)
+                .addTrustAnchor(caCert2.getPublicKey(), caCert2.getSubjectX500Principal(), false, false);
 
         assertThat(obj.getTrustAnchors()).hasSize(3);
 
@@ -277,16 +279,19 @@ public class TenantObjectTest {
                 assertThat(trustAnchor.getCA()).isEqualTo(caCert1.getSubjectX500Principal());
                 assertThat(trustAnchor.getCAPublicKey()).isEqualTo(caCert1.getPublicKey());
                 assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName())).isTrue();
+                assertThat(obj.isAutoProvisioningAsGatewayEnabled(trustAnchor.getCAName())).isTrue();
                 break;
             case "CN=" + caName2:
                 assertThat(trustAnchor.getCA()).isEqualTo(caCert2.getSubjectX500Principal());
                 assertThat(trustAnchor.getCAPublicKey()).isEqualTo(caCert2.getPublicKey());
                 assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName())).isFalse();
+                assertThat(obj.isAutoProvisioningAsGatewayEnabled(trustAnchor.getCAName())).isFalse();
                 break;
             default:
                 assertThat(trustAnchor.getCA()).isEqualTo(trustedCaCert.getSubjectX500Principal());
                 assertThat(trustAnchor.getCAPublicKey()).isEqualTo(trustedCaCert.getPublicKey());
                 assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName())).isFalse();
+                assertThat(obj.isAutoProvisioningAsGatewayEnabled(trustAnchor.getCAName())).isFalse();
             }
         });
     }
@@ -460,9 +465,27 @@ public class TenantObjectTest {
 
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
-                .addTrustAnchor(caCert.getPublicKey(), caCert.getSubjectX500Principal(), null);
+                .addTrustAnchor(caCert.getPublicKey(), caCert.getSubjectX500Principal(), null, null);
 
         assertThat(tenantObject.isAutoProvisioningEnabled(caCert.getSubjectX500Principal().getName())).isFalse();
 
+    }
+
+    /**
+     * Verify if the {@value TenantConstants#FIELD_AUTO_PROVISION_AS_GATEWAY} property can be {@code null} 
+     * and default value of {@code false} is returned.
+     *
+     * @throws Exception in case the certificate generation fails.
+     */
+    @Test
+    void testAutoProvisionAsGatewayPropertyWithNull() throws Exception {
+        final String caName = "eclipse.org";
+        final X509Certificate caCert = createCaCertificate(caName);
+
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
+                .addTrustAnchor(caCert.getPublicKey(), caCert.getSubjectX500Principal(), null, null);
+
+        assertThat(tenantObject.isAutoProvisioningAsGatewayEnabled(caCert.getSubjectX500Principal().getName())).isFalse();
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -436,7 +436,8 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test.org")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOT_A_PUBLIC_KEY".getBytes())
                 .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC")
-                .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
+                .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false)
+                .put(TenantConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, false));
 
         final JsonObject target = DeviceRegistryUtils.convertTenant("4711", source, true);
 

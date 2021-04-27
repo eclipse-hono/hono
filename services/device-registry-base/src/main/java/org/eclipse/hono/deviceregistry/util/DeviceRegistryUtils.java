@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -222,6 +222,21 @@ public final class DeviceRegistryUtils {
         return type.equals(CredentialsConstants.SECRETS_TYPE_X509_CERT)
                 && clientContext != null
                 && clientContext.containsKey(CredentialsConstants.FIELD_CLIENT_CERT);
+    }
+
+    /**
+     * Checks using the client context that if a unregistered device that authenticates with a client certificate
+     * is to be auto-provisioned as a gateway.
+     *
+     * @param clientContext The client context that can be used to check if a unregistered device is to
+     *                      be auto-provisioned as a gateway.
+     * @return {@code true} if a unregistered device should be be auto-provisioned as a gateway.
+     *          If the client context is {@code null}, then the default value of {@code false} is returned.
+     */
+    public static boolean isAutoProvisioningAsGatewayEnabled(final JsonObject clientContext) {
+        return Optional.ofNullable(clientContext)
+                .map(ctx -> ctx.getBoolean(CredentialsConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, false))
+                .orElse(false);
     }
 
     /**

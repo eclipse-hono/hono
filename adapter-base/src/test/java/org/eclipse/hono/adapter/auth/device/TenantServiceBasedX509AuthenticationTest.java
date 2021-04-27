@@ -30,9 +30,9 @@ import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -82,7 +82,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         // GIVEN a trust anchor that is enabled for auto-provisioning
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), true);
+                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), true, false);
         when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
 
         // WHEN validating the client certificate
@@ -103,7 +103,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         // GIVEN a trust anchor that is disabled for auto-provisioning
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), false);
+                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), false, false);
         when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
 
         // WHEN validating the client certificate
@@ -113,6 +113,26 @@ class TenantServiceBasedX509AuthenticationTest {
         // THEN the returned JSON object does not contain the client certificate
         assertResponseContainsStandardProperties(jsonObjectFuture.result());
         assertThat(jsonObjectFuture.result().containsKey("client-certificate")).isFalse();
+    }
+
+    /**
+     * Verifies that when the trust anchor is enabled for auto-provisioning a unregistered device as a gateway, then
+     * the corresponding flag is set in the JSON object used to query the credentials from the credentials API.
+     */
+    @Test
+    void testAutoProvisionAsGatewayIsSet() {
+        // GIVEN a trust anchor that is enabled for auto-provisioning a unregistered device that authenticate using a client certificate as a gateway.
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), true, true);
+        when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
+
+        // WHEN validating the client certificate
+        final Future<JsonObject> jsonObjectFuture = underTest.validateClientCertificate(certPath, null);
+        assertThat(jsonObjectFuture.succeeded()).isTrue();
+
+        // THEN the returned JSON object contains the flag regarding auto-provisioning of unregistered devices as gateways
+        assertResponseContainsStandardProperties(jsonObjectFuture.result());
+        assertThat(jsonObjectFuture.result().getBoolean(TenantConstants.FIELD_AUTO_PROVISION_AS_GATEWAY)).isTrue();
     }
 
     private void assertResponseContainsStandardProperties(final JsonObject response) {

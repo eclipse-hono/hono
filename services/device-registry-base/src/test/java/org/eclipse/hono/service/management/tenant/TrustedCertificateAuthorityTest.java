@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -70,11 +70,13 @@ class TrustedCertificateAuthorityTest {
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, certificate.getSubjectX500Principal().getName(X500Principal.RFC2253))
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
+                .put(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, true)
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_INSTANT.format(notBefore))
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, DateTimeFormatter.ISO_INSTANT.format(notAfter));
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
         assertThat(authority.isValid()).isTrue();
+        assertThat(authority.isAutoProvisioningAsGatewayEnabled()).isTrue();
         assertAuthority(authority);
     }
 

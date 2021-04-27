@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -116,7 +116,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param subjectDn The CA's subject DN.
      * @return This tenant for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see #addTrustAnchor(PublicKey, X500Principal, Boolean)
+     * @see #addTrustAnchor(PublicKey, X500Principal, Boolean, Boolean)
      */
     @JsonIgnore
     public TenantObject setTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn) {
@@ -125,7 +125,7 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(subjectDn);
 
         setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray());
-        return addTrustAnchor(publicKey, subjectDn, false);
+        return addTrustAnchor(publicKey, subjectDn, false, false);
     }
 
     /**
@@ -134,17 +134,21 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param publicKey The CA's public key.
      * @param subjectDn The CA's subject DN.
      * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
+     * @param autoProvisioningAsGatewayEnabled A flag indicating if a unregistered device that authenticate with a
+     *                                         client certificate issued by this CA should be auto-provisioned as
+     *                                         a gateway or not.
      * @return This tenant for command chaining.
      * @throws NullPointerException if the public key or subjectDN parameters is {@code null}.
      */
     @JsonIgnore
     public TenantObject addTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn,
-            final Boolean autoProvisioningEnabled) {
+            final Boolean autoProvisioningEnabled, final Boolean autoProvisioningAsGatewayEnabled) {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
 
-        return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, autoProvisioningEnabled);
+        return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, autoProvisioningEnabled,
+                autoProvisioningAsGatewayEnabled);
 
     }
 
@@ -155,6 +159,9 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param publicKeyAlgorithm The algorithm of the public key.
      * @param subjectDn The CA's subject DN.
      * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
+     * @param autoProvisioningAsGatewayEnabled A flag indicating if a unregistered device that authenticate with
+     *                                         a client certificate issued by this CA should be auto-provisioned
+     *                                         as a gateway or not.
      * @return This tenant for command chaining.
      * @throws NullPointerException if the public key, algorithm or subjectDN parameters is {@code null}.
      */
@@ -162,7 +169,8 @@ public final class TenantObject extends JsonBackedValueObject {
     public TenantObject addTrustAnchor(final byte[] publicKey,
                                        final String publicKeyAlgorithm,
                                        final X500Principal subjectDn,
-                                       final Boolean autoProvisioningEnabled) {
+                                       final Boolean autoProvisioningEnabled,
+                                       final Boolean autoProvisioningAsGatewayEnabled) {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(publicKeyAlgorithm);
@@ -173,6 +181,7 @@ public final class TenantObject extends JsonBackedValueObject {
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKeyAlgorithm);
         trustedCa.put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, autoProvisioningEnabled);
+        trustedCa.put(TenantConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, autoProvisioningAsGatewayEnabled);
         final JsonArray cas = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray());
         trustAnchors = null;
         return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, cas.add(trustedCa));
@@ -252,6 +261,26 @@ public final class TenantObject extends JsonBackedValueObject {
                 .map(JsonObject.class::cast)
                 .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
                 .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, Boolean.class, false))
+                .findFirst().orElse(false);
+    }
+
+    /**
+     * Checks whether any unregistered devices that authenticate with a client certificate issued by 
+     * this tenant's CA should be auto-provisioned as gateways.
+     *
+     * @param subjectDn The subject DN of the CA to check.
+     * @return {@code true} if to be auto-provisioned as a gateway.
+     * @throws NullPointerException if the subjectDN is {@code null}.
+     */
+    @JsonIgnore
+    public boolean isAutoProvisioningAsGatewayEnabled(final String subjectDn) {
+        Objects.requireNonNull(subjectDn);
+        return getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray())
+                .stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
+                .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, Boolean.class, false))
                 .findFirst().orElse(false);
     }
 
