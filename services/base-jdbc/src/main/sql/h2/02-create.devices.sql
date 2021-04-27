@@ -52,12 +52,12 @@ CREATE TABLE IF NOT EXISTS device_states
 
 -- create indexes for non-primary key access paths
 
-CREATE INDEX idx_device_registrations_tenant ON device_registrations (TENANT_ID);
+CREATE INDEX IF NOT EXISTS idx_device_registrations_tenant ON device_registrations (TENANT_ID);
 
-CREATE INDEX idx_device_credentials_tenant ON device_credentials (TENANT_ID);
-CREATE INDEX idx_device_credentials_tenant_and_device ON device_credentials (TENANT_ID, DEVICE_ID);
+CREATE INDEX IF NOT EXISTS idx_device_credentials_tenant ON device_credentials (TENANT_ID);
+CREATE INDEX IF NOT EXISTS idx_device_credentials_tenant_and_device ON device_credentials (TENANT_ID, DEVICE_ID);
 
-CREATE INDEX idx_device_states_tenant ON device_states (TENANT_ID);
+CREATE INDEX IF NOT EXISTS idx_device_states_tenant ON device_states (TENANT_ID);
 
-CREATE INDEX idx_device_member_of_tenant ON device_groups (TENANT_ID);
-CREATE INDEX idx_device_member_of_tenant_and_device ON device_groups (TENANT_ID, DEVICE_ID);
+CREATE INDEX IF NOT EXISTS idx_device_member_of_tenant ON device_groups (TENANT_ID);
+CREATE INDEX IF NOT EXISTS idx_device_member_of_tenant_and_device ON device_groups (TENANT_ID, DEVICE_ID);

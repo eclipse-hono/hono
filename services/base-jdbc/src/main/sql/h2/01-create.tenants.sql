@@ -19,4 +19,4 @@ CREATE TABLE IF NOT EXISTS tenant_trust_anchors
 
 -- create indexes for non-primary key access paths
 
-CREATE INDEX idx_tenant_trust_anchors_tenant ON tenant_trust_anchors (TENANT_ID);
+CREATE INDEX IF NOT EXISTS idx_tenant_trust_anchors_tenant ON tenant_trust_anchors (TENANT_ID);
