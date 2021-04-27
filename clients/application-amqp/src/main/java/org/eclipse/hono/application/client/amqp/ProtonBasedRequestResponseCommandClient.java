@@ -14,6 +14,7 @@ package org.eclipse.hono.application.client.amqp;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -55,6 +56,7 @@ import io.vertx.proton.ProtonDelivery;
 final class ProtonBasedRequestResponseCommandClient extends
         AbstractRequestResponseServiceClient<DownstreamMessage<AmqpMessageContext>, RequestResponseResult<DownstreamMessage<AmqpMessageContext>>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProtonBasedRequestResponseCommandClient.class);
+    private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
     private int messageCounter;
 
     /**
@@ -92,6 +94,9 @@ final class ProtonBasedRequestResponseCommandClient extends
      *            <em>command_response/${tenantId}/${replyId}</em>. If it is {@code null} then an unique 
      *                identifier generated using {@link UUID#randomUUID()} is used.
      * @param properties The headers to include in the command message as AMQP application properties.
+     * @param timeout The duration after which the send command request times out. If the timeout is {@code null}
+     *                then the default timeout value of {@value DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
+     *                If the timeout duration is set to 0 then the send command request never times out.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation.
@@ -103,6 +108,7 @@ final class ProtonBasedRequestResponseCommandClient extends
      *         the (error) status code. Status codes are defined at 
      *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     * @throws IllegalArgumentException if the timeout duration value is &lt; 0
      */
     public Future<DownstreamMessage<AmqpMessageContext>> sendCommand(
             final String tenantId,
@@ -112,15 +118,29 @@ final class ProtonBasedRequestResponseCommandClient extends
             final Buffer data,
             final String replyId,
             final Map<String, Object> properties,
+            final Duration timeout,
             final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
+        final long timeoutInMs = Optional.ofNullable(timeout)
+                .map(t -> {
+                    if (t.isNegative()) {
+                        throw new IllegalArgumentException("command timeout duration must be >= 0");
+                    }
+                    return t.toMillis();
+                })
+                .orElse(DEFAULT_COMMAND_TIMEOUT_IN_MS);
+
         final Span currentSpan = newChildSpan(context, "send command and receive response");
 
         return getOrCreateClient(tenantId, replyId)
+                .map(client -> {
+                    client.setRequestTimeout(timeoutInMs);
+                    return client;
+                })
                 .compose(client -> {
                     final String messageTargetAddress = AddressHelper.getTargetAddress(
                             CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId,

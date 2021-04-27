@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.cli.app;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.UUID;
@@ -45,7 +46,7 @@ public class Commander extends AbstractApplicationClient {
 
     private final Scanner scanner = new Scanner(System.in);
     @Value(value = "${command.timeoutInSeconds}")
-    private int requestTimeoutInSecs;
+    private int commandTimeOutInSeconds;
     private WorkerExecutor workerExecutor;
 
     /**
@@ -73,17 +74,16 @@ public class Commander extends AbstractApplicationClient {
 
     private Future<Void> processCommand(final Command command) {
 
-        // TODO set request timeout
         final Future<Void> sendResult;
         if (command.isOneWay()) {
             log.info("Command sent to device");
             sendResult = client.sendOneWayCommand(tenantId, deviceId, command.getName(), command.getContentType(),
                     Buffer.buffer(command.getPayload()), null, null);
         } else {
-            log.info("Command sent to device... [waiting for response for max. {} seconds]",
-                    requestTimeoutInSecs);
+            log.info("Command sent to device... [waiting for response for max. {} seconds]", commandTimeOutInSeconds);
             sendResult = client.sendCommand(tenantId, deviceId, command.getName(), command.getContentType(),
-                    Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null, null)
+                    Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null,
+                    Duration.ofSeconds(commandTimeOutInSeconds), null)
                     .map(this::printResponse);
         }
 

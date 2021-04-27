@@ -15,6 +15,7 @@ package org.eclipse.hono.application.client.kafka.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
+import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
@@ -50,6 +52,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
@@ -203,6 +206,28 @@ public class KafkaBasedCommandSenderTest {
         final String correlationId = UUID.randomUUID().toString();
 
         sendCommandAndReceiveResponse(ctx, correlationId, null, "failure", false, 500);
+    }
+
+    /**
+     * Verifies that
+     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, SpanContext)}
+     * fails as the timeout is reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
+        commandSender.setKafkaConsumerSupplier(config -> KafkaConsumer.create(vertx, mockConsumer));
+        commandSender
+                .sendCommand(tenantId, deviceId, "testCommand", null, Buffer.buffer("data"), null, null,
+                        Duration.ofMillis(5), NoopSpan.INSTANCE.context())
+                .onComplete(ctx.failing(error -> {
+                    ctx.verify(() -> {
+                        // VERIFY that the error is caused due to time out.
+                        assertThat(error).isInstanceOf(SendMessageTimeoutException.class);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     private void sendCommandAndReceiveResponse(final VertxTestContext ctx, final String correlationId,

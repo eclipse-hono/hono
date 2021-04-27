@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -65,13 +67,14 @@ public class ProtonBasedRequestResponseCommandClientTest {
     private ProtonDelivery protonDelivery;
     private String tenantId;
     private String deviceId;
+    private Vertx vertx;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     void setUp() {
-        final var vertx = mock(Vertx.class);
+        vertx = mock(Vertx.class);
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx);
 
         final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
@@ -107,7 +110,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
         // WHEN sending a command with some application properties and payload
         requestResponseCommandClient
                 .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), replyId,
-                        properties, NoopSpan.INSTANCE.context())
+                        properties, null, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         // VERIFY the properties of the received response.
@@ -150,7 +153,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
         // WHEN sending a command with some application properties and payload
         requestResponseCommandClient
                 .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), replyId,
-                        properties, NoopSpan.INSTANCE.context())
+                        properties, null, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.failing(thr -> {
                     ctx.verify(() -> {
                         // VERIFY the returned exception
@@ -196,8 +199,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
 
         requestResponseCommandClient
                 .sendCommand(tenantId, deviceId, "doSomething", "text/plain", Buffer.buffer("payload"), replyId,
-                        applicationProperties, NoopSpan.INSTANCE
-                                .context());
+                        applicationProperties, null, NoopSpan.INSTANCE.context());
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
@@ -210,5 +212,34 @@ public class ProtonBasedRequestResponseCommandClientTest {
         assertThat(messageCaptor.getValue().getContentType()).isEqualTo("text/plain");
         assertNotNull(messageCaptor.getValue().getApplicationProperties());
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey")).isEqualTo("appValue");
+    }
+
+    /**
+     * Verifies that sending a command times out with a failed future containing the appropriate error code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
+        final String subject = "sendCommandTimesOut";
+        final String replyId = UUID.randomUUID().toString();
+        final Map<String, Object> properties = Map.of("appKey", "appValue");
+
+        // Run the timer immediately to simulate the time out.
+        VertxMockSupport.runTimersImmediately(vertx);
+
+        // WHEN sending a command with some application properties and payload
+        requestResponseCommandClient
+                .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("test"), replyId,
+                        properties, Duration.ofMillis(1), NoopSpan.INSTANCE.context())
+                .onComplete(ctx.failing(error -> {
+                    ctx.verify(() -> {
+                        // VERIFY the error code.
+                        assertThat(error).isInstanceOf(ServerErrorException.class);
+                        assertThat(((ServerErrorException) error).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    });
+                    ctx.completeNow();
+                }));
     }
 }

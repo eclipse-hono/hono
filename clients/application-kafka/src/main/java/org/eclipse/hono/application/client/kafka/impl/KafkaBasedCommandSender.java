@@ -66,8 +66,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumer;
 public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         implements CommandSender<KafkaMessageContext> {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaBasedCommandSender.class);
-    //TODO to make this timeout configurable
-    private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
+    private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
 
     private final KafkaConsumerConfigProperties consumerConfig;
     /**
@@ -174,8 +173,9 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
      * <p>
      * The replyId is not used in the Kafka based implementation. It can be set to {@code null}.
      * If set it will be ignored.
-     *
-     * @throws NullPointerException if tenantId, deviceId, or command is {@code null}.
+     * <p>
+     * If the timeout duration is {@code null} then the default timeout value of 
+     * {@value DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
      */
     @Override
     public Future<DownstreamMessage<KafkaMessageContext>> sendCommand(
@@ -186,10 +186,20 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final Buffer data,
             final String replyId,
             final Map<String, Object> properties,
+            final Duration timeout,
             final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
+
+        final long timeoutInMs = Optional.ofNullable(timeout)
+                .map(t -> {
+                    if (t.isNegative()) {
+                        throw new IllegalArgumentException("command timeout duration must be >= 0");
+                    }
+                    return t.toMillis();
+                })
+                .orElse(DEFAULT_COMMAND_TIMEOUT_IN_MS);
 
         final String correlationId = correlationIdSupplier.get();
         final Span span = TracingHelper
@@ -201,7 +211,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                 .start();
         final ExpiringCommandPromise expiringCommandPromise = new ExpiringCommandPromise(
                 correlationId,
-                COMMAND_TIMEOUT,
+                timeoutInMs,
                 // Remove the corresponding pending response entry if times out
                 x -> removePendingCommandResponse(tenantId, correlationId),
                 span);
@@ -294,7 +304,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
 
     /**
      * Maps the status according to
-     * {@link CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, SpanContext)}.
+     * {@link CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, SpanContext)}.
      *
      * @param message The received command response.
      * @return The outcome: a succeeded future if the message contains a 2xx status and a failed future otherwise.
@@ -375,31 +385,32 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
          * Starts a timer so that after the given timeout value, this promise shall get failed if not completed already.
          *
          * @param correlationId The identifier to use for correlating a command with its response.
-         * @param timeout The timeout duration to use for the timer.
+         * @param timeoutInMs The timeout duration in milliseconds to use for the timer.
+         *                    If it is set to &lt;= 0 then the promise never times out.
          * @param timeOutHandler The operation to run after this promise got failed as part of a timeout.
          * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
          *             An implementation should log (error) events on this span and it may set tags and use this span as
          *             the parent for any spans created in this method.
-         * @throws NullPointerException if the timeout or span is {@code null}.
+         * @throws NullPointerException if the span is {@code null}.
          */
-        ExpiringCommandPromise(final String correlationId, final Duration timeout, final Handler<Void> timeOutHandler,
+        ExpiringCommandPromise(final String correlationId, final long timeoutInMs, final Handler<Void> timeOutHandler,
                 final Span span) {
-            Objects.requireNonNull(timeout);
             Objects.requireNonNull(span);
 
             this.span = span;
-            timerId = vertx.setTimer(timeout.toMillis(), id -> {
-                final long timeOutInMs = timeout.toMillis();
-                final SendMessageTimeoutException error = new SendMessageTimeoutException(
-                        "send command/wait for response timed out after " + timeOutInMs + "ms");
-                timerId = null;
-                LOGGER.debug("cancelling sending command [correlation-id: {}] and waiting for response after {} ms",
-                        correlationId, timeOutInMs);
-                TracingHelper.logError(span, error);
-                promise.tryFail(error);
-                Optional.ofNullable(timeOutHandler)
-                        .ifPresent(handler -> handler.handle(null));
-            });
+            if (timeoutInMs > 0) {
+                timerId = vertx.setTimer(timeoutInMs, id -> {
+                    final SendMessageTimeoutException error = new SendMessageTimeoutException(
+                            "send command/wait for response timed out after " + timeoutInMs + "ms");
+                    timerId = null;
+                    LOGGER.debug("cancelling sending command [correlation-id: {}] and waiting for response after {} ms",
+                            correlationId, timeoutInMs);
+                    TracingHelper.logError(span, error);
+                    promise.tryFail(error);
+                    Optional.ofNullable(timeOutHandler)
+                            .ifPresent(handler -> handler.handle(null));
+                });
+            }
         }
 
         /**
