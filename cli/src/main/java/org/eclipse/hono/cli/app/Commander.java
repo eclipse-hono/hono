@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -74,7 +74,6 @@ public class Commander extends AbstractApplicationClient {
 
     private Future<Void> processCommand(final Command command) {
 
-        // TODO set request timeout
         final Future<Void> sendResult;
         if (command.isOneWay()) {
             log.info("Command sent to device");

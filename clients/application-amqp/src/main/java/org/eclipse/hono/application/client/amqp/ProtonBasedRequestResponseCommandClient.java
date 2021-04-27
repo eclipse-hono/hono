@@ -96,6 +96,7 @@ final class ProtonBasedRequestResponseCommandClient extends
      * @param properties The headers to include in the command message as AMQP application properties.
      * @param timeout The duration after which the send command request times out. If the timeout is {@code null}
      *                then the default timeout value of {@value DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
+     *                If the timeout duration is set to 0 then the send command request never times out.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation.
@@ -107,6 +108,7 @@ final class ProtonBasedRequestResponseCommandClient extends
      *         the (error) status code. Status codes are defined at 
      *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
+     * @throws IllegalArgumentException if the timeout duration value is &lt; 0
      */
     public Future<DownstreamMessage<AmqpMessageContext>> sendCommand(
             final String tenantId,
@@ -123,11 +125,19 @@ final class ProtonBasedRequestResponseCommandClient extends
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
+        final long timeoutInMs = Optional.ofNullable(timeout)
+                .map(t -> {
+                    if (t.isNegative()) {
+                        throw new IllegalArgumentException("command timeout duration must be >= 0");
+                    }
+                    return t.toMillis();
+                })
+                .orElse(DEFAULT_COMMAND_TIMEOUT_IN_MS);
+
         final Span currentSpan = newChildSpan(context, "send command and receive response");
 
         return getOrCreateClient(tenantId, replyId)
                 .map(client -> {
-                    final long timeoutInMs = timeout == null ? DEFAULT_COMMAND_TIMEOUT_IN_MS : timeout.toMillis();
                     client.setRequestTimeout(timeoutInMs);
                     return client;
                 })
