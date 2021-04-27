@@ -33,9 +33,11 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceProperties;
+import org.eclipse.hono.deviceregistry.jdbc.impl.ClasspathSchemaCreator;
 import org.eclipse.hono.deviceregistry.jdbc.impl.CredentialsManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.CredentialsServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.DeviceManagementServiceImpl;
+import org.eclipse.hono.deviceregistry.jdbc.impl.NoOpSchemaCreator;
 import org.eclipse.hono.deviceregistry.jdbc.impl.RegistrationServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantServiceImpl;
@@ -425,15 +427,16 @@ public class ApplicationConfig {
     /**
      * Provide a registration service.
      *
+     * @param schemaCreator The schema creator.
      * @return The bean instance.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public RegistrationService registrationService() throws IOException {
+    public RegistrationService registrationService(final SchemaCreator schemaCreator) throws IOException {
 
-        final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore());
+        final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore(), schemaCreator);
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
 
         autoProvisioner.setDeviceManagementService(registrationManagementService());
@@ -527,14 +530,15 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
+     * @param registrationService The registration service.
      * @return The handler.
      * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(RegistrationService.class)
-    public AmqpEndpoint registrationAmqpEndpoint() throws IOException {
-        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService());
+    public AmqpEndpoint registrationAmqpEndpoint(final RegistrationService registrationService) throws IOException {
+        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService);
     }
 
     /**
@@ -620,7 +624,7 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a new instance of an auth handler to provide basic authentication for the 
+     * Creates a new instance of an auth handler to provide basic authentication for the
      * HTTP based Device Registry Management endpoint.
      * <p>
      * This method creates a {@link BasicAuthHandler} using the auth provider returned by
@@ -629,7 +633,7 @@ public class ApplicationConfig {
      *
      * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
      *                                    management endpoint.
-     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
+     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()}
      *         is {@code true} or {@code null} otherwise.
      * @see <a href="https://vertx.io/docs/vertx-auth-jdbc/java/">JDBC Auth Provider docs</a>
      */
@@ -684,5 +688,45 @@ public class ApplicationConfig {
     @ConditionalOnBean(TenantManagementService.class)
     public HttpEndpoint tenantHttpEndpoint() throws IOException {
         return new DelegatingTenantManagementHttpEndpoint<>(vertx(), tenantManagementService());
+    }
+
+    /**
+     * Exposes a database schema creator for device and tenant schema.
+     *
+     * @param vertx The Vert.x instance to use.
+     * @param devicesProperties The configuration properties for the device store.
+     * @param tenantsProperties The configuration properties for the tenant store.
+     * @return The schema creator.
+     */
+    @Bean
+    @Profile(Profiles.PROFILE_CREATE_SCHEMA + " & " + Profiles.PROFILE_TENANT_SERVICE)
+    public SchemaCreator deviceAndTenantSchemaCreator(final Vertx vertx,
+            final JdbcDeviceStoreProperties devicesProperties,
+            final JdbcTenantStoreProperties tenantsProperties) {
+        return new ClasspathSchemaCreator(vertx, devicesProperties.getAdapter(), tenantsProperties.getAdapter());
+    }
+
+    /**
+     * Exposes a database schema creator for device schema.
+     *
+     * @param vertx The Vert.x instance to use.
+     * @param devicesProperties The configuration properties for the device store.
+     * @return The schema creator.
+     */
+    @Bean
+    @Profile(Profiles.PROFILE_CREATE_SCHEMA + " & !" + Profiles.PROFILE_TENANT_SERVICE)
+    public SchemaCreator deviceSchemaCreator(final Vertx vertx, final JdbcDeviceStoreProperties devicesProperties) {
+        return new ClasspathSchemaCreator(vertx, devicesProperties.getAdapter(), null);
+    }
+
+    /**
+     * Exposes a database schema creator that does nothing.
+     *
+     * @return The no-op schema creator.
+     */
+    @Bean
+    @Profile("!" + Profiles.PROFILE_CREATE_SCHEMA)
+    public SchemaCreator schemaCreator() {
+        return new NoOpSchemaCreator();
     }
 }

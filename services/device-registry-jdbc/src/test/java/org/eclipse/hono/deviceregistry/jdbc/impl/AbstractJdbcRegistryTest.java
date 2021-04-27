@@ -103,7 +103,8 @@ abstract class AbstractJdbcRegistryTest {
                 properties
         );
         this.registrationAdapter = new RegistrationServiceImpl(
-                DeviceStores.adapterStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty())
+                DeviceStores.adapterStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty()),
+                new NoOpSchemaCreator()
         );
 
         this.credentialsManagement = new CredentialsManagementServiceImpl(
