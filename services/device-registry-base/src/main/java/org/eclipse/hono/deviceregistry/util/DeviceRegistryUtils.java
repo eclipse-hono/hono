@@ -209,6 +209,22 @@ public final class DeviceRegistryUtils {
     }
 
     /**
+     * Checks if auto-provisioning of devices is enabled or not from the client context.
+     *
+     * @param type The type of the secret.
+     * @param clientContext The client context that can be used to check if auto-provisioning is enabled or not.
+     * @return {@code true} if auto-provisioning is enabled.
+     * @throws NullPointerException if type is {@code null}.
+     */
+    public static boolean isAutoProvisioningEnabled(final String type, final JsonObject clientContext) {
+        Objects.requireNonNull(type);
+
+        return type.equals(CredentialsConstants.SECRETS_TYPE_X509_CERT)
+                && clientContext != null
+                && clientContext.containsKey(CredentialsConstants.FIELD_CLIENT_CERT);
+    }
+
+    /**
      * Validates the given credentials for consistency.
      * <p>
      * The following checks are performed

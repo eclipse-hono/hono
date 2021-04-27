@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -208,7 +209,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
         return credentialsService.get(tenantId, type, authId, clientContext, span)
                 .compose(result -> {
                     if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
-                            && isAutoProvisioningEnabled(type, clientContext)) {
+                            && DeviceRegistryUtils.isAutoProvisioningEnabled(type, clientContext)) {
                         Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
                         return provisionDevice(tenantId, authId, clientContext, span);
                     }
@@ -254,12 +255,6 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
 
         return credentialsService.get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, span)
                 .map(r -> r.isOk() ? CredentialsResult.from(HttpURLConnection.HTTP_CREATED, r.getPayload()) : r);
-    }
-
-    private boolean isAutoProvisioningEnabled(final String type, final JsonObject clientContext) {
-        return type.equals(CredentialsConstants.SECRETS_TYPE_X509_CERT)
-                && clientContext != null
-                && clientContext.containsKey(CredentialsConstants.FIELD_CLIENT_CERT);
     }
 
     private CredentialsResult<JsonObject> createErrorCredentialsResult(final int status, final String message) {

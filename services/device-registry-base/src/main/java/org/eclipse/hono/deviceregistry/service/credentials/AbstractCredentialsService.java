@@ -154,7 +154,7 @@ public abstract class AbstractCredentialsService implements CredentialsService {
 
                     if (result.isNotFound()
                             && isAutoProvisioningConfigured()
-                            && isAutoProvisioningEnabled(type, clientContext)) {
+                            && DeviceRegistryUtils.isAutoProvisioningEnabled(type, clientContext)) {
 
                         return provisionDevice(result, tenantId, type, authId, clientContext, span);
 
@@ -169,12 +169,6 @@ public abstract class AbstractCredentialsService implements CredentialsService {
 
     private boolean isAutoProvisioningConfigured() {
         return this.credentialsManagementService != null && this.deviceManagementService != null;
-    }
-
-    private boolean isAutoProvisioningEnabled(final String type, final JsonObject clientContext) {
-        return type.equals(CredentialsConstants.SECRETS_TYPE_X509_CERT)
-                && clientContext != null
-                && clientContext.containsKey(CredentialsConstants.FIELD_CLIENT_CERT);
     }
 
     private Future<CredentialsResult<JsonObject>> provisionDevice(
