@@ -577,7 +577,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <inline>
                         <id>sql</id>
                         <fileSet>
-                          <directory>${project.build.directory}/../../services/base-jdbc/src/main/sql/postgresql</directory>
+                          <directory>${project.build.directory}/../../services/base-jdbc/src/main/resources/sql/postgresql</directory>
                           <outputDirectory>docker-entrypoint-initdb.d</outputDirectory>
                           <includes>
                             <include>**/*</include>

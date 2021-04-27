@@ -72,7 +72,7 @@ abstract class AbstractJdbcRegistryTest {
     private static final AtomicLong UNIQUE_ID_GENERATOR = new AtomicLong(System.currentTimeMillis());
 
     private static final Tracer TRACER = NoopTracerFactory.create();
-    private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "sql", DATABASE_TYPE.name().toLowerCase());
+    private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "resources", "sql", DATABASE_TYPE.name().toLowerCase());
 
     private static final Path BASE_DIR = Path.of("target/data").toAbsolutePath();
 
