@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,33 +26,49 @@ hono:
     keyPath: /run/secrets/hono.eclipse.org-key.pem
     certPath: /run/secrets/hono.eclipse.org-cert.pem
     tenantIdleTimeout: 1h
+    maxConnections: 400
   messaging:
-    name: 'Hono AMQP Adapter'
+    name: 'Hono CoAP Adapter'
     amqpHostname: hono-internal
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
   registration:
-    name: 'Hono AMQP Adapter'
+    name: 'Hono CoAP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/coap-adapter.credentials
   credentials:
-    name: 'Hono AMQP Adapter'
+    name: 'Hono CoAP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/coap-adapter.credentials
   tenant:
-    name: 'Hono AMQP Adapter'
+    name: 'Hono CoAP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/coap-adapter.credentials
-  deviceConnection:
-    name: 'Hono AMQP Adapter'
-    host: ${hono.registration.service}${service.suffix}
+  commandRouter:
+    name: 'Hono CoAP Adapter'
+    host: ${hono.command-router.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/coap-adapter.credentials
   command:
-    name: 'Hono AMQP Adapter'
+    name: 'Hono CoAP Adapter'
     amqpHostname: hono-internal
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.adapter":
+        level: INFO
+  vertx:
+    prefer-native-transport: true
+    resolver:
+      cache-max-time-to-live: 0

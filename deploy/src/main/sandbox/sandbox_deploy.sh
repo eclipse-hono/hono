@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -123,14 +123,10 @@ docker service create $CREATE_OPTIONS --name ${hono.auth.service} \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret sandbox-permissions.json \
-  --secret hono-service-auth-config.yml \
-  --limit-memory 196m \
+  --secret source=hono-service-auth-config.yml,target=/opt/hono/config/application.yml \
+  --limit-memory 32m \
   --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
-  --env SPRING_PROFILES_ACTIVE=authentication-impl,prod,prometheus \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-service-auth:$HONO_VERSION
+  ${docker.image.org-name}/hono-service-auth-quarkus-native:$HONO_VERSION
 echo ... done
 
 echo
@@ -170,10 +166,35 @@ docker service create $CREATE_OPTIONS --name ${hono.registration.service} -p 256
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev,prometheus \
+  --env JAEGER_SERVICE_NAME=device-registry \
+  --env JAEGER_SAMPLER_TYPE=const \
+  --env JAEGER_SAMPLER_PARAM=0 \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
   ${docker.image.org-name}/hono-service-device-registry-file:$HONO_VERSION
 echo ... done
+
+echo
+echo Deploying Command Router ...
+docker secret create -l project=$NS command-router-key.pem $CERTS/command-router-key.pem
+docker secret create -l project=$NS command-router-cert.pem $CERTS/command-router-cert.pem
+docker secret create -l project=$NS command-router.credentials $SCRIPTPATH/command-router.credentials
+docker secret create -l project=$NS hono-service-command-router-config.yml $SCRIPTPATH/hono-service-command-router-config.yml
+docker config create -l project=$NS command-router-cache-config.xml $SCRIPTPATH/command-router-cache-config.xml
+docker service create $CREATE_OPTIONS --name ${hono.command-router.service} \
+  --secret command-router-key.pem \
+  --secret command-router-cert.pem \
+  --secret auth-server-cert.pem \
+  --secret trusted-certs.pem \
+  --secret command-router.credentials \
+  --secret source=hono-service-command-router-config.yml,target=/opt/hono/config/application.yml \
+  --config source=command-router-cache-config.xml,target=/etc/hono/command-router-cache-config.xml \
+  --limit-memory 128m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
+  --env JAEGER_SERVICE_NAME=command-router \
+  ${docker.image.org-name}/hono-service-command-router-quarkus-native:$HONO_VERSION
+echo ... done
+
 
 echo
 echo Deploying HTTP adapter ...
@@ -183,14 +204,11 @@ docker service create $CREATE_OPTIONS --name ${hono.adapter-http.service} -p 808
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret http-adapter.credentials \
-  --secret hono-adapter-http-vertx-config.yml \
-  --limit-memory 384m \
+  --secret source=hono-adapter-http-vertx-config.yml,target=/opt/hono/config/application.yml \
+  --limit-memory 96m \
   --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-http-vertx:$HONO_VERSION
+  --env JAEGER_SERVICE_NAME=hono-http-adapter \
+  ${docker.image.org-name}/hono-adapter-http-vertx-quarkus-native:$HONO_VERSION
 echo ... done
 
 echo
@@ -201,14 +219,11 @@ docker service create $CREATE_OPTIONS --name ${hono.adapter-mqtt.service} -p 188
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret mqtt-adapter.credentials \
-  --secret hono-adapter-mqtt-vertx-config.yml \
-  --limit-memory 384m \
+  --secret source=hono-adapter-mqtt-vertx-config.yml,target=/opt/hono/config/application.yml \
+  --limit-memory 96m \
   --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-mqtt-vertx:$HONO_VERSION
+  --env JAEGER_SERVICE_NAME=hono-mqtt-adapter \
+  ${docker.image.org-name}/hono-adapter-mqtt-vertx-quarkus-native:$HONO_VERSION
 echo ... done
 
 echo
@@ -219,32 +234,30 @@ docker service create $CREATE_OPTIONS --name ${hono.adapter-amqp.service} -p 567
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret amqp-adapter.credentials \
-  --secret hono-adapter-amqp-vertx-config.yml \
-  --limit-memory 384m \
+  --secret source=hono-adapter-amqp-vertx-config.yml,target=/opt/hono/config/application.yml \
+  --limit-memory 96m \
   --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  ${docker.image.org-name}/hono-adapter-amqp-vertx:$HONO_VERSION
+  --env JAEGER_SERVICE_NAME=hono-amqp-adapter \
+  ${docker.image.org-name}/hono-adapter-amqp-vertx-quarkus-native:$HONO_VERSION
 echo ... done
 
-echo
-echo Deploying Kura adapter ...
-docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/kura-adapter.credentials
-docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
-docker service create $CREATE_OPTIONS --name ${hono.adapter-kura.service} -p 1884:1883 -p 8884:8883 \
-  --secret hono.eclipse.org-key.pem \
-  --secret hono.eclipse.org-cert.pem \
-  --secret kura-adapter.credentials \
-  --secret hono-adapter-kura-config.yml \
-  --limit-memory 384m \
-  --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod,prometheus \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-kura:$HONO_VERSION
-echo ... done
+#echo
+#echo Deploying Kura adapter ...
+#docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/kura-adapter.credentials
+#docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
+#docker service create $CREATE_OPTIONS --name ${hono.adapter-kura.service} -p 1884:1883 -p 8884:8883 \
+#  --secret hono.eclipse.org-key.pem \
+#  --secret hono.eclipse.org-cert.pem \
+#  --secret kura-adapter.credentials \
+#  --secret hono-adapter-kura-config.yml \
+#  --limit-memory 384m \
+#  --env _JAVA_OPTIONS="${default-java-options}" \
+#  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
+#  --env SPRING_PROFILES_ACTIVE=prod,prometheus \
+#  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+#  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
+#  ${docker.image.org-name}/hono-adapter-kura:$HONO_VERSION
+#echo ... done
 
 echo
 echo Deploying CoAP adapter ...
@@ -254,14 +267,11 @@ docker service create $CREATE_OPTIONS --name ${hono.adapter-coap.service} -p 568
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret coap-adapter.credentials \
-  --secret hono-adapter-coap-vertx-config.yml \
-  --limit-memory 384m \
+  --secret source=hono-adapter-coap-vertx-config.yml,target=/opt/hono/config/application.yml \
+  --limit-memory 96m \
   --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-coap-vertx:$HONO_VERSION
+  --env JAEGER_SERVICE_NAME=hono-coap-adapter \
+  ${docker.image.org-name}/hono-adapter-coap-vertx-quarkus-native:$HONO_VERSION
 echo ... done
 
 echo

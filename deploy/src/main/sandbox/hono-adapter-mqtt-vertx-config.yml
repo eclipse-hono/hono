@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -27,6 +27,7 @@ hono:
     jmsVendorPropsEnabled: true
     maxPayloadSize: 8096
     tenantIdleTimeout: 1h
+    maxConnections: 200
   messaging:
     name: 'Hono MQTT Adapter'
     host: ${hono.amqp-network.service}${service.suffix}
@@ -47,9 +48,9 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-  deviceConnection:
+  commandRouter:
     name: 'Hono MQTT Adapter'
-    host: ${hono.registration.service}${service.suffix}
+    host: ${hono.command-router.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
   command:
@@ -57,3 +58,18 @@ hono:
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     amqpHostname: hono-internal
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.adapter":
+        level: INFO
+  vertx:
+    prefer-native-transport: true
+    resolver:
+      cache-max-time-to-live: 0

@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,10 +26,10 @@ docker secret rm \
   coap-adapter.credentials \
   hono-adapter-coap-vertx-config.yml
 
-docker service rm ${hono.adapter-kura.service}
-docker secret rm \
-  kura-adapter.credentials \
-  hono-adapter-kura-config.yml
+#docker service rm ${hono.adapter-kura.service}
+#docker secret rm \
+#  kura-adapter.credentials \
+#  hono-adapter-kura-config.yml
 
 docker service rm ${hono.adapter-amqp.service}
 docker secret rm \
@@ -45,6 +45,15 @@ docker service rm ${hono.adapter-mqtt.service}
 docker secret rm \
   mqtt-adapter.credentials \
   hono-adapter-mqtt-vertx-config.yml
+
+docker service rm ${hono.command-router.service}
+docker secret rm \
+  command-router-key.pem \
+  command-router-cert.pem \
+  command-router.credentials \
+  hono-service-command-router-config.yml
+docker config rm \
+  command-router-cache-config.xml
 
 docker service rm ${hono.registration.service}
 docker secret rm \

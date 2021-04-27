@@ -54,6 +54,7 @@
     <hono.amqp-network.service>hono-dispatch-router</hono.amqp-network.service>
     <hono.artemis.service>hono-artemis</hono.artemis.service>
     <hono.auth.service>hono-service-auth</hono.auth.service>
+    <hono.command-router.service>hono-service-command-router</hono.command-router.service>
     <hono.registration.service>hono-service-device-registry</hono.registration.service>
 
   </properties>

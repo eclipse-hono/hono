@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,6 +26,7 @@ hono:
     certPath: /run/secrets/hono.eclipse.org-cert.pem
     maxPayloadSize: 8096
     tenantIdleTimeout: 1h
+    maxConnections: 200
   messaging:
     name: 'Hono Kura Adapter'
     host: ${hono.amqp-network.service}${service.suffix}
@@ -46,9 +47,9 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
-  deviceConnection:
+  commandRouter:
     name: 'Hono Kura Adapter'
-    host: ${hono.registration.service}${service.suffix}
+    host: ${hono.command-router.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
   command:
