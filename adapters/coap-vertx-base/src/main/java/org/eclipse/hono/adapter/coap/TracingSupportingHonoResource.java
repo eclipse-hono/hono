@@ -116,7 +116,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
         if (peerIdentity instanceof ExtensiblePrincipal) {
             final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
             final Device authenticatedDevice = extPrincipal.getExtendedInfo()
-                    .get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_DEVICE, Device.class);
+                    .get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class);
             if (authenticatedDevice != null) {
                 result.complete(authenticatedDevice);
             } else {
@@ -145,7 +145,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             return null;
         }
         final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
-        return extPrincipal.getExtendedInfo().get(DefaultDeviceResolver.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
+        return extPrincipal.getExtendedInfo().get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
     }
 
     private SpanContext extractSpanContextFromRequest(final OptionSet requestOptions) {
