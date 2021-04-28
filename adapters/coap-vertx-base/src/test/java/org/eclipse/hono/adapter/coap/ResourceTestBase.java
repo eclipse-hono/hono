@@ -32,60 +32,23 @@ import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
-import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.test.ProtocolAdapterMockSupport;
-import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.jupiter.api.BeforeEach;
 
-import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
 /**
  * Base class for implementing CoAP resource tests.
  */
-abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
+abstract class ResourceTestBase extends CoapProtocolAdapterMockSupport<CoapProtocolAdapter, CoapAdapterProperties> {
 
-    CommandConsumer commandConsumer;
-    CoapAdapterMetrics metrics;
-    Span span;
     CoapProtocolAdapter adapter;
-    CoapAdapterProperties properties;
-    Vertx vertx;
-
-    /**
-     * Sets up common fixture.
-     */
-    @BeforeEach
-    public void setup() {
-
-        vertx = mock(Vertx.class);
-        metrics = mock(CoapAdapterMetrics.class);
-
-        span = TracingMockSupport.mockSpan();
-
-        createClients();
-        prepareClients();
-
-        commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
-
-        properties = new CoapAdapterProperties();
-        properties.setInsecurePortEnabled(true);
-        properties.setAuthenticationRequired(false);
-    }
 
     static CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final Integer contentFormat) {
 
@@ -148,5 +111,13 @@ abstract class ResourceTestBase extends ProtocolAdapterMockSupport {
         }).when(adapter).runOnContext(VertxMockSupport.anyHandler());
         when(adapter.sendTtdEvent(anyString(), anyString(), any(), anyInt(), any())).thenReturn(Future.succeededFuture());
         return adapter;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    CoapAdapterProperties newDefaultConfigurationProperties() {
+        return new CoapAdapterProperties();
     }
 }
