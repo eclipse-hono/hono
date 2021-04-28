@@ -251,7 +251,8 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
     }
 
     /**
-     * Closes the underlying Kafka consumer and tries to commit the current offsets before.
+     * Closes the underlying Kafka consumer and tries to commit the current offsets before (if the consumer hasn't
+     * already been stopped).
      * <p>
      * This does not invoke the close handler.
      *
@@ -260,6 +261,9 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
      */
     @Override
     public Future<Void> stop() {
+        if (stopped) {
+            return Future.succeededFuture();
+        }
         return tryCommitAndClose();
     }
 

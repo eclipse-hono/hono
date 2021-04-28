@@ -109,6 +109,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     @SuppressWarnings("rawtypes")
     @Override
     public Future<Void> stop() {
+        // assemble futures for closing the command response consumers
         final List<Future> closeKafkaClientsTracker = commandResponseSubscriptions
                 .keySet()
                 .stream()
@@ -117,9 +118,10 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                 .map(MessageConsumer::close)
                 .collect(Collectors.toList());
 
+        // add future for closing command producer
         closeKafkaClientsTracker.add(super.stop());
 
-        return CompositeFuture.all(closeKafkaClientsTracker)
+        return CompositeFuture.join(closeKafkaClientsTracker)
                 .mapEmpty();
     }
 
