@@ -22,8 +22,12 @@ public interface SchemaCreator {
 
     /**
      * Creates the database schema.
+     * <p>
+     * The schema creation process is expected to be idempotent because it is invoked at every start of the registry.
+     * So, for example, a table or an index should only be created if it does not already exist.
      *
-     * @return A future indicating the outcome of the creation attempt.
+     * @return A future indicating the outcome of the creation attempt. The future will succeed if the schema is
+     *         successfully created or already exists.
      */
     Future<Void> createDbSchema();
 }
