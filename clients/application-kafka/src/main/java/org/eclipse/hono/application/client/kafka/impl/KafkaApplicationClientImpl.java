@@ -13,9 +13,12 @@
 
 package org.eclipse.hono.application.client.kafka.impl;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -28,6 +31,7 @@ import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -42,6 +46,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
 
     private final Vertx vertx;
     private final KafkaConsumerConfigProperties consumerConfig;
+    private final List<MessageConsumer> consumersToCloseOnStop = new LinkedList<>();
     private Supplier<KafkaConsumer<String, Buffer>> kafkaConsumerSupplier;
 
     /**
@@ -90,6 +95,18 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         }
         this.vertx = vertx;
         this.consumerConfig = consumerConfig;
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Future<Void> stop() {
+        // stop created consumers
+        final List<Future> closeKafkaClientsTracker = consumersToCloseOnStop.stream()
+                .map(MessageConsumer::close).collect(Collectors.toList());
+        // add command sender related clients
+        closeKafkaClientsTracker.add(super.stop());
+        return CompositeFuture.join(closeKafkaClientsTracker)
+                .mapEmpty();
     }
 
     @Override
@@ -151,6 +168,6 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         final Handler<Throwable> effectiveCloseHandler = Objects.nonNull(closeHandler) ? closeHandler : (t -> {});
 
         return KafkaBasedDownstreamMessageConsumer.create(tenantId, type, kafkaConsumer, consumerConfig, messageHandler,
-                effectiveCloseHandler);
+                effectiveCloseHandler).onSuccess(consumersToCloseOnStop::add);
     }
 }

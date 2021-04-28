@@ -111,10 +111,32 @@ public class KafkaApplicationClientImplTest {
     @MethodSource("messageTypes")
     public void testCreateConsumer(final Type msgType, final VertxTestContext ctx) {
 
-        //Verify that the consumer for the given tenant and the message type is successfully created
+        // Verify that the consumer for the given tenant and the message type is successfully created
         createConsumer(tenantId, msgType, m -> {}, t -> {})
                 .onComplete(ctx.succeeding(consumer -> ctx.verify(() -> {
                     assertThat(consumer).isNotNull();
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that a message consumer created by the application client is closed when the application
+     * client is closed.
+     *
+     * @param msgType The message type (telemetry, event or command_response)
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("messageTypes")
+    public void testStopClosesConsumer(final Type msgType, final VertxTestContext ctx) {
+
+        // Verify that the consumer for the given tenant and the message type is successfully created
+        createConsumer(tenantId, msgType, m -> {}, t -> {})
+                // stop the application client
+                .compose(c -> client.stop())
+                .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
+                    // verify that the Kafka mock consumer is closed
+                    assertThat(mockConsumer.closed()).isTrue();
                     ctx.completeNow();
                 })));
     }
