@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.metric;
 import java.util.Objects;
 
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -53,7 +54,12 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void reportConnectionAttempt(final MetricsTags.ConnectionAttemptOutcome outcome, final String tenantId) {
+    public void reportConnectionAttempt(final ConnectionAttemptOutcome outcome, final String tenantId) {
+        Objects.requireNonNull(outcome);
+    }
+
+    @Override
+    public void reportConnectionAttempt(final ConnectionAttemptOutcome outcome, final String tenantId, final String cipherSuite) {
         Objects.requireNonNull(outcome);
     }
 

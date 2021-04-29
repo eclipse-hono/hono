@@ -362,6 +362,10 @@ public final class MetricsTags {
     }
 
     /**
+     * The name of the tag that holds the name of the cipher suite used by a device to connect to an adapter.
+     */
+    public static final String TAG_CIPHER_SUITE   = "cipher-suite";
+    /**
      * The name of the tag that holds the name of the component that reports a metric.
      */
     public static final String TAG_COMPONENT_NAME = "component-name";
@@ -418,4 +422,18 @@ public final class MetricsTags {
     public static Tag getTenantTag(final String tenant) {
         return Tag.of(MetricsTags.TAG_TENANT, Strings.isNullOrEmpty(tenant) ? "UNKNOWN" : tenant);
     }
+
+    /**
+     * Creates a tag for a tenant identifier.
+     *
+     * @param cipherSuite The name of the cipher suite a device uses to connect to an adapter
+     *                    or {@code null} if unknown.
+     *                    The value of the tag will be set to <em>UNKNOWN</em> if the suite
+     *                    is {@code null} or an empty string.
+     * @return The tag.
+     */
+    public static Tag getCipherSuiteTag(final String cipherSuite) {
+        return Tag.of(MetricsTags.TAG_CIPHER_SUITE, Strings.isNullOrEmpty(cipherSuite) ? "UNKNOWN" : cipherSuite);
+    }
+
 }

@@ -196,18 +196,35 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
     /**
      * {@inheritDoc}
      * <p>
-     * The tenant tag will be set to value <em>UNKNOWN</em> if the
-     * given tenant ID is {@code null}.
+     * Invokes {@link #reportConnectionAttempt(org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome, String, String)}
+     * for the given tenant ID and {@code null} as the cipher suite.
      */
     @Override
     public void reportConnectionAttempt(
             final MetricsTags.ConnectionAttemptOutcome outcome,
             final String tenantId) {
+        reportConnectionAttempt(outcome, tenantId, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The tenant tag will be set to value <em>UNKNOWN</em> if the
+     * given tenant ID is {@code null}.
+     * The cipher suite tag will be set to value <em>UNKNOWN</em> if
+     * the given cipher suite is {@code null}. 
+     */
+    @Override
+    public void reportConnectionAttempt(
+            final MetricsTags.ConnectionAttemptOutcome outcome,
+            final String tenantId,
+            final String cipherSuite) {
 
         Objects.requireNonNull(outcome);
 
         final Tags tags = Tags.of(outcome.asTag())
-                .and(MetricsTags.getTenantTag(tenantId));
+                .and(MetricsTags.getTenantTag(tenantId))
+                .and(MetricsTags.getCipherSuiteTag(cipherSuite));
 
         Counter.builder(METER_CONNECTIONS_ATTEMPTS)
             .tags(tags)
