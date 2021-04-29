@@ -19,9 +19,12 @@ import java.util.Set;
 import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CommandResponseResource;
+import org.eclipse.hono.adapter.coap.DeviceRegistryBasedCertificateVerifier;
+import org.eclipse.hono.adapter.coap.DeviceRegistryBasedPskStore;
 import org.eclipse.hono.adapter.coap.EventResource;
 import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.TelemetryResource;
+import org.eclipse.hono.adapter.coap.impl.ConfigBasedCoapEndpointFactory;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
@@ -87,6 +90,13 @@ public class Config extends AbstractAdapterConfig {
                 new TelemetryResource(adapter, getTracer(), vertx()),
                 new EventResource(adapter, getTracer(), vertx()),
                 new CommandResponseResource(adapter, getTracer(), vertx())));
+
+        final var endpointFactory = new ConfigBasedCoapEndpointFactory(vertx(), adapterProperties());
+        endpointFactory.setPskStore(new DeviceRegistryBasedPskStore(adapter, getTracer()));
+        endpointFactory.setCertificateVerifier(new DeviceRegistryBasedCertificateVerifier(adapter, getTracer()));
+
+        adapter.setCoapEndpointFactory(endpointFactory);
+
         return adapter;
     }
 

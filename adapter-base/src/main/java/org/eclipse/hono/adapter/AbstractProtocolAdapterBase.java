@@ -223,11 +223,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         this.credentialsClient = Objects.requireNonNull(client);
     }
 
-    /**
-     * Gets the client used for accessing the Credentials service.
-     *
-     * @return The client.
-     */
+    @Override
     public final CredentialsClient getCredentialsClient() {
         return credentialsClient;
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,8 +29,6 @@ import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -42,55 +40,36 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 
 /**
- * A Hono Credentials service based implementation of Scandium's PSK authentication related interfaces.
+ * A PSK store that looks up keys using Hono's Credentials service.
  *
  */
-public class PskDeviceResolver implements AdvancedPskStore {
+public class DeviceRegistryBasedPskStore implements AdvancedPskStore {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PskDeviceResolver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryBasedPskStore.class);
 
-    /**
-     * The vert.x context to run interactions with Hono services on.
-     */
-    private final Context context;
+    private final CoapProtocolAdapter adapter;
     private final Tracer tracer;
-    private final String adapterName;
-    private final CoapAdapterProperties config;
-    private final CredentialsClient credentialsClient;
-    private final TenantClient tenantClient;
+
     private volatile PskSecretResultHandler californiumResultHandler;
 
     /**
      * Creates a new resolver.
      *
-     * @param vertxContext The vert.x context to run on.
+     * @param adapter The protocol adapter to use for accessing Hono services.
      * @param tracer The OpenTracing tracer.
-     * @param adapterName The name of the protocol adapter.
-     * @param config The configuration properties.
-     * @param credentialsClient The client to use for accessing the Credentials service.
-     * @param tenantClient The client to use for accessing the Tenant service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public PskDeviceResolver(
-            final Context vertxContext,
-            final Tracer tracer,
-            final String adapterName,
-            final CoapAdapterProperties config,
-            final CredentialsClient credentialsClient,
-            final TenantClient tenantClient) {
+    public DeviceRegistryBasedPskStore(
+            final CoapProtocolAdapter adapter,
+            final Tracer tracer) {
 
-        this.context = Objects.requireNonNull(vertxContext);
+        this.adapter = Objects.requireNonNull(adapter);
         this.tracer = Objects.requireNonNull(tracer);
-        this.adapterName = Objects.requireNonNull(adapterName);
-        this.config = Objects.requireNonNull(config);
-        this.credentialsClient = Objects.requireNonNull(credentialsClient);
-        this.tenantClient = Objects.requireNonNull(tenantClient);
     }
 
     /**
@@ -118,13 +97,6 @@ public class PskDeviceResolver implements AdvancedPskStore {
         }
     }
 
-    private Span newSpan(final String operation) {
-        return tracer.buildSpan(operation)
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), adapterName)
-                .start();
-    }
-
     /**
      * Load credentials for an identity used by a device in a PSK based DTLS handshake.
      *
@@ -135,10 +107,14 @@ public class PskDeviceResolver implements AdvancedPskStore {
         final String publicInfo = identity.getPublicInfoAsString();
         LOG.debug("getting PSK secret for identity [{}]", publicInfo);
 
-        final Span span = newSpan("PSK-getDeviceCredentials");
+        final Span span = tracer.buildSpan("look up pre-shared key")
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(Tags.COMPONENT.getKey(), adapter.getTypeName())
+                .start();
 
         final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(publicInfo, span);
         if (handshakeIdentity == null) {
+            TracingHelper.logError(span, "could not determine auth-id from PSK identity");
             span.finish();
             return;
         }
@@ -147,7 +123,7 @@ public class PskDeviceResolver implements AdvancedPskStore {
         TracingHelper.TAG_AUTH_ID.set(span, handshakeIdentity.getAuthId());
 
         applyTraceSamplingPriority(handshakeIdentity, span)
-                .compose(v -> credentialsClient.get(
+                .compose(v -> adapter.getCredentialsClient().get(
                         handshakeIdentity.getTenantId(),
                         handshakeIdentity.getType(),
                         handshakeIdentity.getAuthId(),
@@ -181,7 +157,7 @@ public class PskDeviceResolver implements AdvancedPskStore {
     }
 
     private Future<Void> applyTraceSamplingPriority(final DeviceCredentials deviceCredentials, final Span span) {
-        return tenantClient.get(deviceCredentials.getTenantId(), span.context())
+        return adapter.getTenantClient().get(deviceCredentials.getTenantId(), span.context())
                 .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, deviceCredentials.getAuthId());
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, deviceCredentials.getAuthId(), span);
@@ -203,7 +179,7 @@ public class PskDeviceResolver implements AdvancedPskStore {
      * @return tenant aware identity.
      */
     private PreSharedKeyDeviceIdentity getHandshakeIdentity(final String identity, final Span span) {
-        return PreSharedKeyDeviceIdentity.create(identity, config.getIdSplitRegex(), span);
+        return PreSharedKeyDeviceIdentity.create(identity, adapter.getConfig().getIdSplitRegex(), span);
     }
 
     @Override
@@ -220,7 +196,7 @@ public class PskDeviceResolver implements AdvancedPskStore {
             final SecretKey otherSecret,
             final byte[] seed) {
 
-        context.runOnContext((v) -> loadCredentialsForDevice(cid, identity));
+        adapter.runOnContext((v) -> loadCredentialsForDevice(cid, identity));
         return null;
     }
 

@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
@@ -64,6 +65,13 @@ public interface ProtocolAdapter {
      * @return The client.
      */
     TenantClient getTenantClient();
+
+    /**
+     * Gets the client used for accessing the Credentials service.
+     *
+     * @return The client.
+     */
+    CredentialsClient getCredentialsClient();
 
     /**
      * Gets the client being used for sending telemetry messages downstream.

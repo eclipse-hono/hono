@@ -12,41 +12,19 @@
  */
 package org.eclipse.hono.adapter.coap;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.security.PrivateKey;
-import java.security.cert.Certificate;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
-import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
-import org.eclipse.californium.core.network.config.NetworkConfig.Keys;
 import org.eclipse.californium.core.server.resources.Resource;
-import org.eclipse.californium.scandium.DTLSConnector;
-import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
-import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
-import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
-import org.eclipse.californium.scandium.dtls.x509.NewAdvancedCertificateVerifier;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
-import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
-import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
-import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
-import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -63,71 +41,26 @@ import io.vertx.core.Promise;
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> implements CoapProtocolAdapter {
 
-    /**
-     * The minimum amount of memory that the adapter requires to run.
-     */
-    private static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
-    /**
-     * The amount of memory required for each connection.
-     */
-    private static final int MEMORY_PER_CONNECTION = 10_000; // 10KB: expected avg. memory consumption per connection
-
-    /**
-     * A logger shared with subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(getClass());
+    protected Endpoint secureEndpoint;
+    protected Endpoint insecureEndpoint;
 
     private final Set<Resource> resourcesToAdd = new HashSet<>();
 
+    private CoapEndpointFactory endpointFactory;
     private CoapServer server;
     private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
-    private ApplicationLevelInfoSupplier honoDeviceResolver;
-    private AdvancedPskStore pskStore;
-    private NewAdvancedCertificateVerifier certificateVerifier;
-    private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-
-    private volatile Endpoint secureEndpoint;
-    private volatile Endpoint insecureEndpoint;
 
     /**
-     * Sets the service to use for resolving an authenticated CoAP client to a Hono device.
-     *
-     * @param deviceIdentityResolver The resolver to use.
-     */
-    public final void setHonoDeviceResolver(final ApplicationLevelInfoSupplier deviceIdentityResolver) {
-        this.honoDeviceResolver = Objects.requireNonNull(deviceIdentityResolver);
-    }
-
-    /**
-     * Sets the service to use for looking up pre-shared keys for clients authenticating using PSK
-     * based ciphers in a DTLS handshake.
-     *
-     * @param pskStore The service to use.
-     */
-    public final void setPskStore(final AdvancedPskStore pskStore) {
-        this.pskStore = Objects.requireNonNull(pskStore);
-    }
-
-    /**
-     * Sets the service to use for verifying certificates for clients authenticating using x509 based ciphers in a DTLS
-     * handshake.
-     *
-     * @param certificateVerifier The service to use.
-     */
-    public final void setCertificateVerifier(final NewAdvancedCertificateVerifier certificateVerifier) {
-        this.certificateVerifier = Objects.requireNonNull(certificateVerifier);
-    }
-
-    /**
-     * Sets the provider to use for authenticating devices based on a client certificate.
+     * Sets the factory for creating CoAP endpoints.
      * <p>
-     * If not set explicitly using this method, a {@code SubjectDnAuthProvider} will be created during startup.
+     * The factory will be used during startup to create endpoints for the CoAP server if no
+     * server has been set explicitly using {@link #setCoapServer(CoapServer)}.
      *
-     * @param provider The provider to use.
-     * @throws NullPointerException if provider is {@code null}.
+     * @param factory The factory.
+     * @throws NullPointerException if factory is {@code null}.
      */
-    public final void setClientCertAuthProvider(final DeviceCredentialsAuthProvider<SubjectDnCredentials> provider) {
-        this.clientCertAuthProvider = Objects.requireNonNull(provider);
+    public final void setCoapEndpointFactory(final CoapEndpointFactory factory) {
+        this.endpointFactory = Objects.requireNonNull(factory);
     }
 
     /**
@@ -175,22 +108,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     @Override
     protected final int getActualPort() {
-        int port = Constants.PORT_UNCONFIGURED;
-        final Endpoint endpoint = secureEndpoint;
-        if (endpoint != null) {
-            port = endpoint.getAddress().getPort();
-        }
-        return port;
+        return Optional.ofNullable(secureEndpoint)
+                .map(ep -> ep.getAddress().getPort())
+                .orElse(Constants.PORT_UNCONFIGURED);
     }
 
     @Override
     protected final int getActualInsecurePort() {
-        int port = Constants.PORT_UNCONFIGURED;
-        final Endpoint endpoint = insecureEndpoint;
-        if (endpoint != null) {
-            port = endpoint.getAddress().getPort();
-        }
-        return port;
+        return Optional.ofNullable(insecureEndpoint)
+                .map(ep -> ep.getAddress().getPort())
+                .orElse(Constants.PORT_UNCONFIGURED);
     }
 
     /**
@@ -248,83 +175,33 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private Future<CoapServer> createServer() {
 
-        return checkCoapPortConfiguration()
-                .compose(portConfigOk -> {
-                    log.info("creating new CoAP server");
-                    final CoapServer newServer = new CoapServer(NetworkConfig.createStandardWithoutFile());
-                    final Future<Endpoint> secureEndpoint;
-                    final Future<Endpoint> insecureEndpoint;
-
-                    if (isSecurePortEnabled()) {
-                        secureEndpoint = createSecureEndpoint()
-                                .map(ep -> {
-                                    newServer.addEndpoint(ep);
-                                    this.secureEndpoint = ep;
-                                    return ep;
-                                });
-                    } else {
-                        log.info("neither key/cert nor secure port are configured, won't start secure endpoint");
-                        secureEndpoint = Future.succeededFuture();
-                    }
-
-                    if (isInsecurePortEnabled()) {
-                        if (getConfig().isAuthenticationRequired()) {
-                            log.warn("skipping start up of insecure endpoint, configuration requires authentication of devices");
-                            insecureEndpoint = Future.succeededFuture();
-                        } else {
-                            insecureEndpoint = createInsecureEndpoint()
-                                    .map(ep -> {
-                                        newServer.addEndpoint(ep);
-                                        this.insecureEndpoint = ep;
-                                        return ep;
-                                    });
-                        }
-                    } else {
-                        log.info("insecure port is not configured, won't start insecure endpoint");
-                        insecureEndpoint = Future.succeededFuture();
-                    }
-
-                    return CompositeFuture.all(insecureEndpoint, secureEndpoint)
-                            .map(ok -> {
-                                this.server = newServer;
-                                return newServer;
-                            });
-                });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean isSecurePortEnabled() {
-        return getConfig().isSecurePortEnabled() || getConfig().getPort() > Constants.PORT_UNCONFIGURED;
-    }
-
-    private Future<Void> checkCoapPortConfiguration() {
-
-        final Promise<Void> result = Promise.promise();
-
-        final boolean securePortEnabled = isSecurePortEnabled();
-        final int securePort = securePortEnabled ? getConfig().getPort(getPortDefaultValue()) : Constants.PORT_UNCONFIGURED;
-
-        if (!securePortEnabled) {
-            if (getConfig().isInsecurePortEnabled()) {
-                result.complete();
-            } else {
-                log.error("configuration must have at least one of secure or insecure port set to start up");
-                result.fail("no ports configured");
-            }
-        } else if (getConfig().isInsecurePortEnabled() && securePort == getConfig().getInsecurePort(getInsecurePortDefaultValue())) {
-            log.error("secure and insecure ports must be configured to bind to different port numbers");
-            result.fail("secure and insecure ports configured to bind to same port number");
-        } else {
-            if (getConfig().getKeyCertOptions() == null) {
-                log.warn("secure port configured, but no certificate/key is set. Will only enable ciphers that do not require server certificate!");
-            }
-            result.complete();
+        if (endpointFactory == null) {
+            return Future.failedFuture(new IllegalStateException(
+                    "coapEndpointFactory property must be set if no CoAP server is set explicitly"));
         }
 
-        return result.future();
+        log.info("creating new CoAP server");
+        final CoapServer newServer = new CoapServer(NetworkConfig.createStandardWithoutFile());
+        final Future<Endpoint> secureEndpoint = endpointFactory.getSecureEndpoint()
+                .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
+                .map(ep -> {
+                    newServer.addEndpoint(ep);
+                    this.secureEndpoint = ep;
+                    return ep;
+                });
+        final Future<Endpoint> insecureEndpoint = endpointFactory.getInsecureEndpoint()
+                .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
+                .map(ep -> {
+                    newServer.addEndpoint(ep);
+                    this.insecureEndpoint = ep;
+                    return ep;
+                });
+
+        return CompositeFuture.any(insecureEndpoint, secureEndpoint)
+                .map(ok -> {
+                    this.server = newServer;
+                    return newServer;
+                });
     }
 
     private void addResources(final CoapServer startingServer) {
@@ -335,109 +212,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         resourcesToAdd.clear();
     }
 
-    private boolean addIdentity(final DtlsConnectorConfig.Builder dtlsConfig) {
-
-        final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
-        final PrivateKey pk = keyLoader.getPrivateKey();
-        final Certificate[] certChain = keyLoader.getCertificateChain();
-        if (pk != null && certChain != null) {
-            if (pk.getAlgorithm().equals("EC")) {
-                // Californium's cipher suites support ECC based keys only
-                log.info("using private key [{}] and certificate [{}] as server identity",
-                        getConfig().getKeyPath(), getConfig().getCertPath());
-                dtlsConfig.setIdentity(pk, certChain);
-                return true;
-            } else {
-                log.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
-            }
-        } else if (certChain == null) {
-            log.warn("Missing configured certificate");
-        } else if (pk == null) {
-            log.warn("Missing configured private key");
-        }
-        return false;
-    }
-
-    private Future<Endpoint> createSecureEndpoint() {
-
-        return getSecureNetworkConfig().compose(config -> createSecureEndpoint(config));
-    }
-
-    private Future<Endpoint> createSecureEndpoint(final NetworkConfig config) {
-        final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
-                .orElseGet(() -> new DeviceInfoSupplier());
-
-        final AdvancedPskStore store = Optional.ofNullable(pskStore)
-                .orElseGet(() -> {
-                    return new PskDeviceResolver(context, tracer,
-                            getTypeName(), getConfig(),
-                            getCredentialsClient(), getTenantClient());
-                });
-
-        final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
-        // prevent session resumption
-        dtlsConfig.setNoServerSessionId(true);
-        dtlsConfig.setServerOnly(true);
-        dtlsConfig.setRecommendedCipherSuitesOnly(true);
-        dtlsConfig.setClientAuthenticationRequired(true);
-        dtlsConfig.setAddress(
-                new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
-        dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
-        dtlsConfig.setAdvancedPskStore(store);
-        dtlsConfig.setRetransmissionTimeout(getConfig().getDtlsRetransmissionTimeout());
-        dtlsConfig.setMaxConnections(config.getInt(Keys.MAX_ACTIVE_PEERS));
-
-        if (addIdentity(dtlsConfig)) {
-            final NewAdvancedCertificateVerifier verifier = Optional.ofNullable(certificateVerifier)
-                    .orElseGet(() -> {
-                        return new CertificateDeviceResolver(
-                                context, tracer,
-                                getTypeName(), getTenantClient(),
-                                new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
-                                Optional.ofNullable(clientCertAuthProvider).orElseGet(
-                                        () -> new X509AuthProvider(getCredentialsClient(), tracer)));
-                    });
-            dtlsConfig.setAdvancedCertificateVerifier(verifier);
-        }
-
-        try {
-            final DtlsConnectorConfig dtlsConnectorConfig = dtlsConfig.build();
-            if (log.isInfoEnabled()) {
-                final String ciphers = dtlsConnectorConfig.getSupportedCipherSuites()
-                        .stream()
-                        .map(cipher -> cipher.name())
-                        .collect(Collectors.joining(", "));
-                log.info("creating secure endpoint supporting ciphers: {}", ciphers);
-            }
-            final DTLSConnector dtlsConnector = new DTLSConnector(dtlsConnectorConfig);
-            final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
-            builder.setNetworkConfig(config);
-            builder.setConnector(dtlsConnector);
-            return Future.succeededFuture(builder.build());
-
-        } catch (final IllegalStateException ex) {
-            log.warn("failed to create secure endpoint", ex);
-            return Future.failedFuture(ex);
-        }
-    }
-
-    private Future<Endpoint> createInsecureEndpoint() {
-
-        log.info("creating insecure endpoint");
-
-        return getInsecureNetworkConfig()
-                .map(config -> {
-                    final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
-                    builder.setNetworkConfig(config);
-                    builder.setInetSocketAddress(new InetSocketAddress(
-                            getConfig().getInsecurePortBindAddress(),
-                            getConfig().getInsecurePort(getInsecurePortDefaultValue())));
-                    return builder.build();
-                });
-    }
-
     /**
-     * Invoked before the coap server is started.
+     * Invoked before the CoAP server is started.
      * <p>
      * May be overridden by sub-classes to provide additional startup handling.
      *
@@ -456,85 +232,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     protected void onStartupSuccess() {
         // empty
-    }
-
-    private NetworkConfig newDefaultNetworkConfig() {
-        final NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setInt(Keys.PROTOCOL_STAGE_THREAD_COUNT, getConfig().getCoapThreads());
-        networkConfig.setInt(Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, getConfig().getConnectorThreads());
-        networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getConnectorThreads());
-        networkConfig.setInt(Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
-        networkConfig.setInt(Keys.EXCHANGE_LIFETIME, getConfig().getExchangeLifetime());
-        networkConfig.setBoolean(Keys.USE_MESSAGE_OFFLOADING, getConfig().isMessageOffloadingEnabled());
-        networkConfig.setString(Keys.DEDUPLICATOR, Keys.DEDUPLICATOR_PEERS_MARK_AND_SWEEP);
-        final int maxConnections = getConfig().getMaxConnections();
-        if (maxConnections == 0) {
-            final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION);
-            networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, limits.getRecommendedLimit());
-        } else {
-            networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, maxConnections);
-        }
-        return networkConfig;
-    }
-
-    /**
-     * Gets the CoAP network configuration for the secure endpoint.
-     * <ol>
-     * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
-     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
-     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getSecureNetworkConfig()}.</li>
-     * </ol>
-     *
-     * @return The network configuration for the secure endpoint.
-     */
-    protected Future<NetworkConfig> getSecureNetworkConfig() {
-
-        final NetworkConfig networkConfig = newDefaultNetworkConfig();
-        networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getDtlsThreads());
-        return loadNetworkConfig(getConfig().getNetworkConfig(), networkConfig)
-                .compose(c -> loadNetworkConfig(getConfig().getSecureNetworkConfig(), c));
-    }
-
-    /**
-     * Gets the CoAP network configuration for the insecure endpoint.
-     * <ol>
-     * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
-     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
-     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getInsecureNetworkConfig()}.</li>
-     * </ol>
-     *
-     * @return The network configuration for the insecure endpoint.
-     */
-    protected Future<NetworkConfig> getInsecureNetworkConfig() {
-
-        final NetworkConfig networkConfig = newDefaultNetworkConfig();
-        return loadNetworkConfig(getConfig().getNetworkConfig(), networkConfig)
-                .compose(c -> loadNetworkConfig(getConfig().getInsecureNetworkConfig(), c));
-    }
-
-    /**
-     * Loads Californium configuration properties from a file.
-     *
-     * @param fileName The absolute path to the properties file.
-     * @param networkConfig The configuration to apply the properties to.
-     * @return The updated configuration.
-     */
-    protected Future<NetworkConfig> loadNetworkConfig(final String fileName, final NetworkConfig networkConfig) {
-
-        if (fileName != null && !fileName.isEmpty()) {
-            getVertx().fileSystem().readFile(fileName, readAttempt -> {
-                if (readAttempt.succeeded()) {
-                    try (InputStream is = new ByteArrayInputStream(readAttempt.result().getBytes())) {
-                        networkConfig.load(is);
-                    } catch (final IOException e) {
-                        log.warn("skipping malformed NetworkConfig properties [{}]", fileName);
-                    }
-                } else {
-                    log.warn("error reading NetworkConfig file [{}]", fileName, readAttempt.cause());
-                }
-            });
-        }
-        return Future.succeededFuture(networkConfig);
     }
 
     @Override
@@ -557,7 +254,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Invoked before the coap server is shut down. May be overridden by sub-classes.
+     * Invoked before the CoAP server is shut down. May be overridden by sub-classes.
      */
     protected void preShutdown() {
         // empty

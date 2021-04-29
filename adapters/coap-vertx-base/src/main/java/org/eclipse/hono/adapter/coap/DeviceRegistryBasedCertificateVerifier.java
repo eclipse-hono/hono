@@ -17,8 +17,6 @@ import java.net.HttpURLConnection;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,8 +39,9 @@ import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
+import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
@@ -53,35 +52,29 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 
 /**
- * A Hono Credentials service based implementation of Scandium's x509 authentication related interfaces.
+ * A certificate verifier that uses Hono's Tenant and Credentials services to
+ * look up trust anchors and resolve device identifiers.
  *
  */
-public class CertificateDeviceResolver
-        implements NewAdvancedCertificateVerifier {
+public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertificateVerifier {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CertificateDeviceResolver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryBasedCertificateVerifier.class);
     /**
      * Use empty issuer list. Device is required to send the proper certificate without this hint. Otherwise, if all
      * trusted issuers for the tenants are included, the client certificate request will get easily too large.
      */
-    private static final List<X500Principal> ISSUER = Collections.emptyList();
+    private static final List<X500Principal> ISSUER = List.of();
     /**
      * Support only x509 (for now).
      */
-    private static final List<CertificateType> SUPPORTED_TYPES = Arrays.asList(CertificateType.X_509);
+    private static final List<CertificateType> SUPPORTED_TYPES = List.of(CertificateType.X_509);
 
-    /**
-     * The vert.x context to run interactions with Hono services on.
-     */
-    private final Context context;
+    private final CoapProtocolAdapter adapter;
     private final Tracer tracer;
-    private final String adapterName;
-    private final TenantClient tenantClient;
     private final X509Authentication auth;
     private final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider;
 
@@ -90,35 +83,18 @@ public class CertificateDeviceResolver
     /**
      * Creates a new resolver.
      *
-     * @param vertxContext The vert.x context to run on.
+     * @param adapter The protocol adapter to use for accessing Hono services.
      * @param tracer The OpenTracing tracer.
-     * @param adapterName The name of the protocol adapter.
-     * @param tenantClient The service to use for trace sampling priority.
-     * @param clientAuth The service to use for validating the client's certificate path.
-     * @param authProvider The authentication provider to use for verifying the device identity.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public CertificateDeviceResolver(
-            final Context vertxContext,
-            final Tracer tracer,
-            final String adapterName,
-            final TenantClient tenantClient,
-            final X509Authentication clientAuth,
-            final DeviceCredentialsAuthProvider<SubjectDnCredentials> authProvider) {
+    public DeviceRegistryBasedCertificateVerifier(
+            final CoapProtocolAdapter adapter,
+            final Tracer tracer) {
 
-        this.context = Objects.requireNonNull(vertxContext);
+        this.adapter = Objects.requireNonNull(adapter);
         this.tracer = Objects.requireNonNull(tracer);
-        this.adapterName = Objects.requireNonNull(adapterName);
-        this.tenantClient = Objects.requireNonNull(tenantClient);
-        this.auth = Objects.requireNonNull(clientAuth);
-        this.authProvider = Objects.requireNonNull(authProvider);
-    }
-
-    private Span newSpan(final String operation) {
-        return tracer.buildSpan(operation)
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), adapterName)
-                .start();
+        this.auth = new TenantServiceBasedX509Authentication(adapter.getTenantClient(), tracer);
+        this.authProvider = new X509AuthProvider(adapter.getCredentialsClient(), tracer);
     }
 
     /**
@@ -175,10 +151,16 @@ public class CertificateDeviceResolver
      * @param session session.
      * @see #setResultHandler(HandshakeResultHandler)
      */
-    private void validateCertificateAndLoadDevice(final ConnectionId cid, final CertPath certPath,
+    private void validateCertificateAndLoadDevice(
+            final ConnectionId cid,
+            final CertPath certPath,
             final DTLSSession session) {
-        LOG.debug("verifying x509");
-        final Span span = newSpan("X500-validate-client-certificate");
+
+        LOG.debug("validating client's X.509 certificate");
+        final Span span = tracer.buildSpan("validate client certificate")
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(Tags.COMPONENT.getKey(), adapter.getTypeName())
+                .start();
 
         validateCertificateAndLoadDevice(certPath, span)
                 .map(info -> {
@@ -191,7 +173,7 @@ public class CertificateDeviceResolver
                     final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
                             AlertDescription.BAD_CERTIFICATE, session.getPeer());
                     return new CertificateVerificationResult(cid,
-                            new HandshakeException("Error validating X509", alert), null);
+                            new HandshakeException("error validating X509", alert), null);
                 })
                 .onSuccess(result -> {
                     span.finish();
@@ -200,7 +182,7 @@ public class CertificateDeviceResolver
     }
 
     private Future<Void> applyTraceSamplingPriority(final DeviceCredentials deviceCredentials, final Span span) {
-        return tenantClient.get(deviceCredentials.getTenantId(), span.context())
+        return adapter.getTenantClient().get(deviceCredentials.getTenantId(), span.context())
                 .map(tenantObject -> {
                     TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null, deviceCredentials.getAuthId());
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, deviceCredentials.getAuthId(),
@@ -221,41 +203,42 @@ public class CertificateDeviceResolver
     }
 
     @Override
-    public CertificateVerificationResult verifyCertificate(final ConnectionId cid, final ServerNames serverName,
-            final Boolean clientUsage, final boolean truncateCertificatePath, final CertificateMessage message,
+    public CertificateVerificationResult verifyCertificate(
+            final ConnectionId cid,
+            final ServerNames serverName,
+            final Boolean clientUsage,
+            final boolean truncateCertificatePath,
+            final CertificateMessage message,
             final DTLSSession session) {
+
         try {
             final CertPath certChain = message.getCertificateChain();
             if (certChain == null) {
-                LOG.debug("Certificate validation failed: RPK not supported!");
                 final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
                         AlertDescription.BAD_CERTIFICATE, session.getPeer());
-                throw new HandshakeException("RPK not supported!", alert);
+                throw new HandshakeException("RPK not supported", alert);
             }
             final List<? extends Certificate> list = certChain.getCertificates();
             final int pathSize = list.size();
             if (pathSize < 1) {
-                final String msg = "At least one certificate is required!";
-                LOG.debug("Certificate validation failed: {}", msg);
                 final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
                         AlertDescription.BAD_CERTIFICATE, session.getPeer());
-                throw new HandshakeException(msg, alert);
+                throw new HandshakeException("client certificate chain must not be empty", alert);
             }
             if (clientUsage != null) {
                 final Certificate certificate = list.get(0);
                 if (certificate instanceof X509Certificate) {
                     if (!CertPathUtil.canBeUsedForAuthentication((X509Certificate) certificate, clientUsage)) {
-                        LOG.debug("Certificate validation failed: key usage doesn't match");
                         final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
                                 AlertDescription.BAD_CERTIFICATE, session.getPeer());
-                        throw new HandshakeException("Key Usage doesn't match!", alert);
+                        throw new HandshakeException("certificate cannot be used for client authentication", alert);
                     }
                 }
             }
-            context.runOnContext((v) -> validateCertificateAndLoadDevice(cid, certChain, session));
+            adapter.runOnContext((v) -> validateCertificateAndLoadDevice(cid, certChain, session));
             return null;
         } catch (HandshakeException e) {
-            LOG.debug("Certificate validation failed!", e);
+            LOG.debug("certificate validation failed", e);
             return new CertificateVerificationResult(cid, e, null);
         }
     }
