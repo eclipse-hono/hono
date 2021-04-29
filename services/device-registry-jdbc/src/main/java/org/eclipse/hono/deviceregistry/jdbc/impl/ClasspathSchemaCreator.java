@@ -15,92 +15,105 @@ package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.util.Objects;
 
+import org.eclipse.hono.deviceregistry.jdbc.SchemaCreator;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
 import org.eclipse.hono.service.base.jdbc.store.SQL;
+import org.eclipse.hono.service.base.jdbc.store.Statement;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.jdbc.JDBCClient;
 
 /**
  * Create the expected database schema if it does not exist from SQL script bundled with the classpath.
  */
-public class ClasspathSchemaCreator implements org.eclipse.hono.deviceregistry.jdbc.SchemaCreator {
+public class ClasspathSchemaCreator implements SchemaCreator {
 
     private static final Logger log = LoggerFactory.getLogger(ClasspathSchemaCreator.class);
 
     private final JdbcProperties deviceProperties;
     private final JdbcProperties tenantProperties;
     private final Vertx vertx;
+    private final Tracer tracer;
 
     /**
      * Creates a new instance.
      *
      * @param vertx The Vert.x instance to use.
+     * @param tracer The tracer to use.
      * @param devicesProperties The configuration properties for the device store.
      * @param tenantsProperties The configuration properties for the tenant store - may be {@code null}.
      * @throws NullPointerException if vertx or devicesProperties is {@code null}.
      */
-    public ClasspathSchemaCreator(final Vertx vertx, final JdbcProperties devicesProperties,
+    public ClasspathSchemaCreator(final Vertx vertx, final Tracer tracer, final JdbcProperties devicesProperties,
             final JdbcProperties tenantsProperties) {
 
         Objects.requireNonNull(vertx);
+        Objects.requireNonNull(tracer);
         Objects.requireNonNull(devicesProperties);
 
         this.vertx = vertx;
+        this.tracer = tracer;
         this.deviceProperties = devicesProperties;
         this.tenantProperties = tenantsProperties;
     }
 
     @Override
     public Future<Void> createDbSchema() {
-        return createTenantSchema().compose(v -> createDeviceSchema());
-    }
+        final Span span = TracingHelper.buildServerChildSpan(tracer, null,
+                "create database schema", getClass().getSimpleName()).start();
 
-    private Future<Void> createTenantSchema() {
         if (tenantProperties == null) {
-            return Future.succeededFuture();
+            return executeScript(deviceProperties, "02-create.devices.sql", span.context());
+        } else {
+            return executeScript(tenantProperties, "01-create.tenants.sql", span.context())
+                    .compose(v -> executeScript(deviceProperties, "02-create.devices.sql", span.context()));
         }
 
-        final JDBCClient jdbcClient = JdbcProperties.dataSource(vertx, tenantProperties);
-
-        switch (SQL.getDatabaseDialect(tenantProperties.getUrl())) {
-        case SQL.DIALECT_POSTGRESQL:
-            return readScript(jdbcClient, "'classpath:/sql/postgresql/01-create.tenants.sql'");
-        case SQL.DIALECT_H2:
-            return readScript(jdbcClient, "'classpath:/sql/h2/01-create.tenants.sql'");
-        default:
-            return Future.failedFuture(new IllegalArgumentException(
-                    "Unknown database dialect '" + SQL.getDatabaseDialect(tenantProperties.getUrl()) + "'"));
-        }
     }
 
-    private Future<Void> createDeviceSchema() {
-        final JDBCClient jdbcClient = JdbcProperties.dataSource(vertx, deviceProperties);
+    private Future<Void> executeScript(final JdbcProperties jdbcProperties, final String scriptName,
+            final SpanContext context) {
 
-        switch (SQL.getDatabaseDialect(deviceProperties.getUrl())) {
-        case SQL.DIALECT_POSTGRESQL:
-            return readScript(jdbcClient, "'classpath:/sql/postgresql/02-create.devices.sql'");
-        case SQL.DIALECT_H2:
-            return readScript(jdbcClient, "'classpath:/sql/h2/02-create.devices.sql'");
-        default:
-            return Future.failedFuture(new IllegalArgumentException(
-                    "Unknown database dialect '" + SQL.getDatabaseDialect(deviceProperties.getUrl()) + "'"));
+        final String dialect = SQL.getDatabaseDialect(jdbcProperties.getUrl());
+
+        if (!SQL.isSupportedDatabaseDialect(dialect)) {
+            return Future.failedFuture(new IllegalArgumentException("Unknown database dialect '" + dialect + "'"));
         }
+
+        final String scriptPath = "'classpath:/sql/" + dialect + "/" + scriptName + "'";
+        log.info("Creating database schema from file {}", scriptPath);
+
+        final Promise<Buffer> loadScript = Promise.promise();
+        vertx.fileSystem().readFile("sql/" + dialect + "/" + scriptName, loadScript);
+        return loadScript.future()
+                .map(Buffer::toString)
+                .compose(script -> runScript(jdbcProperties, script, context));
     }
 
-    private Future<Void> readScript(final JDBCClient client, final String scriptPath) {
-        log.debug("Creating database schema from file {}", scriptPath);
-        client.call("RUNSCRIPT FROM " + scriptPath, ar -> {
-            if (ar.succeeded()) {
-                log.info("Created database schema from file {}", scriptPath);
-            } else {
-                log.error("Failed to create database schema from file {}", scriptPath, ar.cause());
-            }
-        });
-        return Future.succeededFuture();
+    private Future<Void> runScript(final JdbcProperties jdbcProperties, final String script, final SpanContext ctx) {
+
+        final JDBCClient jdbcClient = JdbcProperties.dataSource(vertx, jdbcProperties);
+
+        final Promise<Void> clientCloseTracker = Promise.promise();
+        SQL.runTransactionally(jdbcClient, tracer, ctx,
+                (connection, context) -> {
+                    final var expanded = Statement.statement(script).expand();
+                    log.debug("create schema in DB [{}]: statement: {}", jdbcProperties.getUrl(), expanded);
+                    return expanded
+                            .query(jdbcClient)
+                            .recover(SQL::translateException);
+                })
+                .onComplete(ar -> jdbcClient.close(clientCloseTracker));
+        return clientCloseTracker.future();
     }
 
 }

@@ -696,14 +696,17 @@ public class ApplicationConfig {
      * @param vertx The Vert.x instance to use.
      * @param devicesProperties The configuration properties for the device store.
      * @param tenantsProperties The configuration properties for the tenant store.
+     * @param tracer The tracer to use.
      * @return The schema creator.
      */
     @Bean
     @Profile(Profiles.PROFILE_CREATE_SCHEMA + " & " + Profiles.PROFILE_TENANT_SERVICE)
     public SchemaCreator deviceAndTenantSchemaCreator(final Vertx vertx,
             final JdbcDeviceStoreProperties devicesProperties,
-            final JdbcTenantStoreProperties tenantsProperties) {
-        return new ClasspathSchemaCreator(vertx, devicesProperties.getAdapter(), tenantsProperties.getAdapter());
+            final JdbcTenantStoreProperties tenantsProperties,
+            final Tracer tracer) {
+        return new ClasspathSchemaCreator(vertx, tracer, devicesProperties.getAdapter(),
+                tenantsProperties.getAdapter());
     }
 
     /**
@@ -711,12 +714,15 @@ public class ApplicationConfig {
      *
      * @param vertx The Vert.x instance to use.
      * @param devicesProperties The configuration properties for the device store.
+     * @param tracer The tracer to use.
      * @return The schema creator.
      */
     @Bean
     @Profile(Profiles.PROFILE_CREATE_SCHEMA + " & !" + Profiles.PROFILE_TENANT_SERVICE)
-    public SchemaCreator deviceSchemaCreator(final Vertx vertx, final JdbcDeviceStoreProperties devicesProperties) {
-        return new ClasspathSchemaCreator(vertx, devicesProperties.getAdapter(), null);
+    public SchemaCreator deviceSchemaCreator(final Vertx vertx,
+            final JdbcDeviceStoreProperties devicesProperties,
+            final Tracer tracer) {
+        return new ClasspathSchemaCreator(vertx, tracer, devicesProperties.getAdapter(), null);
     }
 
     /**

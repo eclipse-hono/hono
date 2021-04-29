@@ -16,6 +16,7 @@ package org.eclipse.hono.service.base.jdbc.store;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -219,6 +220,16 @@ public final class SQL {
         }
         final URI subUri = URI.create(UrlEscapers.urlPathSegmentEscaper().escape(uri.getSchemeSpecificPart()));
         return subUri.getScheme();
+    }
+
+    /**
+     * Checks if the given string matches one of the supported database dialects.
+     *
+     * @param databaseDialect The dialect to be checked.
+     * @return {@code true} if databaseDialect is a supported dialect.
+     */
+    public static boolean isSupportedDatabaseDialect(final String databaseDialect) {
+        return List.of(SQL.DIALECT_H2, SQL.DIALECT_POSTGRESQL).contains(databaseDialect);
     }
 
     /**
