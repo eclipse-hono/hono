@@ -32,5 +32,5 @@
   <logger name="org.eclipse.hono.tests.mqtt" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.registry" level="TRACE"/>
 
-  <logger name="org.apache.kafka" level="DEBUG"/>
+  <logger name="org.apache.kafka" level="INFO"/>
 </included>

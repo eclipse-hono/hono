@@ -41,7 +41,7 @@
     <logger name="org.eclipse.hono.service.auth.device" level="TRACE"/>
     <logger name="org.eclipse.hono.util" level="TRACE"/>
 
-    <logger name="org.apache.kafka" level="DEBUG"/>
+    <logger name="org.apache.kafka" level="INFO"/>
   </springProfile>
 
   <springProfile name="dev">

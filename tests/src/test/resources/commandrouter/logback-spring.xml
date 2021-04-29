@@ -42,16 +42,22 @@
 
   <springProfile name="trace">
     <logger name="org.eclipse.hono.adapter.client" level="TRACE"/>
+    <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.commandrouter" level="TRACE"/>
+    <logger name="org.eclipse.hono.connection" level="TRACE"/>
+    <logger name="org.eclipse.hono.service" level="TRACE"/>
     <logger name="org.eclipse.hono" level="DEBUG"/>
 
     <logger name="org.infinispan" level="DEBUG"/>
-    <logger name="org.apache.kafka" level="DEBUG"/>
+    <logger name="org.apache.kafka" level="INFO"/>
   </springProfile>
 
   <springProfile name="dev">
-    <logger name="org.eclipse.hono" level="DEBUG"/>
     <logger name="org.eclipse.hono.adapter.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.commandrouter" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service" level="DEBUG"/>
 
     <logger name="org.infinispan" level="DEBUG"/>
     <logger name="org.apache.kafka" level="INFO"/>
