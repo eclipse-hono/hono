@@ -1095,10 +1095,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         props,
                         context)
                     .onSuccess(s -> log.debug(
-                            "successfully sent TTD notification [tenant: {}, device-id: {}, TTD: {}",
+                            "successfully sent TTD notification [tenant: {}, device-id: {}, TTD: {}]",
                             tenant, deviceId, ttd))
                     .onFailure(t -> log.debug(
-                            "failed to send TTD notification [tenant: {}, device-id: {}, TTD: {}",
+                            "failed to send TTD notification [tenant: {}, device-id: {}, TTD: {}]",
                             tenant, deviceId, ttd, t));
             } else {
                 // this adapter is not enabled for the tenant
