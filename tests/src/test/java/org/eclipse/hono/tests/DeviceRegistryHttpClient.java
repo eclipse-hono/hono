@@ -279,6 +279,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         final String uri = tenantInstanceUri(tenantId);
+        LOG.debug("adding tenant: {}", requestPayload.encodePrettily());
         return httpClient.create(
                 uri,
                 requestPayload,

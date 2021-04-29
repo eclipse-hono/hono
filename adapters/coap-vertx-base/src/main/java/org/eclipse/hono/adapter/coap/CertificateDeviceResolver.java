@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import java.net.HttpURLConnection;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -43,6 +44,7 @@ import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -126,6 +128,7 @@ public class CertificateDeviceResolver
      * @param span tracing span.
      */
     private Future<AdditionalInfo> validateCertificateAndLoadDevice(final CertPath certPath, final Span span) {
+
         final List<? extends Certificate> list = certPath.getCertificates();
         final Certificate[] certChain = list.toArray(new Certificate[list.size()]);
         final Promise<AdditionalInfo> authResult = Promise.promise();
@@ -134,9 +137,12 @@ public class CertificateDeviceResolver
                 .onSuccess(ar -> {
                     final SubjectDnCredentials credentials = authProvider.getCredentials(ar);
                     if (credentials == null) {
-                        authResult.fail("x509: no valid subject-dn!");
+                        authResult.fail(new ClientErrorException(
+                                HttpURLConnection.HTTP_UNAUTHORIZED,
+                                "failed to extract subject DN from client certificate"));
                     } else {
-                        LOG.debug("x509: subject-dn: {}", credentials.getAuthId());
+                        LOG.debug("authenticating Subject DN credentials [tenant-id: {}, subject-dn: {}]",
+                                credentials.getTenantId(), credentials.getAuthId());
                         applyTraceSamplingPriority(credentials, span)
                                 .onSuccess(v -> {
                                     authProvider.authenticate(credentials, span.context(), result -> {
@@ -144,11 +150,9 @@ public class CertificateDeviceResolver
                                             authResult.fail(result.cause());
                                         } else {
                                             final Device device = result.result();
-                                            LOG.debug("x509: device-id: {}, tenant-id: {}", device.getDeviceId(),
-                                                    device.getTenantId());
                                             TracingHelper.TAG_TENANT_ID.set(span, device.getTenantId());
                                             TracingHelper.TAG_DEVICE_ID.set(span, device.getDeviceId());
-                                            span.log("successfully verified X509 for device");
+                                            span.log("successfully validated device's client certificate");
                                             final AdditionalInfo info = DeviceInfoSupplier.createDeviceInfo(
                                                     device,
                                                     credentials.getAuthId());

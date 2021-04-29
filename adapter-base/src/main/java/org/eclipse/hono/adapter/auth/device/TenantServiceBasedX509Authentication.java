@@ -139,15 +139,16 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
         Objects.requireNonNull(path);
 
-        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "verify device certificate", getClass().getSimpleName())
+        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "validate device certificate", getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .start();
 
         return getX509CertificatePath(path).compose(x509chain -> {
 
             final X509Certificate deviceCert = x509chain.get(0);
-            final Map<String, String> detail = new HashMap<>(3);
-            detail.put("subject DN", deviceCert.getSubjectX500Principal().getName());
+            final Map<String, String> detail = new HashMap<>(4);
+            detail.put("subject DN", deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
+            detail.put("issuer DN", deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253));
             detail.put("not before", deviceCert.getNotBefore().toString());
             detail.put("not after", deviceCert.getNotAfter().toString());
             span.log(detail);
@@ -157,22 +158,40 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                     .compose(tenant -> {
                         final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
                         if (trustAnchors.isEmpty()) {
-                            log.debug("no valid trust anchors defined for tenant [{}]", tenant.getTenantId());
-                            return Future.failedFuture(new ClientErrorException(tenant.getTenantId(),
-                                    HttpURLConnection.HTTP_UNAUTHORIZED));
+                            return Future.failedFuture(new ClientErrorException(
+                                    tenant.getTenantId(),
+                                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                                    "no valid trust anchors defined for tenant"));
                         } else {
+                            if (log.isTraceEnabled()) {
+                                final var b = new StringBuilder("found tenant [tenant-id: ")
+                                        .append(tenant.getTenantId()).append("]")
+                                        .append(" for client certificate [subject-dn: ")
+                                        .append(deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                                        .append(", issuer-dn: ")
+                                        .append(deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                                        .append("]").append(System.lineSeparator())
+                                        .append("with trust anchors:").append(System.lineSeparator());
+                                trustAnchors.stream().forEach(ta -> {
+                                    b.append("Trust Anchor [subject-dn: ").append(ta.getCAName()).append("]");
+                                });
+                                log.trace(b.toString());
+                            }
                             final List<X509Certificate> chainToValidate = List.of(deviceCert);
                             return certPathValidator.validate(chainToValidate, trustAnchors)
-                                    .recover(t -> Future.failedFuture(new ClientErrorException(tenant.getTenantId(),
-                                            HttpURLConnection.HTTP_UNAUTHORIZED)));
+                                    .recover(t -> Future.failedFuture(new ClientErrorException(
+                                            tenant.getTenantId(),
+                                            HttpURLConnection.HTTP_UNAUTHORIZED,
+                                            t.getMessage(),
+                                            t)));
                         }
                     }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
         }).map(authInfo -> {
-            span.log("certificate verified successfully");
+            span.log("certificate validated successfully");
             span.finish();
             return authInfo;
         }).recover(t -> {
-            log.debug("verification of client certificate failed", t);
+            log.debug("validation of client certificate failed", t);
             TracingHelper.logError(span, t);
             span.finish();
             return Future.failedFuture(t);
