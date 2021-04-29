@@ -379,7 +379,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         dtlsConfig.setNoServerSessionId(true);
         dtlsConfig.setServerOnly(true);
         dtlsConfig.setRecommendedCipherSuitesOnly(true);
-        dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
+        dtlsConfig.setClientAuthenticationRequired(true);
         dtlsConfig.setAddress(
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);

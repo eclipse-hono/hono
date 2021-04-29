@@ -6,6 +6,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 1.8.0 (not released yet)
 
+### New Features
+
+* The CoAP adapter now supports authentication of client certificates using ECDSA based cipher suites.
+
 ### Fixes & Enhancements
 
 * The CoAP adapter did not correctly track the time it took to forward a command message to a device. This has been fixed.

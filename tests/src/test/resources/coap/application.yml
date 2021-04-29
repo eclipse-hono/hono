@@ -11,6 +11,8 @@ hono:
     authenticationRequired: false
     bindAddress: 0.0.0.0
     port: 5684
+    keyPath: /etc/hono/certs/coap-adapter-key.pem
+    certPath: /etc/hono/certs/coap-adapter-cert.pem
     insecurePortBindAddress: 0.0.0.0
     insecurePort: 5683
     maxConnections: 100
@@ -50,6 +52,12 @@ hono:
     port: 5672
     username: coap-adapter@HONO
     password: coap-secret
+    # we need to disable caching of tenant lookup results
+    # in order to allow registration of non-matching trust anchors
+    # leaving the cache "poisoned" when looking up a tenant using
+    # the same issuer DN in subsequent test cases
+    responseCacheMinSize: 0
+    responseCacheMaxSize: 0
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}

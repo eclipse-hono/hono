@@ -22,6 +22,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +36,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.assertj.core.data.Index;
 import org.eclipse.californium.core.CoapClient;
@@ -49,16 +54,20 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
+import org.eclipse.californium.scandium.dtls.CertificateType;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
+import org.eclipse.californium.scandium.dtls.x509.StaticNewAdvancedCertificateVerifier;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -108,6 +117,9 @@ public abstract class CoapTestBase {
 
     private static final String COMMAND_TO_SEND = "setDarkness";
     private static final String COMMAND_JSON_KEY = "darkness";
+    private static final String PATH_CA_CERT = "target/certs/default_tenant-cert.pem";
+    private static final String PATH_DEVICE_CERT = "target/certs/device-4711-cert.pem";
+    private static final String PATH_DEVICE_KEY = "target/certs/device-4711-key.pem";
 
     /**
      * A logger to be shared with subclasses.
@@ -202,6 +214,21 @@ public abstract class CoapTestBase {
      * Creates the client to use for uploading data to the secure endpoint
      * of the CoAP adapter.
      *
+     * @param keyLoader The loader for the device's private key and certificate.
+     * @return The client.
+     */
+    protected CoapClient getCoapsClient(final KeyLoader keyLoader) {
+
+        final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        dtlsConfig.setIdentity(keyLoader.getPrivateKey(), keyLoader.getCertificateChain(), CertificateType.X_509);
+        dtlsConfig.setAdvancedCertificateVerifier(StaticNewAdvancedCertificateVerifier.builder().setTrustAllCertificates().build());
+        return getCoapsClient(dtlsConfig);
+    }
+
+    /**
+     * Creates the client to use for uploading data to the secure endpoint
+     * of the CoAP adapter.
+     *
      * @param deviceId The device to add a shared secret for.
      * @param tenant The tenant that the device belongs to.
      * @param sharedSecret The secret shared with the CoAP server.
@@ -223,13 +250,26 @@ public abstract class CoapTestBase {
     protected CoapClient getCoapsClient(final AdvancedPskStore pskStoreToUse) {
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
-        // listen on wildcard to support non-localhost docker daemons
-        dtlsConfig.setAddress(new InetSocketAddress(0));
         dtlsConfig.setAdvancedPskStore(pskStoreToUse);
-        dtlsConfig.setMaxRetransmissions(1);
+        return getCoapsClient(dtlsConfig);
+    }
+
+    /**
+     * Creates the client to use for uploading data to the secure endpoint
+     * of the CoAP adapter.
+     *
+     * @param dtlsConnectorConfig The configuration of the DTLS connector to use for connecting
+     *                            to the adapter.
+     * @return The client.
+     */
+    protected CoapClient getCoapsClient(final DtlsConnectorConfig.Builder dtlsConnectorConfig) {
+
+        // listen on wildcard to support non-localhost docker daemons
+        dtlsConnectorConfig.setAddress(new InetSocketAddress(0));
+        dtlsConnectorConfig.setMaxRetransmissions(1);
         final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
         builder.setNetworkConfig(NetworkConfig.createStandardWithoutFile());
-        builder.setConnector(new DTLSConnector(dtlsConfig.build()));
+        builder.setConnector(new DTLSConnector(dtlsConnectorConfig.build()));
         return new CoapClient().setEndpoint(builder.build());
     }
 
@@ -350,6 +390,46 @@ public abstract class CoapTestBase {
                 count -> {
                     final Promise<OptionSet> result = Promise.promise();
                     final Request request = createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
+                    client.advanced(getHandler(result), request);
+                    return result.future();
+                });
+    }
+
+    /**
+     * Verifies that a number of messages uploaded to Hono's CoAP adapter using TLS_ECDSA based authentication can be
+     * successfully consumed via the messaging infrastructure.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesUsingClientCertificate(final VertxTestContext ctx) throws InterruptedException {
+
+        final var clientCertLoader = KeyLoader.fromFiles(vertx, PATH_DEVICE_KEY, PATH_DEVICE_CERT);
+        final var clientCert = (X509Certificate) clientCertLoader.getCertificateChain()[0];
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.getCertificate(PATH_CA_CERT)
+            .compose(caCert -> {
+                final var tenant = Tenants.createTenantForTrustAnchor(caCert);
+                return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, clientCert);
+            })
+            .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final CoapClient client = getCoapsClient(clientCertLoader);
+
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                count -> {
+                    final Promise<OptionSet> result = Promise.promise();
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
@@ -575,6 +655,45 @@ public abstract class CoapTestBase {
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
             ctx.failNow(new AssertionError("did not receive all messages sent"));
         }
+    }
+
+    /**
+     * Verifies that the adapter fails to authenticate a device if the device's client certificate's signature cannot be
+     * validated using the trust anchor that is registered for the tenant that the device belongs to.
+     *
+     * @param ctx The vert.x test context.
+     * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
+     */
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testUploadFailsForNonMatchingTrustAnchor(final VertxTestContext ctx) throws GeneralSecurityException {
+
+        final var keyLoader = KeyLoader.fromFiles(vertx, PATH_DEVICE_KEY, PATH_DEVICE_CERT);
+
+        // GIVEN a tenant configured with a trust anchor
+
+        final KeyPair keyPair = helper.newEcKeyPair();
+        final var clientCert = (X509Certificate) keyLoader.getCertificateChain()[0];
+        final Tenant tenant = Tenants.createTenantForTrustAnchor(
+                clientCert.getIssuerX500Principal().getName(X500Principal.RFC2253),
+                keyPair.getPublic().getEncoded(),
+                keyPair.getPublic().getAlgorithm());
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, clientCert)
+            // WHEN a device tries to upload data and authenticate with a client
+            // certificate that has not been signed with the configured trusted CA
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(keyLoader);
+                final Promise<OptionSet> result = Promise.promise();
+                client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
+                return result.future();
+            })
+            .onComplete(ctx.failing(t -> {
+                // THEN the request fails because the DTLS handshake cannot be completed
+                assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
+                ctx.completeNow();
+            }));
     }
 
     /**

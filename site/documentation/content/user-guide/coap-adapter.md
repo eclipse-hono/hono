@@ -9,15 +9,14 @@ The CoAP protocol adapter exposes [CoAP](https://tools.ietf.org/html/rfc7252) ba
 ## Device Authentication
 
 The CoAP adapter by default requires clients (devices or gateway components) to authenticate during connection establishment.
-The adapter (currently) only supports [PSK](https://tools.ietf.org/html/rfc4279) as part of a DTLS handshake for that purpose.
+The adapter (currently) supports the use of pre-shared keys (PSK) and X.509 certificates as part of a DTLS handshake for that purpose.
 Additional variants mentioned in [Securing CoAP](https://tools.ietf.org/html/rfc7252#section-9) might be added in the future.
-
-The adapter tries to authenticate the device using these mechanisms in the following order
 
 ### PSK
 
 The *identity* provided in the ClientKeyExchange must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
-The adapter performs the handshake using the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
+The adapter performs the handshake using the credentials which the
+[configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
 has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record
 with the *tenant* and *auth-id* provided by the device in the *identity* and `psk` as the *type* of secret as query parameters.
 
@@ -27,7 +26,24 @@ with the corresponding entities in its device registry component.
 Please refer to the [Credentials API]({{< relref "/api/credentials#standard-credential-types" >}}) for details regarding the different
 types of secrets.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
+**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication.
+See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
+
+### X.509
+
+When a device uses a client certificate for authentication during the DTLS handshake, the adapter tries to determine the
+tenant that the device belongs to, based on the *issuer DN* contained in the certificate.
+In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of
+[registering the trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}).
+The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing
+the tenant that the device belongs to.
+
+In a second step, the adapter then determines the device identifier using the Credentials API's *get* operation with the
+client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
+
+**NB** The CoAP adapter needs to be [configured for DTLS]({{< relref "/admin-guide/secure_communication#coap-adapter" >}})
+in order to support this mechanism. X.509 based authentication of clients is only supported with *elliptic curve cryptography*
+(ECC) based keys.
 
 ## Message Limits
 
