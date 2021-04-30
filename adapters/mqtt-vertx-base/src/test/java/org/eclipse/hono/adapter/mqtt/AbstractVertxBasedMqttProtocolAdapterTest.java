@@ -34,6 +34,8 @@ import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
+import javax.net.ssl.SSLSession;
+
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
@@ -238,7 +240,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // THEN the connection is established
         verify(endpoint).accept(false);
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.SUCCEEDED, null);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.SUCCEEDED, null, null);
     }
 
     /**
@@ -263,7 +265,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // THEN the connection is not established
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_DISABLED, "my-tenant");
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.ADAPTER_DISABLED,
+                "my-tenant",
+                null);
     }
 
     /**
@@ -337,7 +342,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
                 verify(metrics).reportConnectionAttempt(
                         ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED,
-                        null);
+                        null,
+                        "BUMLUX_CIPHER");
             });
             ctx.completeNow();
         }));
@@ -365,7 +371,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         verify(endpoint).accept(false);
         verify(endpoint).publishHandler(VertxMockSupport.anyHandler());
         verify(endpoint, times(2)).closeHandler(VertxMockSupport.anyHandler());
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.SUCCEEDED, Constants.DEFAULT_TENANT);
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.SUCCEEDED,
+                Constants.DEFAULT_TENANT,
+                "BUMLUX_CIPHER");
     }
 
     /**
@@ -394,7 +403,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         verify(metrics).reportConnectionAttempt(
                 ConnectionAttemptOutcome.REGISTRATION_ASSERTION_FAILURE,
-                Constants.DEFAULT_TENANT);
+                Constants.DEFAULT_TENANT,
+                "BUMLUX_CIPHER");
     }
 
     /**
@@ -1138,7 +1148,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         verify(metrics).reportConnectionAttempt(
                 ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED,
-                Constants.DEFAULT_TENANT);
+                Constants.DEFAULT_TENANT,
+                "BUMLUX_CIPHER");
     }
 
     /**
@@ -1165,7 +1176,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         verify(metrics).reportConnectionAttempt(
                 ConnectionAttemptOutcome.CONNECTION_DURATION_EXCEEDED,
-                Constants.DEFAULT_TENANT);
+                Constants.DEFAULT_TENANT,
+                "BUMLUX_CIPHER");
     }
 
     /**
@@ -1346,11 +1358,16 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
+
+        final SSLSession sslSession = mock(SSLSession.class);
+        when(sslSession.getCipherSuite()).thenReturn("BUMLUX_CIPHER");
+
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
         when(endpoint.subscribeHandler(VertxMockSupport.anyHandler())).thenReturn(endpoint);
         when(endpoint.unsubscribeHandler(VertxMockSupport.anyHandler())).thenReturn(endpoint);
         when(endpoint.isCleanSession()).thenReturn(Boolean.FALSE);
+        when(endpoint.sslSession()).thenReturn(sslSession);
         return endpoint;
     }
 

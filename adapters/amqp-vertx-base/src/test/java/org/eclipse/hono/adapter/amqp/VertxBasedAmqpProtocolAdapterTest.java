@@ -1150,7 +1150,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         verify(metrics).reportConnectionAttempt(
                 ConnectionAttemptOutcome.TENANT_CONNECTIONS_EXCEEDED,
-                TEST_TENANT_ID);
+                TEST_TENANT_ID,
+                null);
     }
 
     /**
@@ -1167,6 +1168,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
         record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class, "BUMLUX_CIPHER");
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         adapter.onConnectRequest(deviceConnection);
@@ -1181,7 +1183,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         verify(metrics).reportConnectionAttempt(
                 ConnectionAttemptOutcome.ADAPTER_DISABLED,
-                TEST_TENANT_ID);
+                TEST_TENANT_ID,
+                "BUMLUX_CIPHER");
     }
 
     /**
@@ -1200,6 +1203,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
         record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class, "BUMLUX_CIPHER");
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         adapter.onConnectRequest(deviceConnection);
@@ -1220,7 +1224,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementConnections(TEST_TENANT_ID);
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED, TEST_TENANT_ID);
+        verify(metrics).reportConnectionAttempt(
+                ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED,
+                TEST_TENANT_ID,
+                "BUMLUX_CIPHER");
     }
 
     /**
@@ -1256,7 +1263,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
         // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementUnauthenticatedConnections();
-        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED, null);
+        verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED, null, null);
     }
 
     private String getCommandEndpoint() {

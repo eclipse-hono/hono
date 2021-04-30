@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import javax.net.ssl.SSLSession;
+
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AuthorizationException;
@@ -415,7 +417,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 span.log("connection accepted");
                 metrics.reportConnectionAttempt(
                         ConnectionAttemptOutcome.SUCCEEDED,
-                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null));
+                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null),
+                        Optional.ofNullable(endpoint.sslSession()).map(SSLSession::getCipherSuite).orElse(null));
             })
             .onFailure(t -> {
                 if (!connectionClosedPrematurely.get()) {
@@ -426,18 +429,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     rejectConnectionRequest(endpoint, code, span);
                     TracingHelper.logError(span, t);
                 }
-                reportFailedConnectionAttempt(t);
+                reportFailedConnectionAttempt(t, endpoint);
             })
             .onComplete(result -> span.finish());
 
     }
 
-    private void reportFailedConnectionAttempt(final Throwable error) {
+    private void reportFailedConnectionAttempt(final Throwable error, final MqttEndpoint endpoint) {
 
         final String tenantId = error instanceof ServiceInvocationException
                 ? ((ServiceInvocationException) error).getTenant()
                 : null;
-        metrics.reportConnectionAttempt(AbstractProtocolAdapterBase.getOutcome(error), tenantId);
+        metrics.reportConnectionAttempt(
+                AbstractProtocolAdapterBase.getOutcome(error),
+                tenantId,
+                Optional.ofNullable(endpoint.sslSession()).map(SSLSession::getCipherSuite).orElse(null));
     }
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint,

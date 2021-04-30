@@ -411,7 +411,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (authenticatedDevice != null) {
             TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
         }
-
+        final String cipherSuite = con.attachments().get(AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class);
         checkConnectionLimitForAdapter()
             .compose(ok -> checkAuthorizationAndResourceLimits(authenticatedDevice, con, span))
             .compose(ok -> sendConnectedEvent(
@@ -425,7 +425,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 span.log("connection established");
                 metrics.reportConnectionAttempt(
                         ConnectionAttemptOutcome.SUCCEEDED,
-                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null));
+                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null),
+                        cipherSuite);
                 return null;
             })
             .otherwise(t -> {
@@ -434,7 +435,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 TracingHelper.logError(span, t);
                 metrics.reportConnectionAttempt(
                         AbstractProtocolAdapterBase.getOutcome(t),
-                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null));
+                        Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null),
+                        cipherSuite);
                 return null;
             })
             .onComplete(s -> span.finish());

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -152,6 +153,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final byte[] saslResponse = new byte[sasl.pending()];
             sasl.recv(saslResponse, 0, saslResponse.length);
 
+            final String cipherSuite = Optional.ofNullable(sslSession).map(SSLSession::getCipherSuite).orElse(null);
+
             buildSaslResponseContext(remoteMechanism, saslResponse)
                 .compose(saslResponseContext -> verify(saslResponseContext))
                 .onSuccess(deviceUser -> {
@@ -163,6 +166,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             currentSpan);
                     protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
                             deviceUser);
+                    Optional.ofNullable(cipherSuite).ifPresent(s -> protonConnection.attachments().set(
+                            AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class, s));
                     // we do not report a succeeded authentication here already because some
                     // additional checks regarding resource limits need to be passed
                     // before we can consider connection establishment a success
@@ -177,10 +182,16 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             ? ((ClientErrorException) t).getTenant()
                             : null;
                     if (t instanceof ClientErrorException || t instanceof LoginException) {
-                        metrics.reportConnectionAttempt(ConnectionAttemptOutcome.UNAUTHORIZED, tenantId);
+                        metrics.reportConnectionAttempt(
+                                ConnectionAttemptOutcome.UNAUTHORIZED,
+                                tenantId,
+                                cipherSuite);
                         sasl.done(SaslOutcome.PN_SASL_AUTH);
                     } else {
-                        metrics.reportConnectionAttempt(ConnectionAttemptOutcome.UNAVAILABLE, null);
+                        metrics.reportConnectionAttempt(
+                                ConnectionAttemptOutcome.UNAVAILABLE,
+                                null,
+                                cipherSuite);
                         sasl.done(SaslOutcome.PN_SASL_TEMP);
                     }
                 })
