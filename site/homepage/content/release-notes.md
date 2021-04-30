@@ -16,6 +16,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Sending requests using the Hono AMQP request-response client erroneously increased the `hono.downstream.timeout` metric.
   This has been fixed.
 * Support for uplink messages from the Embedded LNS on MultiTech gateways.
+* The *hono.connections.attempts* metric has been extended with a `cipher-suite` tag which contains the name of the
+  cipher suite that is used in a device's attempt to establish a TLS based connection to an adapter.
 
 ### Deprecations
 
