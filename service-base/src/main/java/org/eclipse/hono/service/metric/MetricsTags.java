@@ -424,7 +424,7 @@ public final class MetricsTags {
     }
 
     /**
-     * Creates a tag for a tenant identifier.
+     * Creates a tag for a cipher suite name.
      *
      * @param cipherSuite The name of the cipher suite a device uses to connect to an adapter
      *                    or {@code null} if unknown.
