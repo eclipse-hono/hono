@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,8 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,10 +25,15 @@ import java.util.Optional;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -60,6 +67,8 @@ public final class HttpUtils {
      * Refer <a href="https://tools.ietf.org/html/rfc6585#section-4"> RFC 6585, Section 4 </a>.
      */
     public static final int HTTP_TOO_MANY_REQUESTS = 429;
+
+    private static final Logger LOG = LoggerFactory.getLogger(HttpUtils.class);
 
     private HttpUtils() {
         // prevent instantiation
@@ -305,4 +314,47 @@ public final class HttpUtils {
         return status >= HttpURLConnection.HTTP_BAD_REQUEST && status < 600;
     }
 
+    /**
+     * Gets the absolute URI of the given request.
+     * <p>
+     * In contrast to {@link HttpServerRequest#absoluteURI()} this method
+     * won't return {@code null} if the URI is invalid (at least not if {@link HttpServerRequest#host()} is set).
+     *
+     * @param req The request to get the absolute URI from.
+     * @return The absolute URI.
+     * @throws NullPointerException if req is {@code null}.
+     */
+    public static String getAbsoluteURI(final HttpServerRequest req) {
+        Objects.requireNonNull(req);
+        final String uri = req.uri();
+        if (uri.startsWith("http://") || uri.startsWith("https://")) {
+            return uri;
+        }
+        final String host = req.host();
+        if (host == null) {
+            // fall back to using the original method which will use the serverOrigin as host
+            // see io.vertx.core.http.impl.HttpUtils.absoluteURI(String, HttpServerRequest)
+            return req.absoluteURI();
+        }
+        return req.scheme() + "://" + host + uri;
+    }
+
+    /**
+     * Checks the URI of the given request and logs an error to the given
+     * span if it is invalid.
+     *
+     * @param req The request to check the absolute URI for.
+     * @param span The span to log to.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void logErrorIfInvalidURI(final HttpServerRequest req, final Span span) {
+        Objects.requireNonNull(req);
+        Objects.requireNonNull(span);
+        try {
+            new URI(req.uri());
+        } catch (final URISyntaxException e) {
+            LOG.debug("invalid request URI", e);
+            TracingHelper.logError(span, "invalid request URI", e);
+        }
+    }
 }

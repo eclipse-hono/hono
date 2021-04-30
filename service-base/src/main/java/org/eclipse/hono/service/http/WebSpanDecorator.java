@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import io.vertx.core.http.HttpServerResponse;
  * This class has been copied from the <a href="https://github.com/opentracing-contrib/java-vertx-web">
  * OpenTracing Vert.x Web Instrumentation</a> project.
  * It has been adapted to support Opentracing 0.33 and slightly adapted to Hono's code style guide.
+ * There have also been minor improvements to the StandardTags inner class.
  *
  * @author Pavol Loffay
  */
@@ -74,14 +75,14 @@ public interface WebSpanDecorator {
         public void onRequest(final HttpServerRequest request, final Span span) {
             Tags.COMPONENT.set(span, "vertx");
             Tags.HTTP_METHOD.set(span, request.method().toString());
-            Tags.HTTP_URL.set(span, request.absoluteURI());
+            Tags.HTTP_URL.set(span, HttpUtils.getAbsoluteURI(request));
         }
 
         @Override
         public void onReroute(final HttpServerRequest request, final Span span) {
             final Map<String, String> logs = new HashMap<>(2);
             logs.put("event", "reroute");
-            logs.put(Tags.HTTP_URL.getKey(), request.absoluteURI());
+            logs.put(Tags.HTTP_URL.getKey(), HttpUtils.getAbsoluteURI(request));
             logs.put(Tags.HTTP_METHOD.getKey(), request.method().toString());
             span.log(logs);
         }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,14 +18,14 @@ import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.hono.tracing.TracingHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -36,12 +36,13 @@ import io.vertx.ext.web.RoutingContext;
  * This class has been copied from the <a href="https://github.com/opentracing-contrib/java-vertx-web">
  * OpenTracing Vert.x Web Instrumentation</a> project.
  * It has been adapted to support Opentracing 0.33 and slightly adapted to Hono's code style guide.
+ * Also the used logging framework has been changed to slf4j.
  *
  * @author Pavol Loffay
  */
 public class TracingHandler implements Handler<RoutingContext> {
 
-    public static final String CURRENT_SPAN = TracingHandler.class.getName() + ".severSpan";
+    public static final String CURRENT_SPAN = TracingHandler.class.getName() + ".serverSpan";
 
     private static final Logger log = LoggerFactory.getLogger(TracingHandler.class);
 
@@ -153,7 +154,7 @@ public class TracingHandler implements Handler<RoutingContext> {
             final Span span = (Span) object;
             serverContext = span.context();
         } else {
-            log.error("Sever SpanContext is null or not an instance of SpanContext");
+            log.warn("Server SpanContext is null or not an instance of SpanContext");
         }
 
         return serverContext;

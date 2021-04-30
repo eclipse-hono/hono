@@ -61,8 +61,6 @@ import io.vertx.ext.web.Router;
 public class DelegatingDeviceManagementHttpEndpointTest {
 
     private DeviceManagementService service;
-    private DelegatingDeviceManagementHttpEndpoint<DeviceManagementService> endpoint;
-    private Vertx vertx;
     private Router router;
     private MultiMap requestParams;
     private MultiMap requestHeaders;
@@ -75,7 +73,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     @BeforeEach
     public void setUp() {
 
-        vertx = mock(Vertx.class);
+        final Vertx vertx = mock(Vertx.class);
         router = Router.router(vertx);
         // make sure that ServiceInvocationExceptions are properly handled
         // and result in the exception's error code being set on the response
@@ -96,7 +94,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 any(List.class),
                 any(Span.class)))
             .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_OK)));
-        endpoint = new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx, service);
+        final var endpoint = new DelegatingDeviceManagementHttpEndpoint<>(vertx, service);
         endpoint.setConfiguration(new ServiceConfigProperties());
         endpoint.addRoutes(router);
         requestParams = MultiMap.caseInsensitiveMultiMap();
@@ -430,14 +428,17 @@ public class DelegatingDeviceManagementHttpEndpointTest {
 
     private static HttpServerRequest newRequest(
             final HttpMethod method,
-            final String path,
+            final String relativeURI,
             final MultiMap requestHeaders,
             final MultiMap requestParams,
             final HttpServerResponse response) {
 
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.method()).thenReturn(method);
-        when(request.path()).thenReturn(path);
+        when(request.scheme()).thenReturn("http");
+        when(request.host()).thenReturn("localhost");
+        when(request.uri()).thenReturn(relativeURI);
+        when(request.path()).thenReturn(relativeURI);
         when(request.headers()).thenReturn(requestHeaders);
         when(request.params()).thenReturn(requestParams);
         when(request.response()).thenReturn(response);
