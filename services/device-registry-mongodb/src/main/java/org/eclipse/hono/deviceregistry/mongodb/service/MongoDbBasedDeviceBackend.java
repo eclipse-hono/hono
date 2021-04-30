@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -62,10 +63,14 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
      *
      * @param registrationService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceBackend(
             final MongoDbBasedRegistrationService registrationService,
             final MongoDbBasedCredentialsService credentialsService) {
+        Objects.requireNonNull(registrationService);
+        Objects.requireNonNull(credentialsService);
+
         this.registrationService = registrationService;
         this.credentialsService = credentialsService;
     }
