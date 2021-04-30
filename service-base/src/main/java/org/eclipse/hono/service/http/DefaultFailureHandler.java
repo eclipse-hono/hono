@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                 LOG.debug("skipping processing of failed route, response already ended");
             } else {
                 LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}] - {}",
-                        ctx.request().method(), ctx.request().absoluteURI(), ctx.statusCode(), ctx.getBody(),
+                        ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), ctx.statusCode(), ctx.getBody(),
                         ctx.failure());
                 if (ctx.failure() != null) {
                     if (ctx.failure() instanceof ServiceInvocationException) {

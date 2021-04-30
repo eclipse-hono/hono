@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -60,28 +60,31 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onRequest(final HttpServerRequest request, final Span span) {
-        LOG.trace("starting span for request [method: {}, URI: {}]", request.method(), request.absoluteURI());
+        final String absoluteURI = HttpUtils.getAbsoluteURI(request);
+        LOG.trace("starting span for request [method: {}, URI: {}]", request.method(), absoluteURI);
+        HttpUtils.logErrorIfInvalidURI(request, span);
         Tags.HTTP_METHOD.set(span, request.method().toString());
-        Tags.HTTP_URL.set(span, request.absoluteURI());
-        tags.forEach((key, value) -> {
-            span.setTag(key, value);
-        });
+        Tags.HTTP_URL.set(span, absoluteURI);
+        tags.forEach(span::setTag);
     }
 
     @Override
     public void onReroute(final HttpServerRequest request, final Span span) {
-        LOG.trace("logging re-routed request [method: {}, URI: {}]", request.method(), request.absoluteURI());
+        final String absoluteURI = HttpUtils.getAbsoluteURI(request);
+        LOG.trace("logging re-routed request [method: {}, URI: {}]", request.method(), absoluteURI);
         final Map<String, String> logs = new HashMap<>(3);
         logs.put(Fields.EVENT, "reroute");
-        logs.put(Tags.HTTP_URL.getKey(), request.absoluteURI());
+        logs.put(Tags.HTTP_URL.getKey(), absoluteURI);
         logs.put(Tags.HTTP_METHOD.getKey(), request.method().toString());
         span.log(logs);
     }
 
     @Override
     public void onResponse(final HttpServerRequest request, final Span span) {
-        LOG.trace("setting status code of response to request span [method: {}, URI: {}, status code: {}]",
-                request.method(), request.absoluteURI(), request.response().getStatusCode());
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("setting status code of response to request span [method: {}, URI: {}, status code: {}]",
+                    request.method(), HttpUtils.getAbsoluteURI(request), request.response().getStatusCode());
+        }
         Tags.HTTP_STATUS.set(span, request.response().getStatusCode());
     }
 
