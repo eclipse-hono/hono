@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -26,11 +26,10 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
-import org.eclipse.hono.service.management.device.AutoProvisioningEnabledDeviceBackend;
+import org.eclipse.hono.service.management.device.AutoProvisioning;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceBackend;
 import org.eclipse.hono.service.management.device.DeviceWithId;
-import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationResult;
@@ -42,7 +41,6 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -51,28 +49,33 @@ import io.vertx.core.json.JsonObject;
  * A device backend that leverages and unifies {@link MongoDbBasedRegistrationService} and
  * {@link MongoDbBasedCredentialsService}.
  */
-public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend, Lifecycle {
+public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedDeviceBackend.class);
 
     private final MongoDbBasedRegistrationService registrationService;
     private final MongoDbBasedCredentialsService credentialsService;
+    private final TenantInformationService tenantInformationService;
 
     /**
      * Creates a new instance.
      *
      * @param registrationService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
+     * @param tenantInformationService an implementation of tenant information service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceBackend(
             final MongoDbBasedRegistrationService registrationService,
-            final MongoDbBasedCredentialsService credentialsService) {
+            final MongoDbBasedCredentialsService credentialsService,
+            final TenantInformationService tenantInformationService) {
         Objects.requireNonNull(registrationService);
         Objects.requireNonNull(credentialsService);
+        Objects.requireNonNull(tenantInformationService);
 
         this.registrationService = registrationService;
         this.credentialsService = credentialsService;
+        this.tenantInformationService = tenantInformationService;
     }
 
     /**
@@ -191,43 +194,23 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
 
     @Override
     public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
-            final JsonObject clientContext,
-            final Span span) {
+            final JsonObject clientContext, final Span span) {
 
         return credentialsService.get(tenantId, type, authId, clientContext, span)
-                .compose(result -> {
-                    if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
-                            && DeviceRegistryUtils.isAutoProvisioningEnabled(type, clientContext)) {
-                        Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
-                        return DeviceRegistryUtils
-                                .getCertificateFromClientContext(tenantId, authId, clientContext, span)
-                                .compose(optionalCert -> optionalCert
-                                        .map(ok -> provisionDevice(tenantId, optionalCert.get(), span)
-                                                .compose(r -> {
-                                                    if (r.isError()) {
-                                                        TracingHelper.logError(span, r.getPayload());
-                                                        return Future.succeededFuture(
-                                                                createErrorCredentialsResult(r.getStatus(),
-                                                                        r.getPayload()));
-                                                    } else {
-                                                        return getNewCredentials(tenantId, authId, span);
-                                                    }
-                                                }))
-                                        .orElseGet(() -> Future.succeededFuture(result)));
+                .compose(credentialsResult -> {
+                    if (credentialsResult.isNotFound()) {
+                        return AutoProvisioning.provisionIfEnabled(
+                                tenantId,
+                                authId,
+                                clientContext,
+                                this,
+                                this,
+                                this,
+                                tenantInformationService,
+                                span);
                     }
-                    return Future.succeededFuture(result);
+                    return Future.succeededFuture(credentialsResult);
                 });
-    }
-
-    private Future<CredentialsResult<JsonObject>> getNewCredentials(final String tenantId, final String authId,
-            final Span span) {
-
-        return credentialsService.get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, span)
-                .map(r -> r.isOk() ? CredentialsResult.from(HttpURLConnection.HTTP_CREATED, r.getPayload()) : r);
-    }
-
-    private CredentialsResult<JsonObject> createErrorCredentialsResult(final int status, final String message) {
-        return CredentialsResult.from(status, new JsonObject().put("description", message));
     }
 
     @Override

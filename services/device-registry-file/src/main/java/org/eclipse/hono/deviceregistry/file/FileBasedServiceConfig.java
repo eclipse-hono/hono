@@ -267,7 +267,7 @@ public class FileBasedServiceConfig {
                 credentialsProperties(),
                 passwordEncoder());
 
-        return new FileBasedDeviceBackend(registrationService, credentialsService);
+        return new FileBasedDeviceBackend(registrationService, credentialsService, tenantInformationService);
     }
 
     //

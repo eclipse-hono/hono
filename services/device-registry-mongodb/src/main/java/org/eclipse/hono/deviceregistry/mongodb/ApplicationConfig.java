@@ -473,7 +473,7 @@ public class ApplicationConfig {
         // need to use backend service because the Credentials service's "get" operation
         // supports auto-provisioning and thus needs to be able to create a device on the fly
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
-                credentialsService());
+                credentialsService(), tenantInformationService());
         return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
     }
 
@@ -566,7 +566,8 @@ public class ApplicationConfig {
     public HttpEndpoint deviceHttpEndpoint() {
         // need to use backend service because creating a device implicitly
         // creates (empty) credentials as well for the device
-        final var service = new MongoDbBasedDeviceBackend(registrationService(), credentialsService());
+        final var service = new MongoDbBasedDeviceBackend(registrationService(), credentialsService(),
+                tenantInformationService());
         return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), service);
     }
 
