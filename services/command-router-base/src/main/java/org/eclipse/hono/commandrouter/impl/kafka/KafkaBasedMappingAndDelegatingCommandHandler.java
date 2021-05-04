@@ -43,6 +43,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      * Creates a new KafkaBasedMappingAndDelegatingCommandHandler instance.
      *
      * @param tenantClient The Tenant service client.
+     * @param commandQueue The command queue to use for keeping track of the command processing.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
      * @param tracer The tracer instance.
@@ -50,11 +51,12 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      */
     public KafkaBasedMappingAndDelegatingCommandHandler(
             final TenantClient tenantClient,
+            final KafkaCommandProcessingQueue commandQueue,
             final CommandTargetMapper commandTargetMapper,
             final KafkaBasedInternalCommandSender internalCommandSender,
             final Tracer tracer) {
         super(tenantClient, commandTargetMapper, internalCommandSender);
-        this.commandQueue = new KafkaCommandProcessingQueue();
+        this.commandQueue = Objects.requireNonNull(commandQueue);
         this.tracer = Objects.requireNonNull(tracer);
     }
 

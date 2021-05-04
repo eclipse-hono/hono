@@ -22,7 +22,7 @@ import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
-import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
+import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -38,6 +38,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.common.impl.Helper;
 
 /**
  * A factory for creating clients for the <em>Kafka messaging infrastructure</em> to receive commands.
@@ -55,9 +56,10 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private static final Pattern COMMANDS_TOPIC_PATTERN = Pattern
             .compile(Pattern.quote(HonoTopic.Type.COMMAND.prefix) + ".*");
 
+    private final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue();
     private final KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
     private final Tracer tracer;
-    private final HonoKafkaConsumer kafkaConsumer;
+    private final AsyncHandlingAutoCommitKafkaConsumer kafkaConsumer;
 
     /**
      * Creates a new factory to process commands via the Kafka cluster.
@@ -92,12 +94,14 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
 
         final KafkaBasedInternalCommandSender internalCommandSender = new KafkaBasedInternalCommandSender(
                 kafkaProducerFactory, kafkaProducerConfig, tracer);
-        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandTargetMapper,
-                internalCommandSender, tracer);
+        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue,
+                commandTargetMapper, internalCommandSender, tracer);
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "cmd-router-group");
-        kafkaConsumer = new HonoKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
+        kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
+        kafkaConsumer.setOnRebalanceDoneHandler(
+                partitions -> commandQueue.setCurrentlyHandledPartitions(Helper.to(partitions)));
     }
 
     @Override
