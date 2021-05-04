@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.net.HttpURLConnection;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -23,6 +25,7 @@ import java.util.function.Supplier;
 
 import org.apache.kafka.common.TopicPartition;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
@@ -34,10 +37,13 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
- * Queue with the commands currently being processed, maintaining FIFO semantics and keeping track of partition offsets
- * of the last fully processed commands per partition.
+ * Queue with the commands currently being processed, maintaining FIFO semantics.
+ * That means the last step of command processing, sending the command on the internal command topic, is
+ * invoked with respect to the order in which commands were originally received.
  */
 public class KafkaCommandProcessingQueue {
+
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaCommandProcessingQueue.class);
 
     /**
      * The queues that contain the commands currently being processed, with the commands stored according to the
@@ -94,9 +100,37 @@ public class KafkaCommandProcessingQueue {
                 commandContext.getCommand().getRecord().topic(), commandContext.getCommand().getRecord().partition());
         final TopicPartitionCommandQueue commandQueue = commandQueues.get(topicPartition);
         if (commandQueue == null) {
-            return Future.failedFuture(new IllegalStateException("command can't be sent - corresponding queue does not exist"));
+            LOG.info("command won't be sent - commands received from partition [{}] aren't handled by this consumer anymore [{}]",
+                    topicPartition, commandContext.getCommand());
+            TracingHelper.logError(commandContext.getTracingSpan(), String.format(
+                    "command won't be sent - commands received from partition [%s] aren't handled by this consumer anymore",
+                    topicPartition));
+            commandContext.release();
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
         }
         return commandQueue.applySendCommandAction(commandContext, sendActionSupplier);
+    }
+
+    /**
+     * Informs this queue about changes to the partitions that the command consumer is receiving records from.
+     * @param partitions The newly assigned partitions.
+     * @throws NullPointerException if partitions is {@code null}.
+     */
+    public void setCurrentlyHandledPartitions(final Collection<TopicPartition> partitions) {
+        Objects.requireNonNull(partitions);
+        final var commandQueuesIterator = commandQueues.entrySet().iterator();
+        while (commandQueuesIterator.hasNext()) {
+            final var commandQueueEntry = commandQueuesIterator.next();
+            if (!partitions.contains(commandQueueEntry.getKey())) {
+                if (commandQueueEntry.getValue().isEmpty()) {
+                    LOG.debug("partition {} not being handled anymore; command queue is empty", commandQueueEntry.getKey());
+                } else {
+                    LOG.info("partition {} not being handled anymore but its command queue isn't empty!", commandQueueEntry.getKey());
+                    commandQueueEntry.getValue().clear();
+                }
+                commandQueuesIterator.remove();
+            }
+        }
     }
 
     /**
@@ -142,6 +176,22 @@ public class KafkaCommandProcessingQueue {
         }
 
         /**
+         * Checks whether this queue is empty.
+         * @return {@code true} if this queue is empty.
+         */
+        public boolean isEmpty() {
+            return queue.isEmpty();
+        }
+
+        /**
+         * Clears the queue.
+         */
+        public void clear() {
+            queue.clear();
+            // let the applySendCommandAction() method release the commands
+        }
+
+        /**
          * Either invokes the given sendAction directly if it is next-in-line or makes sure the action is
          * invoked at a later point in time according to the order in which commands were originally received.
          *
@@ -162,15 +212,16 @@ public class KafkaCommandProcessingQueue {
                 // the usual case - first command added to the queue is the first command to send to the protocol adapter
                 sendGivenCommandAndNextInQueueIfPossible(queue.remove(), sendActionSupplier, resultPromise);
             } else if (!queue.contains(commandContext)) {
-                LOG.warn("command can't be sent - not in queue [{}]", commandContext.getCommand());
-                TracingHelper.logError(commandContext.getTracingSpan(), "command can't be sent - not in queue");
+                // might happen if the invoking the sendAction takes place after the partition got unassigned and then reassigned again
+                LOG.info("command won't be sent - not in queue [{}]", commandContext.getCommand());
+                TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - not in queue");
                 commandContext.release();
-                resultPromise.fail(new IllegalStateException("command can't be sent - not in queue"));
+                resultPromise.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
             } else {
                 // given command is not next-in-line;
                 // that means determining its target adapter instance has finished sooner (maybe because of fewer data-grid requests)
                 // compared to a command that was received earlier
-                LOG.debug("sending of command with offset {} delayed waiting for processing of offset {} [delayed {}]",
+                LOG.debug("sending of command with offset {} gets delayed; waiting for processing of offset {} [delayed {}]",
                         getRecordOffset(commandContext), getRecordOffset(queue.peek()), commandContext.getCommand());
                 commandContext.getTracingSpan()
                         .log(String.format("waiting for an earlier command with offset %d to be processed first",
@@ -184,7 +235,6 @@ public class KafkaCommandProcessingQueue {
         private void sendGivenCommandAndNextInQueueIfPossible(final KafkaBasedCommandContext commandContext,
                 final Supplier<Future<Void>> sendActionSupplier, final Promise<Void> sendActionCompletedPromise) {
             LOG.trace("sending [{}]", commandContext.getCommand());
-            // TODO use the supplier result future to keep track of the latest fully processed command record with regard to its partition offset
             sendActionSupplier.get()
                     .onComplete(sendActionCompletedPromise);
             sendNextCommandInQueueIfPossible();

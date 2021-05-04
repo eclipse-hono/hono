@@ -65,6 +65,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
 
     private CommandTargetMapper commandTargetMapper;
     private KafkaBasedMappingAndDelegatingCommandHandler cmdHandler;
+    private KafkaCommandProcessingQueue commandQueue;
     private KafkaBasedInternalCommandSender internalCommandSender;
     private String tenantId;
     private String deviceId;
@@ -89,7 +90,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
         when(internalCommandSender.sendCommand(any(), any())).thenReturn(Future.succeededFuture());
 
-        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandTargetMapper,
+        commandQueue = new KafkaCommandProcessingQueue();
+        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue, commandTargetMapper,
                 internalCommandSender, TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
     }
 

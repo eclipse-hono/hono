@@ -16,5 +16,12 @@
     "allPublicMethods" : true,
     "allDeclaredFields" : true,
     "allPublicFields" : true
+  },
+  {
+    "name" : "io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl",
+    "fields" : [
+      { "name" : "rebalanceListener", "allowWrite" : true },
+      { "name" : "worker", "allowWrite" : true }
+    ]
   }
 ]

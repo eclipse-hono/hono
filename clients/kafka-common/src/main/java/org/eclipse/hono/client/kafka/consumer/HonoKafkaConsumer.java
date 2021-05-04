@@ -22,10 +22,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -35,6 +35,7 @@ import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -58,6 +59,9 @@ import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
  */
 public class HonoKafkaConsumer implements Lifecycle {
 
+    /**
+     * Timeout used waiting for a rebalance after a subscription was updated.
+     */
     private static final long WAIT_FOR_REBALANCE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
     /**
      * Default value for 'max.poll.interval.ms', i.e. the maximum delay between invocations of poll(), also
@@ -69,9 +73,9 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final Vertx vertx;
-    protected final AtomicBoolean stopped = new AtomicBoolean();
+    protected final AtomicBoolean stopCalled = new AtomicBoolean();
 
-    private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
+    private final Map<String, String> consumerConfig;
     private final AtomicReference<Promise<Void>> subscribeDonePromiseRef = new AtomicReference<>();
     private final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler;
     private final Set<String> topics;
@@ -79,9 +83,13 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     private KafkaConsumer<String, Buffer> kafkaConsumer;
     /**
-     * The ver.x context the KafkaConsumer runs in.
+     * The vert.x context used by the KafkaConsumer.
      */
     private Context context;
+    /**
+     * The executor service to run tasks on the Kafka polling thread.
+     */
+    private ExecutorService kafkaConsumerWorker;
     /**
      * Currently subscribed topics matching the topic pattern (if set).
      * Note that these are not (necessarily) the topics that this particular kafkaConsumer
@@ -89,8 +97,8 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     private Set<String> subscribedTopicPatternTopics = new HashSet<>();
     private Handler<Set<TopicPartition>> onPartitionsAssignedHandler;
+    private Handler<Set<TopicPartition>> onRebalanceDoneHandler;
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
-    private Handler<Set<TopicPartition>> blockingOnPartitionsRevokedHandler;
 
     /**
      * Creates a consumer to receive records on the given topics.
@@ -126,7 +134,18 @@ public class HonoKafkaConsumer implements Lifecycle {
         this(vertx, null, Objects.requireNonNull(topicPattern), recordHandler, consumerConfig);
     }
 
-    private HonoKafkaConsumer(
+    /**
+     * Creates a consumer to receive records on topics defined either via a topic list or a topic pattern.
+     *
+     * @param vertx The Vert.x instance to use.
+     * @param topics The Kafka topic to consume records from ({@code null} if topicPattern is set).
+     * @param topicPattern The pattern of Kafka topic names to consume records from ({@code null} if topics is set).
+     * @param recordHandler The handler to be invoked for each received record.
+     * @param consumerConfig The Kafka consumer configuration.
+     * @throws NullPointerException if vertx, recordHandler, consumerConfig or either topics or topicPattern is
+     *                              {@code null}.
+     */
+    protected HonoKafkaConsumer(
             final Vertx vertx,
             final Set<String> topics,
             final Pattern topicPattern,
@@ -137,8 +156,11 @@ public class HonoKafkaConsumer implements Lifecycle {
         this.topics = topics;
         this.topicPattern = topicPattern;
         this.recordHandler = Objects.requireNonNull(recordHandler);
-        Objects.requireNonNull(consumerConfig);
+        this.consumerConfig = Objects.requireNonNull(consumerConfig);
 
+        if ((topics == null) == (topicPattern == null)) {
+            throw new NullPointerException("either topics or topicPattern has to be set");
+        }
         if (!consumerConfig.containsKey(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG)) {
             consumerConfig.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, DEFAULT_MAX_POLL_INTERNAL_MS);
         }
@@ -146,17 +168,31 @@ public class HonoKafkaConsumer implements Lifecycle {
             log.trace("no group.id set, using a random UUID as default");
             consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         }
-        consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
     /**
-     * Sets a handler to be invoked on the vert.x event loop thread
-     * when partitions are about to be assigned as part of a rebalance.
+     * Sets a handler to be invoked on the vert.x event loop thread when partitions have been assigned
+     * as part of a rebalance.
+     * <p>
+     * NOTE: the partitions with which the handler is invoked are the <i>newly</i> assigned partitions,
+     * i.e. previously owned partitions are not included.
      *
-     * @param onPartitionsAssignedHandler The handler to be invoked.
+     * @param onPartitionsAssignedHandler The handler to be invoked with the newly added partitions (without the
+     *                                    previously owned partitions).
      */
     public final void setOnPartitionsAssignedHandler(final Handler<Set<TopicPartition>> onPartitionsAssignedHandler) {
         this.onPartitionsAssignedHandler = Objects.requireNonNull(onPartitionsAssignedHandler);
+    }
+
+    /**
+     * Sets a handler to be invoked on the vert.x event loop thread when a rebalance is done.
+     * <p>
+     * The handler is invoked with all currently assigned partitions at the end of the rebalance.
+     *
+     * @param handler The handler to be invoked with all currently assigned partitions.
+     */
+    public final void setOnRebalanceDoneHandler(final Handler<Set<TopicPartition>> handler) {
+        this.onRebalanceDoneHandler = Objects.requireNonNull(handler);
     }
 
     /**
@@ -170,27 +206,11 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
-     * Sets a handler to be invoked when partitions are about to be revoked as part of a rebalance.
-     * <p>
-     * This handler will be invoked on the Kafka thread of the consumer and can be used to commit partition offset
-     * synchronously.
-     *
-     * @param blockingOnPartitionsRevokedHandler The handler to be invoked.
-     * @throws IllegalStateException if invoked after {@link #start()} has been called.
+     * Only to be overridden by unit tests.
+     * @return The created vert.x Kafka consumer.
      */
-    protected final void setBlockingOnPartitionsRevokedHandler(final Handler<Set<TopicPartition>> blockingOnPartitionsRevokedHandler) {
-        if (kafkaConsumer != null) {
-            throw new IllegalStateException("must be called before the consumer is started");
-        }
-        this.blockingOnPartitionsRevokedHandler = Objects.requireNonNull(blockingOnPartitionsRevokedHandler);
-    }
-
-    /**
-     * Only to be used for unit tests.
-     * @param context The vert.x context to use.
-     */
-    void setContext(final Context context) {
-        this.context = context;
+    KafkaConsumer<String, Buffer> createKafkaConsumer() {
+        return KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
     /**
@@ -208,17 +228,17 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     @Override
     public Future<Void> start() {
+        context = Vertx.currentContext();
         if (context == null) {
-            context = Vertx.currentContext();
-            if (context == null) {
-                return Future.failedFuture(new IllegalStateException("consumer must be started in a Vert.x context"));
-            }
+            return Future.failedFuture(new IllegalStateException("consumer must be started in a Vert.x context"));
         }
         // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
-        kafkaConsumer = consumerCreator.get();
+        kafkaConsumer = createKafkaConsumer();
         kafkaConsumer.handler(recordHandler);
         kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred", error));
         installRebalanceListeners();
+        // subscribe and wait for rebalance to make sure that when start() completes,
+        // the consumer is actually ready to receive records already
         return subscribeAndWaitForRebalance()
                 .map(ok -> {
                     if (topicPattern != null) {
@@ -237,30 +257,52 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     private void installRebalanceListeners() {
-        if (blockingOnPartitionsRevokedHandler != null) {
-            // need to apply workaround to set the blockingOnPartitionsRevokedHandler
-            replaceRebalanceListener(kafkaConsumer, new ConsumerRebalanceListener() {
-                @Override
-                public void onPartitionsAssigned(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
-                    // invoked on the actual Kafka consumer thread, not the event loop thread!
-                    context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsAssigned(Helper.from(partitions)));
+        // apply workaround to set listeners working on the kafka polling thread
+        replaceRebalanceListener(kafkaConsumer, new ConsumerRebalanceListener() {
+            @Override
+            public void onPartitionsAssigned(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
+                // invoked on the Kafka polling thread, not the event loop thread!
+                final Set<TopicPartition> partitionsSet = Helper.from(partitions);
+                if (log.isDebugEnabled()) {
+                    log.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
-                @Override
-                public void onPartitionsRevoked(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
-                    // invoked on the actual Kafka consumer thread, not the event loop thread!
-                    final Set<TopicPartition> partitionsSet = Helper.from(partitions);
-                    blockingOnPartitionsRevokedHandler.handle(partitionsSet);
-                    context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
+                onPartitionsAssignedBlocking(partitionsSet);
+                final Set<TopicPartition> allAssignedPartitions = Optional.ofNullable(onRebalanceDoneHandler)
+                        .map(h -> Helper.from(getKafkaConsumer().asStream().unwrap().assignment()))
+                        .orElse(null);
+                context.runOnContext(v -> {
+                    HonoKafkaConsumer.this.onPartitionsAssigned(partitionsSet);
+                    if (onRebalanceDoneHandler != null) {
+                        onRebalanceDoneHandler.handle(allAssignedPartitions);
+                    }
+                });
+            }
+            @Override
+            public void onPartitionsRevoked(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
+                // invoked on the Kafka polling thread, not the event loop thread!
+                final Set<TopicPartition> partitionsSet = Helper.from(partitions);
+                if (log.isDebugEnabled()) {
+                    log.debug("partitions revoked: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
-            });
-        } else {
-            kafkaConsumer.partitionsAssignedHandler(this::onPartitionsAssigned);
-            kafkaConsumer.partitionsRevokedHandler(this::onPartitionsRevoked);
-        }
+                onPartitionsRevokedBlocking(partitionsSet);
+                context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
+            }
+
+            @Override // override default implementation (which just calls onPartitionsRevoked()) to log this situation specifically
+            public void onPartitionsLost(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
+                // invoked on the Kafka polling thread, not the event loop thread!
+                final Set<TopicPartition> partitionsSet = Helper.from(partitions);
+                if (log.isInfoEnabled()) {
+                    log.info("partitions lost: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+                }
+                onPartitionsRevokedBlocking(partitionsSet);
+                context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
+            }
+        });
     }
 
     private Future<Void> subscribeAndWaitForRebalance() {
-        if (stopped.get()) {
+        if (stopCalled.get()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "already stopped"));
         }
         final Promise<Void> subscribeDonePromise = subscribeDonePromiseRef
@@ -270,6 +312,10 @@ public class HonoKafkaConsumer implements Lifecycle {
             kafkaConsumer.subscribe(topicPattern, subscriptionPromise);
         } else {
             kafkaConsumer.subscribe(topics, subscriptionPromise);
+        }
+        // kafkaConsumerWorker has to be retrieved after the first "subscribe" invocation
+        if (kafkaConsumerWorker == null) {
+            kafkaConsumerWorker = getKafkaConsumerWorker(kafkaConsumer);
         }
         vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT, ar -> {
             if (!subscribeDonePromise.future().isComplete()) {
@@ -281,16 +327,38 @@ public class HonoKafkaConsumer implements Lifecycle {
         return CompositeFuture.all(subscriptionPromise.future(), subscribeDonePromise.future()).mapEmpty();
     }
 
+    /**
+     * A callback method that will be invoked after the partition re-assignment completes and before the consumer
+     * starts fetching data.
+     * <p>
+     * NOTE: that this method will be invoked on the Kafka polling thread, not the vert.x event
+     * loop thread!
+     * <p>
+     * This default implementation does nothing. Subclasses may override this method to query offsets of the assigned
+     * partitions for example.
+     *
+     * @param partitionsSet The list of partitions that are now newly assigned to the consumer (previously owned
+     *                      partitions will NOT be included, i.e. this list will only include newly added partitions)
+     */
+    protected void onPartitionsAssignedBlocking(final Set<TopicPartition> partitionsSet) {
+        // do nothing by default
+    }
+
     private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
-        if (log.isDebugEnabled()) {
-            log.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitionsSet));
-        }
         // if a topic pattern is used, kafkaConsumer.subscription() will be used to fetch the actual subscribed topics;
         // if a fixed topic list is used instead, calling kafkaConsumer.subscription() would be of no use since it
         // always returns the topics used in the kafkaConsumer.subscribe(Collection) call, regardless of whether they exist
         // (kafkaConsumer.subscribe(Collection) would have auto-created the topics anyway, if "auto.create.topics.enable" is true)
         if (topicPattern != null) {
-            updateSubscribedTopicPatternTopics();
+            // update subscribedTopicPatternTopics (subscription() will return the actual topics, i.e. not the topic pattern if one is used
+            final Promise<Set<String>> subscriptionResultPromise = Promise.promise();
+            kafkaConsumer.subscription(subscriptionResultPromise);
+            subscriptionResultPromise.future()
+                    .onSuccess(result -> subscribedTopicPatternTopics = new HashSet<>(result))
+                    .onFailure(thr -> log.info("failed to get subscription", thr))
+                    .map((Void) null)
+                    .onComplete(ar -> Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
+                            .ifPresent(promise -> tryCompletePromise(promise, ar)));
         } else {
             Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
                     .ifPresent(Promise::tryComplete);
@@ -300,29 +368,23 @@ public class HonoKafkaConsumer implements Lifecycle {
         }
     }
 
-    private void updateSubscribedTopicPatternTopics() {
-        // update subscribedTopicPatternTopics (subscription() will return the actual topics, i.e. not the topic pattern if one is used
-        kafkaConsumer.subscription(ar -> {
-            if (ar.succeeded()) {
-                subscribedTopicPatternTopics = new HashSet<>(ar.result());
-            } else {
-                log.warn("failed to get subscription", ar.cause());
-            }
-            Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
-                    .ifPresent(promise -> {
-                        if (ar.succeeded()) {
-                            promise.tryComplete();
-                        } else {
-                            promise.tryFail(ar.cause());
-                        }
-                    });
-        });
+    /**
+     * A callback method that will be invoked during a rebalance operation when the consumer has to give up some
+     * partitions.
+     * <p>
+     * NOTE: this method will be invoked on the Kafka polling thread, not the vert.x event loop thread!
+     * <p>
+     * This default implementation does nothing. Subclasses may override this method to commit partition offsets
+     * synchronously for example.
+     *
+     * @param partitionsSet The list of partitions that previously were assigned to the consumer and now need to be
+     *                      revoked.
+     */
+    protected void onPartitionsRevokedBlocking(final Set<TopicPartition> partitionsSet) {
+        // do nothing by default
     }
 
     private void onPartitionsRevoked(final Set<TopicPartition> partitionsSet) {
-        if (log.isDebugEnabled()) {
-            log.debug("partitions revoked: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitionsSet));
-        }
         if (onPartitionsRevokedHandler != null) {
             onPartitionsRevokedHandler.handle(partitionsSet);
         }
@@ -332,12 +394,51 @@ public class HonoKafkaConsumer implements Lifecycle {
     public Future<Void> stop() {
         if (kafkaConsumer == null) {
             return Future.failedFuture("not started");
-        } else if (!stopped.compareAndSet(false, true)) {
-            return Future.failedFuture("already stopped");
+        } else if (!stopCalled.compareAndSet(false, true)) {
+            return Future.failedFuture("stop already called");
         }
         final Promise<Void> consumerClosePromise = Promise.promise();
         kafkaConsumer.close(consumerClosePromise);
         return consumerClosePromise.future();
+    }
+
+    /**
+     * Runs code on the vert.x context used by the Kafka consumer.
+     *
+     * @param codeToRun The code to execute on the context.
+     * @throws NullPointerException if codeToRun is {@code null}.
+     */
+    protected void runOnContext(final Handler<Void> codeToRun) {
+        Objects.requireNonNull(codeToRun);
+        if (context != Vertx.currentContext()) {
+            context.runOnContext(go -> codeToRun.handle(null));
+        } else {
+            codeToRun.handle(null);
+        }
+    }
+
+    /**
+     * Runs the given handler on the Kafka polling thread.
+     * <p>
+     * The invocation of the handler is skipped if the this consumer is already closed.
+     *
+     * @param handler The handler to invoke.
+     * @throws IllegalStateException if the corresponding executor service isn't available because no subscription
+     *                               has been set yet on the Kafka consumer.
+     * @throws NullPointerException if handler is {@code null}.
+     */
+    protected void runOnKafkaWorkerThread(final Handler<Void> handler) {
+        Objects.requireNonNull(handler);
+        if (kafkaConsumerWorker == null) {
+            throw new IllegalStateException("consumer not initialized/started");
+        }
+        if (!stopCalled.get()) {
+            kafkaConsumerWorker.submit(() -> {
+                if (!stopCalled.get()) {
+                    handler.handle(null);
+                }
+            });
+        }
     }
 
     /**
@@ -402,7 +503,7 @@ public class HonoKafkaConsumer implements Lifecycle {
         }
         if (kafkaConsumer == null) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, "not started"));
-        } else if (stopped.get()) {
+        } else if (stopCalled.get()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "already stopped"));
         }
         // check whether topic exists and its existence has been applied to the wildcard subscription yet;
@@ -437,6 +538,14 @@ public class HonoKafkaConsumer implements Lifecycle {
                     return subscribeAndWaitForRebalance()
                             .compose(v -> {
                                 if (!subscribedTopicPatternTopics.contains(topic)) {
+                                    // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic
+                                    log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
+                                    return subscribeAndWaitForRebalance();
+                                }
+                                return Future.succeededFuture(v);
+                            })
+                            .compose(v -> {
+                                if (!subscribedTopicPatternTopics.contains(topic)) {
                                     log.warn("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance [topic: {}]", topic);
                                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                                     "subscription not updated with topic after rebalance"));
@@ -445,6 +554,14 @@ public class HonoKafkaConsumer implements Lifecycle {
                                 return Future.succeededFuture(v);
                             });
                 });
+    }
+
+    private static <T> void tryCompletePromise(final Promise<T> promise, final AsyncResult<T> asyncResult) {
+        if (asyncResult.succeeded()) {
+            promise.tryComplete(asyncResult.result());
+        } else {
+            promise.tryFail(asyncResult.cause());
+        }
     }
 
     /**
@@ -468,5 +585,30 @@ public class HonoKafkaConsumer implements Lifecycle {
         } catch (final Exception e) {
             throw new IllegalArgumentException("Failed to adapt rebalance listener", e);
         }
+    }
+
+    /**
+     * Gets the executor service for running tasks on the Kafka polling thread.
+     * <p>
+     * Using this worker thread is needed to commit partition offsets synchronously during a rebalance for example.
+     *
+     * @param consumer The Kafka consumer to get the worker from.
+     * @return The worker thread executor service.
+     * @throws IllegalStateException if the corresponding executor service isn't available because no subscription
+     *                               has been set yet on the Kafka consumer.
+     */
+    private static ExecutorService getKafkaConsumerWorker(final KafkaConsumer<String, Buffer> consumer) {
+        final ExecutorService worker;
+        try {
+            final Field field = KafkaReadStreamImpl.class.getDeclaredField("worker");
+            field.setAccessible(true);
+            worker = (ExecutorService) field.get(consumer.asStream());
+        } catch (final Exception e) {
+            throw new IllegalArgumentException("Failed to get worker", e);
+        }
+        if (worker == null) {
+            throw new IllegalStateException("worker not set");
+        }
+        return worker;
     }
 }
