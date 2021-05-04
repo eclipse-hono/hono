@@ -380,7 +380,6 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final VertxTestContext setup = new VertxTestContext();
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
-        final String gatewayManagedDevice = helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5);
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -388,6 +387,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             return;
         }
 
+        final String gatewayManagedDevice = helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5);
         testUploadMessageWithInvalidContentType(ctx, tenantId, deviceId, gatewayManagedDevice);
     }
 
