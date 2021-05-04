@@ -44,6 +44,7 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -473,6 +474,18 @@ public class ApplicationConfig {
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER + " & " + Profiles.PROFILE_TENANT_SERVICE)
     public TenantService tenantService() throws IOException {
         return new TenantServiceImpl(tenantAdapterStore(), tenantServiceProperties());
+    }
+
+    /**
+     * Provide a tenant information service, backed by the JDBC tenant service instance.
+     *
+     * @return The bean instance.
+     */
+    @Bean
+    @Scope("prototype")
+    @ConditionalOnBean(TenantService.class)
+    public TenantInformationService tenantInformationService() {
+        return new AutowiredTenantInformationService();
     }
 
     /**
