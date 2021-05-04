@@ -26,6 +26,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
+import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -87,6 +88,7 @@ public final class AutoProvisioning {
                     certCredential.setEnabled(true).setComment(comment);
 
                     final String deviceId = r.getPayload().getId();
+                    TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
                     return credentialsManagementService.updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
                             .compose(v -> {
@@ -98,7 +100,7 @@ public final class AutoProvisioning {
                                                     Optional.empty(),
                                                     Optional.empty()));
                                 } else {
-                                    span.log("Auto-provisioning successful for device [" + deviceId + "]");
+                                    span.log("auto-provisioning successful");
                                     return Future
                                             .succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CREATED));
                                 }
