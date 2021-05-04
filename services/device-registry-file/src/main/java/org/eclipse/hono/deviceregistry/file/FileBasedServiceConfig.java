@@ -31,6 +31,7 @@ import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.http.HttpEndpoint;
@@ -40,10 +41,12 @@ import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttp
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -103,6 +106,17 @@ public class FileBasedServiceConfig {
     @Bean
     public FileBasedTenantService tenantService() {
         return new FileBasedTenantService(vertx);
+    }
+
+    /**
+     * Creates an instance of the tenant information service based on the file based tenant service as a Spring Bean.
+     *
+     * @return The service.
+     */
+    @Bean
+    @ConditionalOnBean(TenantService.class)
+    public TenantInformationService tenantInformationService() {
+        return new AutowiredTenantInformationService();
     }
 
     /**
