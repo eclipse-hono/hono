@@ -215,7 +215,6 @@ public class FileBasedDeviceBackend implements DeviceBackend, Lifecycle {
                                 clientContext,
                                 this,
                                 this,
-                                this,
                                 tenantInformationService,
                                 span);
                     }

@@ -205,7 +205,6 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
                                 clientContext,
                                 this,
                                 this,
-                                this,
                                 tenantInformationService,
                                 span);
                     }

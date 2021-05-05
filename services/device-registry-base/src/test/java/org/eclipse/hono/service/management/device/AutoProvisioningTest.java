@@ -33,13 +33,11 @@ import java.util.UUID;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
-import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,7 +45,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -68,7 +65,6 @@ public class AutoProvisioningTest {
     private String deviceId;
     private DeviceManagementService deviceManagementService;
     private CredentialsManagementService credentialsManagementService;
-    private CredentialsService credentialsService;
     private TenantInformationService tenantInformationService;
 
     /**
@@ -95,7 +91,6 @@ public class AutoProvisioningTest {
         deviceId = UUID.randomUUID().toString();
         deviceManagementService = mock(DeviceManagementService.class);
         credentialsManagementService = mock(CredentialsManagementService.class);
-        credentialsService = mock(CredentialsService.class);
         tenantInformationService = mock(TenantInformationService.class);
     }
 
@@ -120,14 +115,11 @@ public class AutoProvisioningTest {
                         Optional.empty(), Optional.empty())));
         when(credentialsManagementService.updateCredentials(eq(tenantObject.getTenantId()), eq(deviceId), any(), any(),
                 any())).thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CREATED)));
-        when(credentialsService.get(eq(tenantObject.getTenantId()), eq(CredentialsConstants.SECRETS_TYPE_X509_CERT),
-                eq(SUBJECT_DN), any(Span.class))).thenReturn(
-                        Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_OK, new JsonObject())));
 
         // WHEN provisioning a device from a certificate
         AutoProvisioning
-                .provisionIfEnabled(tenantId, SUBJECT_DN, clientContext,
-                        credentialsManagementService, credentialsService, deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
+                .provisionIfEnabled(tenantId, SUBJECT_DN, clientContext, credentialsManagementService,
+                        deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the device is registered, credentials are set and credentials information is returned
@@ -135,8 +127,6 @@ public class AutoProvisioningTest {
                                 any(), any());
                         verify(credentialsManagementService).updateCredentials(eq(tenantObject.getTenantId()),
                                 eq(deviceId), any(), any(), any());
-                        verify(credentialsService).get(eq(tenantObject.getTenantId()), any(), eq(SUBJECT_DN),
-                                any(Span.class));
 
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                     });
@@ -161,7 +151,7 @@ public class AutoProvisioningTest {
         // WHEN provisioning a device from a certificate
         AutoProvisioning
                 .provisionIfEnabled(tenantId, SUBJECT_DN, new JsonObject(), credentialsManagementService,
-                        credentialsService, deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
+                        deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         //THEN the device is not registered and credentials are not set
@@ -169,8 +159,6 @@ public class AutoProvisioningTest {
                                 any(), any());
                         verify(credentialsManagementService, never()).updateCredentials(eq(tenantObject.getTenantId()),
                                 eq(deviceId), any(), any(), any());
-                        verify(credentialsService, never()).get(eq(tenantObject.getTenantId()), any(), eq(SUBJECT_DN),
-                                any(Span.class));
 
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     });
@@ -206,9 +194,8 @@ public class AutoProvisioningTest {
 
         // WHEN provisioning a device from a certificate
         AutoProvisioning
-                .provisionIfEnabled(tenantId, SUBJECT_DN, clientContext,
-                        credentialsManagementService, credentialsService, deviceManagementService,
-                        tenantInformationService, NoopSpan.INSTANCE)
+                .provisionIfEnabled(tenantId, SUBJECT_DN, clientContext, credentialsManagementService,
+                        deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the device is registered

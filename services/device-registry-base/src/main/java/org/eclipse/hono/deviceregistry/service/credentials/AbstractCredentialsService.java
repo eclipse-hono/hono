@@ -157,7 +157,6 @@ public abstract class AbstractCredentialsService implements CredentialsService {
                                                     authId,
                                                     clientContext,
                                                     this.credentialsManagementService,
-                                                    this,
                                                     this.deviceManagementService,
                                                     this.tenantInformationService,
                                                     span);

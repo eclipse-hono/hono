@@ -24,14 +24,15 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.service.credentials.CredentialsService;
-import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,11 @@ public final class AutoProvisioning {
 
     /**
      * Auto-provision a device if auto-provisioning feature is enabled.
+     * <p>
+     * A device is auto-provisioned based on the information from the client certificate that 
+     * the device used for authentication. The client certificate is expected to be in the 
+     * client context corresponding to the property {@value CredentialsConstants#FIELD_CLIENT_CERT}
+     * for auto-provisioning to take place.
      *
      * @param tenantId The tenant identifier.
      * @param authId The authentication identifier of the device. The authId is 
@@ -62,17 +68,19 @@ public final class AutoProvisioning {
      *               by <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
      * @param clientContext The client context that can be used to get the X.509 certificate of the device
      *                      to be provisioned.
-     * @param credentialsManagementService The credentials management service to use.
-     * @param credentialsService The credentials service to use.
-     * @param deviceManagementService The device management service to use.
-     * @param tenantInformationService The tenant information service to use.
+     * @param credentialsManagementService The credentials management service to update the credentials information
+     *                                     of the device being auto-provisioned.
+     * @param deviceManagementService The device management service to create a new device registration for the device
+     *                                being auto-provisioned.
+     * @param tenantInformationService The tenant information service to retrieve the tenant information corresponding
+     *                                 to the device being auto-provisioned.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *             implementation should log (error) events on this span and it may set tags and use this span
      *             as the parent for any spans created in this method.
      * @return A (succeeded) future containing the result of the operation. The <em>status</em> will be
      *         <ul>
      *         <li><em>201 CREATED</em> if the device has successfully been provisioned. The payload contains the
-     *         credentials information.</li>
+     *         credentials information of the auto-provisioned device.</li>
      *         <li><em>4XX</em> if the provisioning failed. The payload may contain an error description.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters except clientContext is {@code null}.
@@ -82,7 +90,6 @@ public final class AutoProvisioning {
             final String authId,
             final JsonObject clientContext,
             final CredentialsManagementService credentialsManagementService,
-            final CredentialsService credentialsService,
             final DeviceManagementService deviceManagementService,
             final TenantInformationService tenantInformationService,
             final Span span) {
@@ -91,7 +98,6 @@ public final class AutoProvisioning {
         Objects.requireNonNull(authId);
         Objects.requireNonNull(deviceManagementService);
         Objects.requireNonNull(credentialsManagementService);
-        Objects.requireNonNull(credentialsService);
         Objects.requireNonNull(tenantInformationService);
         Objects.requireNonNull(span);
 
@@ -108,19 +114,7 @@ public final class AutoProvisioning {
                                     .filter(cert -> AutoProvisioning.isEnabled(tenantConfig, cert, span))
                                     .map(cert -> {
                                         Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
-                                        return provisionDevice(tenantId, authId, deviceManagementService, credentialsManagementService, cert, span)
-                                                        .compose(r -> {
-                                                            // if error then return error result
-                                                            if (r.isError()) {
-                                                                TracingHelper.logError(span, r.getPayload());
-                                                                return Future.succeededFuture(CredentialsResult
-                                                                        .from(r.getStatus(), new JsonObject()
-                                                                                .put("description", r.getPayload())));
-                                                            }
-                                                            // else return the new credentials
-                                                            return getNewCredentials(credentialsService, tenantId,
-                                                                    authId, span);
-                                                        });
+                                        return provisionDevice(tenantId, authId, deviceManagementService, credentialsManagementService, cert, span);
                                     })
                                     // if the auto-provisioning is not enabled or 
                                     // no client certificate is set in the client context
@@ -144,14 +138,15 @@ public final class AutoProvisioning {
      *            parent for any spans created in this method.
      * @return A (succeeded) future containing the result of the operation. The <em>status</em> will be
      *         <ul>
-     *         <li><em>201 CREATED</em> if the device has successfully been provisioned.</li>
+     *         <li><em>201 CREATED</em> if the device has successfully been provisioned. The payload contains 
+     *         the credentials information of the auto-provisioned device.</li>
      *         <li><em>4XX</em> if the provisioning failed. The payload may contain an error description.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    private static Future<OperationResult<String>> provisionDevice(
+    private static Future<CredentialsResult<JsonObject>> provisionDevice(
             final String tenantId,
-            final String authId, 
+            final String authId,
             final DeviceManagementService deviceManagementService,
             final CredentialsManagementService credentialsManagementService,
             final X509Certificate clientCertificate,
@@ -174,33 +169,36 @@ public final class AutoProvisioning {
                     if (r.isError()) {
                         LOG.warn("auto-provisioning failed: device could not be created [tenant: {}, auth-id: {}, status: {}]",
                                 tenantId, authId, r.getStatus());
-                        return Future.succeededFuture(OperationResult.ok(r.getStatus(),
-                                "Auto-provisioning failed: device could not be created", Optional.empty(),
-                                Optional.empty()));
+                        return Future.succeededFuture(getCredentialsResult(r.getStatus(),
+                                "auto-provisioning failed: device could not be created"));
                     }
 
                     // 2. set the certificate credential
-                    final var certCredential = X509CertificateCredential.fromSubjectDn(authId, List.of(new X509CertificateSecret()));
+                    final var certCredential = X509CertificateCredential.fromSubjectDn(authId,
+                            List.of(new X509CertificateSecret()));
                     certCredential.setEnabled(true).setComment(comment);
 
                     final String deviceId = r.getPayload().getId();
                     TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
-                    return credentialsManagementService.updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
+                    return credentialsManagementService
+                            .updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
                             .compose(v -> {
                                 if (v.isError()) {
-                                    LOG.warn("auto-provisioning failed: credentials could not be set [tenant: {}, auth-id: {}, status: {}]",
-                                            tenantId, authId, v.getStatus());
-                                    return deviceManagementService.deleteDevice(tenantId, deviceId, Optional.empty(), span)
-                                            .map(OperationResult.ok(v.getStatus(),
-                                                    "Auto-provisioning failed: credentials could not be set for device ["
-                                                            + deviceId + "]",
-                                                    Optional.empty(),
-                                                    Optional.empty()));
+                                    LOG.warn("auto-provisioning failed: credentials could not be set [tenant: {}, device: {}, auth-id: {}, status: {}]",
+                                            tenantId, deviceId, authId, v.getStatus());
+                                    return deviceManagementService
+                                            .deleteDevice(tenantId, deviceId, Optional.empty(), span)
+                                            .map(getCredentialsResult(v.getStatus(),
+                                                    "auto-provisioning failed: credentials could not be set for device ["
+                                                            + deviceId + "]"));
                                 } else {
                                     span.log("auto-provisioning successful");
-                                    return Future
-                                            .succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CREATED));
+                                    if (LOG.isTraceEnabled()) {
+                                        LOG.trace("auto-provisioning successful [tenant: {}, device: {}, auth-id: {}]",
+                                                tenantId, deviceId, authId);
+                                    }
+                                    return Future.succeededFuture(getCredentialsResult(deviceId, certCredential));
                                 }
                             });
                 });
@@ -229,18 +227,15 @@ public final class AutoProvisioning {
         return isEnabled;
     }
 
-    /**
-     * Retrieve the newly created credentials.
-     *
-     * @param credentialsService The credentials service to use.
-     * @param tenantId The tenant to query for.
-     * @param authId The auth ID to query for.
-     * @param span The active OpenTracing span for this operation.
-     * @return A future, tracking the outcome of the operation.
-     */
-    private static Future<CredentialsResult<JsonObject>> getNewCredentials(final CredentialsService credentialsService,
-            final String tenantId, final String authId, final Span span) {
-        return credentialsService.get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, span)
-                .map(r -> r.isOk() ? CredentialsResult.from(HttpURLConnection.HTTP_CREATED, r.getPayload()) : r);
+    private static CredentialsResult<JsonObject> getCredentialsResult(final String deviceId,
+            final CommonCredential credential) {
+        final JsonObject credentialJson = JsonObject.mapFrom(credential)
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+
+        return CredentialsResult.from(HttpURLConnection.HTTP_CREATED, credentialJson);
+    }
+
+    private static CredentialsResult<JsonObject> getCredentialsResult(final int status, final String message) {
+        return CredentialsResult.from(status, new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, message));
     }
 }
