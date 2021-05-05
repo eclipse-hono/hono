@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -162,12 +163,18 @@ public class AbstractAtLeastOnceKafkaConsumerMockitoTest {
         for (int i = 0; i < recordsPerPoll; i++) {
             recordList.add(new ConsumerRecord<>(TOPIC, PARTITION, i, null, Buffer.buffer()));
         }
-        final TopicPartition topicPartition = new TopicPartition(TOPIC, PARTITION);
-        final Map<TopicPartition, List<ConsumerRecord<String, Buffer>>> pollResult = Map.of(topicPartition, recordList);
+        final Map<TopicPartition, List<ConsumerRecord<String, Buffer>>> pollResult = recordsPerPoll > 0
+                ? Map.of(new TopicPartition(TOPIC, PARTITION), recordList)
+                : Map.of();
 
+        final AtomicBoolean pollAlreadyCalled = new AtomicBoolean();
         doAnswer(invocation -> {
             final Promise<KafkaConsumerRecords<String, Buffer>> task = invocation.getArgument(1);
-            task.handle(Future.succeededFuture(new KafkaConsumerRecordsImpl<>(new ConsumerRecords<>(pollResult))));
+            // only invoke the poll() result handler on the first poll() invocation,
+            // otherwise there's an endless poll()/handleBatch() loop because no decoupling via vert.x is used here
+            if (pollAlreadyCalled.compareAndSet(false, true)) {
+                task.handle(Future.succeededFuture(new KafkaConsumerRecordsImpl<>(new ConsumerRecords<>(pollResult))));
+            }
             return 1L;
         }).when(mockKafkaConsumer).poll(any(Duration.class), VertxMockSupport.anyHandler());
 
