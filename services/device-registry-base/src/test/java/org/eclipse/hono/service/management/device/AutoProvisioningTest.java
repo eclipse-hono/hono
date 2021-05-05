@@ -14,6 +14,7 @@ package org.eclipse.hono.service.management.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -38,6 +39,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.junit.jupiter.api.BeforeAll;
@@ -129,6 +131,14 @@ public class AutoProvisioningTest {
                                 eq(deviceId), any(), any(), any());
 
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+
+                        final JsonObject returnedCredential = result.getPayload();
+                        assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID))
+                                .isEqualTo(deviceId);
+                        assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_AUTH_ID))
+                                .isEqualTo(SUBJECT_DN);
+                        assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_TYPE))
+                                .isEqualTo(RegistryManagementConstants.SECRETS_TYPE_X509_CERT);
                     });
                     ctx.completeNow();
                 }));
@@ -140,6 +150,7 @@ public class AutoProvisioningTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testProvisionDeviceWhenNotEnabled(final VertxTestContext ctx) {
         //GIVEN a tenant CA with auto-provisioning not enabled
@@ -155,10 +166,10 @@ public class AutoProvisioningTest {
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         //THEN the device is not registered and credentials are not set
-                        verify(deviceManagementService, never()).createDevice(eq(tenantObject.getTenantId()), any(),
+                        verify(deviceManagementService, never()).createDevice(anyString(), any(Optional.class),
+                                any(Device.class), any());
+                        verify(credentialsManagementService, never()).updateCredentials(anyString(), anyString(), any(),
                                 any(), any());
-                        verify(credentialsManagementService, never()).updateCredentials(eq(tenantObject.getTenantId()),
-                                eq(deviceId), any(), any(), any());
 
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     });
