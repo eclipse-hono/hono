@@ -60,8 +60,17 @@
     <mockito.version>3.7.7</mockito.version>
     <mongodb-image.name>mongo:4.2.13</mongodb-image.name>
     <mongodb-driver.version>3.10.1</mongodb-driver.version>
-    <netty.version>4.1.49.Final</netty.version>
-    <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
+    <!--
+      Quarkus native image build requires a pre 4.1.59 version because it
+      invokes io.netty.handler.ssl.SslContext.newServerContextInternal via reflection and
+      that method's signature has changed in 4.1.59.
+      This is only an issue in the native image build but we might want to consider
+      changing our code in org.eclipse.hono.service.AbstractServiceBase.addTlsKeyCertOptions
+      for checking if a native TLS implementation can/should be used so that we do not require
+      netty-tcnative to be on the build path.
+    -->
+    <netty.version>4.1.58.Final</netty.version>
+    <netty.tcnative.version>2.0.36.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
@@ -80,7 +89,7 @@
     <spring-boot.version>2.4.3</spring-boot.version>
     <spring-security-crypto.version>5.4.5</spring-security-crypto.version>
     <testcontainers.version>1.15.2</testcontainers.version>
-    <vertx.version>3.9.5</vertx.version>
+    <vertx.version>3.9.7</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
     <wildfly-elytron.version>1.14.1.Final</wildfly-elytron.version>
     <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.0</zookeeper.image.name>
@@ -524,6 +533,11 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
+        <artifactId>netty-codec</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-dns</artifactId>
         <version>${netty.version}</version>
       </dependency>
@@ -540,6 +554,11 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-mqtt</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-socks</artifactId>
         <version>${netty.version}</version>
       </dependency>
       <dependency>
@@ -584,6 +603,13 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-kqueue</artifactId>
         <classifier>osx-x86_64</classifier>
+        <version>${netty.version}</version>
+        <scope>runtime</scope>
+        <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${netty.version}</version>
         <scope>runtime</scope>
         <optional>true</optional>
