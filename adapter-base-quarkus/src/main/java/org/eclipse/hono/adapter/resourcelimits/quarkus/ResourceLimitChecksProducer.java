@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.resourcelimits.quarkus;
 
 import java.time.Duration;
+import java.util.concurrent.Executors;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
@@ -62,6 +63,8 @@ public class ResourceLimitChecksProducer {
             webClientOptions.setSsl(config.isTlsEnabled());
 
             final Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                    // make sure we run one Prometheus query at a time
+                    .executor(Executors.newSingleThreadExecutor())
                     .initialCapacity(config.getCacheMinSize())
                     .maximumSize(config.getCacheMaxSize())
                     .expireAfterWrite(Duration.ofSeconds(config.getCacheTimeout()));

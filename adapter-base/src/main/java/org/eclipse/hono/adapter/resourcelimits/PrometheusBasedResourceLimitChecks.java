@@ -20,11 +20,10 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAdjusters;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutionException;
 
 import org.eclipse.hono.adapter.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -40,17 +39,15 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 
+import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
@@ -77,7 +74,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
 
     private static final String QUERY_TEMPLATE_MESSAGE_LIMIT = String.format(
-            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm:%%3$ds]) or %2$s*0) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm:%%3$ds]) or %1$s*0))",
+            "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm]) or vector(0)) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm]) or vector(0)))",
             METRIC_NAME_MESSAGES_PAYLOAD_SIZE,
             METRIC_NAME_COMMANDS_PAYLOAD_SIZE,
             MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
@@ -152,16 +149,6 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 QUERY_URI);
     }
 
-    private Span createSpan(final String name, final SpanContext parent, final TenantObject tenant) {
-        return TracingHelper.buildChildSpan(tracer, parent, name, getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(Tags.PEER_HOSTNAME.getKey(), config.getHost())
-                .withTag(Tags.PEER_PORT.getKey(), config.getPort())
-                .withTag(Tags.HTTP_URL.getKey(), QUERY_URI)
-                .withTag(TracingHelper.TAG_TENANT_ID.getKey(), tenant.getTenantId())
-                .start();
-    }
-
     /**
      * Sets a clock to use for determining the current system time.
      * <p>
@@ -181,13 +168,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         Objects.requireNonNull(tenant);
 
-        final Span span = createSpan("verify connection limit", spanContext, tenant);
-        final Map<String, Object> traceItems = new HashMap<>();
-
+        final var span = TracingHelper.buildChildSpan(tracer, spanContext, "verify connection limit", getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(TracingHelper.TAG_TENANT_ID.getKey(), tenant.getTenantId())
+                .start();
         final Promise<Boolean> result = Promise.promise();
 
         if (tenant.getResourceLimits() == null) {
-            traceItems.put(Fields.EVENT, "no resource limits configured");
+            span.log(Map.of(Fields.MESSAGE, "no resource limits configured"));
             LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
@@ -195,46 +183,56 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             LOG.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), maxConnections);
 
             if (maxConnections == TenantConstants.UNLIMITED_CONNECTIONS) {
-                traceItems.put(Fields.EVENT, "no connection limit configured");
+                span.log(Map.of(Fields.MESSAGE, "no connection limit configured"));
                 result.complete(Boolean.FALSE);
             } else {
-                final Context originalContext = Vertx.currentContext();
-                final AtomicBoolean cacheHit = new AtomicBoolean(true);
-                connectionCountCache.get(tenant.getTenantId(), (tenantId, executor) -> {
+                TracingHelper.TAG_CACHE_HIT.set(span, Boolean.FALSE);
+                final var value = connectionCountCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                     final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
-                    cacheHit.set(false);
                     final String queryParams = String.format(
                             "sum(%s{tenant=\"%s\"})",
                             METRIC_NAME_CONNECTIONS,
                             tenantId);
-                    executeQuery(queryParams, span)
+                    executeQuery(queryParams, span.context())
                         .onSuccess(currentConnections -> r.complete(new LimitedResource<>(maxConnections, currentConnections)))
                         .onFailure(r::completeExceptionally);
                     return r;
-                })
-                .whenComplete((value, error) -> runOnContext(originalContext, v -> {
-                    TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-                    if (error != null) {
-                        TracingHelper.logError(span, error);
-                        result.complete(Boolean.FALSE);
-                    } else {
-                        traceItems.put(TenantConstants.FIELD_MAX_CONNECTIONS, maxConnections);
-                        traceItems.put("current-connections", value.getCurrentValue());
-                        final boolean isExceeded = value.getCurrentValue() >= value.getCurrentLimit();
-                        LOG.trace("connection limit {}exceeded [tenant: {}, current connections: {}, max-connections: {}]",
-                                isExceeded ? "" : "not ", tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit());
+                });
+
+                if (value.isDone()) {
+                    try {
+                        final var limitedResource = value.get();
+                        TracingHelper.TAG_CACHE_HIT.set(span, Boolean.TRUE);
+                        span.log(Map.of(
+                                TenantConstants.FIELD_MAX_CONNECTIONS, maxConnections,
+                                "current-connections", limitedResource.getCurrentValue()));
+                        final boolean isExceeded = limitedResource.getCurrentValue() >= limitedResource.getCurrentLimit();
+                        LOG.trace(
+                                "connection limit {}exceeded [tenant: {}, current connections: {}, max-connections: {}]",
+                                isExceeded ? "" : "not ",
+                                tenant.getTenantId(),
+                                limitedResource.getCurrentValue(),
+                                limitedResource.getCurrentLimit());
                         result.complete(isExceeded);
+                    } catch (InterruptedException | ExecutionException e) {
+                        // this means that the query could not be run successfully
+                        TracingHelper.logError(span, e);
+                        // fall back to default value
+                        result.complete(Boolean.FALSE);
                     }
-                }));
+                } else {
+                    LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
+                    span.log("query still running, using default value");
+                    result.complete(Boolean.FALSE);
+                }
             }
         }
 
-        return result.future().map(b -> {
-            traceItems.put("limit exceeded", b);
-            span.log(traceItems);
-            span.finish();
-            return b;
-        });
+        return result.future()
+                .onSuccess(b -> {
+                    span.log(Map.of("limit exceeded", b));
+                    span.finish();
+                });
     }
 
     /**
@@ -276,43 +274,42 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         Objects.requireNonNull(tenant);
 
-        final Span span = createSpan("verify message limit", spanContext, tenant);
-        final Map<String, Object> items = new HashMap<>();
-        items.put("payload-size", payloadSize);
+        final var span = TracingHelper.buildChildSpan(tracer, spanContext, "verify message limit", getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(TracingHelper.TAG_TENANT_ID.getKey(), tenant.getTenantId())
+                .start();
+        span.log(Map.of("payload-size", payloadSize));
 
         final Promise<Boolean> result = Promise.promise();
 
         if (tenant.getResourceLimits() == null) {
-            items.put(Fields.EVENT, "no resource limits configured");
+            span.log(Map.of(Fields.MESSAGE, "no resource limits configured"));
             LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else if (tenant.getResourceLimits().getDataVolume() == null) {
-            items.put(Fields.EVENT, "no message limits configured");
+            span.log(Map.of(Fields.MESSAGE, "no message limits configured"));
             LOG.trace("no message limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
-            checkMessageLimit(tenant, payloadSize, items, span, result);
+            checkMessageLimit(tenant, payloadSize, span, result);
         }
         return result.future()
-                .map(b -> {
-                    items.put("limit exceeded", b);
-                    span.log(items);
+                .onSuccess(b -> {
+                    span.log(Map.of("limit exceeded", b));
                     span.finish();
-                    return b;
                 });
     }
 
     private void checkMessageLimit(
             final TenantObject tenant,
             final long payloadSize,
-            final Map<String, Object> items,
             final Span span,
             final Promise<Boolean> result) {
 
         final DataVolume dataVolumeConfig = tenant.getResourceLimits().getDataVolume();
         final long maxBytes = dataVolumeConfig.getMaxBytes();
         final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
-        //If the period is not set explicitly, monthly is assumed as the default value
+        // If the period is not set explicitly, monthly is assumed as the default value
         final String periodMode = dataVolumeConfig.getPeriod().getMode();
         final long periodInDays = dataVolumeConfig.getPeriod().getNoOfDays();
 
@@ -322,15 +319,17 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxBytes == TenantConstants.UNLIMITED_BYTES || effectiveSince == null || !ResourceLimitsPeriod.isSupportedMode(periodMode) || payloadSize <= 0) {
+        if (maxBytes == TenantConstants.UNLIMITED_BYTES || effectiveSince == null
+                || !ResourceLimitsPeriod.isSupportedMode(periodMode) || payloadSize <= 0) {
+
+            // if not limits are defined for the tenant we always pass the check
             result.complete(Boolean.FALSE);
         } else {
 
-            final Context originalContext = Vertx.currentContext();
-            final AtomicBoolean cacheHit = new AtomicBoolean(true);
-            dataVolumeCache.get(tenant.getTenantId(), (tenantId, executor) -> {
+            TracingHelper.TAG_CACHE_HIT.set(span, false);
+
+            final var value = dataVolumeCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Long>> r = new CompletableFuture<>();
-                cacheHit.set(false);
                 final Instant nowUtc = Instant.now(clock);
                 final Long allowedMaxBytes = calculateEffectiveLimit(
                         effectiveSince,
@@ -348,33 +347,43 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                     final String queryParams = String.format(
                             QUERY_TEMPLATE_MESSAGE_LIMIT,
                             tenant.getTenantId(),
-                            dataUsagePeriod.toMinutes(),
-                            config.getCacheTimeout());
-                    executeQuery(queryParams, span)
+                            dataUsagePeriod.toMinutes());
+                    executeQuery(queryParams, span.context())
                         .onSuccess(bytesConsumed -> r.complete(new LimitedResource<>(allowedMaxBytes, bytesConsumed)))
                         .onFailure(r::completeExceptionally);
                 }
                 return r;
-            })
-            .whenComplete((value, error) -> runOnContext(originalContext, v -> {
-                TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-                if (error != null) {
-                    TracingHelper.logError(span, error);
-                    result.complete(Boolean.FALSE);
-                } else {
-                    items.put("current period bytes limit", value.getCurrentLimit());
-                    items.put("current period bytes consumed", value.getCurrentValue());
-                    final boolean isExceeded = (value.getCurrentValue() + payloadSize) > value.getCurrentLimit();
+            });
+
+            if (value.isDone()) {
+                try {
+                    final var limitedResource = value.get();
+                    TracingHelper.TAG_CACHE_HIT.set(span, true);
+                    span.log(Map.of(
+                            "current period bytes limit", limitedResource.getCurrentLimit(),
+                            "current period bytes consumed", limitedResource.getCurrentValue()));
+                    final boolean isExceeded = (limitedResource.getCurrentValue() + payloadSize) > limitedResource.getCurrentLimit();
                     LOG.trace(
-                            "data limit {}exceeded [tenant: {}, bytes consumed: {}, allowed max-bytes: {}, {}: {}, {}: {}, {}: {}]",
+                            "data limit {}exceeded [tenant: {}, bytes consumed: {}, payload size: {}, allowed max-bytes: {}, {}: {}, {}: {}, {}: {}]",
                             isExceeded ? "" : "not ",
-                            tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit(),
+                            tenant.getTenantId(), limitedResource.getCurrentValue(),
+                            payloadSize,
+                            limitedResource.getCurrentLimit(),
                             TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
                             TenantConstants.FIELD_PERIOD_MODE, periodMode,
                             TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
                     result.complete(isExceeded);
+                } catch (final Throwable t) {
+                    // this means that the query could not be run successfully
+                    TracingHelper.logError(span, t);
+                    // fall back to default value
+                    result.complete(Boolean.FALSE);
                 }
-            }));
+            } else {
+                LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
+                span.log(Map.of(Fields.MESSAGE, "query still running, using default value"));
+                result.complete(Boolean.FALSE);
+            }
         }
     }
 
@@ -385,42 +394,41 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         Objects.requireNonNull(tenant);
 
-        final Span span = createSpan("verify connection duration limit", spanContext, tenant);
-        final Map<String, Object> items = new HashMap<>();
+        final var span = TracingHelper.buildChildSpan(tracer, spanContext, "verify connection duration limit", getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(TracingHelper.TAG_TENANT_ID.getKey(), tenant.getTenantId())
+                .start();
 
         final Promise<Boolean> result = Promise.promise();
 
         if (tenant.getResourceLimits() == null) {
-            items.put(Fields.EVENT, "no resource limits configured");
+            span.log(Map.of(Fields.MESSAGE, "no resource limits configured"));
             LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else if (tenant.getResourceLimits().getConnectionDuration() == null) {
-            items.put(Fields.EVENT, "no connection duration limit configured");
+            span.log(Map.of(Fields.MESSAGE, "no connection duration limit configured"));
             LOG.trace("no connection duration limit configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
-            checkConnectionDurationLimit(tenant, items, span, result);
+            checkConnectionDurationLimit(tenant, span, result);
         }
 
         return result.future()
-                .map(b -> {
-                    items.put("limit exceeded", b);
-                    span.log(items);
+                .onSuccess(b -> {
+                    span.log(Map.of("limit exceeded", b));
                     span.finish();
-                    return b;
                 });
     }
 
     private void checkConnectionDurationLimit(
             final TenantObject tenant,
-            final Map<String, Object> items,
             final Span span,
             final Promise<Boolean> result) {
 
         final ConnectionDuration connectionDurationConfig = tenant.getResourceLimits().getConnectionDuration();
         final long maxConnectionDurationInMinutes = connectionDurationConfig.getMaxMinutes();
         final Instant effectiveSince = connectionDurationConfig.getEffectiveSince();
-        //If the period is not set explicitly, monthly is assumed as the default value
+        // If the period is not set explicitly, monthly is assumed as the default value
         final String periodMode = connectionDurationConfig.getPeriod().getMode();
         final long periodInDays = connectionDurationConfig.getPeriod().getNoOfDays();
 
@@ -431,15 +439,17 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null || !ResourceLimitsPeriod.isSupportedMode(periodMode)) {
+        if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null
+                || !ResourceLimitsPeriod.isSupportedMode(periodMode)) {
+
+            // if not limits are defined for the tenant we always pass the check
             result.complete(Boolean.FALSE);
+
         } else {
 
-            final Context originalContext = Vertx.currentContext();
-            final AtomicBoolean cacheHit = new AtomicBoolean(true);
-            connectionDurationCache.get(tenant.getTenantId(), (tenantId, executor) -> {
+            TracingHelper.TAG_CACHE_HIT.set(span, false);
+            final var value = connectionDurationCache.get(tenant.getTenantId(), (tenantId, executor) -> {
                 final CompletableFuture<LimitedResource<Duration>> r = new CompletableFuture<>();
-                cacheHit.set(false);
                 final Instant nowUtc = Instant.now(clock);
                 final Duration allowedMaxMinutes = Duration.ofMinutes(calculateEffectiveLimit(
                                 effectiveSince,
@@ -455,62 +465,77 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 if (connectionDurationUsagePeriod.toMinutes() <= 0) {
                     r.complete(new LimitedResource<>(allowedMaxMinutes, Duration.ofMinutes(0)));
                 } else {
-                    final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%dm:%ds])))",
+                    final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%dm])))",
                             METRIC_NAME_CONNECTIONS_DURATION,
                             tenant.getTenantId(),
-                            connectionDurationUsagePeriod.toMinutes(),
-                            config.getCacheTimeout());
-                    executeQuery(queryParams, span)
+                            connectionDurationUsagePeriod.toMinutes());
+                    executeQuery(queryParams, span.context())
                         .onSuccess(minutesConnected -> r.complete(new LimitedResource<>(allowedMaxMinutes, Duration.ofMinutes(minutesConnected))))
                         .onFailure(r::completeExceptionally);
                 }
                 return r;
-            })
-            .whenComplete((value, error) -> runOnContext(originalContext, v -> {
-                TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-                if (error != null) {
-                    TracingHelper.logError(span, error);
-                    result.complete(Boolean.FALSE);
-                } else {
-                    items.put("current period's connection duration limit", value.getCurrentLimit());
-                    items.put("current period's connection duration consumed", value.getCurrentValue());
-                    final boolean isExceeded = value.getCurrentValue().compareTo(value.getCurrentLimit()) >= 0;
+            });
+
+            if (value.isDone()) {
+                try {
+                    final var limitedResource = value.get();
+                    TracingHelper.TAG_CACHE_HIT.set(span, true);
+                    span.log(Map.of(
+                            "current period's connection duration limit", limitedResource.getCurrentLimit(),
+                            "current period's connection duration consumed", limitedResource.getCurrentValue()));
+                    final boolean isExceeded = limitedResource.getCurrentValue().compareTo(limitedResource.getCurrentLimit()) >= 0;
                     LOG.trace(
                             "connection duration limit {} exceeded [tenant: {}, connection duration consumed: {}, allowed max-duration: {}, {}: {}, {}: {}, {}: {}]",
                             isExceeded ? "" : "not ",
-                            tenant.getTenantId(), value.getCurrentValue(), value.getCurrentLimit(),
+                            tenant.getTenantId(), limitedResource.getCurrentValue(), limitedResource.getCurrentLimit(),
                             TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
                             TenantConstants.FIELD_PERIOD_MODE, periodMode,
                             TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
                     result.complete(isExceeded);
+                } catch (final Throwable t) {
+                    // this means that the query could not be run successfully
+                    TracingHelper.logError(span, t);
+                    // fall back to default value
+                    result.complete(Boolean.FALSE);
                 }
-            }));
+            } else {
+                LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
+                span.log(Map.of(Fields.MESSAGE, "query still running, using default value"));
+                result.complete(Boolean.FALSE);
+            }
         }
     }
 
-    private Future<Long> executeQuery(final String query, final Span span) {
+    private Future<Long> executeQuery(final String query, final SpanContext tracingContext) {
 
-        final Promise<Long> result = Promise.promise();
+        final var span = tracer.buildSpan("execute Prometheus query")
+                .addReference(References.FOLLOWS_FROM, tracingContext)
+                .withTag(Tags.COMPONENT, getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(Tags.HTTP_URL.getKey(), url)
+                .start();
+
         LOG.trace("running Prometheus query [URL: {}, query: {}]", url, query);
-        newQueryRequest(query).send(sendAttempt -> {
-            if (sendAttempt.succeeded()) {
-                final HttpResponse<JsonObject> response = sendAttempt.result();
-                result.complete(extractLongValue(response.body(), span));
-            } else {
-                final Map<String, Object> traceItems = Map.of(
-                        Fields.EVENT, Tags.ERROR.getKey(),
-                        Fields.MESSAGE, "failed to run Prometheus query",
-                        "URL", url,
-                        "query", query,
-                        Fields.ERROR_KIND, "Exception",
-                        Fields.ERROR_OBJECT, sendAttempt.cause());
-                TracingHelper.logError(span, traceItems);
-                LOG.warn("failed to run Prometheus query [URL: {}, query: {}]: {}",
-                        url, query, sendAttempt.cause().getMessage());
-                result.fail(sendAttempt.cause());
-            }
-        });
-        return result.future();
+        span.log(Map.of(
+                Fields.MESSAGE, "running Prometheus query",
+                "query", query));
+
+        final Promise<HttpResponse<JsonObject>> result = Promise.promise();
+        newQueryRequest(query).send(result);
+        return result.future()
+                .onFailure(t -> {
+                    TracingHelper.logError(span, Map.of(
+                            Fields.MESSAGE, "failed to run Prometheus query",
+                            Fields.ERROR_KIND, "Exception",
+                            Fields.ERROR_OBJECT, t));
+                    LOG.warn("failed to run Prometheus query [URL: {}, query: {}]: {}",
+                            url, query, t.getMessage());
+                })
+                .map(response -> {
+                    Tags.HTTP_STATUS.set(span, response.statusCode());
+                    return extractLongValue(response.body(), span);
+                })
+                .onComplete(r -> span.finish());
     }
 
     private HttpRequest<JsonObject> newQueryRequest(final String query) {
@@ -742,14 +767,6 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             }
         default:
             return targetDateTime;
-        }
-    }
-
-    private void runOnContext(final Context context, final Handler<Void> action) {
-        if (context != null && context != Vertx.currentContext()) {
-            context.runOnContext(go -> action.handle(null));
-        } else {
-            action.handle(null);
         }
     }
 }

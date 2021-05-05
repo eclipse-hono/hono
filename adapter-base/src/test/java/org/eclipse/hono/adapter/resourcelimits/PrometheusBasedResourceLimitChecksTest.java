@@ -12,13 +12,14 @@
  */
 package org.eclipse.hono.adapter.resourcelimits;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -30,11 +31,12 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
 import org.eclipse.hono.test.TracingMockSupport;
@@ -52,11 +54,11 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.log.Fields;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -319,7 +321,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        assertRequestParamsSet(bufferReq, getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        assertRequestParamsSet(bufferReq, getExpectedDataVolumeQuery(tenant, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
                         verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
@@ -353,7 +355,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         // THEN the limit is reported as being exceeded
                         assertTrue(response);
-                        assertRequestParamsSet(bufferReq, getExpectedDataVolumeQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        assertRequestParamsSet(bufferReq, getExpectedDataVolumeQuery(tenant, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
                         verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
@@ -384,8 +386,6 @@ public class PrometheusBasedResourceLimitChecksTest {
                         // THEN the limit is not exceeded
                         assertFalse(response);
                         verify(jsonRequest).send(VertxMockSupport.anyHandler());
-                        // AND the span is not marked as erroneous
-                        verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
                     ctx.completeNow();
                 }));
@@ -558,6 +558,39 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
+     * Verifies that the message limit is not exceeded if no value is in the cache yet and the
+     * Prometheus query is still running.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testMessageLimitFallsBackToDefaultValueIfQueryStillRunning(final VertxTestContext ctx) {
+
+        when(dataVolumeCache.get(anyString(), any(BiFunction.class)))
+            .then(invocation -> {
+                final CompletableFuture<LimitedResource<Long>> result = new CompletableFuture<>();
+                return result;
+            });
+        final long incomingMessageSize = 20;
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume(
+                                Instant.parse("2019-01-03T14:30:00Z"),
+                                new ResourceLimitsPeriod(ResourceLimitsPeriod.PERIOD_MODE_DAYS).setNoOfDays(30),
+                                100L)));
+
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, span.context())
+                .onComplete(ctx.succeeding(exceeded -> {
+                    ctx.verify(() -> {
+                        assertFalse(exceeded);
+                        verify(jsonRequest, never()).send(VertxMockSupport.anyHandler());
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that on a data volume cache miss the current data volume consumption is retrieved from
      * the Prometheus server.
      *
@@ -590,6 +623,63 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
+     * Verifies that the function to compute a value asynchronously is invoked once only.
+     */
+    @Test
+    public void testCaffeineAsyncCacheComputesValueOnceOnly() {
+
+        final var computationsTriggered = new AtomicInteger(0);
+        final var result = new CompletableFuture<LimitedResource<Long>>();
+        final Executor executor = mock(Executor.class);
+        doAnswer(invocation -> {
+            final Runnable task = invocation.getArgument(0);
+            task.run();
+            return null;
+        }).when(executor).execute(any(Runnable.class));
+
+        // GIVEN an asynchronous Caffeine cache
+        dataVolumeCache = Caffeine.newBuilder()
+                .executor(executor)
+                .buildAsync();
+
+        final BiFunction<String, Executor, CompletableFuture<LimitedResource<Long>>> computation = (key, exec) -> {
+            computationsTriggered.incrementAndGet();
+            return result;
+        };
+        // WHEN getting the value for a key providing a function for computing the value asynchronously
+        final var resultOne = dataVolumeCache.get("key", computation);
+        // and retrieving the value for the same key again
+        final var resultTwo = dataVolumeCache.get("key", computation);
+
+        // THEN both invocations return the same incomplete future
+        assertThat(resultOne.isDone()).isFalse();
+        assertThat(resultTwo.isDone()).isFalse();
+        assertThat(resultTwo == resultOne);
+        // but the computation of the value has been triggered once only
+        assertThat(computationsTriggered.get()).isEqualTo(1);
+
+        // and WHEN the value has been computed
+        result.complete(new LimitedResource<Long>(10L, 5L));
+
+        // THEN a subsequent look up of the same key
+        final var resultThree = dataVolumeCache.get("key", computation);
+
+        // does not trigger computation of the value again
+        assertThat(computationsTriggered.get()).isEqualTo(1);
+
+        // but instead returns the existing completed future
+        assertThat(resultThree == resultOne);
+        assertThat(resultThree.isDone()).isTrue();
+        try {
+            assertThat(resultThree.get().getCurrentLimit()).isEqualTo(10L);
+            assertThat(resultThree.get().getCurrentValue()).isEqualTo(5L);
+        } catch (InterruptedException | ExecutionException e) {
+            fail(e);
+        }
+    }
+
+
+    /**
      *
      * Verifies that the connection duration limit check returns {@code false} if the limit is not exceeded.
      *
@@ -612,7 +702,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
-                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
                         verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
@@ -642,7 +732,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
-                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
                         verify(jsonRequest).send(VertxMockSupport.anyHandler());
                     });
                     ctx.completeNow();
@@ -699,10 +789,8 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
-                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60, config), QUERY_TIMEOUT, REQUEST_TIMEOUT);
+                        assertRequestParamsSet(bufferReq, getExpectedConnectionDurationQuery(tenant, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
                         verify(jsonRequest).send(VertxMockSupport.anyHandler());
-                        // AND the span is not marked as erroneous
-                        verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
                     ctx.completeNow();
                 }));
@@ -779,27 +867,23 @@ public class PrometheusBasedResourceLimitChecksTest {
 
     private static String getExpectedDataVolumeQuery(
             final TenantObject tenant,
-            final long minutes,
-            final PrometheusBasedResourceLimitChecksConfig config) {
+            final long minutes) {
 
         return String.format(
-                "floor(sum(increase(hono_messages_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm:%3$ds]) or hono_commands_payload_bytes_sum*0)"
-                + " + sum(increase(hono_commands_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm:%3$ds]) or hono_messages_payload_bytes_sum*0))",
+                "floor(sum(increase(hono_messages_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm]) or vector(0))"
+                + " + sum(increase(hono_commands_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm]) or vector(0)))",
                 tenant.getTenantId(),
-                minutes,
-                config.getCacheTimeout());
+                minutes);
     }
 
     private static String getExpectedConnectionDurationQuery(
             final TenantObject tenant,
-            final long minutes,
-            final PrometheusBasedResourceLimitChecksConfig config) {
+            final long minutes) {
 
         return String.format(
-                "minute( sum( increase( hono_connections_authenticated_duration_seconds_sum {tenant=\"%1$s\"} [%2$dm:%3$ds])))",
+                "minute( sum( increase( hono_connections_authenticated_duration_seconds_sum {tenant=\"%1$s\"} [%2$dm])))",
                 tenant.getTenantId(),
-                minutes,
-                config.getCacheTimeout());
+                minutes);
     }
 
     private static String getExpectedConnectionNumberQuery(final TenantObject tenant) {

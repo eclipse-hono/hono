@@ -18,6 +18,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Support for uplink messages from the Embedded LNS on MultiTech gateways.
 * The *hono.connections.attempts* metric has been extended with a `cipher-suite` tag which contains the name of the
   cipher suite that is used in a device's attempt to establish a TLS based connection to an adapter.
+* The Prometheus based resource limit checks have been improved to reduce the load generated on the Prometheus server
+  in cases where a protocol adapter to which many devices of many different tenants were connected would crash
+  (or be shut down) and the devices would immediately re-connect to another instance of the protocol adapter.
 
 ### Deprecations
 
