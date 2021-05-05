@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -167,7 +168,7 @@ public final class AutoProvisioning {
         return deviceManagementService.createDevice(tenantId, Optional.empty(), device, span)
                 .compose(r -> {
                     if (r.isError()) {
-                        LOG.warn("auto-provisioning failed: device could not be created [tenant: {}, auth-id: {}, status: {}]",
+                        LOG.warn("auto-provisioning failed: device could not be created [tenant-id: {}, auth-id: {}, status: {}]",
                                 tenantId, authId, r.getStatus());
                         return Future.succeededFuture(getCredentialsResult(r.getStatus(),
                                 "auto-provisioning failed: device could not be created"));
@@ -185,19 +186,19 @@ public final class AutoProvisioning {
                             .updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
                             .compose(v -> {
                                 if (v.isError()) {
-                                    LOG.warn("auto-provisioning failed: credentials could not be set [tenant: {}, device: {}, auth-id: {}, status: {}]",
+                                    LOG.warn("auto-provisioning failed: credentials could not be set [tenant-id: {}, device-id: {}, auth-id: {}, status: {}]",
                                             tenantId, deviceId, authId, v.getStatus());
                                     return deviceManagementService
                                             .deleteDevice(tenantId, deviceId, Optional.empty(), span)
                                             .map(getCredentialsResult(v.getStatus(),
-                                                    "auto-provisioning failed: credentials could not be set for device ["
-                                                            + deviceId + "]"));
+                                                    "auto-provisioning failed: credentials could not be set for device"))
+                                            .recover(error -> Future.succeededFuture(getCredentialsResult(
+                                                    ServiceInvocationException.extractStatusCode(error),
+                                                    "auto-provisioning failed: credentials could not be set and also the device could not be deleted")));
                                 } else {
                                     span.log("auto-provisioning successful");
-                                    if (LOG.isTraceEnabled()) {
-                                        LOG.trace("auto-provisioning successful [tenant: {}, device: {}, auth-id: {}]",
-                                                tenantId, deviceId, authId);
-                                    }
+                                    LOG.trace("auto-provisioning successful [tenant-id: {}, device-id: {}, auth-id: {}]",
+                                            tenantId, deviceId, authId);
                                     return Future.succeededFuture(getCredentialsResult(deviceId, certCredential));
                                 }
                             });
