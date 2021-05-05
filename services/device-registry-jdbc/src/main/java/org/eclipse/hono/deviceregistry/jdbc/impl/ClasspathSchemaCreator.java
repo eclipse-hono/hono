@@ -72,15 +72,15 @@ public class ClasspathSchemaCreator implements SchemaCreator {
                 "create database schema", getClass().getSimpleName()).start();
 
         if (tenantProperties == null) {
-            return executeScript(deviceProperties, "02-create.devices.sql", span.context());
+            return loadAndRunScript(deviceProperties, "02-create.devices.sql", span.context());
         } else {
-            return executeScript(tenantProperties, "01-create.tenants.sql", span.context())
-                    .compose(v -> executeScript(deviceProperties, "02-create.devices.sql", span.context()));
+            return loadAndRunScript(tenantProperties, "01-create.tenants.sql", span.context())
+                    .compose(v -> loadAndRunScript(deviceProperties, "02-create.devices.sql", span.context()));
         }
 
     }
 
-    private Future<Void> executeScript(final JdbcProperties jdbcProperties, final String scriptName,
+    private Future<Void> loadAndRunScript(final JdbcProperties jdbcProperties, final String scriptName,
             final SpanContext context) {
 
         final String dialect = SQL.getDatabaseDialect(jdbcProperties.getUrl());
@@ -89,12 +89,12 @@ public class ClasspathSchemaCreator implements SchemaCreator {
             return Future.failedFuture(new IllegalArgumentException("Unknown database dialect '" + dialect + "'"));
         }
 
-        final String scriptPath = "'classpath:/sql/" + dialect + "/" + scriptName + "'";
+        final String scriptPath = "sql/" + dialect + "/" + scriptName;
         log.info("Creating database schema from file {}", scriptPath);
 
-        final Promise<Buffer> loadScript = Promise.promise();
-        vertx.fileSystem().readFile("sql/" + dialect + "/" + scriptName, loadScript);
-        return loadScript.future()
+        final Promise<Buffer> loadScriptTracker = Promise.promise();
+        vertx.fileSystem().readFile(scriptPath, loadScriptTracker);
+        return loadScriptTracker.future()
                 .map(Buffer::toString)
                 .compose(script -> runScript(jdbcProperties, script, context));
     }
@@ -107,7 +107,7 @@ public class ClasspathSchemaCreator implements SchemaCreator {
         SQL.runTransactionally(jdbcClient, tracer, ctx,
                 (connection, context) -> {
                     final var expanded = Statement.statement(script).expand();
-                    log.debug("create schema in DB [{}]: statement: {}", jdbcProperties.getUrl(), expanded);
+                    log.debug("Creating database schema in [{}] with script: {}", jdbcProperties.getUrl(), expanded);
                     return expanded
                             .query(jdbcClient)
                             .recover(SQL::translateException);
