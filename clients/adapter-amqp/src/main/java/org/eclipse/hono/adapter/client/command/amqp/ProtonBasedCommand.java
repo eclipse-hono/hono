@@ -105,7 +105,7 @@ public final class ProtonBasedCommand implements Command {
             throw new IllegalArgumentException("address is missing device-id part");
         }
 
-        final String tenantId = addressIdentifier.getTenantId();;
+        final String tenantId = addressIdentifier.getTenantId();
         final String deviceId = addressIdentifier.getResourceId();
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
 

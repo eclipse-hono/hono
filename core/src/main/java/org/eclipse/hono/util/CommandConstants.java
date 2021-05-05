@@ -14,7 +14,7 @@
 package org.eclipse.hono.util;
 
 /**
- * Commands utility methods used throughout the Command and Control API.
+ * Constants &amp; utility methods used throughout the Command and Control API.
  */
 public class CommandConstants {
 
@@ -24,7 +24,7 @@ public class CommandConstants {
     public static final String COMMAND_ENDPOINT = "command";
 
     /**
-     * The short name of the control endpoint.
+     * The short name of the Command and Control endpoint.
      */
     public static final String COMMAND_ENDPOINT_SHORT = "c";
 

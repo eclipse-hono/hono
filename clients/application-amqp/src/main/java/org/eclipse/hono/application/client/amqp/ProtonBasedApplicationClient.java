@@ -51,8 +51,6 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedApplicationClient.class);
 
-    private final HonoConnection connection;
-
     /**
      * Creates a new vertx-proton based based application client.
      *
@@ -62,29 +60,19 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
      */
     public ProtonBasedApplicationClient(final HonoConnection connection) {
         super(connection, SendMessageSampler.Factory.noop());
-        this.connection = connection;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<HonoConnection> connect() {
         LOG.info("connecting to Hono endpoint");
         return connection.connect();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void disconnect() {
         disconnect(Promise.promise());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         LOG.info("disconnecting from Hono endpoint");
@@ -265,6 +253,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                 false,
                 s -> Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(null)))
             .map(recv -> new MessageConsumer() {
+                @Override
                 public Future<Void> close() {
                     return recv.close();
                 };
@@ -299,6 +288,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                 false,
                 s -> Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(null)))
             .map(recv -> new MessageConsumer() {
+                @Override
                 public Future<Void> close() {
                     return recv.close();
                 };

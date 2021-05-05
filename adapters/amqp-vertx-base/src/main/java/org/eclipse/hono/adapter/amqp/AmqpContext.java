@@ -114,7 +114,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
     public final Optional<Duration> getTimeToLive() {
         if (endpoint == EndpointType.EVENT && message.getTtl() > 0) {
             // make sure it is at least one second
-            return Optional.of(Duration.ofMillis(message.getTtl() >= 1000L ? message.getTtl() : 1000L));
+            return Optional.of(Duration.ofMillis(Math.max(message.getTtl(), 1000L)));
         }
         return Optional.empty();
     }

@@ -172,7 +172,7 @@ public abstract class AbstractAtLeastOnceKafkaConsumer<T> implements Lifecycle {
         topicsLogString = topics != null
                 ? "[" + topics.stream().limit(3).collect(Collectors.joining(", "))
                         + (topics.size() > 3 ? ", ...]" : "]")
-                : topicPattern.toString();
+                : Objects.toString(topicPattern, "");
 
         this.pollTimeout = Duration.ofMillis(pollTimeout);
     }

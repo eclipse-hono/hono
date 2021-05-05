@@ -230,7 +230,7 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
         final Promise<Void> result = Promise.promise();
 
         if (!getConfig().isSaveToFile()) {
-            result.complete();;
+            result.complete();
         } else if (dirty.get()) {
             checkFileExists(true)
                 .compose(s -> {
@@ -259,7 +259,7 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
                 .onComplete(result);
         } else {
             LOG.trace("tenants registry does not need to be persisted");
-            result.complete();;
+            result.complete();
         }
 
         return result.future();

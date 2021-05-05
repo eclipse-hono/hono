@@ -32,8 +32,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
@@ -53,7 +51,6 @@ import io.vertx.core.buffer.Buffer;
  */
 public abstract class AbstractRequestResponseServiceClient<T, R extends RequestResponseResult<T>> extends AbstractServiceClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractRequestResponseServiceClient.class);
     private static final int[] CACHEABLE_STATUS_CODES = new int[] {
                             HttpURLConnection.HTTP_OK,
                             HttpURLConnection.HTTP_NOT_AUTHORITATIVE,
@@ -169,7 +166,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
 
         final Integer status = MessageHelper.getStatus(message);
         if (status == null) {
-            LOG.debug("response message has no status code application property [reply-to: {}, correlation ID: {}]",
+            log.debug("response message has no status code application property [reply-to: {}, correlation ID: {}]",
                     message.getReplyTo(), message.getCorrelationId());
             return null;
         } else {

@@ -24,8 +24,6 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -39,8 +37,6 @@ import io.vertx.kafka.client.producer.KafkaHeader;
  * @see "https://www.eclipse.org/hono/docs/api/command-and-control-kafka/"
  */
 public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSender implements CommandResponseSender {
-
-    private static final Logger log = LoggerFactory.getLogger(KafkaBasedCommandResponseSender.class);
 
     /**
      * Creates a new Kafka-based command response sender.
@@ -64,7 +60,7 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId());
         log.trace("send command [response topic : {}, tenant-id: {}, device-id: {}, correlation-id: {}",
-                topic.toString(), response.getTenantId(), response.getDeviceId(), response.getCorrelationId());
+                topic, response.getTenantId(), response.getDeviceId(), response.getCorrelationId());
 
         return sendAndWaitForOutcome(topic.toString(), response.getTenantId(), response.getDeviceId(),
                 response.getPayload(), getHeaders(response), context);

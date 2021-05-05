@@ -149,8 +149,8 @@ public abstract class ProtocolAdapterMockSupport {
     /**
      * Prepares the (mock) service clients with default behavior.
      * <p>
-     * This method is separate from {@link #createClientFactories()} in order to
-     * support setups where the factories/clients are created once for all test cases but
+     * This method is separate from {@link #createClients()} in order to
+     * support setups where the clients are created once for all test cases but
      * the client instances need to be (re-)set for each individual test case.
      * <p>
      * This method configures

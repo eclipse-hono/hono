@@ -31,8 +31,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -46,8 +44,6 @@ import io.vertx.proton.ProtonReceiver;
  * A vertx-proton based consumer to receive commands forwarded by the Command Router on the internal command endpoint.
  */
 public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient implements Lifecycle {
-
-    protected static final Logger LOG = LoggerFactory.getLogger(ProtonBasedInternalCommandConsumer.class);
 
     private static final int RECREATE_CONSUMER_DELAY = 20;
 
@@ -122,7 +118,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         try {
             command = ProtonBasedCommand.fromRoutedCommandMessage(msg);
         } catch (final IllegalArgumentException e) {
-            LOG.debug("address of command message is invalid: {}", msg.getAddress());
+            log.debug("address of command message is invalid: {}", msg.getAddress());
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
             delivery.disposition(rejected, true);
@@ -143,11 +139,11 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         final CommandContext commandContext = new ProtonBasedCommandContext(command, delivery, currentSpan);
 
         if (commandHandler != null) {
-            LOG.trace("using [{}] for received command [{}]", commandHandler, command);
+            log.trace("using [{}] for received command [{}]", commandHandler, command);
             // command.isValid() check not done here - it is to be done in the command handler
             commandHandler.handleCommand(commandContext);
         } else {
-            LOG.info("no command handler found for command [{}]", command);
+            log.info("no command handler found for command [{}]", command);
             TracingHelper.logError(currentSpan, "no command handler found for command");
             commandContext.release();
         }
@@ -164,16 +160,16 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
                         }
                         return Future.succeededFuture();
                     }).onComplete(ar -> {
-                recreatingConsumer.set(false);
-                if (tryAgainRecreatingConsumer.compareAndSet(true, false) || ar.failed()) {
-                    if (ar.succeeded()) {
-                        // tryAgainRecreatingConsumers was set - try again immediately
-                        recreateConsumer();
-                    } else {
-                        invokeRecreateConsumerWithDelay();
-                    }
-                }
-            });
+                        recreatingConsumer.set(false);
+                        if (tryAgainRecreatingConsumer.compareAndSet(true, false) || ar.failed()) {
+                            if (ar.succeeded()) {
+                                // tryAgainRecreatingConsumers was set - try again immediately
+                                recreateConsumer();
+                            } else {
+                                invokeRecreateConsumerWithDelay();
+                            }
+                        }
+                    });
         } else {
             // if recreateConsumer() was triggered by a remote link closing, that might have occurred after that link was dealt with above;
             // therefore be sure recreateConsumer() gets called again once the current invocation has finished.

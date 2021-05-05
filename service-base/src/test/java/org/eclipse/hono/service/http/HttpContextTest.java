@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import static org.mockito.Mockito.when;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
@@ -32,9 +31,7 @@ import io.vertx.ext.web.RoutingContext;
  */
 public class HttpContextTest {
 
-    @Mock
     private RoutingContext routingContext;
-    @Mock
     private HttpServerRequest httpServerRequest;
 
     /**
@@ -42,7 +39,6 @@ public class HttpContextTest {
      */
     @BeforeEach
     public void setUp() {
-
         routingContext = mock(RoutingContext.class);
         httpServerRequest = mock(HttpServerRequest.class);
         when(routingContext.request()).thenReturn(httpServerRequest);

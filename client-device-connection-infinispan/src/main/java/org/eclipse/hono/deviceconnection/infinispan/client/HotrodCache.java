@@ -107,7 +107,7 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
         configBuilder.remoteCache(commonCacheConfig.getCacheName()).forceReturnValues(true);
         final var configuration = configBuilder.build();
         LOG.info("creating HotrodCache using configuration: {}", configuration);
-        return new HotrodCache<String, String>(
+        return new HotrodCache<>(
                 vertx,
                 new RemoteCacheManager(configuration, false),
                 commonCacheConfig.getCacheName(),

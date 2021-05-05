@@ -295,7 +295,7 @@ public interface AbstractCredentialsServiceTest {
      * @param deviceId The device to check for.
      * @param authId The authentication id to check for.
      * @param type The credentials type to check for.
-     * @param mangementValidation The validation logic for the management data.
+     * @param managementValidation The validation logic for the management data.
      * @param adapterValidation The validation logic for the protocol adapter data.
      * @param whenComplete Call when this assertion was successful.
      */
@@ -305,7 +305,7 @@ public interface AbstractCredentialsServiceTest {
             final String deviceId,
             final String authId,
             final String type,
-            final ThrowingConsumer<OperationResult<List<CommonCredential>>> mangementValidation,
+            final ThrowingConsumer<OperationResult<List<CommonCredential>>> managementValidation,
             final ThrowingConsumer<CredentialsResult<JsonObject>> adapterValidation,
             final ExecutionBlock whenComplete) {
 
@@ -330,7 +330,7 @@ public interface AbstractCredentialsServiceTest {
                             assertResourceVersion(readCredentialsResult);
                         }
 
-                        mangementValidation.accept(readCredentialsResult);
+                        managementValidation.accept(readCredentialsResult);
 
                         getCredentialsService().get(
                                 tenantId,
@@ -1034,7 +1034,7 @@ public interface AbstractCredentialsServiceTest {
 
                     final boolean pskCredentialHasBeenDeleted = result.getPayload().stream()
                         .noneMatch(PskCredential.class::isInstance);
-                    assertThat(pskCredentialHasBeenDeleted).as("PSK credentials have been deleted");
+                    assertThat(pskCredentialHasBeenDeleted).as("PSK credentials have been deleted").isTrue();
 
                     assertThat(result.getPayload().get(0)).isInstanceOf(PasswordCredential.class);
                     final PasswordCredential creds = (PasswordCredential) result.getPayload().get(0);

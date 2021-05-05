@@ -62,7 +62,7 @@ class DelegatingCommandRouterAmqpEndpointTest {
         when(service.enableCommandRouting(anyList(), any())).thenReturn(
                 Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
         final Vertx vertx = mock(Vertx.class);
-        endpoint = new DelegatingCommandRouterAmqpEndpoint<CommandRouterService>(vertx, service);
+        endpoint = new DelegatingCommandRouterAmqpEndpoint<>(vertx, service);
     }
 
     @Test

@@ -29,6 +29,7 @@ public class FileBasedAuthenticationServiceConfigProperties extends org.eclipse.
      *
      * @return The properties.
      */
+    @Override
     public final SignatureSupportingConfigProperties getSigning() {
         return signing;
     }
@@ -38,6 +39,7 @@ public class FileBasedAuthenticationServiceConfigProperties extends org.eclipse.
      *
      * @return The properties.
      */
+    @Override
     public final SignatureSupportingConfigProperties getValidation() {
         return signing;
     }

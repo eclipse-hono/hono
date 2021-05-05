@@ -115,7 +115,7 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
                 targetInstanceObject = chooseTargetGatewayAndAdapterInstance(instancesArray);
             }
         } catch (final ClassCastException e) {
-            return createAndLogInternalServerErrorFuture(span, "Invalid result JSON: " + e.toString());
+            return createAndLogInternalServerErrorFuture(span, "Invalid result JSON: " + e);
         }
         final String targetDevice = targetInstanceObject.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
         final String targetAdapterInstance = targetInstanceObject.getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
