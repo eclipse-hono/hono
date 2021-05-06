@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,6 +36,7 @@ import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -129,7 +130,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
 
         this.credentialsService = new FileBasedCredentialsService(vertx, credentialsConfig, PASSWORD_ENCODER);
 
-        this.svc = new FileBasedDeviceBackend(this.registrationService, this.credentialsService);
+        this.svc = new FileBasedDeviceBackend(this.registrationService, this.credentialsService, new NoopTenantInformationService());
     }
 
     @Override

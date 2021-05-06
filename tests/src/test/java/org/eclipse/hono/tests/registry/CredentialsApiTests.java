@@ -37,6 +37,7 @@ import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,15 +148,20 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     public void testGetCredentialsWithAutoProvisioning(final VertxTestContext ctx)
             throws CertificateException, FileNotFoundException {
 
-        // GIVEN a client context that contains a client certificate to allow auto-provisioning
+        // GIVEN a tenant with auto-provisioning enabled and a client context that contains a client certificate
         // while device has not been registered and no credentials are stored yet
         final X509Certificate cert = createCertificate();
+        final var tenant = Tenants.createTenantForTrustAnchor(cert);
+        tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
         final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
         final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
 
-        getClient()
-                // WHEN getting credentials
-                .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext)
+        tenantId = getHelper().getRandomTenantId();
+        getHelper().registry
+                .addTenant(tenantId, tenant)
+                .compose(ok -> getClient()
+                        // WHEN getting credentials
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
                 .onComplete(ctx.succeeding(result -> {
                     // THEN the newly created credentials are returned...
                     ctx.verify(() -> {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -167,12 +167,14 @@ public final class DeviceRegistryUtils {
      * @param authId The authentication identifier.
      * @param clientContext The client context that can be used to get the X.509 certificate 
      *                      of the device to be provisioned.
+     *                      <p>
+     *                      If it is {@code null} then the result contains {@link Optional#empty()}.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *             implementation should log (error) events on this span and it may set tags and use this span 
      *             as the parent for any spans created in this method.
      * @return A future indicating the outcome of the operation. If the operation succeeds, the
      *         retrieved certificate is returned. Else {@link Optional#empty()} is returned.
-     * @throws NullPointerException if any of the parameters except span is {@code null}.
+     * @throws NullPointerException if tenantId or authId is {@code null}.
      */
     public static Future<Optional<X509Certificate>> getCertificateFromClientContext(
             final String tenantId,
@@ -182,7 +184,10 @@ public final class DeviceRegistryUtils {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(authId);
-        Objects.requireNonNull(clientContext);
+
+        if (clientContext == null) {
+            return Future.succeededFuture(Optional.empty());
+        }
 
         try {
             final byte[] bytes = clientContext.getBinary(CredentialsConstants.FIELD_CLIENT_CERT);
@@ -206,22 +211,6 @@ public final class DeviceRegistryUtils {
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, errorMessage, error));
         }
-    }
-
-    /**
-     * Checks if auto-provisioning of devices is enabled or not from the client context.
-     *
-     * @param type The type of the secret.
-     * @param clientContext The client context that can be used to check if auto-provisioning is enabled or not.
-     * @return {@code true} if auto-provisioning is enabled.
-     * @throws NullPointerException if type is {@code null}.
-     */
-    public static boolean isAutoProvisioningEnabled(final String type, final JsonObject clientContext) {
-        Objects.requireNonNull(type);
-
-        return type.equals(CredentialsConstants.SECRETS_TYPE_X509_CERT)
-                && clientContext != null
-                && clientContext.containsKey(CredentialsConstants.FIELD_CLIENT_CERT);
     }
 
     /**
