@@ -355,7 +355,9 @@ public class Device {
      * @return A reference to this for fluent use.
      */
     public final Device setAuthorities(final Set<String> authorities) {
-        this.authorities = new HashSet<>(authorities);
+        this.authorities = Optional.ofNullable(authorities)
+                .map(HashSet::new)
+                .orElseGet(HashSet::new);
         return this;
     }
 
