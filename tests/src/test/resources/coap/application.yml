@@ -98,6 +98,8 @@ quarkus:
         level: INFO
       "org.eclipse.hono.adapter":
         level: INFO
+      "org.apache.kafka":
+        level: WARN
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
     prefer-native-transport: true

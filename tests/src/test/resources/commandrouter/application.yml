@@ -71,6 +71,8 @@ quarkus:
         level: INFO
       "org.infinispan":
         level: INFO
+      "org.apache.kafka":
+        level: WARN
   vertx:
     prefer-native-transport: true
 
