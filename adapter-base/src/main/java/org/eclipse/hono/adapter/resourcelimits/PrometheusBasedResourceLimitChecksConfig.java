@@ -30,7 +30,7 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
     /**
      * The default timeout for cached data in seconds until they are considered invalid.
      */
-    public static final long DEFAULT_CACHE_TIMEOUT = 15L;
+    public static final long DEFAULT_CACHE_TIMEOUT = 60L;
     /**
      * The default number of milliseconds that the client waits for a connection to
      * the Prometheus server.

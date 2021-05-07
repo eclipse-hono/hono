@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.adapter.coap.spring;
 
-import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
@@ -26,7 +25,6 @@ import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.TelemetryResource;
 import org.eclipse.hono.adapter.coap.impl.ConfigBasedCoapEndpointFactory;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
-import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -71,19 +69,16 @@ public class Config extends AbstractAdapterConfig {
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
-     * @param resourceLimitChecks The component to use for checking if the adapter's
-     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_COAP_ADAPTER)
     @Scope("prototype")
     public VertxBasedCoapAdapter vertxBasedCoapAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final CoapAdapterMetrics metrics,
-            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+            final CoapAdapterMetrics metrics) {
 
         final VertxBasedCoapAdapter adapter = new VertxBasedCoapAdapter();
-        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        setCollaborators(adapter, adapterProperties(), samplerFactory);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
         adapter.addResources(Set.of(

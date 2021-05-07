@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,8 @@
 
 package org.eclipse.hono.adapter.kura.impl;
 
-import java.util.Optional;
-
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
-import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -45,19 +42,16 @@ public class Config extends AbstractAdapterConfig {
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
-     * @param resourceLimitChecks The component to use for checking if the adapter's
-     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_KURA_PROTOCOL_ADAPTER)
     @Scope("prototype")
     public KuraProtocolAdapter kuraProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final MqttAdapterMetrics metrics,
-            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+            final MqttAdapterMetrics metrics) {
 
         final KuraProtocolAdapter adapter = new KuraProtocolAdapter();
-        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        setCollaborators(adapter, adapterProperties(), samplerFactory);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
         return adapter;
