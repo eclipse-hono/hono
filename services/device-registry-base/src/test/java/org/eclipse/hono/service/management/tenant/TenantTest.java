@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -42,6 +42,7 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeAll;
@@ -308,7 +309,7 @@ public class TenantTest {
                 limits.getDataVolume().getEffectiveSince());
         assertEquals(20_000_000, limits.getDataVolume().getMaxBytes());
         assertNotNull(limits.getDataVolume().getPeriod());
-        assertEquals("days", limits.getDataVolume().getPeriod().getMode());
+        assertEquals(PeriodMode.days, limits.getDataVolume().getPeriod().getMode());
         assertEquals(90, limits.getDataVolume().getPeriod().getNoOfDays());
         assertNotNull(limits.getConnectionDuration());
         assertEquals(
@@ -317,7 +318,7 @@ public class TenantTest {
                 limits.getConnectionDuration().getEffectiveSince());
         assertEquals(20_000_000, limits.getConnectionDuration().getMaxMinutes());
         assertNotNull(limits.getConnectionDuration().getPeriod());
-        assertEquals("monthly", limits.getConnectionDuration().getPeriod().getMode());
+        assertEquals(PeriodMode.monthly, limits.getConnectionDuration().getPeriod().getMode());
     }
 
     /**

@@ -36,6 +36,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
+import org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
@@ -83,7 +84,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                 .setMaxTtl(30L)
                 .setDataVolume(new DataVolume(
                         Instant.parse("2019-07-27T14:30:00Z"),
-                        new ResourceLimitsPeriod(ResourceLimitsPeriod.PERIOD_MODE_DAYS).setNoOfDays(30),
+                        new ResourceLimitsPeriod(PeriodMode.days).setNoOfDays(30),
                         2147483648L));
 
         final String tenantId = getHelper().getRandomTenantId();

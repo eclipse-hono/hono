@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,7 @@ public class DataVolume extends LimitedResource {
      * @param effectiveSince The point in time at which the limit became or will become effective.
      * @param period The definition of the accounting periods to be used for this specification
      *               or {@code null} to use the default period definition with mode
-     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     *               {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#monthly}.
      * @throws NullPointerException if effectiveSince is {@code null}.
      * @throws IllegalArgumentException if max bytes is &lt; -1.
      */
@@ -54,7 +54,7 @@ public class DataVolume extends LimitedResource {
      * @param effectiveSince The point in time at which the limit became or will become effective.
      * @param period The definition of the accounting periods to be used for this specification
      *               or {@code null} to use the default period definition with mode
-     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     *               {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#monthly}.
      * @param maxBytes The amount of data (in bytes) that devices of a tenant may transfer per accounting period.
      *                 The value {@value TenantConstants#UNLIMITED_BYTES} can be used to indicate that
      *                 the data volume should not be limited.

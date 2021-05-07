@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.util;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,7 +38,7 @@ public abstract class LimitedResource {
      * @param effectiveSince The point in time at which the limit became or will become effective.
      * @param period The definition of the accounting periods to be used for this specification
      *               or {@code null} to use the default period definition with mode
-     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     *               {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#monthly}.
      * @throws NullPointerException if effective since is {@code null}.
      */
     protected LimitedResource(final Instant effectiveSince, final ResourceLimitsPeriod period) {
@@ -60,12 +61,32 @@ public abstract class LimitedResource {
      * Gets the definition of the accounting periods used for this specification.
      * <p>
      * The default value of this property is a period definition with mode
-     * {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     * {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#monthly}.
      *
      * @return The period definition.
      */
     @JsonProperty(TenantConstants.FIELD_PERIOD)
     public final ResourceLimitsPeriod getPeriod() {
         return period;
+    }
+
+
+    /**
+     * Gets the already elapsed time of the most recent accounting period.
+     * <p>
+     * The value is calculated as the duration for which the most recent
+     * accounting period overlaps with the period that begins at the point
+     * in time defined by the effective since property and ends at the given
+     * point in time.
+     *
+     * @param end The end of the time period to evaluate. If {@code null}, the
+     *            current point in time is used.
+     * @return The elapsed time.
+     */
+    public final Duration getElapsedAccountingPeriodDuration(final Instant end) {
+
+        return period.getElapsedAccountingPeriodDuration(
+                effectiveSince,
+                Optional.ofNullable(end).orElse(Instant.now()));
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,7 @@ public class ConnectionDuration extends LimitedResource {
      * @param effectiveSince The point in time at which the limit became or will become effective.
      * @param period The definition of the accounting periods to be used for this specification
      *               or {@code null} to use the default period definition with mode
-     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     *               {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#monthly}.
      * @throws NullPointerException if effectiveSince is {@code null}.
      */
     public ConnectionDuration(
@@ -53,7 +53,7 @@ public class ConnectionDuration extends LimitedResource {
      * @param effectiveSince The point in time at which the limit became or will become effective.
      * @param period The definition of the accounting periods to be used for this specification
      *               or {@code null} to use the default period definition with mode
-     *               {@value org.eclipse.hono.util.ResourceLimitsPeriod#PERIOD_MODE_MONTHLY}.
+     *               {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#monthly}.
      * @param maxMinutes The maximum connection duration in minutes to be allowed.
      * @throws NullPointerException if effectiveSince is {@code null}.
      * @throws IllegalArgumentException if the maximum number of minutes is set to less than 

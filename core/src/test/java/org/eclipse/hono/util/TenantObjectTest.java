@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,6 +33,7 @@ import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -361,7 +362,7 @@ public class TenantObjectTest {
                         new JsonObject().put("max-bytes", 20_000_000)
                                 .put("effective-since", "2019-04-25T15:30:00+01:00")
                                 .put("period", new JsonObject()
-                                        .put("mode", ResourceLimitsPeriod.PERIOD_MODE_DAYS)
+                                        .put("mode", PeriodMode.days)
                                         .put("no-of-days", 90)));
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.setResourceLimits(limitsConfig);
@@ -369,7 +370,7 @@ public class TenantObjectTest {
         assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes()).isEqualTo(20_000_000L);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T14:30:00Z"));
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(ResourceLimitsPeriod.PERIOD_MODE_DAYS);
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(PeriodMode.days);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays()).isEqualTo(90);
     }
 
@@ -389,7 +390,7 @@ public class TenantObjectTest {
        assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
        assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes()).isEqualTo(20_000_000);
        assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T19:30:00Z"));
-       assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(ResourceLimitsPeriod.PERIOD_MODE_MONTHLY);
+       assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(PeriodMode.monthly);
        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays()).isEqualTo(0);
    }
 
@@ -409,7 +410,7 @@ public class TenantObjectTest {
        assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
        assertThat(tenantObject.getResourceLimits().getConnectionDuration().getMaxMinutes()).isEqualTo(1_000L);
        assertThat(tenantObject.getResourceLimits().getConnectionDuration().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T14:30:00Z"));
-       assertThat(tenantObject.getResourceLimits().getConnectionDuration().getPeriod().getMode()).isEqualTo(ResourceLimitsPeriod.PERIOD_MODE_MONTHLY);
+       assertThat(tenantObject.getResourceLimits().getConnectionDuration().getPeriod().getMode()).isEqualTo(PeriodMode.monthly);
        assertThat(tenantObject.getResourceLimits().getConnectionDuration().getPeriod().getNoOfDays()).isEqualTo(0);
    }
 
