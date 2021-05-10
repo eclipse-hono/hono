@@ -15,8 +15,10 @@ package org.eclipse.hono.util;
 import java.time.Instant;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -88,5 +90,17 @@ public class ConnectionDuration extends LimitedResource {
     @JsonProperty(TenantConstants.FIELD_MAX_MINUTES)
     public final long getMaxMinutes() {
         return maxMinutes;
+    }
+
+    /**
+     * Checks if the device connection duration is effectively limited.
+     *
+     * @return {@code true} if the max minutes value is not {@value TenantConstants#UNLIMITED_MINUTES}
+     *         and the period mode is not {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#unknown}.
+     */
+    @JsonIgnore
+    public boolean isLimited() {
+        return getMaxMinutes() != TenantConstants.UNLIMITED_MINUTES
+                && getPeriod().getMode() != PeriodMode.unknown; 
     }
 }

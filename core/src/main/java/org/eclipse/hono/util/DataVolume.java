@@ -15,8 +15,10 @@ package org.eclipse.hono.util;
 import java.time.Instant;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -72,7 +74,7 @@ public class DataVolume extends LimitedResource {
             final long maxBytes) {
 
         super(effectiveSince, period);
-        if (maxBytes < -1) {
+        if (maxBytes < TenantConstants.UNLIMITED_BYTES) {
             throw new IllegalArgumentException("Maximum bytes allowed property must be set to value >= -1");
         }
         this.maxBytes = maxBytes;
@@ -90,4 +92,17 @@ public class DataVolume extends LimitedResource {
     public final long getMaxBytes() {
         return maxBytes;
     }
+
+    /**
+     * Checks if the amount of data that devices of a tenant may transfer per accounting period is limited.
+     *
+     * @return {@code true} if the max bytes value is not {@value TenantConstants#UNLIMITED_BYTES}
+     *         and the period mode is not {@link org.eclipse.hono.util.ResourceLimitsPeriod.PeriodMode#unknown}.
+     */
+    @JsonIgnore
+    public boolean isLimited() {
+        return getMaxBytes() != TenantConstants.UNLIMITED_BYTES
+                && getPeriod().getMode() != PeriodMode.unknown; 
+    }
+
 }

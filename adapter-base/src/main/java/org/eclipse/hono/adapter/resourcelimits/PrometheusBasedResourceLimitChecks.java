@@ -322,7 +322,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxBytes == TenantConstants.UNLIMITED_BYTES || effectiveSince == null || periodMode == PeriodMode.unknown || payloadSize <= 0) {
+        if (!dataVolumeConfig.isLimited() || payloadSize <= 0) {
             result.complete(Boolean.FALSE);
         } else {
 
@@ -427,7 +427,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null || periodMode == PeriodMode.unknown) {
+        if (!connectionDurationConfig.isLimited()) {
             result.complete(Boolean.FALSE);
         } else {
 
