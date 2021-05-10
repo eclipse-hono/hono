@@ -538,7 +538,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                     return subscribeAndWaitForRebalance()
                             .compose(v -> {
                                 if (!subscribedTopicPatternTopics.contains(topic)) {
-                                    // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic
+                                    // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic;
+                                    // seems to happen when some other topics have just been deleted for example
                                     log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
                                     return subscribeAndWaitForRebalance();
                                 }
