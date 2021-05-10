@@ -29,12 +29,12 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,25 +103,21 @@ public final class AutoProvisioning {
         Objects.requireNonNull(span);
 
         return tenantInformationService.getTenant(tenantId, span)
-                .compose(tenantResult -> {
-                    if (tenantResult.isError()) {
-                        return Future.succeededFuture(CredentialsResult.from(tenantResult.getStatus()));
-                    }
-
-                    final TenantObject tenantConfig = tenantResult.getPayload();
-                    return DeviceRegistryUtils
-                            .getCertificateFromClientContext(tenantId, authId, clientContext, span)
-                            .compose(optionalCert -> optionalCert
-                                    .filter(cert -> AutoProvisioning.isEnabled(tenantConfig, cert, span))
-                                    .map(cert -> {
-                                        Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
-                                        return provisionDevice(tenantId, authId, deviceManagementService, credentialsManagementService, cert, span);
-                                    })
-                                    // if the auto-provisioning is not enabled or 
-                                    // no client certificate is set in the client context
-                                    .orElseGet(() -> Future.succeededFuture(
-                                            CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND))));
-                });
+                .compose(tenant -> DeviceRegistryUtils
+                        .getCertificateFromClientContext(tenantId, authId, clientContext, span)
+                        .compose(optionalCert -> optionalCert
+                                .filter(cert -> AutoProvisioning.isAutoProvisioningEnabledForTenant(tenant, cert, span))
+                                .map(cert -> {
+                                    Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
+                                    return provisionDevice(tenantId, authId, deviceManagementService,
+                                            credentialsManagementService, cert, span);
+                                })
+                                // if the auto-provisioning is not enabled or
+                                // no client certificate is set in the client context
+                                .orElseGet(() -> Future.succeededFuture(
+                                        CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)))))
+                .recover(error -> Future.succeededFuture(
+                        getCredentialsResult(ServiceInvocationException.extractStatusCode(error), error.getMessage())));
     }
 
     /**
@@ -206,19 +202,20 @@ public final class AutoProvisioning {
     }
 
     /**
-     * Checks if auto-provisioning is enabled.
+     * Checks if auto-provisioning is enabled from the tenant's trusted CA entry which has been
+     * used to authenticate the device.
      *
-     * @param tenantConfig The tenant configuration to check if auto-provisioning is enabled or not.
+     * @param tenant The tenant information to check if auto-provisioning is enabled or not.
      * @param certificate The client certificate that devices used for authentication.
      *                    If the certificate is {@code null} then {@code false} is returned.
      * @param span The active OpenTracing span for this operation.
      * @return {@code true} if auto-provisioning is enabled.
      */
-    private static boolean isEnabled(final TenantObject tenantConfig, final X509Certificate certificate,
+    private static boolean isAutoProvisioningEnabledForTenant(final Tenant tenant, final X509Certificate certificate,
             final Span span) {
         final boolean isEnabled = Optional.ofNullable(certificate)
                 .map(cert -> cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                .map(tenantConfig::isAutoProvisioningEnabled)
+                .map(tenant::isAutoProvisioningEnabled)
                 .orElse(false);
 
         final String logMessage = String.format("auto-provisioning [enabled: %s]", isEnabled);

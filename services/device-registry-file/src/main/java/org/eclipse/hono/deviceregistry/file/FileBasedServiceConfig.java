@@ -30,7 +30,7 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -41,12 +41,10 @@ import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttp
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
-import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -109,14 +107,14 @@ public class FileBasedServiceConfig {
     }
 
     /**
-     * Creates an instance of the tenant information service based on the file based tenant service as a Spring Bean.
+     * Creates an instance of the tenant information service based on the file based tenant management service
+     * as a Spring Bean.
      *
      * @return The service.
      */
     @Bean
-    @ConditionalOnBean(TenantService.class)
     public TenantInformationService tenantInformationService() {
-        return new AutowiredTenantInformationService();
+        return new DefaultTenantInformationService(tenantService());
     }
 
     /**
@@ -249,8 +247,7 @@ public class FileBasedServiceConfig {
         final FileBasedRegistrationService registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationProperties());
 
-        final var tenantInformationService = new AutowiredTenantInformationService();
-        tenantInformationService.setService(tenantService());
+        final var tenantInformationService = tenantInformationService();
 
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setDeviceManagementService(registrationService);

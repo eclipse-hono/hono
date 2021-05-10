@@ -43,7 +43,7 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -434,17 +434,14 @@ public class ApplicationConfig {
     public RegistrationService registrationService() throws IOException {
 
         final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore());
-
-        final var tenantInformationService = new AutowiredTenantInformationService();
-        tenantInformationService.setService(tenantService());
-
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
+
         autoProvisioner.setDeviceManagementService(registrationManagementService());
         autoProvisioner.setVertx(vertx());
         autoProvisioner.setTracer(tracer());
         autoProvisioner.setEventSenders(eventSenders());
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
-        autoProvisioner.setTenantInformationService(tenantInformationService);
+        autoProvisioner.setTenantInformationService(tenantInformationService());
         registrationService.setAutoProvisioner(autoProvisioner);
 
         return registrationService;
@@ -477,15 +474,15 @@ public class ApplicationConfig {
     }
 
     /**
-     * Provide a tenant information service, backed by the JDBC tenant service instance.
+     * Provide a tenant information service, backed by the JDBC tenant management service instance.
      *
      * @return The bean instance.
+     * @throws IOException if reading the SQL configuration fails.
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnBean(TenantService.class)
-    public TenantInformationService tenantInformationService() {
-        return new AutowiredTenantInformationService();
+    public TenantInformationService tenantInformationService() throws IOException {
+        return new DefaultTenantInformationService(tenantManagementService());
     }
 
     /**

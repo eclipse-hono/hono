@@ -39,6 +39,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceStatus;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
@@ -48,7 +49,6 @@ import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -85,8 +85,7 @@ class AutoProvisionerTest {
     public void setUp() {
         tenantInformationService = mock(TenantInformationService.class);
         when(tenantInformationService.getTenant(anyString(), any(Span.class)))
-                .thenAnswer(invocation -> Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK,
-                        TenantObject.from(invocation.getArgument(0), true))));
+                .thenAnswer(invocation -> Future.succeededFuture(new Tenant()));
 
         span = TracingMockSupport.mockSpan();
         vertx = mock(Vertx.class);

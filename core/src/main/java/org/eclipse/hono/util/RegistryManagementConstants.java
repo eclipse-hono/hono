@@ -164,6 +164,11 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_EXT                         = "ext";
     /**
+     * The name of the property that defines the messaging type to be used for a tenant.
+     */
+    public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
+
+    /**
      * The name of the field that contains the id of the entity (e.g. secret id).
      */
     public static final String FIELD_ID = "id";
