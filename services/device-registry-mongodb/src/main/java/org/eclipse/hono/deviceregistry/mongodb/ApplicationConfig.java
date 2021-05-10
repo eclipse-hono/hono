@@ -42,7 +42,7 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -69,7 +69,6 @@ import org.eclipse.hono.util.MessagingType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -388,14 +387,11 @@ public class ApplicationConfig {
                 mongoClient(),
                 registrationServiceProperties());
 
-        final var tenantInformationService = new AutowiredTenantInformationService();
-        tenantInformationService.setService(tenantService());
-
         final AutoProvisioner autoProvisioner = new AutoProvisioner();
         autoProvisioner.setVertx(vertx());
         autoProvisioner.setTracer(tracer());
         autoProvisioner.setDeviceManagementService(service);
-        autoProvisioner.setTenantInformationService(tenantInformationService);
+        autoProvisioner.setTenantInformationService(tenantInformationService());
         autoProvisioner.setEventSenders(eventSenders());
         autoProvisioner.setConfig(autoProvisionerConfigProperties());
 
@@ -440,15 +436,14 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes the tenant information service based on the MongoDB tenant service as a Spring Bean.
+     * Exposes the tenant information service based on the MongoDB tenant management service as a Spring Bean.
      *
      * @return The bean instance.
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnBean(TenantService.class)
     public TenantInformationService tenantInformationService() {
-        return new AutowiredTenantInformationService();
+        return new DefaultTenantInformationService(tenantService());
     }
 
     /**

@@ -25,19 +25,21 @@ import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceStatus;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,32 +193,32 @@ public class AutoProvisioner implements Lifecycle {
 
         LOG.debug("sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]", deviceId, gatewayId, tenantId);
 
-        final Future<TenantResult<TenantObject>> tenantTracker = tenantInformationService.getTenant(tenantId, span);
+        return tenantInformationService.getTenant(tenantId, span)
+                .compose(tenant -> {
+                    // TODO to remove once able to send events without providing an argument of type TenantObject
+                    final TenantObject tenantConfig = DeviceRegistryUtils.convertTenant(tenantId, tenant)
+                            .mapTo(TenantObject.class);
 
-        return tenantTracker.compose(ok -> {
-            if (tenantTracker.result().isError()) {
-                return Future.failedFuture(StatusCodeMapper.from(tenantTracker.result()));
-            }
+                    final Map<String, Object> props = new HashMap<>();
+                    props.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+                    props.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+                    props.put(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS,
+                            EventConstants.RegistrationStatus.NEW.name());
+                    props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY);
+                    props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, EventConstants.EVENT_ENDPOINT);
 
-            final Map<String, Object> props = new HashMap<>();
-            props.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-            props.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
-            props.put(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS, EventConstants.RegistrationStatus.NEW.name());
-            props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY);
-            props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, EventConstants.EVENT_ENDPOINT);
+                    final EventSender eventSender = eventClients.getClient(getMessagingType(tenant));
 
-            final EventSender eventSender = eventClients.getClient(tenantTracker.result().getPayload());
-
-            return eventSender.sendEvent(
-                    tenantTracker.result().getPayload(),
-                    new RegistrationAssertion(deviceId),
-                    EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION,
-                    null,
-                    props,
-                    span.context())
+                    return eventSender.sendEvent(
+                            tenantConfig,
+                            new RegistrationAssertion(deviceId),
+                            EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION,
+                            null,
+                            props,
+                            span.context())
                 .onFailure(t -> LOG.info("error sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]",
-                        deviceId, gatewayId, tenantId));
-        });
+                                    deviceId, gatewayId, tenantId));
+                });
     }
 
     /**
@@ -379,6 +381,14 @@ public class AutoProvisioner implements Lifecycle {
                     }).onComplete(resultPromise);
         });
         return resultPromise.future();
+    }
+
+    private String getMessagingType(final Tenant tenant) {
+        return Optional.ofNullable(tenant.getExtensions())
+                .map(ext -> ext.get(RegistryManagementConstants.FIELD_EXT_MESSAGING_TYPE))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .orElse(null);
     }
 
     private boolean wasDeviceAutoProvisioned(final Device registrationData) {

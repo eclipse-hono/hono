@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,34 +23,43 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
 
 /**
- * A default implementation of {@link TenantInformationService} that uses embedded {@link TenantManagementService} to
- * verify if tenant exists.
+ * An implementation of {@link TenantInformationService} that uses {@link TenantManagementService}
+ * internally.
  */
-public class AutowiredTenantInformationService implements TenantInformationService {
+public class DefaultTenantInformationService implements TenantInformationService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AutowiredTenantInformationService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultTenantInformationService.class);
 
-    private TenantManagementService service;
+    private final TenantManagementService tenantManagementService;
+
+    /**
+     * Creates a default tenant information service that uses the given {@link TenantManagementService}.
+     *
+     * @param tenantManagementService The tenant management service.
+     * @throws NullPointerException if the tenantManagementService is {@code null}.
+     */
+    public DefaultTenantInformationService(final TenantManagementService tenantManagementService) {
+        this.tenantManagementService = Objects.requireNonNull(tenantManagementService);
+    }
 
     @Override
-    public final Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
-        return service.readTenant(tenantId, span)
+    public Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
+        return tenantManagementService.readTenant(tenantId, span)
                 .map(result -> {
                     if (result.isOk()) {
-                        LOG.debug("tenant [{}] exists", tenantId);
+                        LOG.trace("tenant [{}] exists", tenantId);
                         return OperationResult.ok(
-                                        HttpURLConnection.HTTP_OK,
-                                        TenantKey.from(tenantId),
-                                        Optional.empty(),
-                                        Optional.empty());
+                                HttpURLConnection.HTTP_OK,
+                                TenantKey.from(tenantId),
+                                Optional.empty(),
+                                Optional.empty());
                     } else {
-                        LOG.debug("tenant [{}] does not exist", tenantId);
+                        LOG.trace("tenant [{}] does not exist", tenantId);
                         return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
                     }
                 });
@@ -58,7 +67,7 @@ public class AutowiredTenantInformationService implements TenantInformationServi
 
     @Override
     public Future<Tenant> getTenant(final String tenantId, final Span span) {
-        return service.readTenant(tenantId, span)
+        return tenantManagementService.readTenant(tenantId, span)
                 .compose(result -> {
                     if (result.isError()) {
                         return Future.failedFuture(
@@ -66,18 +75,5 @@ public class AutowiredTenantInformationService implements TenantInformationServi
                     }
                     return Future.succeededFuture(result.getPayload());
                 });
-    }
-
-    /**
-     * Sets the tenant management service to delegate to.
-     *
-     * @param service The tenant management service.
-     * @throws NullPointerException if service is {@code null}.
-     */
-    @Autowired
-    public final void setService(final TenantManagementService service) {
-        Objects.requireNonNull(service);
-        LOG.debug("using service instance: {}", service);
-        this.service = service;
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -465,5 +466,32 @@ public class Tenant {
                 throw new IllegalStateException("trusted anchor IDs must be unique within each tenant object");
             }
         }
+    }
+
+    /**
+     * Checks whether auto-provisioning is enabled for a CA with the given subject DN
+     * and which is valid at this point of time.
+     *
+     * @param subjectDn The subject DN of the CA to check.
+     * @return {@code true} if auto-provisioning is enabled.
+     * @throws NullPointerException if subjectDN is {@code null}.
+     */
+    @JsonIgnore
+    public boolean isAutoProvisioningEnabled(final String subjectDn) {
+        Objects.requireNonNull(subjectDn);
+
+        if (trustedCertificateAuthorities == null) {
+            return false;
+        }
+
+        final Instant now = Instant.now();
+        return trustedCertificateAuthorities
+                .stream()
+                .filter(ca -> subjectDn.equals(ca.getSubjectDnAsString()))
+                // filter out CAs which are not valid at this point in time
+                .filter(ca -> !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter()))
+                .findFirst()
+                .map(TrustedCertificateAuthority::isAutoProvisioningEnabled)
+                .orElse(false);
     }
 }

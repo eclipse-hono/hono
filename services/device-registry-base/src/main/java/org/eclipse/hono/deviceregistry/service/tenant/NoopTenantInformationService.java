@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.service.management.tenant.Tenant;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -39,12 +38,13 @@ public final class NoopTenantInformationService implements TenantInformationServ
      */
     @Override
     public Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
-        return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_OK, TenantKey.from(tenantId), Optional.empty(), Optional.empty()));
+        return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_OK, TenantKey.from(tenantId),
+                Optional.empty(), Optional.empty()));
     }
 
     @Override
-    public Future<TenantResult<TenantObject>> getTenant(final String tenantId, final Span span) {
-        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, TenantObject.from(tenantId, true)));
+    public Future<Tenant> getTenant(final String tenantId, final Span span) {
+        return Future.succeededFuture(new Tenant());
     }
 
 }

@@ -38,6 +38,11 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public final class MessagingClient<T extends Lifecycle> implements Lifecycle, ServiceClient {
 
+    /**
+     * The default messaging type to be used.
+     */
+    public static final MessagingType DEFAULT_MESSAGING_TYPE = MessagingType.amqp;
+
     private final Map<MessagingType, T> clientImplementations = new HashMap<>();
 
     private void requireClientsConfigured() {
@@ -95,13 +100,31 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
             .orElseGet(this::getDefaultImplementation);
     }
 
+    /**
+     * Gets an messaging client implementation for the given messaging type.
+     *
+     * @param messagingType The messaging type. If {@code null}, then a messaging client of 
+     *                      type defined in {@link #DEFAULT_MESSAGING_TYPE} is returned.
+     * @return The messaging client for the given type.
+     * @throws IllegalStateException if no client implementations are set.
+     */
+    public T getClient(final String messagingType) {
+
+        requireClientsConfigured();
+
+        return Optional.ofNullable(messagingType)
+                .map(MessagingType::valueOf)
+                .map(clientImplementations::get)
+                .orElseGet(this::getDefaultImplementation);
+    }
+
     private T getDefaultImplementation() {
         if (clientImplementations.size() == 1) {
             return clientImplementations.values().iterator().next();
         }
 
         // multiple client sets are present -> fallback to default
-        return clientImplementations.get(MessagingType.amqp);
+        return clientImplementations.get(DEFAULT_MESSAGING_TYPE);
     }
 
     @Override

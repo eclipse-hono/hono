@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 package org.eclipse.hono.deviceregistry.service.tenant;
 
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.service.management.tenant.Tenant;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -53,15 +52,10 @@ public interface TenantInformationService {
      *            it may set tags and use this span as the parent for any spans created in this method.
      *
      * @return A future indicating the outcome of the operation.
-     *             The <em>status</em> will be
-     *             <ul>
-     *             <li><em>200 OK</em> if a tenant with the given ID is registered.
-     *             The <em>payload</em> will contain the tenant's configuration information.</li>
-     *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
-     *             </ul>
-     *
+     *         If succeeds the future contains the tenant information. Otherwise, the future will fail with
+     *         a {@link org.eclipse.hono.client.ServiceInvocationException} containing a corresponding status code.
      * @throws NullPointerException if any argument is {@code null}.
      */
-     Future<TenantResult<TenantObject>> getTenant(String tenantId, Span span);
+     Future<Tenant> getTenant(String tenantId, Span span);
 
 }
