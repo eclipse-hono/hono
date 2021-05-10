@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.kafka;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.util.CommandConstants;
@@ -143,6 +144,10 @@ public final class HonoTopic {
         COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT),
         COMMAND_INTERNAL(CommandConstants.INTERNAL_COMMAND_ENDPOINT);
 
+        /**
+         * A list of the types of topics that include a tenant identifier.
+         */
+        public static final List<Type> TENANT_RELATED_TYPES = List.of(TELEMETRY, EVENT, COMMAND, COMMAND_RESPONSE);
         private static final String SEPARATOR = ".";
         private static final String NAMESPACE = "hono";
 

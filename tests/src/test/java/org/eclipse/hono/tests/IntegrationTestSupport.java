@@ -24,15 +24,19 @@ import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -55,8 +59,11 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
@@ -68,6 +75,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -85,6 +93,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.kafka.admin.KafkaAdminClient;
 
 /**
  * A helper class for integration tests.
@@ -487,6 +496,8 @@ public final class IntegrationTestSupport {
                 return runningOnTestEnvironment;
             });
 
+    private static final Queue<Pair<List<String>, Instant>> tenantsToDeleteTopicsForAfterDelay = new LinkedList<>();
+
     /**
      * A client for managing tenants/devices/credentials.
      */
@@ -567,7 +578,7 @@ public final class IntegrationTestSupport {
     /**
      * Creates properties for connecting a consumer to Kafka.
      *
-     * @return The properties or {@code null} if no connection to Kafka is configured.
+     * @return The properties.
      */
     public static KafkaConsumerConfigProperties getKafkaConsumerConfig() {
         LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
@@ -582,15 +593,27 @@ public final class IntegrationTestSupport {
     /**
      * Creates properties for connecting a producer to Kafka.
      *
-     * @return The properties or {@code null} if no connection to Kafka is configured.
+     * @return The properties.
      */
     public static KafkaProducerConfigProperties getKafkaProducerConfig() {
         LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
         final KafkaProducerConfigProperties consumerConfig = new KafkaProducerConfigProperties();
         consumerConfig.setProducerConfig(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS)
-        );
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
         return consumerConfig;
+    }
+
+    /**
+     * Creates properties for connecting an admin client to Kafka.
+     *
+     * @return The properties.
+     */
+    public static KafkaAdminClientConfigProperties getKafkaAdminClientConfig() {
+        LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        final KafkaAdminClientConfigProperties adminClientConfig = new KafkaAdminClientConfigProperties();
+        adminClientConfig.setAdminClientConfig(Map.of(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
+        return adminClientConfig;
     }
 
     /**
@@ -802,14 +825,16 @@ public final class IntegrationTestSupport {
     public void deleteObjects(final VertxTestContext ctx) {
 
         // copy and reset
-
         final var devicesToDelete = Map.copyOf(this.devicesToDelete);
         this.devicesToDelete.clear();
         final var tenantsToDelete = List.copyOf(this.tenantsToDelete);
         this.tenantsToDelete.clear();
 
-        // first delete devices
+        // delete tenant-related Kafka topics
+        final Future<Void> tenantTopicsDeletionDoneFuture = deleteTenantKafkaTopics(tenantsToDelete);
 
+        // delete device registry entries
+        // first delete devices
         final var deleteDevices = CompositeFuture
                 .join(devicesToDelete.entrySet()
                         .stream().flatMap(entry ->
@@ -818,19 +843,12 @@ public final class IntegrationTestSupport {
                         .collect(Collectors.toList()));
 
         final var devicesDeleted = new AtomicBoolean();
-
         deleteDevices
-
                 // record success of first operation ...
-
                 .onSuccess(x -> devicesDeleted.set(true))
-
                 // ... and reset error, will be checked at the end
-
                 .otherwiseEmpty()
-
                 // then delete tenants
-
                 .compose(x -> {
                     if (!tenantsToDelete.isEmpty()) {
                         LOGGER.debug("deleting {} temporary tenants ...", tenantsToDelete.size());
@@ -839,7 +857,6 @@ public final class IntegrationTestSupport {
                                     .map(tenantId -> registry.removeTenant(tenantId, true))
                                     .collect(Collectors.toList()));
                 })
-
                 .compose(ok -> registry.searchTenants(
                         Optional.of(30),
                         Optional.of(0),
@@ -865,9 +882,9 @@ public final class IntegrationTestSupport {
                     LOGGER.info("error querying tenants endpoint", t);
                     return 0;
                 })
-
+                // wait for deletion of Kafka topics result
+                .compose(tenantsInRegistry -> tenantTopicsDeletionDoneFuture.map(tenantsInRegistry))
                 // complete, and check if we successfully deleted the devices
-
                 .onComplete(ctx.succeeding(tenantsInRegistry -> {
                     ctx.verify(() -> {
                         assertThat(devicesDeleted.get())
@@ -880,6 +897,50 @@ public final class IntegrationTestSupport {
                     ctx.completeNow();
                 }));
 
+    }
+
+    private Future<Void> deleteTenantKafkaTopics(final List<String> tenantsToDelete) {
+        if (getConfiguredMessagingType() != MessagingType.kafka) {
+            return Future.succeededFuture();
+        }
+        // topics for the given tenants are not deleted right away: It could be that the offset-commit interval of the CommandRouter
+        // command consumer (5s) hasn't elapsed yet and it has to be avoided to delete the topics before the consumer has
+        // committed corresponding offsets (otherwise the consumer will retry the commit for some time and be blocked during that time)
+        final Promise<Void> tenantTopicsDeletionDonePromise = Promise.promise();
+        tenantsToDeleteTopicsForAfterDelay.add(Pair.of(tenantsToDelete, Instant.now()));
+        final List<String> tenantsToDeleteTopicsForNow = new LinkedList<>();
+        final Instant nowMinusCommitInterval = Instant.now().minus(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL);
+        final Iterator<Pair<List<String>, Instant>> iterator = tenantsToDeleteTopicsForAfterDelay.iterator();
+        while (iterator.hasNext()) {
+            final Pair<List<String>, Instant> tenantsToDeleteAndInstantPair = iterator.next();
+            if (tenantsToDeleteAndInstantPair.two().isBefore(nowMinusCommitInterval)) {
+                tenantsToDeleteTopicsForNow.addAll(tenantsToDeleteAndInstantPair.one());
+                iterator.remove();
+            }
+        }
+        if (!tenantsToDeleteTopicsForNow.isEmpty()) {
+            final KafkaAdminClient adminClient = KafkaAdminClient.create(vertx,
+                    getKafkaAdminClientConfig().getAdminClientConfig("test"));
+            final Promise<Void> adminClientClosedPromise = Promise.promise();
+            LOGGER.debug("deleting topics for temporary tenants {}", tenantsToDeleteTopicsForNow);
+            final List<String> topicNames = tenantsToDeleteTopicsForNow.stream()
+                    .flatMap(tenant -> HonoTopic.Type.TENANT_RELATED_TYPES.stream()
+                            .map(type -> new HonoTopic(type, tenant).toString()))
+                    .collect(Collectors.toList());
+            adminClient.deleteTopics(topicNames, ar -> {
+                // note that the result will probably have failed with an UnknownTopicOrPartitionException here;
+                // not necessarily all tenant topics may have been created before
+                LOGGER.debug("done triggering deletion of topics for tenants {}", tenantsToDeleteTopicsForNow);
+                adminClient.close(adminClientClosedPromise);
+            });
+            adminClientClosedPromise.future().recover(thr -> {
+                LOGGER.warn("error closing Kafka admin client", thr);
+                return Future.succeededFuture();
+            }).onComplete(tenantTopicsDeletionDonePromise);
+        } else {
+            tenantTopicsDeletionDonePromise.complete();
+        }
+        return tenantTopicsDeletionDonePromise.future();
     }
 
     /**
