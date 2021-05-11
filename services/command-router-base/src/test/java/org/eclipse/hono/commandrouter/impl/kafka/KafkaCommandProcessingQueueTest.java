@@ -65,35 +65,38 @@ public class KafkaCommandProcessingQueueTest {
     @Test
     @SuppressWarnings("rawtypes")
     void testSendActionIsInvokedInOrder(final Vertx vertx, final VertxTestContext ctx) {
-        final KafkaCommandProcessingQueue kafkaCommandProcessingQueue = new KafkaCommandProcessingQueue(vertx.getOrCreateContext());
-        // GIVEN a number of test commands
-        final LinkedList<KafkaBasedCommandContext> commandContexts = IntStream.range(0, 5)
-                .mapToObj(this::getTestCommandContext)
-                .collect(Collectors.toCollection(LinkedList::new));
-        // ... added to the queue in order
-        commandContexts.forEach(kafkaCommandProcessingQueue::add);
+        final Context vertxContext = vertx.getOrCreateContext();
+        vertxContext.runOnContext(v -> {
+            final KafkaCommandProcessingQueue kafkaCommandProcessingQueue = new KafkaCommandProcessingQueue(vertxContext);
+            // GIVEN a number of test commands
+            final LinkedList<KafkaBasedCommandContext> commandContexts = IntStream.range(0, 5)
+                    .mapToObj(this::getTestCommandContext)
+                    .collect(Collectors.toCollection(LinkedList::new));
+            // ... added to the queue in order
+            commandContexts.forEach(kafkaCommandProcessingQueue::add);
 
-        // WHEN applying the sendAction on these commands in the reverse order
-        final LinkedList<KafkaBasedCommandContext> sendActionInvoked = new LinkedList<>();
-        final LinkedList<KafkaBasedCommandContext> applySendActionSucceeded = new LinkedList<>();
-        final List<Future> resultFutures = new LinkedList<>();
-        commandContexts.descendingIterator().forEachRemaining(context -> {
-            resultFutures.add(kafkaCommandProcessingQueue
-                    .applySendCommandAction(context, () -> {
-                        sendActionInvoked.add(context);
-                        return Future.succeededFuture();
-                    })
-                    .onSuccess(v -> applySendActionSucceeded.add(context)));
-        });
-
-        CompositeFuture.all(resultFutures).onComplete(ctx.succeeding(ar -> {
-            ctx.verify(() -> {
-                // THEN the commands got sent in the original order
-                assertThat(sendActionInvoked).isEqualTo(commandContexts);
-                assertThat(applySendActionSucceeded).isEqualTo(commandContexts);
+            // WHEN applying the sendAction on these commands in the reverse order
+            final LinkedList<KafkaBasedCommandContext> sendActionInvoked = new LinkedList<>();
+            final LinkedList<KafkaBasedCommandContext> applySendActionSucceeded = new LinkedList<>();
+            final List<Future> resultFutures = new LinkedList<>();
+            commandContexts.descendingIterator().forEachRemaining(context -> {
+                resultFutures.add(kafkaCommandProcessingQueue
+                        .applySendCommandAction(context, () -> {
+                            sendActionInvoked.add(context);
+                            return Future.succeededFuture();
+                        })
+                        .onSuccess(v2 -> applySendActionSucceeded.add(context)));
             });
-            ctx.completeNow();
-        }));
+
+            CompositeFuture.all(resultFutures).onComplete(ctx.succeeding(ar -> {
+                ctx.verify(() -> {
+                    // THEN the commands got sent in the original order
+                    assertThat(sendActionInvoked).isEqualTo(commandContexts);
+                    assertThat(applySendActionSucceeded).isEqualTo(commandContexts);
+                });
+                ctx.completeNow();
+            }));
+        });
     }
 
     /**
@@ -148,7 +151,12 @@ public class KafkaCommandProcessingQueueTest {
         when(consumerRecord.partition()).thenReturn(0);
 
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(consumerRecord);
-        return new KafkaBasedCommandContext(cmd, mock(Span.class));
+        return new KafkaBasedCommandContext(cmd, mock(Span.class)) {
+            @Override
+            public String toString() {
+                return "Command " + offset;
+            }
+        };
     }
 
 }
