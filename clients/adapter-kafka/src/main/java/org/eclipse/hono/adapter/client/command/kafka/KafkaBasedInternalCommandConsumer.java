@@ -109,6 +109,9 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
         // no commits of partition offsets needed - topic only used during lifetime of this consumer
         consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        // there will be no offsets stored for this consumer - so the "auto.offset.reset" config is relevant
+        // - set it to "earliest" just in case records have already been published to it
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
