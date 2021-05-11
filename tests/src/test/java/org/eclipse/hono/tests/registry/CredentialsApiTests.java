@@ -40,6 +40,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -180,6 +181,65 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                                 ctx.verify(() -> assertThat(httpResponse.bodyAsJson(Device.class).isEnabled()).isTrue());
                                 ctx.completeNow();
                             }));
+                }));
+    }
+
+    /**
+     * Verifies when no credentials are found, the properties related to auto-provisioning of gateways are enabled
+     * in the corresponding tenant's CA entry and the client context contains a serialized X.509 certificate then 
+     * a gateway is auto-provisioned. (i.e A gateway is registered and it's corresponding credentials are stored). 
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateException if the self signed certificate cannot be created.
+     * @throws FileNotFoundException if the self signed certificate cannot be read.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCredentialsWithGatewayAutoProvisioning(final VertxTestContext ctx)
+            throws CertificateException, FileNotFoundException {
+
+        // GIVEN a tenant's trusted CA entry with auto-provisioning and auto-provision as gateway enabled
+        // and a client context that contains a client certificate
+        // while device has not been registered and no credentials are stored yet
+        final X509Certificate cert = createCertificate();
+        final var tenant = Tenants.createTenantForTrustAnchor(cert);
+        tenant.getTrustedCertificateAuthorities()
+                .get(0)
+                .setAutoProvisioningEnabled(true)
+                .setAutoProvisioningAsGatewayEnabled(true);
+        final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
+        final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+
+        tenantId = getHelper().getRandomTenantId();
+        getHelper().registry
+                .addTenant(tenantId, tenant)
+                .compose(ok -> getClient()
+                        // WHEN getting credentials
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
+                .compose(result -> {
+                    // VERIFY the newly created credentials
+                    ctx.verify(() -> {
+                        assertThat(result).isNotNull();
+                        assertThat(result.isEnabled()).isTrue();
+                        assertThat(result.getDeviceId()).isNotNull();
+                        assertThat(result.getAuthId()).isEqualTo(authId);
+                        assertThat(result.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_X509_CERT);
+                        assertThat(result.getSecrets()).isNotNull();
+                        assertThat(result.getSecrets()).hasSize(1);
+                    });
+                    // WHEN getting device registration information
+                    return getHelper().registry.getRegistrationInfo(tenantId, result.getDeviceId());
+                })
+                .onComplete(ctx.succeeding(result -> {
+                    // VERIFY that the gateway has been registered as well
+                    final Device gateway = result.bodyAsJson(Device.class);
+                    ctx.verify(() -> {
+                        assertThat(gateway.isEnabled()).isTrue();
+                        assertThat(gateway.getAuthorities()
+                                .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED))
+                                        .isTrue();
+                    });
+                    ctx.completeNow();
                 }));
     }
 

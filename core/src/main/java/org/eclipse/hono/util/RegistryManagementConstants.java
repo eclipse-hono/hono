@@ -364,6 +364,18 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String FIELD_AUTO_PROVISIONED   = "auto-provisioned";
 
     /**
+     * The name of the property that indicates whether a CA cert can be used to
+     * automatically provision new devices. 
+     */
+    public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+
+    /**
+     * The name of the property that indicates whether a unregistered device that authenticates with
+     * a client certificate should be auto-provisioned as a gateway. 
+     */
+    public static final String FIELD_AUTO_PROVISION_AS_GATEWAY = "auto-provision-as-gateway";
+
+    /**
      * The name of the field that contains a boolean indicating if a notification for an auto-provisioned device was sent.
      */
     public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "auto-provisioning-notification-sent";

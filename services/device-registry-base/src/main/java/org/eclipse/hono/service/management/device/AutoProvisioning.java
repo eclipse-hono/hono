@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -44,7 +45,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Helper to auto-provision devices.
+ * Helper to auto-provision devices/gateways.
  *
  * @see <a href="https://www.eclipse.org/hono/docs/dev/concepts/device-provisioning/#automatic-device-provisioning">
  *      Automatic Device Provisioning</a>
@@ -56,32 +57,41 @@ public final class AutoProvisioning {
     }
 
     /**
-     * Auto-provision a device if auto-provisioning feature is enabled.
+     * Auto-provision a device/gateway if auto-provisioning feature is enabled.
      * <p>
-     * A device is auto-provisioned based on the information from the client certificate that 
-     * the device used for authentication. The client certificate is expected to be in the 
+     * A device/gateway is auto-provisioned based on the information from the client certificate that 
+     * the device/gateway used for authentication. The client certificate is expected to be in the 
      * client context corresponding to the property {@value CredentialsConstants#FIELD_CLIENT_CERT}
      * for auto-provisioning to take place.
+     *<p>
+     * In order to enable auto-provisioning, the value of the property
+     * {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_ENABLED} must be set to {@code true}
+     * in the corresponding tenant's CA entry.
+     * <p>
+     * If the above property is set to {@code true} and in addition, the property 
+     * {@value RegistryManagementConstants#FIELD_AUTO_PROVISION_AS_GATEWAY} is also set to {@code true},
+     * then a gateway is auto-provisioned. If the value of {@value RegistryManagementConstants#FIELD_AUTO_PROVISION_AS_GATEWAY}
+     * is set to {@code false}, then a device is auto-provisioned.
      *
      * @param tenantId The tenant identifier.
-     * @param authId The authentication identifier of the device. The authId is 
+     * @param authId The authentication identifier of the device/gateway. The authId is 
      *               the certificate's subject DN using the serialization format defined
      *               by <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
-     * @param clientContext The client context that can be used to get the X.509 certificate of the device
+     * @param clientContext The client context that can be used to get the X.509 certificate of the device/gateway
      *                      to be provisioned.
      * @param credentialsManagementService The credentials management service to update the credentials information
-     *                                     of the device being auto-provisioned.
-     * @param deviceManagementService The device management service to create a new device registration for the device
-     *                                being auto-provisioned.
+     *                                     of the device/gateway being auto-provisioned.
+     * @param deviceManagementService The device management service to create a new device registration for the 
+     *                                device/gateway being auto-provisioned.
      * @param tenantInformationService The tenant information service to retrieve the tenant information corresponding
-     *                                 to the device being auto-provisioned.
+     *                                 to the device/gateway being auto-provisioned.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *             implementation should log (error) events on this span and it may set tags and use this span
      *             as the parent for any spans created in this method.
      * @return A (succeeded) future containing the result of the operation. The <em>status</em> will be
      *         <ul>
-     *         <li><em>201 CREATED</em> if the device has successfully been provisioned. The payload contains the
-     *         credentials information of the auto-provisioned device.</li>
+     *         <li><em>201 CREATED</em> if the device/gateway has successfully been provisioned. The payload
+     *         contains the credentials information of the auto-provisioned device/gateway.</li>
      *         <li><em>4XX</em> if the provisioning failed. The payload may contain an error description.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters except clientContext is {@code null}.
@@ -106,11 +116,17 @@ public final class AutoProvisioning {
                 .compose(tenant -> DeviceRegistryUtils
                         .getCertificateFromClientContext(tenantId, authId, clientContext, span)
                         .compose(optionalCert -> optionalCert
-                                .filter(cert -> AutoProvisioning.isAutoProvisioningEnabledForTenant(tenant, cert, span))
+                                .filter(cert -> isAutoProvisioningEnabledForTenant(tenant, cert, span))
                                 .map(cert -> {
                                     Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
-                                    return provisionDevice(tenantId, authId, deviceManagementService,
-                                            credentialsManagementService, cert, span);
+                                    return provision(
+                                            tenantId,
+                                            authId,
+                                            isProvisionAsGatewayEnabledForTenant(tenant, cert, span),
+                                            deviceManagementService,
+                                            credentialsManagementService,
+                                            cert,
+                                            span);
                                 })
                                 // if the auto-provisioning is not enabled or
                                 // no client certificate is set in the client context
@@ -120,30 +136,10 @@ public final class AutoProvisioning {
                         getCredentialsResult(ServiceInvocationException.extractStatusCode(error), error.getMessage())));
     }
 
-    /**
-     * Registers a device together with a set of credentials for the given client certificate.
-     *
-     * @param tenantId The tenant to which the device belongs.
-     * @param authId The authentication identifier of the device. The authId is 
-     *               the certificate's subject DN using the serialization format defined
-     *               by <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
-     * @param deviceManagementService The device management service to use.
-     * @param credentialsManagementService The credentials service to use.
-     * @param clientCertificate The X.509 certificate of the device to be provisioned.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
-     * @return A (succeeded) future containing the result of the operation. The <em>status</em> will be
-     *         <ul>
-     *         <li><em>201 CREATED</em> if the device has successfully been provisioned. The payload contains 
-     *         the credentials information of the auto-provisioned device.</li>
-     *         <li><em>4XX</em> if the provisioning failed. The payload may contain an error description.</li>
-     *         </ul>
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    private static Future<CredentialsResult<JsonObject>> provisionDevice(
+    private static Future<CredentialsResult<JsonObject>> provision(
             final String tenantId,
             final String authId,
+            final boolean isGateway,
             final DeviceManagementService deviceManagementService,
             final CredentialsManagementService credentialsManagementService,
             final X509Certificate clientCertificate,
@@ -160,7 +156,7 @@ public final class AutoProvisioning {
         final String comment = "Auto-provisioned at " + Instant.now().toString();
 
         // 1. create device
-        final Device device = new Device().setEnabled(true).putExtension("comment", comment);
+        final Device device = createDeviceInformation(isGateway, comment);
         return deviceManagementService.createDevice(tenantId, Optional.empty(), device, span)
                 .compose(r -> {
                     if (r.isError()) {
@@ -201,6 +197,18 @@ public final class AutoProvisioning {
                 });
     }
 
+    private static Device createDeviceInformation(final boolean isGateway, final String comment) {
+        final Device device = new Device()
+                .setEnabled(true)
+                .putExtension(RegistryManagementConstants.FIELD_COMMENT, comment);
+
+        if (isGateway) {
+            device.setAuthorities(Set.of(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
+        }
+
+        return device;
+    }
+
     /**
      * Checks if auto-provisioning is enabled from the tenant's trusted CA entry which has been
      * used to authenticate the device.
@@ -219,6 +227,20 @@ public final class AutoProvisioning {
                 .orElse(false);
 
         final String logMessage = String.format("auto-provisioning [enabled: %s]", isEnabled);
+        LOG.debug(logMessage);
+        span.log(logMessage);
+
+        return isEnabled;
+    }
+
+    private static boolean isProvisionAsGatewayEnabledForTenant(final Tenant tenant,
+            final X509Certificate certificate, final Span span) {
+        final boolean isEnabled = Optional.ofNullable(certificate)
+                .map(cert -> cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                .map(tenant::isAutoProvisioningAsGatewayEnabled)
+                .orElse(false);
+
+        final String logMessage = String.format("auto-provisioning as a gateway [enabled: %s]", isEnabled);
         LOG.debug(logMessage);
         span.log(logMessage);
 

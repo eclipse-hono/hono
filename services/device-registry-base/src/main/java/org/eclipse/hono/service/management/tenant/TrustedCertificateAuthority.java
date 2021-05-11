@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,8 +63,11 @@ public class TrustedCertificateAuthority {
     @HonoTimestamp
     private Instant notAfter;
 
-    @JsonProperty(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED)
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_ENABLED)
     private boolean autoProvisioningEnabled;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY)
+    private boolean autoProvisioningAsGatewayEnabled;
 
     /**
      * Checks if this object contains all required data.
@@ -284,6 +287,28 @@ public class TrustedCertificateAuthority {
      */
     public final TrustedCertificateAuthority setAutoProvisioningEnabled(final boolean enabled) {
         this.autoProvisioningEnabled = enabled;
+        return this;
+    }
+
+    /**
+     * Checks if any unregistered devices that authenticate with a client certificate issued by this CA
+     * should be auto-provisioned as gateways.
+     *
+     * @return {@code true} if to be auto-provisioned as a gateway.
+     */
+    public final boolean isAutoProvisioningAsGatewayEnabled() {
+        return autoProvisioningAsGatewayEnabled;
+    }
+
+    /**
+     * Sets whether any unregistered devices that authenticate with a client certificate issued by this CA
+     * should be auto-provisioned as gateways.
+     *
+     * @param enabled {@code true} if to be auto-provisioned as a gateway.
+     * @return A reference to this for fluent use.
+     */
+    public final TrustedCertificateAuthority setAutoProvisioningAsGatewayEnabled(final boolean enabled) {
+        this.autoProvisioningAsGatewayEnabled = enabled;
         return this;
     }
 }

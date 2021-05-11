@@ -128,6 +128,9 @@ public final class DeviceRegistryUtils {
                         // validity period is not included in TenantObject
                         json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
                         json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER);
+                        // remove the attributes that are internal to the device registry
+                        // and not to be exposed to the adapters
+                        json.remove(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY);
                         return json;
                     })
                     .collect(JsonArray::new, JsonArray::add, JsonArray::addAll))
