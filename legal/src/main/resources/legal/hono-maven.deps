@@ -8,7 +8,7 @@ com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.11.3
 com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.11.3
 com.github.ben-manes.caffeine:caffeine:jar:2.8.8
 com.github.luben:zstd-jni:jar:1.4.4-7
-com.google.code.gson:gson:jar:2.8.5
+com.google.code.gson:gson:jar:2.8.6
 com.google.guava:guava:jar:30.1-jre
 com.google.protobuf:protobuf-java:jar:3.12.2
 com.h2database:h2:jar:1.4.200
