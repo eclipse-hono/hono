@@ -25,6 +25,7 @@ quarkus:
     console:
       color: true
     level: INFO
+    min-level: TRACE
     category:
       "org.eclipse.hono":
         level: INFO
