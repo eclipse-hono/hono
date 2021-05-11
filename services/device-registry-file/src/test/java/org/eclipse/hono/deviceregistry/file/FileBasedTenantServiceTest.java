@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -410,13 +410,15 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 .setKeyAlgorithm("EC")
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
-                .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS));
+                .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS))
+                .setAutoProvisioningAsGatewayEnabled(true);
         final TrustedCertificateAuthority ca2 = new TrustedCertificateAuthority()
                 .setSubjectDn("CN=test.org")
                 .setKeyAlgorithm("RSA")
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS))
-                .setNotAfter(Instant.now().plus(20, ChronoUnit.DAYS));
+                .setNotAfter(Instant.now().plus(20, ChronoUnit.DAYS))
+                .setAutoProvisioningAsGatewayEnabled(true);
 
         final Tenant source = new Tenant();
         source.setEnabled(true);
@@ -451,6 +453,10 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
         final JsonObject extensions = target.getJsonObject(RegistryManagementConstants.FIELD_EXT);
         assertThat(extensions).isNotNull();
         assertThat(extensions.getString("custom")).isEqualTo("value");
+
+        //Verify that the internal attributes to the device registry are not transferred to the TenantObject
+        assertThat(expectedAuthorities.getJsonObject(0)
+                .containsKey(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY)).isFalse();
     }
 
     /**

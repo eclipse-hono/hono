@@ -837,12 +837,21 @@ components:
                   If it is *true* and the feature is supported by the device registry, the device registry
                   automatically provisions unregistered devices that authenticate with a client certificate
                   issued by this CA (that is, creates registration and credentials).
+            "auto-provision-as-gateway":
+               type: boolean
+               default: false
+               description: |
+                  Indictates whether this trusted certificate authority may be used for automatically provisioning 
+                  gateways. If it is *true* and the *auto-provisioning-enabled* is also *true*, then the unregistered
+                  devices that authenticate with a client certificate issued by this CA are provisioned as gateways
+                  provided that the device registry implementation being used supports this feature.
 
          example:
             subject-dn: "CN=devices,OU=iot,O=ACME"
             public-key: "Tk9UIEEgUFVCTElDIEtFWQ=="
             algorithm: "EC"
             auto-provisioning-enabled: false
+            auto-provision-as-gateway: false
             not-before: "2019-10-03T13:45:16+02:00"
             not-after: "2021-10-03T00:00:00Z"
 

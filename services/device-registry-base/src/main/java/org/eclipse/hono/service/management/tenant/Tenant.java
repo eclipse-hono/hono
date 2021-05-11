@@ -480,18 +480,38 @@ public class Tenant {
     public boolean isAutoProvisioningEnabled(final String subjectDn) {
         Objects.requireNonNull(subjectDn);
 
-        if (trustedCertificateAuthorities == null) {
-            return false;
-        }
+        return getValidTrustedCA(subjectDn)
+                .map(TrustedCertificateAuthority::isAutoProvisioningEnabled)
+                .orElse(false);
+    }
 
+    /**
+     * Checks whether any unregistered devices that authenticate with a client certificate
+     * issued by this tenant's CA should be auto-provisioned as gateways.
+     *
+     * @param subjectDn The subject DN of the tenant's CA to check.
+     * @return {@code true} if to be auto-provisioned as a gateway.
+     * @throws NullPointerException if the subjectDN is {@code null}.
+     */
+    @JsonIgnore
+    public boolean isAutoProvisioningAsGatewayEnabled(final String subjectDn) {
+        Objects.requireNonNull(subjectDn);
+
+        return getValidTrustedCA(subjectDn)
+                .map(TrustedCertificateAuthority::isAutoProvisioningAsGatewayEnabled)
+                .orElse(false);
+    }
+
+    private Optional<TrustedCertificateAuthority> getValidTrustedCA(final String subjectDn) {
+        if (trustedCertificateAuthorities == null) {
+            return Optional.empty();
+        }
         final Instant now = Instant.now();
         return trustedCertificateAuthorities
                 .stream()
                 .filter(ca -> subjectDn.equals(ca.getSubjectDnAsString()))
                 // filter out CAs which are not valid at this point in time
                 .filter(ca -> !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter()))
-                .findFirst()
-                .map(TrustedCertificateAuthority::isAutoProvisioningEnabled)
-                .orElse(false);
+                .findFirst();
     }
 }
