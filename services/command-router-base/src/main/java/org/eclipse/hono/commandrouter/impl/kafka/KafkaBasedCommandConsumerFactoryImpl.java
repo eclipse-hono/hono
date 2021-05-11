@@ -35,6 +35,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -56,10 +57,15 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private static final Pattern COMMANDS_TOPIC_PATTERN = Pattern
             .compile(Pattern.quote(HonoTopic.Type.COMMAND.prefix) + ".*");
 
-    private final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue();
-    private final KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
+    private final Vertx vertx;
+    private final TenantClient tenantClient;
+    private final CommandTargetMapper commandTargetMapper;
+    private final KafkaConsumerConfigProperties kafkaConsumerConfig;
     private final Tracer tracer;
-    private final AsyncHandlingAutoCommitKafkaConsumer kafkaConsumer;
+    private final KafkaBasedInternalCommandSender internalCommandSender;
+
+    private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
+    private AsyncHandlingAutoCommitKafkaConsumer kafkaConsumer;
 
     /**
      * Creates a new factory to process commands via the Kafka cluster.
@@ -84,29 +90,36 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             final KafkaConsumerConfigProperties kafkaConsumerConfig,
             final Tracer tracer) {
 
-        Objects.requireNonNull(vertx);
-        Objects.requireNonNull(tenantClient);
-        Objects.requireNonNull(commandTargetMapper);
+        this.vertx = Objects.requireNonNull(vertx);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
+        this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
         Objects.requireNonNull(kafkaProducerFactory);
         Objects.requireNonNull(kafkaProducerConfig);
-        Objects.requireNonNull(kafkaConsumerConfig);
+        this.kafkaConsumerConfig = Objects.requireNonNull(kafkaConsumerConfig);
         this.tracer = Objects.requireNonNull(tracer);
 
-        final KafkaBasedInternalCommandSender internalCommandSender = new KafkaBasedInternalCommandSender(
-                kafkaProducerFactory, kafkaProducerConfig, tracer);
+        internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
+    }
+
+    @Override
+    public Future<Void> start() {
+        final Context context = Vertx.currentContext();
+        if (context == null) {
+            return Future.failedFuture(new IllegalStateException("factory must be started in a Vert.x context"));
+        }
+        final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue,
                 commandTargetMapper, internalCommandSender, tracer);
+
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "cmd-router-group");
         kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
         kafkaConsumer.setOnRebalanceDoneHandler(
                 partitions -> commandQueue.setCurrentlyHandledPartitions(Helper.to(partitions)));
-    }
 
-    @Override
-    public Future<Void> start() {
-        return kafkaConsumer.start();
+        return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start())
+                .mapEmpty();
     }
 
     @Override

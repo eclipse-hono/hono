@@ -39,6 +39,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
@@ -48,8 +49,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -65,7 +68,6 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
 
     private CommandTargetMapper commandTargetMapper;
     private KafkaBasedMappingAndDelegatingCommandHandler cmdHandler;
-    private KafkaCommandProcessingQueue commandQueue;
     private KafkaBasedInternalCommandSender internalCommandSender;
     private String tenantId;
     private String deviceId;
@@ -90,7 +92,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
         when(internalCommandSender.sendCommand(any(), any())).thenReturn(Future.succeededFuture());
 
-        commandQueue = new KafkaCommandProcessingQueue();
+        final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
+        final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue, commandTargetMapper,
                 internalCommandSender, TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
     }

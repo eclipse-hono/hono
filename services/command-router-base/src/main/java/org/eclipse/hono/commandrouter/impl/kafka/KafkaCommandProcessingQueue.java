@@ -31,6 +31,7 @@ import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -50,6 +51,16 @@ public class KafkaCommandProcessingQueue {
      * TopicPartition they were received from and in the order they were received.
      */
     private final Map<TopicPartition, TopicPartitionCommandQueue> commandQueues = new HashMap<>();
+    private final Context vertxContext;
+
+    /**
+     * Creates a new KafkaCommandProcessingQueue.
+     * @param vertxContext The vert.x context to run tasks on asynchronously.
+     * @throws NullPointerException if vertxContext is {@code null}.
+     */
+    public KafkaCommandProcessingQueue(final Context vertxContext) {
+        this.vertxContext = Objects.requireNonNull(vertxContext);
+    }
 
     /**
      * Adds the command represented by the given command context.
@@ -126,7 +137,7 @@ public class KafkaCommandProcessingQueue {
                     LOG.debug("partition {} not being handled anymore; command queue is empty", commandQueueEntry.getKey());
                 } else {
                     LOG.info("partition {} not being handled anymore but its command queue isn't empty!", commandQueueEntry.getKey());
-                    commandQueueEntry.getValue().clear();
+                    commandQueueEntry.getValue().markAsUnusedAndClear();
                 }
                 commandQueuesIterator.remove();
             }
@@ -139,9 +150,7 @@ public class KafkaCommandProcessingQueue {
      * is invoked on command objects in the same order that the commands got added
      * to the queue.
      */
-    static class TopicPartitionCommandQueue {
-
-        private static final Logger LOG = LoggerFactory.getLogger(TopicPartitionCommandQueue.class);
+    class TopicPartitionCommandQueue {
 
         private static final String KEY_COMMAND_SEND_ACTION_SUPPLIER_AND_RESULT_PROMISE = "commandSendActionSupplierAndResultPromise";
 
@@ -184,11 +193,20 @@ public class KafkaCommandProcessingQueue {
         }
 
         /**
-         * Clears the queue.
+         * Releases any contained commands waiting to be sent and clears the queue.
          */
-        public void clear() {
+        public void markAsUnusedAndClear() {
+            queue.forEach(commandContext -> {
+                final var actionAppliedPair = getSendActionSupplierAndResultPromise(commandContext);
+                if (actionAppliedPair != null) {
+                    // command is ready to be sent but waiting for the processing of an earlier entry
+                    LOG.info("command won't be sent - its partition isn't being handled anymore [{}]", commandContext.getCommand());
+                    TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - its partition isn't being handled anymore");
+                    commandContext.release();
+                    actionAppliedPair.two().fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                } // in the else case let the applySendCommandAction() method release the command eventually
+            });
             queue.clear();
-            // let the applySendCommandAction() method release the commands
         }
 
         /**
@@ -210,7 +228,7 @@ public class KafkaCommandProcessingQueue {
             final Promise<Void> resultPromise = Promise.promise();
             if (commandContext.equals(queue.peek())) {
                 // the usual case - first command added to the queue is the first command to send to the protocol adapter
-                sendGivenCommandAndNextInQueueIfPossible(queue.remove(), sendActionSupplier, resultPromise);
+                sendGivenCommandAndNextInQueueIfPossible(queue.remove(), sendActionSupplier, resultPromise, true);
             } else if (!queue.contains(commandContext)) {
                 // might happen if the invoking the sendAction takes place after the partition got unassigned and then reassigned again
                 LOG.info("command won't be sent - not in queue [{}]", commandContext.getCommand());
@@ -232,19 +250,32 @@ public class KafkaCommandProcessingQueue {
             return resultPromise.future();
         }
 
-        private void sendGivenCommandAndNextInQueueIfPossible(final KafkaBasedCommandContext commandContext,
-                final Supplier<Future<Void>> sendActionSupplier, final Promise<Void> sendActionCompletedPromise) {
+        private void sendGivenCommandAndNextInQueueIfPossible(
+                final KafkaBasedCommandContext commandContext,
+                final Supplier<Future<Void>> sendActionSupplier,
+                final Promise<Void> sendActionCompletedPromise,
+                final boolean completedPromiseJustCreated) {
+
             LOG.trace("sending [{}]", commandContext.getCommand());
-            sendActionSupplier.get()
-                    .onComplete(sendActionCompletedPromise);
-            sendNextCommandInQueueIfPossible();
+            final Future<Void> sendActionFuture = sendActionSupplier.get();
+            sendActionFuture.onComplete(sendActionCompletedPromise);
+
+            if (!queue.isEmpty()) {
+                if (sendActionFuture.isComplete() && completedPromiseJustCreated) {
+                    // send action directly finished the result future (without any vert.x decoupling) and the completedPromise can't have any handlers yet;
+                    // trigger next-command handling asynchronously, so that a sendActionFuture handler can first be set and run, before handling next commands
+                    vertxContext.runOnContext(v -> sendNextCommandInQueueIfPossible());
+                } else {
+                    sendNextCommandInQueueIfPossible();
+                }
+            }
         }
 
         private void sendNextCommandInQueueIfPossible() {
             Optional.ofNullable(queue.peek())
                     // sendActionSupplierAndResultPromise not null means command is ready to be sent
                     .map(this::getSendActionSupplierAndResultPromise)
-                    .ifPresent(pair -> sendGivenCommandAndNextInQueueIfPossible(queue.remove(), pair.one(), pair.two()));
+                    .ifPresent(pair -> sendGivenCommandAndNextInQueueIfPossible(queue.remove(), pair.one(), pair.two(), false));
         }
 
         private Pair<Supplier<Future<Void>>, Promise<Void>> getSendActionSupplierAndResultPromise(
