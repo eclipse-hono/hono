@@ -30,6 +30,15 @@
     ]
   },
   {
+    "name" : "org.infinispan.persistence.file.SingleFileStore",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
     "name" : "java.util.Arrays$ArrayList",
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,

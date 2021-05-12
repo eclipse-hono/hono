@@ -18,12 +18,14 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Support for uplink messages from the Embedded LNS on MultiTech gateways.
 * The *hono.connections.attempts* metric has been extended with a `cipher-suite` tag which contains the name of the
   cipher suite that is used in a device's attempt to establish a TLS based connection to an adapter.
+* The Quarkus based Command Router native image failed to start an embedded cache that was configured to persist data
+  to the local file system. This has been fixed.
 
 ### Deprecations
 
 * The `org.eclipse.hono.client.ApplicationClientFactory`, `org.eclipse.hono.client.AsyncCommandClient` and
-  `org.eclipse.hono.client.CommandClient` are deprecated.
-  Use `org.eclipse.hono.application.client.ApplicationClient` instead.
+  `org.eclipse.hono.client.CommandClient` classes have been deprecated. Client code should use
+  `org.eclipse.hono.application.client.ApplicationClient` instead.
 
 ## 1.7.1
 
