@@ -13,8 +13,20 @@
  -->
 <infinispan>
   <cache-container default-cache="command-router">
-    <local-cache name="command-router" simple-cache="true">
-      <memory max-count="200" when-full="REMOVE"/>
+    <global-state>
+      <persistent-location path="/var/lib/hono"/>
+    </global-state>
+    <local-cache name="command-router">
+      <persistence passivation="false">
+        <file-store
+            shared="false"
+            preload="true"
+            fetch-state="false"
+            read-only="false"
+            purge="false"
+            path="command-router">
+        </file-store>
+      </persistence>
     </local-cache>
   </cache-container>
 </infinispan>

@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.7.2 (not released yet)
+
+### Fixes & Enhancements
+
+* The Quarkus based Command Router native image failed to start an embedded cache that was configured to persist data
+  to the local file system. This has been fixed.
+
 ## 1.7.1
 
 ### Fixes & Enhancements
