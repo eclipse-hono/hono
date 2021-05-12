@@ -443,7 +443,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.postgres.disabled>false</hono.postgres.disabled>
         <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
         <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,${logging.profile}</hono.deviceregistry.spring.profiles>
+        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
         <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
         <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
         <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
@@ -571,20 +571,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <skip>${hono.postgres.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${postgresql-image.name}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>sql</id>
-                        <fileSet>
-                          <directory>${project.build.directory}/../../services/base-jdbc/src/main/resources/sql/postgresql</directory>
-                          <outputDirectory>docker-entrypoint-initdb.d</outputDirectory>
-                          <includes>
-                            <include>**/*</include>
-                          </includes>
-                        </fileSet>
-                      </inline>
-                    </assembly>
                   </build>
                   <run>
                     <skip>${hono.postgres.disabled}</skip>
