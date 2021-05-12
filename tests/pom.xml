@@ -564,37 +564,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>false</startParallel>
               <images>
-                <!-- ##### PostgreSQL instance for the device registry ##### -->
-                <image>
-                  <name>${docker.repository}/hono-postgres-test:${project.version}</name>
-                  <build>
-                    <skip>${hono.postgres.disabled}</skip>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${postgresql-image.name}</from>
-                  </build>
-                  <run>
-                    <skip>${hono.postgres.disabled}</skip>
-                    <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
-                    <network>
-                      <mode>custom</mode>
-                      <name>hono</name>
-                      <alias>${hono.jdbc.db.host}</alias>
-                    </network>
-                    <memorySwap>134217728</memorySwap>
-                    <memory>134217728</memory>
-                    <env>
-                      <POSTGRES_PASSWORD>${hono.jdbc.db.admin.password}</POSTGRES_PASSWORD>
-                    </env>
-                    <log>
-                      <prefix>POSTGRES</prefix>
-                      <color>${log.color.hono-device-registry}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <log>.*(listening on IPv4 address).*</log>
-                    </wait>
-                  </run>
-                </image>
                 <!-- ##### Mongo DB instance for the device registry ##### -->
                 <image>
                   <name>${docker.repository}/hono-mongodb-test:${project.version}</name>
@@ -648,6 +617,33 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <log>.*(waiting for connections on port).*</log>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### PostgreSQL instance for the device registry ##### -->
+                <image>
+                  <name>${postgresql-image.name}</name>
+                  <run>
+                    <skip>${hono.postgres.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>${hono.jdbc.db.host}</alias>
+                    </network>
+                    <memorySwap>134217728</memorySwap>
+                    <memory>134217728</memory>
+                    <env>
+                      <POSTGRES_PASSWORD>${hono.jdbc.db.admin.password}</POSTGRES_PASSWORD>
+                    </env>
+                    <log>
+                      <prefix>POSTGRES</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(listening on IPv4 address).*</log>
                     </wait>
                   </run>
                 </image>
@@ -1672,7 +1668,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <configuration>
                   <removeVolumes>true</removeVolumes>
                   <removeNamePattern>**/hono-*-test:*</removeNamePattern>
-                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*</stopNamePattern>
+                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*,postgres-*</stopNamePattern>
                 </configuration>
               </execution>
             </executions>
