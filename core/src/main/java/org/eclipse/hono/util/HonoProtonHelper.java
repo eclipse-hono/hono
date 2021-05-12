@@ -154,6 +154,8 @@ public final class HonoProtonHelper {
 
     /**
      * Checks if a link is established.
+     * <p>
+     * Note that this only applies to a link which has originally been created by the local peer.
      *
      * @param link The link to check.
      * @return {@code true} if the link has been established.
@@ -178,14 +180,26 @@ public final class HonoProtonHelper {
         if (link != null && link.isOpen()) {
             if (link.getSession() != null && link.getSession().getConnection() != null
                     && !link.getSession().getConnection().isDisconnected()) {
-                return true;                
+                return true;
             }
-            final String localLinkAddress = link instanceof ProtonSender ? link.getTarget().getAddress()
-                    : link.getSource().getAddress();
-            LOG.debug("{} link [address: {}] is locally open but underlying transport is disconnected",
-                    link instanceof ProtonSender ? "sender" : "receiver", localLinkAddress);
+            LOG.debug("{} link [source: {}, target: {}] is locally open but underlying transport is disconnected",
+                    link instanceof ProtonSender ? "sender" : "receiver", getRemoteOrLocalSourceAddress(link), getRemoteOrLocalTargetAddress(link));
         }
         return false;
+    }
+
+    private static String getRemoteOrLocalSourceAddress(final ProtonLink<?> link) {
+        if (link != null && link.getRemoteSource() != null) {
+            return link.getRemoteSource().getAddress();
+        }
+        return link != null && link.getSource() != null ? link.getSource().getAddress() : null;
+    }
+
+    private static String getRemoteOrLocalTargetAddress(final ProtonLink<?> link) {
+        if (link != null && link.getRemoteTarget() != null) {
+            return link.getRemoteTarget().getAddress();
+        }
+        return link != null && link.getTarget() != null ? link.getTarget().getAddress() : null;
     }
 
     /**
