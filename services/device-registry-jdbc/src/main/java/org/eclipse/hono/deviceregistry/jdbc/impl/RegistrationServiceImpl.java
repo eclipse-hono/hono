@@ -14,13 +14,17 @@
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 import java.util.Set;
 
+import org.eclipse.hono.deviceregistry.jdbc.SchemaCreator;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -31,15 +35,21 @@ import io.vertx.core.json.JsonObject;
  */
 public class RegistrationServiceImpl extends AbstractRegistrationService {
 
+    private static final Logger log = LoggerFactory.getLogger(RegistrationServiceImpl.class);
+
     private final TableAdapterStore store;
+    private final SchemaCreator schemaCreator;
 
     /**
      * Create a new instance.
      *
      * @param store The backing store to use.
+     * @param schemaCreator The schema creator to use.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public RegistrationServiceImpl(final TableAdapterStore store) {
-        this.store = store;
+    public RegistrationServiceImpl(final TableAdapterStore store, final SchemaCreator schemaCreator) {
+        this.store = Objects.requireNonNull(store);
+        this.schemaCreator = Objects.requireNonNull(schemaCreator);
     }
 
     @Override
@@ -67,4 +77,11 @@ public class RegistrationServiceImpl extends AbstractRegistrationService {
                 .resolveGroupMembers(tenantId, viaGroups, span.context());
 
     }
+
+    @Override
+    public Future<Void> startInternal() {
+        log.debug("starting registration service");
+        return schemaCreator.createDbSchema();
+    }
+
 }

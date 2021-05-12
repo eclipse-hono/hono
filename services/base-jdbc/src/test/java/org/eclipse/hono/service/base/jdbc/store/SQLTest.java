@@ -14,9 +14,12 @@
 package org.eclipse.hono.service.base.jdbc.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -45,6 +48,16 @@ public class SQLTest {
     @MethodSource("typeDetectorValue")
     public void testTypeDetector(final String url, final String expected) {
         assertEquals(expected, SQL.getDatabaseDialect(url));
+    }
+
+    /**
+     * Verifies that <em>h2</em> and <em>postgresql</em> are considered as supported dialects.
+     */
+    @Test
+    public void testIsSupportedDatabaseDialect() {
+        assertTrue(SQL.isSupportedDatabaseDialect("h2"));
+        assertTrue(SQL.isSupportedDatabaseDialect("postgresql"));
+        assertFalse(SQL.isSupportedDatabaseDialect("foo"));
     }
 
 }
