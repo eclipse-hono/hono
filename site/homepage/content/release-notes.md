@@ -10,6 +10,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The Quarkus based Command Router native image failed to start an embedded cache that was configured to persist data
   to the local file system. This has been fixed.
+* The delivery of a command message sent to an AMQP device potentially didn't get settled if the connection to the
+  AMQP device got disconnected. This has been fixed.
 
 ## 1.7.1
 
