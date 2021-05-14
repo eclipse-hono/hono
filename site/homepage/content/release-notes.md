@@ -9,6 +9,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### New Features
 
 * The CoAP adapter now supports authentication of client certificates using ECDSA based cipher suites.
+* The JDBC-based device registry implementation now supports the automatic creation of the database schema, both for
+  device registration and tenant data. This is especially useful for experimental setups where an embedded database,
+  such [as H2 provides](http://www.h2database.com/html/features.html#embedded_databases), is sufficient. To enable
+  automatic schema creation, activate the application profile `create-schema`.
 
 ### Fixes & Enhancements
 
