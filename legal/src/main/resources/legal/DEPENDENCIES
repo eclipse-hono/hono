@@ -23,6 +23,7 @@ maven/mavencentral/io.dropwizard.metrics/metrics-core/4.1.14, Apache-2.0, approv
 maven/mavencentral/io.dropwizard.metrics/metrics-graphite/4.1.14, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-client/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-core/1.5.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.jaegertracing/jaeger-micrometer/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-thrift/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-tracerresolver/1.5.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jsonwebtoken/jjwt-api/0.11.2, Apache-2.0, approved, clearlydefined

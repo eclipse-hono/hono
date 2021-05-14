@@ -23,6 +23,7 @@ io.dropwizard.metrics:metrics-core:jar:4.1.14
 io.dropwizard.metrics:metrics-graphite:jar:4.1.14
 io.jaegertracing:jaeger-client:jar:1.5.0
 io.jaegertracing:jaeger-core:jar:1.5.0
+io.jaegertracing:jaeger-micrometer:jar:1.5.0
 io.jaegertracing:jaeger-thrift:jar:1.5.0
 io.jaegertracing:jaeger-tracerresolver:jar:1.5.0
 io.jsonwebtoken:jjwt-api:jar:0.11.2
