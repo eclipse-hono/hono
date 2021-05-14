@@ -356,7 +356,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The default regular expression to validate device IDs supplied when creating devices are legal.
      */
-    public static final String DEFAULT_DEVICE_ID_PATTERN = "^[a-zA-Z0-9-_\\.:]+$";
+    public static final String DEFAULT_DEVICE_ID_PATTERN = "^[a-zA-Z0-9-_\\.:=]+$";
 
     /**
      * The name of the field that contains a boolean indicating if an entity was auto-provisioned.
@@ -375,6 +375,19 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_AUTO_PROVISION_AS_GATEWAY = "auto-provision-as-gateway";
 
+    /**
+     * The name of the property that defines the device identifier template for the devices/gateways
+     * being auto-provisioned.
+     */
+    public static final String FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE = "auto-provisioning-device-id-template";
+    /**
+     * The name of the place holder for subject DN in the device-id template used during auto-provisioning.
+     */
+    public static final String PLACEHOLDER_SUBJECT_DN = "{{subject-dn}}";
+    /**
+     * The name of the place holder for subject DN's Common Name in the device-id template used during auto-provisioning.
+     */
+    public static final String PLACEHOLDER_SUBJECT_CN = "{{subject-cn}}";
     /**
      * The name of the field that contains a boolean indicating if a notification for an auto-provisioned device was sent.
      */

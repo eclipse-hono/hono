@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,7 +45,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,46 +63,40 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class AutoProvisioningTest {
 
-    private static X509Certificate CERT;
-    private static String SUBJECT_DN;
-    private static Tenant TENANT_INFO;
-
-    private String tenantId;
-    private String deviceId;
     private DeviceManagementService deviceManagementService;
     private CredentialsManagementService credentialsManagementService;
     private TenantInformationService tenantInformationService;
+    private String fqdn;
+    private X509Certificate cert;
+    private String subjectDn;
+    private String deviceId;
+    private String tenantId;
+    private Tenant tenant;
 
     /**
-     * Sets up class fixture.
+     * Initializes common fixture.
      *
      * @throws GeneralSecurityException if the self signed certificate cannot be created.
      * @throws IOException if the self signed certificate cannot be read.
      */
-    @BeforeAll
-    public static void setup() throws GeneralSecurityException, IOException {
-        final SelfSignedCertificate ssc = SelfSignedCertificate.create("test.org");
-        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        final TrustedCertificateAuthority trustedCA;
-
-        CERT = (X509Certificate) factory.generateCertificate(new FileInputStream(ssc.certificatePath()));
-        SUBJECT_DN = CERT.getSubjectX500Principal().getName(X500Principal.RFC2253);
-        trustedCA = new TrustedCertificateAuthority().setCertificate(CERT.getEncoded());
-        TENANT_INFO = new Tenant().setTrustedCertificateAuthorities(List.of(trustedCA));
-    }
-
-    /**
-     * Initializes common fixture.
-     */
     @BeforeEach
-    public void init() {
+    public void init() throws GeneralSecurityException, IOException {
         tenantId = UUID.randomUUID().toString();
         deviceId = UUID.randomUUID().toString();
+        fqdn = UUID.randomUUID().toString();
+        final SelfSignedCertificate ssc = SelfSignedCertificate.create(fqdn);
+        cert = (X509Certificate) CertificateFactory.getInstance("X.509")
+                .generateCertificate(new FileInputStream(ssc.certificatePath()));
+        subjectDn = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+
+        final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority()
+                .setCertificate(cert.getEncoded());
+        tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustedCertificateAuthority));
+        tenantInformationService = mock(TenantInformationService.class);
+        when(tenantInformationService.getTenant(eq(tenantId), any())).thenReturn(Future.succeededFuture(tenant));
+
         deviceManagementService = mock(DeviceManagementService.class);
         credentialsManagementService = mock(CredentialsManagementService.class);
-        tenantInformationService = mock(TenantInformationService.class);
-
-        when(tenantInformationService.getTenant(eq(tenantId), any())).thenReturn(Future.succeededFuture(TENANT_INFO));
     }
 
     /**
@@ -113,8 +107,22 @@ public class AutoProvisioningTest {
      */
     @Test
     public void testProvisionDeviceSucceeds(final VertxTestContext ctx) throws CertificateEncodingException {
-        testProvisionSucceeds(ctx, false);
+        testProvisionSucceeds(ctx, false, null, deviceId);
     }
+
+    /**
+     * Verifies that auto-provisioning of a device succeeds and a device identifier is generated in 
+     * accordance with the device-id template configured in the corresponding tenant's trusted CA entry.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateEncodingException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testProvisionDeviceWithDeviceIdTemplateSucceeds(final VertxTestContext ctx) throws CertificateEncodingException {
+        deviceId = "device-" + fqdn;
+        testProvisionSucceeds(ctx, false, "device-{{subject-cn}}", "device-" + fqdn);
+    }
+
     /**
      * Verifies that auto-provisioning of a gateway succeeds.
      *
@@ -123,7 +131,19 @@ public class AutoProvisioningTest {
      */
     @Test
     public void testProvisionGatewaySucceeds(final VertxTestContext ctx) throws CertificateEncodingException {
-        testProvisionSucceeds(ctx, true);
+        testProvisionSucceeds(ctx, true, null , deviceId);
+    }
+
+    /**
+     * Verifies that auto-provisioning of a gateway succeeds and a device identifier is generated in
+     * accordance with the device-id template configured in the corresponding tenant's trusted CA entry.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateEncodingException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testProvisionGatewayWithDeviceIdTemplateSucceeds(final VertxTestContext ctx) throws CertificateEncodingException {
+        testProvisionSucceeds(ctx, true, "device-{{subject-dn}}", "device-" + subjectDn);
     }
 
     /**
@@ -136,11 +156,11 @@ public class AutoProvisioningTest {
     @Test
     public void testProvisionDeviceWhenNotEnabled(final VertxTestContext ctx) {
         //GIVEN a tenant CA with auto-provisioning not enabled
-        TENANT_INFO.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
+        tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
 
         // WHEN provisioning a device from a certificate
         AutoProvisioning
-                .provisionIfEnabled(tenantId, SUBJECT_DN, new JsonObject(), credentialsManagementService,
+                .provisionIfEnabled(tenantId, subjectDn, new JsonObject(), credentialsManagementService,
                         deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
@@ -166,9 +186,9 @@ public class AutoProvisioningTest {
     public void testDeviceRegistrationIsRemovedWhenAutoProvisionFails(final VertxTestContext ctx)
             throws CertificateEncodingException {
         // GIVEN a tenant CA with auto-provisioning enabled
-        TENANT_INFO.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
+        tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
         final JsonObject clientContext = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT,
-                CERT.getEncoded());
+                cert.getEncoded());
 
         when(deviceManagementService.createDevice(eq(tenantId), any(), any(), any()))
                 .thenReturn(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED, Id.of(deviceId),
@@ -181,7 +201,7 @@ public class AutoProvisioningTest {
 
         // WHEN provisioning a device from a certificate
         AutoProvisioning
-                .provisionIfEnabled(tenantId, SUBJECT_DN, clientContext, credentialsManagementService,
+                .provisionIfEnabled(tenantId, subjectDn, clientContext, credentialsManagementService,
                         deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
@@ -200,11 +220,11 @@ public class AutoProvisioningTest {
     }
 
     @SuppressWarnings("unchecked")
-    private void testProvisionSucceeds(final VertxTestContext ctx, final boolean isGateway)
-            throws CertificateEncodingException {
-        final TrustedCertificateAuthority trustedCA = TENANT_INFO.getTrustedCertificateAuthorities().get(0);
+    private void testProvisionSucceeds(final VertxTestContext ctx, final boolean isGateway,
+            final String deviceIdTemplate, final String expectedDeviceId) throws CertificateEncodingException {
+        final TrustedCertificateAuthority trustedCA = tenant.getTrustedCertificateAuthorities().get(0);
         final JsonObject clientContext = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT,
-                CERT.getEncoded());
+                cert.getEncoded());
 
         // GIVEN a tenant CA with auto-provisioning enabled
         trustedCA.setAutoProvisioningEnabled(true);
@@ -214,15 +234,32 @@ public class AutoProvisioningTest {
             trustedCA.setAutoProvisioningAsGatewayEnabled(true);
         }
 
-        when(deviceManagementService.createDevice(eq(tenantId), any(), any(), any()))
-                .thenReturn(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED, Id.of(deviceId),
-                        Optional.empty(), Optional.empty())));
-        when(credentialsManagementService.updateCredentials(eq(tenantId), eq(deviceId), any(), any(),
+        // Set the device id template if available
+        Optional.ofNullable(deviceIdTemplate)
+                .ifPresent(trustedCA::setAutoProvisioningDeviceIdTemplate);
+
+        doAnswer(invocation -> {
+            final Optional<String> optionalDeviceId = invocation.getArgument(1);
+            if (deviceIdTemplate != null) {
+                // Verify that the device id generated based on the configured template is used
+                // while registering device/gateway.
+                assertThat(optionalDeviceId).isPresent();
+                assertThat(optionalDeviceId.get()).isEqualTo(expectedDeviceId);
+            } else {
+                // Verify that no device id is provided during device/gateway registration
+                // when no device id template is configured
+                assertThat(optionalDeviceId).isEmpty();
+            }
+            return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED, Id.of(expectedDeviceId),
+                    Optional.empty(), Optional.empty()));
+        }).when(deviceManagementService).createDevice(eq(tenantId), any(), any(), any());
+
+        when(credentialsManagementService.updateCredentials(eq(tenantId), eq(expectedDeviceId), any(), any(),
                 any())).thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
 
         // WHEN provisioning a device/gateway from a certificate
         AutoProvisioning
-                .provisionIfEnabled(tenantId, SUBJECT_DN, clientContext, credentialsManagementService,
+                .provisionIfEnabled(tenantId, subjectDn, clientContext, credentialsManagementService,
                         deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
@@ -239,21 +276,21 @@ public class AutoProvisioningTest {
 
                         //VERIFY that the correct credentials are stored
                         final ArgumentCaptor<List<CommonCredential>> credentialsCaptor = ArgumentCaptor.forClass(List.class);
-                        verify(credentialsManagementService).updateCredentials(eq(tenantId), eq(deviceId),
+                        verify(credentialsManagementService).updateCredentials(eq(tenantId), eq(expectedDeviceId),
                                 credentialsCaptor.capture(), any(), any());
                         final List<CommonCredential> credentialsCaptorValue = credentialsCaptor.getValue();
                         assertThat(credentialsCaptorValue.size()).isEqualTo(1);
                         assertThat(credentialsCaptorValue.get(0).getType())
                                 .isEqualTo(RegistryManagementConstants.SECRETS_TYPE_X509_CERT);
-                        assertThat(credentialsCaptorValue.get(0).getAuthId()).isEqualTo(SUBJECT_DN);
+                        assertThat(credentialsCaptorValue.get(0).getAuthId()).isEqualTo(subjectDn);
 
                         //VERIFY the returned credentials result after successful auto-provisioning
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                         final JsonObject returnedCredential = result.getPayload();
                         assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID))
-                                .isEqualTo(deviceId);
+                                .isEqualTo(expectedDeviceId);
                         assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_AUTH_ID))
-                                .isEqualTo(SUBJECT_DN);
+                                .isEqualTo(subjectDn);
                         assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_TYPE))
                                 .isEqualTo(RegistryManagementConstants.SECRETS_TYPE_X509_CERT);
                     });

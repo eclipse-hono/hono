@@ -20,9 +20,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -32,6 +34,7 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -52,6 +55,8 @@ import io.vertx.core.json.JsonObject;
  */
 public final class AutoProvisioning {
     private static final Logger LOG = LoggerFactory.getLogger(AutoProvisioning.class);
+    private static final String QUOTED_PLACEHOLDER_SUBJECT_DN = Pattern.quote(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN);
+    private static final String QUOTED_PLACEHOLDER_SUBJECT_CN = Pattern.quote(RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN);
 
     private AutoProvisioning() {
     }
@@ -121,6 +126,7 @@ public final class AutoProvisioning {
                                     Tags.ERROR.set(span, Boolean.FALSE); // reset error tag
                                     return provision(
                                             tenantId,
+                                            generateDeviceIdFromTemplateIfConfigured(tenant, cert),
                                             authId,
                                             isProvisionAsGatewayEnabledForTenant(tenant, cert, span),
                                             deviceManagementService,
@@ -138,6 +144,7 @@ public final class AutoProvisioning {
 
     private static Future<CredentialsResult<JsonObject>> provision(
             final String tenantId,
+            final Optional<String> optionalDeviceId,
             final String authId,
             final boolean isGateway,
             final DeviceManagementService deviceManagementService,
@@ -157,7 +164,12 @@ public final class AutoProvisioning {
 
         // 1. create device
         final Device device = createDeviceInformation(isGateway, comment);
-        return deviceManagementService.createDevice(tenantId, Optional.empty(), device, span)
+        optionalDeviceId.ifPresent(id -> {
+            LOG.debug("generated [device-id: {}] based on the configured template", id);
+            TracingHelper.TAG_DEVICE_ID.set(span, id);
+            span.log("generated device-id based on the configured template");
+        });
+        return deviceManagementService.createDevice(tenantId, optionalDeviceId, device, span)
                 .compose(r -> {
                     if (r.isError()) {
                         LOG.warn("auto-provisioning failed: device could not be created [tenant-id: {}, auth-id: {}, status: {}]",
@@ -172,7 +184,9 @@ public final class AutoProvisioning {
                     certCredential.setEnabled(true).setComment(comment);
 
                     final String deviceId = r.getPayload().getId();
-                    TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+                    if (optionalDeviceId.isEmpty()) {
+                        TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+                    }
 
                     return credentialsManagementService
                             .updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
@@ -257,5 +271,26 @@ public final class AutoProvisioning {
 
     private static CredentialsResult<JsonObject> getCredentialsResult(final int status, final String message) {
         return CredentialsResult.from(status, new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, message));
+    }
+
+    private static Optional<String> generateDeviceIdFromTemplateIfConfigured(final Tenant tenant,
+            final X509Certificate clientCertificate) {
+        final String issuerDN = clientCertificate.getIssuerX500Principal().getName(X500Principal.RFC2253);
+        final String subjectDN = clientCertificate.getSubjectX500Principal().getName(X500Principal.RFC2253);
+        final String deviceIdTemplate = tenant.getAutoProvisioningDeviceIdTemplate(issuerDN);
+
+        return Optional.ofNullable(deviceIdTemplate)
+                .map(template -> template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN, subjectDN))
+                .map(template -> {
+                    if (template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN)) {
+                        return Optional.ofNullable(AuthenticationConstants.getCommonName(subjectDN))
+                                .map(cn -> template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_CN, cn))
+                                .orElseThrow(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                        String.format(
+                                                "error generating device id from template [%s] as Common Name is missing in client certificate's Subject DN",
+                                                deviceIdTemplate)));
+                    }
+                    return template;
+                });
     }
 }

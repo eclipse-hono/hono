@@ -57,6 +57,12 @@ The CA to be used by the devices needs to be configured. The following tasks mus
 If the Device Registry implementation provides the [Management API]({{< ref "/api/management" >}}), this could be done in a single step. 
 For details refer to the [Tenant API specification]({{< ref "/api/tenant#trusted-ca-format" >}}).
 
+The Device Registry generates a unique device identifier during auto-provisioning. If *auto-provisioning-device-id-template*
+is configured in the corresponding tenant's CA entry, then the device registry generates the device identifier based on
+the configured template. If not configured, then a random unique device identifier is generated. Refer to the 
+[Device Registry Management API]({{< ref "/api/management#tenants/createTenant" >}}) for more details on how to 
+configure a tenant's trusted CA authority for that.
+
 ##### Step 2: Connect an unregistered Device to Hono
 
 {{< figure src="auto-provisioning.svg" alt="A unregistered device connects to a protocol adapter which uses the Credentials API to provision it" title="Automatic Provisioning of a Device" >}}

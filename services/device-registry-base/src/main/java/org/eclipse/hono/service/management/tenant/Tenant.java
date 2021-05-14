@@ -502,6 +502,23 @@ public class Tenant {
                 .orElse(false);
     }
 
+    /**
+     * Gets the device-id template corresponding to the given subject DN, which is used for generating
+     * the device identifier of the device/gateway being auto-provisioned.
+     *
+     * @param subjectDn The subject DN of the tenant's CA.
+     * @return The device-id template corresponding to the given trusted CA or {@code null}.
+     * @throws NullPointerException if the subjectDN is {@code null}.
+     */
+    @JsonIgnore
+    public final String getAutoProvisioningDeviceIdTemplate(final String subjectDn) {
+        Objects.requireNonNull(subjectDn);
+
+        return getValidTrustedCA(subjectDn)
+                .map(TrustedCertificateAuthority::getAutoProvisioningDeviceIdTemplate)
+                .orElse(null);
+    }
+
     private Optional<TrustedCertificateAuthority> getValidTrustedCA(final String subjectDn) {
         if (trustedCertificateAuthorities == null) {
             return Optional.empty();

@@ -15,6 +15,7 @@
 package org.eclipse.hono.service.management.tenant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -72,11 +73,15 @@ class TrustedCertificateAuthorityTest {
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_INSTANT.format(notBefore))
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, DateTimeFormatter.ISO_INSTANT.format(notAfter))
-                .put(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, true);
+                .put(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, true)
+                .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE,
+                        "device-" + RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN);
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
         assertThat(authority.isValid()).isTrue();
         assertThat(authority.isAutoProvisioningAsGatewayEnabled()).isTrue();
+        assertThat(authority.getAutoProvisioningDeviceIdTemplate())
+                .isEqualTo("device-" + RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN);
         assertAuthority(authority);
     }
 
@@ -94,6 +99,7 @@ class TrustedCertificateAuthorityTest {
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
         assertThat(authority.isValid()).isTrue();
         assertThat(authority.isAutoProvisioningAsGatewayEnabled()).isFalse();
+        assertThat(authority.getAutoProvisioningDeviceIdTemplate()).isNull();
         assertAuthority(authority);
     }
 
@@ -121,6 +127,29 @@ class TrustedCertificateAuthorityTest {
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
         assertAuthority(authority);
         assertThat(authority.isAutoProvisioningAsGatewayEnabled()).isTrue();
+    }
+
+    /**
+     * Verifies that decoding of a trusted CA entry containing invalid
+     * {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE} value fails.
+     */
+    @Test
+    public void testDecodeTrustedCAWithInvalidDeviceIdTemplate() {
+        final Instant notBefore = certificate.getNotBefore().toInstant();
+        final Instant notAfter = certificate.getNotAfter().toInstant();
+        final JsonObject ca = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                        certificate.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE,
+                        DateTimeFormatter.ISO_INSTANT.format(notBefore))
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER,
+                        DateTimeFormatter.ISO_INSTANT.format(notAfter))
+                .put(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY, true)
+                .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE, "device");
+
+        assertThrows(IllegalArgumentException.class, () -> ca.mapTo(TrustedCertificateAuthority.class));
     }
 
     private void assertAuthority(final TrustedCertificateAuthority authority) {

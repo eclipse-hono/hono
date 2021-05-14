@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.net.HttpURLConnection;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -36,8 +37,10 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -154,34 +157,39 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final X509Certificate cert = createCertificate();
         final var tenant = Tenants.createTenantForTrustAnchor(cert);
         tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
-        final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
-        final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
 
-        tenantId = getHelper().getRandomTenantId();
-        getHelper().registry
-                .addTenant(tenantId, tenant)
-                .compose(ok -> getClient()
-                        // WHEN getting credentials
-                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
-                .onComplete(ctx.succeeding(result -> {
-                    // THEN the newly created credentials are returned...
-                    ctx.verify(() -> {
-                        assertThat(result).isNotNull();
-                        assertThat(result.isEnabled()).isTrue();
-                        assertThat(result.getDeviceId()).isNotNull();
-                        assertThat(result.getAuthId()).isEqualTo(authId);
-                        assertThat(result.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_X509_CERT);
-                        assertThat(result.getSecrets()).isNotNull();
-                        assertThat(result.getSecrets()).hasSize(1);
-                    });
+        testAutoProvisioningSucceeds(ctx, tenant, cert, false, null);
+    }
 
-                    getHelper().registry.getRegistrationInfo(tenantId, result.getDeviceId())
-                            .onComplete(ctx.succeeding(httpResponse -> {
-                                // AND the device has been registered as well
-                                ctx.verify(() -> assertThat(httpResponse.bodyAsJson(Device.class).isEnabled()).isTrue());
-                                ctx.completeNow();
-                            }));
-                }));
+    /**
+     * Verifies when no credentials are found and if the properties related to auto-provisioning of devices are 
+     * enabled, the device id template is configured in the corresponding tenant's CA entry and the client context 
+     * contains a serialized X.509 certificate then a device is auto-provisioned.
+     * (i.e A device is registered and it's corresponding credentials are stored).
+     * <p>
+     * Also verify that the device is auto-provisioned with a device id generated in accordance
+     * with the configured device id template.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateException if the self signed certificate cannot be created.
+     * @throws FileNotFoundException if the self signed certificate cannot be read.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCredentialsWithDeviceAutoProvisioningUsingDeviceIdTemplate(final VertxTestContext ctx)
+            throws CertificateException, FileNotFoundException {
+
+        // GIVEN a tenant's trusted CA entry with auto-provisioning enabled
+        // while device has not been registered and no credentials are stored yet
+        final X509Certificate cert = createCertificate();
+        final var tenant = Tenants.createTenantForTrustAnchor(cert);
+        tenant.getTrustedCertificateAuthorities()
+                .get(0)
+                .setAutoProvisioningEnabled(true)
+                .setAutoProvisioningDeviceIdTemplate("test-device-{{subject-dn}}");
+        final String expectedDeviceId = "test-device-" + cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+
+        testAutoProvisioningSucceeds(ctx, tenant, cert, false, expectedDeviceId);
     }
 
     /**
@@ -199,7 +207,6 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
             throws CertificateException, FileNotFoundException {
 
         // GIVEN a tenant's trusted CA entry with auto-provisioning and auto-provision as gateway enabled
-        // and a client context that contains a client certificate
         // while device has not been registered and no credentials are stored yet
         final X509Certificate cert = createCertificate();
         final var tenant = Tenants.createTenantForTrustAnchor(cert);
@@ -207,6 +214,46 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                 .get(0)
                 .setAutoProvisioningEnabled(true)
                 .setAutoProvisioningAsGatewayEnabled(true);
+
+        testAutoProvisioningSucceeds(ctx, tenant, cert, true, null);
+    }
+
+    /**
+     * Verifies when no credentials are found and if the properties related to auto-provisioning of gateways are 
+     * enabled, device id template is configured in the corresponding tenant's CA entry and the client context 
+     * contains a serialized X.509 certificate then a gateway is auto-provisioned.
+     * (i.e A gateway is registered and it's corresponding credentials are stored).
+     * <p>
+     * Also verify that the gateway is auto-provisioned with a device id generated in accordance
+     * with the configured device id template.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateException if the self signed certificate cannot be created.
+     * @throws FileNotFoundException if the self signed certificate cannot be read.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCredentialsWithGatewayAutoProvisioningUsingDeviceIdTemplate(final VertxTestContext ctx)
+            throws CertificateException, FileNotFoundException {
+
+        // GIVEN a tenant's trusted CA entry with auto-provisioning and auto-provision as gateway enabled
+        // while gateway has not been registered and no credentials are stored yet
+        final X509Certificate cert = createCertificate();
+        final var tenant = Tenants.createTenantForTrustAnchor(cert);
+        tenant.getTrustedCertificateAuthorities()
+                .get(0)
+                .setAutoProvisioningEnabled(true)
+                .setAutoProvisioningAsGatewayEnabled(true)
+                .setAutoProvisioningDeviceIdTemplate("test-device-{{subject-cn}}");
+        final String expectedDeviceId = "test-device-"
+                + AuthenticationConstants.getCommonName(cert.getSubjectX500Principal().getName(X500Principal.RFC2253));
+
+        testAutoProvisioningSucceeds(ctx, tenant, cert, true, expectedDeviceId);
+    }
+
+    private void testAutoProvisioningSucceeds(final VertxTestContext ctx, final Tenant tenant,
+            final X509Certificate cert, final boolean isGateway, final String expectedDeviceId) throws CertificateEncodingException {
+        // GIVEN a client context that contains a client certificate
         final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
         final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
 
@@ -226,18 +273,26 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                         assertThat(result.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_X509_CERT);
                         assertThat(result.getSecrets()).isNotNull();
                         assertThat(result.getSecrets()).hasSize(1);
+
+                        if (expectedDeviceId != null) {
+                            //VERIFY the generated device-id 
+                            assertThat(result.getDeviceId()).isEqualTo(expectedDeviceId);
+                        }
                     });
                     // WHEN getting device registration information
                     return getHelper().registry.getRegistrationInfo(tenantId, result.getDeviceId());
                 })
                 .onComplete(ctx.succeeding(result -> {
-                    // VERIFY that the gateway has been registered as well
-                    final Device gateway = result.bodyAsJson(Device.class);
+                    // VERIFY that the device/gateway has been registered as well
+                    final Device device = result.bodyAsJson(Device.class);
                     ctx.verify(() -> {
-                        assertThat(gateway.isEnabled()).isTrue();
-                        assertThat(gateway.getAuthorities()
-                                .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED))
-                                        .isTrue();
+                        assertThat(device.isEnabled()).isTrue();
+                        if (isGateway) {
+                            // VERIFY that the gateway related attributes are set
+                            assertThat(device.getAuthorities()
+                                    .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED))
+                                            .isTrue();
+                        }
                     });
                     ctx.completeNow();
                 }));

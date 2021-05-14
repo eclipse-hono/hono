@@ -21,6 +21,12 @@ description = "Information about changes in recent Hono releases. Includes new f
   [Gateway Provisioning]({{% doclink "/concepts/device-provisioning/#automatic-gateway-provisioning" %}})
   concept and to the [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}})
   on how to configure a tenant's trusted CA authority for that.
+* Now the tenant configuration supports a new property namely *auto-provisioning-device-id-template* in it's trusted CA 
+  section. During auto-provisioning of devices and gateways, the device identifier is generated based on this template 
+  and used for the device registration. For more information please refer to the
+  [Device Provisioning]({{% doclink "/concepts/device-provisioning/" %}}) concept and to the 
+  [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}})
+  on how to configure a tenant's trusted CA authority for that.
 
 ### Fixes & Enhancements
 
