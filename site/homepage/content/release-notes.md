@@ -24,6 +24,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   cipher suite that is used in a device's attempt to establish a TLS based connection to an adapter.
 * The Quarkus based Command Router native image failed to start an embedded cache that was configured to persist data
   to the local file system. This has been fixed.
+* The Prometheus based resource limit checks' performance has been improved. This should result in considerably less
+  load on the Prometheus server when failing over all of a crashed/stopped adapter instance's device connections.
 
 ### Deprecations
 
