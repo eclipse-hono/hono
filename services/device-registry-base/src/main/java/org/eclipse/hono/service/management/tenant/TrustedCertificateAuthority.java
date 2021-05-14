@@ -69,6 +69,9 @@ public class TrustedCertificateAuthority {
     @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY)
     private boolean autoProvisioningAsGatewayEnabled;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE)
+    private String autoProvisioningDeviceIdTemplate;
+
     /**
      * Checks if this object contains all required data.
      *
@@ -310,5 +313,44 @@ public class TrustedCertificateAuthority {
     public final TrustedCertificateAuthority setAutoProvisioningAsGatewayEnabled(final boolean enabled) {
         this.autoProvisioningAsGatewayEnabled = enabled;
         return this;
+    }
+
+    /**
+     * Gets the template used for generating the device identifier of the device/gateway 
+     * being auto-provisioned.
+     *
+     * @return the template to use during auto-provisioning to generate device identifier.
+     */
+    public final String getAutoProvisioningDeviceIdTemplate() {
+        return autoProvisioningDeviceIdTemplate;
+    }
+
+    /**
+     * Sets the template used for generating the device identifier of the device/gateway being auto-provisioned.
+     *
+     * @param template the template to use during auto-provisioning to generate device identifier.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if the device id template is {@code null}.
+     * @throws IllegalArgumentException if the device id template does not contain
+     *             {@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} or
+     *             {@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN}.
+     */
+    public final TrustedCertificateAuthority setAutoProvisioningDeviceIdTemplate(final String template) {
+        verifyDeviceIdTemplate(template);
+
+        this.autoProvisioningDeviceIdTemplate = template;
+        return this;
+    }
+
+    private static void verifyDeviceIdTemplate(final String template) {
+        Objects.requireNonNull(template);
+
+        if (!template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN) &&
+                !template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN)) {
+            throw new IllegalArgumentException(
+                    String.format("device-id template must contain at least one of these placeholders [%s, %s]",
+                            RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN,
+                            RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN));
+        }
     }
 }
