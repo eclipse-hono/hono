@@ -167,7 +167,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_PORT`<br>`--hono.resourceLimits.prometheusBased.port` | no | `9090` | The port of the Prometheus server to retrieve metrics data from. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHEMINSIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMinSize` | no | `20`   | The minimum size of the cache to store the metrics data retrieved from the Prometheus server. The cache is used for storing the current amount of data exchanged with devices of tenants. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHEMAXSIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the Prometheus server. |
-| `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHETIMEOUT`<br>`--hono.resourceLimits.prometheusBased.cacheTimeout` | no | `15`   | The number of seconds after which the cached metrics data should be considered invalid. |
+| `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHETIMEOUT`<br>`--hono.resourceLimits.prometheusBased.cacheTimeout` | no | `60`   | The number of seconds after which the cached metrics data should be considered invalid. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CONNECTTIMEOUT`<br>`--hono.resourceLimits.prometheusBased.connectTimeout` | no | `1000` | The maximum number of milliseconds that the adapter waits for a TCP connection to a Prometheus server to be established.|
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_QUERYTIMEOUT`<br>`--hono.resourceLimits.prometheusBased.queryTimeout` | no | `500`  | The number of milliseconds after which a request to a Prometheus server is closed. Setting zero or a negative value disables the timeout.|
 

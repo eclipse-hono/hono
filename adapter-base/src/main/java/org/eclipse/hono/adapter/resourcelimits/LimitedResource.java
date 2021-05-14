@@ -24,7 +24,7 @@ public final class LimitedResource<V> {
     private final V currentValue;
     private final V currentLimit;
 
-    /**
+   /**
      * Creates a new instance for a limit and a current value.
      *
      * @param currentLimit The limit calculated for the value.
@@ -45,7 +45,7 @@ public final class LimitedResource<V> {
     }
 
     /**
-     * @return The currentLimit.
+     * @return The currentLimit or {@code null} if there is no limit defined.
      */
     public V getCurrentLimit() {
         return currentLimit;

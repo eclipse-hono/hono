@@ -12,9 +12,11 @@
  */
 package org.eclipse.hono.adapter.quarkus;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -48,7 +50,13 @@ import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.quarkus.ConnectionEventProducerConfig;
+import org.eclipse.hono.adapter.resourcelimits.ConnectedDevicesAsyncCacheLoader;
+import org.eclipse.hono.adapter.resourcelimits.ConnectionDurationAsyncCacheLoader;
+import org.eclipse.hono.adapter.resourcelimits.DataVolumeAsyncCacheLoader;
+import org.eclipse.hono.adapter.resourcelimits.NoopResourceLimitChecks;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.adapter.resourcelimits.quarkus.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
@@ -72,6 +80,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
 import io.quarkus.arc.config.ConfigPrefix;
@@ -82,6 +91,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 
 /**
  * A Quarkus main application base class for Hono protocol adapters.
@@ -108,7 +119,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected HealthCheckServer healthCheckServer;
 
     @Inject
-    protected ResourceLimitChecks resourceLimitChecks;
+    protected PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
 
     @Inject
     protected ConnectionEventProducerConfig connectionEventsConfig;
@@ -271,14 +282,15 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             protocolAdapterProperties));
         }
 
+        final var tenantClient = tenantClient();
         adapter.setMessagingClients(new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders));
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
-        adapter.setResourceLimitChecks(resourceLimitChecks);
-        adapter.setTenantClient(tenantClient());
+        adapter.setResourceLimitChecks(prometheusResourceLimitChecks(resourceLimitChecksConfig, tenantClient));
+        adapter.setTenantClient(tenantClient);
         adapter.setTracer(tracer);
     }
 
@@ -472,4 +484,53 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         return props;
     }
 
+    /**
+     * Creates resource limit checks based on data retrieved from a Prometheus server
+     * via its HTTP API.
+     *
+     * @param config The configuration properties.
+     * @param tenantClient The client to use for retrieving tenant configuration data.
+     * @throws NullPointerException if any of the parameters are {@code null}-
+     * @return The checks.
+     */
+    protected ResourceLimitChecks prometheusResourceLimitChecks(
+            final PrometheusBasedResourceLimitChecksConfig config,
+            final TenantClient tenantClient) {
+
+        Objects.requireNonNull(config);
+        Objects.requireNonNull(tenantClient);
+
+        if (config.isHostConfigured()) {
+            final WebClientOptions webClientOptions = new WebClientOptions();
+            webClientOptions.setConnectTimeout(config.getConnectTimeout());
+            webClientOptions.setDefaultHost(config.getHost());
+            webClientOptions.setDefaultPort(config.getPort());
+            webClientOptions.setTrustOptions(config.getTrustOptions());
+            webClientOptions.setKeyCertOptions(config.getKeyCertOptions());
+            webClientOptions.setSsl(config.isTlsEnabled());
+
+            final var webClient = WebClient.create(vertx, webClientOptions);
+            final var cacheTimeout = Duration.ofSeconds(config.getCacheTimeout());
+            final Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                    // make sure we run one Prometheus query at a time
+                    .executor(Executors.newSingleThreadExecutor(r -> {
+                        final var t = new Thread(r);
+                        t.setDaemon(true);
+                        return t;
+                    }))
+                    .initialCapacity(config.getCacheMinSize())
+                    .maximumSize(config.getCacheMaxSize())
+                    .expireAfterWrite(cacheTimeout)
+                    .refreshAfterWrite(cacheTimeout.dividedBy(2));
+
+            return new PrometheusBasedResourceLimitChecks(
+                    builder.buildAsync(new ConnectedDevicesAsyncCacheLoader(webClient, config, tracer)),
+                    builder.buildAsync(new ConnectionDurationAsyncCacheLoader(webClient, config, tracer)),
+                    builder.buildAsync(new DataVolumeAsyncCacheLoader(webClient, config, tracer)),
+                    tenantClient,
+                    tracer);
+        } else {
+            return new NoopResourceLimitChecks();
+        }
+    }
 }

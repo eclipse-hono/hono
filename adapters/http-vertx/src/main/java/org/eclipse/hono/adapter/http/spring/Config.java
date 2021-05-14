@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,10 @@
 
 package org.eclipse.hono.adapter.http.spring;
 
-import java.util.Optional;
-
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -48,19 +45,16 @@ public class Config extends AbstractAdapterConfig {
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
-     * @param resourceLimitChecks The component to use for checking if the adapter's
-     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
     @Scope("prototype")
     public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final HttpAdapterMetrics metrics,
-            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+            final HttpAdapterMetrics metrics) {
 
         final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
-        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        setCollaborators(adapter, adapterProperties(), samplerFactory);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
         return adapter;

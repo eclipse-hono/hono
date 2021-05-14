@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,13 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp.spring;
 
-import java.util.Optional;
-
 import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
 import org.eclipse.hono.adapter.amqp.VertxBasedAmqpProtocolAdapter;
-import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -47,19 +44,16 @@ public class Config extends AbstractAdapterConfig {
      *
      * @param samplerFactory The sampler factory to use.
      * @param metrics The component to use for reporting metrics.
-     * @param resourceLimitChecks The component to use for checking if the adapter's
-     *                            resource limits are exceeded.
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER)
     @Scope("prototype")
     public VertxBasedAmqpProtocolAdapter vertxBasedAmqpProtocolAdapter(
             final SendMessageSampler.Factory samplerFactory,
-            final AmqpAdapterMetrics metrics,
-            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+            final AmqpAdapterMetrics metrics) {
 
         final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
-        setCollaborators(adapter, adapterProperties(), samplerFactory, resourceLimitChecks);
+        setCollaborators(adapter, adapterProperties(), samplerFactory);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);
         return adapter;

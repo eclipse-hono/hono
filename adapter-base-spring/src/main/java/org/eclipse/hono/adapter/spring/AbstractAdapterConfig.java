@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.spring;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
@@ -38,6 +39,9 @@ import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
+import org.eclipse.hono.adapter.resourcelimits.ConnectedDevicesAsyncCacheLoader;
+import org.eclipse.hono.adapter.resourcelimits.ConnectionDurationAsyncCacheLoader;
+import org.eclipse.hono.adapter.resourcelimits.DataVolumeAsyncCacheLoader;
 import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
@@ -67,7 +71,6 @@ import org.eclipse.hono.util.TenantResult;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -104,15 +107,12 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * @param adapter The adapter to set the collaborators on.
      * @param adapterProperties The adapter's configuration properties.
      * @param samplerFactory The sampler factory to use.
-     * @param resourceLimitChecks The component to use for checking if the adapter's
-     *                            resource limits are exceeded.
-     * @throws NullPointerException if any of the parameters other than resource limit checks are {@code null}
+     * @throws NullPointerException if any of the parameters are {@code null}
      */
     protected void setCollaborators(
             final AbstractProtocolAdapterBase<?> adapter,
             final ProtocolAdapterProperties adapterProperties,
-            final SendMessageSampler.Factory samplerFactory,
-            final Optional<ResourceLimitChecks> resourceLimitChecks) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         Objects.requireNonNull(adapter);
         Objects.requireNonNull(adapterProperties);
@@ -121,6 +121,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
         final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
 
+        final TenantClient tenantClient = tenantClient(samplerFactory);
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
@@ -156,9 +157,18 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         adapter.setCredentialsClient(credentialsClient(samplerFactory));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
-        adapter.setTenantClient(tenantClient(samplerFactory));
+        adapter.setTenantClient(tenantClient);
         adapter.setTracer(getTracer());
-        resourceLimitChecks.ifPresent(adapter::setResourceLimitChecks);
+
+        try {
+            // look up client via bean factory in order to take advantage of conditional
+            // bean instantiation based on config properties
+            final var conf = context.getBean(PrometheusBasedResourceLimitChecksConfig.class);
+            final var resourceLimitChecks = resourceLimitChecks(conf, tenantClient);
+            adapter.setResourceLimitChecks(resourceLimitChecks);
+        } catch (final BeansException e) {
+            // no Prometheus based checks configured
+        } 
     }
 
     /**
@@ -648,19 +658,17 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     /**
      * Creates resource limit checks based on data retrieved from a Prometheus server.
      *
+     * @param config The configuration properties for the Prometheus based resource limit checks.
+     * @param tenantClient The client to use for retrieving tenant configuration data.
      * @return The resource limit checks.
-     * @throws NullPointerException if config is {@code null}.
      */
-    @Bean
-    @ConditionalOnBean(value = PrometheusBasedResourceLimitChecksConfig.class)
-    public ResourceLimitChecks resourceLimitChecks() {
+    public ResourceLimitChecks resourceLimitChecks(
+            final PrometheusBasedResourceLimitChecksConfig config,
+            final TenantClient tenantClient) {
 
-        final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
         Objects.requireNonNull(config);
-        final Caffeine<Object, Object> builder = Caffeine.newBuilder()
-                .initialCapacity(config.getCacheMinSize())
-                .maximumSize(config.getCacheMaxSize())
-                .expireAfterWrite(Duration.ofSeconds(config.getCacheTimeout()));
+        Objects.requireNonNull(tenantClient);
+
         final WebClientOptions webClientOptions = new WebClientOptions();
         webClientOptions.setConnectTimeout(config.getConnectTimeout());
         webClientOptions.setDefaultHost(config.getHost());
@@ -668,12 +676,26 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         webClientOptions.setTrustOptions(config.getTrustOptions());
         webClientOptions.setKeyCertOptions(config.getKeyCertOptions());
         webClientOptions.setSsl(config.isTlsEnabled());
+
+        final var webClient = WebClient.create(vertx(), webClientOptions);
+        final var cacheTimeout = Duration.ofSeconds(config.getCacheTimeout());
+        final Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                // make sure we run one Prometheus query at a time
+                .executor(Executors.newSingleThreadExecutor(r -> {
+                    final var t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
+                }))
+                .initialCapacity(config.getCacheMinSize())
+                .maximumSize(config.getCacheMaxSize())
+                .expireAfterWrite(cacheTimeout)
+                .refreshAfterWrite(cacheTimeout.dividedBy(2));
+
         return new PrometheusBasedResourceLimitChecks(
-                WebClient.create(vertx(), webClientOptions),
-                config,
-                builder.buildAsync(),
-                builder.buildAsync(),
-                builder.buildAsync(),
+                builder.buildAsync(new ConnectedDevicesAsyncCacheLoader(webClient, config, getTracer())),
+                builder.buildAsync(new ConnectionDurationAsyncCacheLoader(webClient, config, getTracer())),
+                builder.buildAsync(new DataVolumeAsyncCacheLoader(webClient, config, getTracer())),
+                tenantClient,
                 getTracer());
     }
 }
