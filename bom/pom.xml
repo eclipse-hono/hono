@@ -42,7 +42,7 @@
     <infinispan.version>11.0.9.Final</infinispan.version>
     <jackson.version>2.11.3</jackson.version>
     <jaeger.image.name>jaegertracing/all-in-one:1.22</jaeger.image.name>
-    <jaeger.version>1.5.0</jaeger.version>
+    <jaeger.version>1.6.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
     <javassist.version>3.26.0-GA</javassist.version>
     <jaxb.api.version>2.2.12</jaxb.api.version>
@@ -690,6 +690,14 @@
         <artifactId>jaeger-thrift</artifactId>
         <version>${jaeger.version}</version>
         <scope>runtime</scope>
+        <exclusions>
+          <!-- libthrift 0.14.1 used by jaeger-thrift 1.6.0 unnecessarily includes tomcat-embed-core dependency - see THRIFT-5375;
+               TODO remove exclusion after updating jaeger to version with newer libthrift  -->
+          <exclusion>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>io.jaegertracing</groupId>

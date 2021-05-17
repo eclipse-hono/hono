@@ -21,11 +21,11 @@ com.squareup.okio:okio:jar:2.8.0
 com.squareup:protoparser:jar:4.0.3
 io.dropwizard.metrics:metrics-core:jar:4.1.14
 io.dropwizard.metrics:metrics-graphite:jar:4.1.14
-io.jaegertracing:jaeger-client:jar:1.5.0
-io.jaegertracing:jaeger-core:jar:1.5.0
-io.jaegertracing:jaeger-micrometer:jar:1.5.0
-io.jaegertracing:jaeger-thrift:jar:1.5.0
-io.jaegertracing:jaeger-tracerresolver:jar:1.5.0
+io.jaegertracing:jaeger-client:jar:1.6.0
+io.jaegertracing:jaeger-core:jar:1.6.0
+io.jaegertracing:jaeger-micrometer:jar:1.6.0
+io.jaegertracing:jaeger-thrift:jar:1.6.0
+io.jaegertracing:jaeger-tracerresolver:jar:1.6.0
 io.jsonwebtoken:jjwt-api:jar:0.11.2
 io.jsonwebtoken:jjwt-impl:jar:0.11.2
 io.jsonwebtoken:jjwt-jackson:jar:0.11.2
@@ -129,7 +129,7 @@ org.apache.logging.log4j:log4j-api:jar:2.13.3
 org.apache.logging.log4j:log4j-to-slf4j:jar:2.13.3
 org.apache.qpid:proton-j:jar:0.33.8
 org.apache.sshd:sshd-common:jar:2.3.0
-org.apache.thrift:libthrift:jar:0.13.0
+org.apache.thrift:libthrift:jar:0.14.1
 org.apiguardian:apiguardian-api:jar:1.1.0
 org.assertj:assertj-core:jar:3.19.0
 org.checkerframework:checker-qual:jar:2.5.2
