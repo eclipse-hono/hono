@@ -17,9 +17,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.clients.consumer.Consumer;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
@@ -27,6 +29,7 @@ import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 
 import io.opentracing.Tracer;
@@ -36,7 +39,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
  * A Kafka based client that supports Hono's north bound operations to send commands and receive telemetry,
@@ -47,7 +50,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
     private final Vertx vertx;
     private final KafkaConsumerConfigProperties consumerConfig;
     private final List<MessageConsumer> consumersToCloseOnStop = new LinkedList<>();
-    private Supplier<KafkaConsumer<String, Buffer>> kafkaConsumerSupplier;
+    private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
 
     /**
      * Creates a new Kafka based application client.
@@ -114,8 +117,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
             final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
 
-        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.TELEMETRY, messageHandler,
-                closeHandler);
+        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.TELEMETRY, messageHandler);
     }
 
     @Override
@@ -123,8 +125,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
             final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
 
-        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.EVENT, messageHandler,
-                closeHandler);
+        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.EVENT, messageHandler);
     }
 
     /**
@@ -141,33 +142,39 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
             final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
 
-        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.COMMAND_RESPONSE, messageHandler,
-                closeHandler);
+        return createKafkaBasedDownstreamMessageConsumer(tenantId, HonoTopic.Type.COMMAND_RESPONSE, messageHandler);
     }
 
     // visible for testing
-    void setKafkaConsumerFactory(final Supplier<KafkaConsumer<String, Buffer>> kafkaConsumerSupplier) {
-        Objects.requireNonNull(kafkaConsumerSupplier);
-        this.kafkaConsumerSupplier = kafkaConsumerSupplier;
+    void setKafkaConsumerFactory(final Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier) {
+        this.kafkaConsumerSupplier = Objects.requireNonNull(kafkaConsumerSupplier);
     }
 
 
     private Future<MessageConsumer> createKafkaBasedDownstreamMessageConsumer(
             final String tenantId,
             final HonoTopic.Type type,
-            final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
-            final Handler<Throwable> closeHandler) {
+            final Handler<DownstreamMessage<KafkaMessageContext>> messageHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(type);
         Objects.requireNonNull(messageHandler);
 
-        final KafkaConsumer<String, Buffer> kafkaConsumer = Optional.ofNullable(kafkaConsumerSupplier)
-                .map(Supplier::get)
-                .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig.getConsumerConfig(type.toString())));
-        final Handler<Throwable> effectiveCloseHandler = Objects.nonNull(closeHandler) ? closeHandler : (t -> {});
-
-        return KafkaBasedDownstreamMessageConsumer.create(tenantId, type, kafkaConsumer, consumerConfig, messageHandler,
-                effectiveCloseHandler).onSuccess(consumersToCloseOnStop::add);
+        final String topic = new HonoTopic(type, tenantId).toString();
+        final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
+            messageHandler.handle(new KafkaDownstreamMessage(record));
+        };
+        final HonoKafkaConsumer consumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler,
+                consumerConfig.getConsumerConfig(type.toString()));
+        Optional.ofNullable(kafkaConsumerSupplier)
+                .ifPresent(consumer::setKafkaConsumerSupplier);
+        return consumer.start()
+                .map(v -> (MessageConsumer) new MessageConsumer() {
+                    @Override
+                    public Future<Void> close() {
+                        return consumer.stop();
+                    }
+                })
+                .onSuccess(consumersToCloseOnStop::add);
     }
 }

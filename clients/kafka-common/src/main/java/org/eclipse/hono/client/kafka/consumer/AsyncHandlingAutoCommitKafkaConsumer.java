@@ -155,8 +155,14 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler) {
         return record -> {
             final OffsetsQueueEntry offsetsQueueEntry = selfRef.getPlain().setRecordReceived(record);
-            recordHandler.apply(record)
-                    .onComplete(ar -> offsetsQueueEntry.setHandlingComplete());
+            try {
+                recordHandler.apply(record)
+                        .onComplete(ar -> offsetsQueueEntry.setHandlingComplete());
+            } catch (final Exception e) {
+                selfRef.getPlain().log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
+                        record.topic(), record.partition(), record.offset(), record.headers(), e);
+                offsetsQueueEntry.setHandlingComplete();
+            }
         };
     }
 
@@ -178,6 +184,11 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         return Optional.ofNullable(consumerConfig.get(CONFIG_HONO_OFFSETS_SKIP_RECOMMIT_PERIOD_SECONDS))
                 .map(Long::parseLong)
                 .orElse(DEFAULT_OFFSETS_SKIP_RECOMMIT_PERIOD.toSeconds());
+    }
+
+    @Override
+    protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
+        setRecordReceived(record).setHandlingComplete();
     }
 
     @Override

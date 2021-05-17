@@ -16,8 +16,6 @@ package org.eclipse.hono.application.client.kafka;
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerCommitException;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerPollException;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -30,26 +28,9 @@ public interface KafkaApplicationClient extends ApplicationClient<KafkaMessageCo
 
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
-     * <p>
-     * The messages passed in to the consumer will be acknowledged automatically if the message handler does not throw
-     * an exception.
-     * <p>
-     * If a fatal error occurs, the consumer will be closed and the close-handler, if it is not {@code null}, invoked
-     * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
-     * sense to create a new consumer and other cases that need to be resolved externally.
-     * <p>
-     * ERROR CASES:
-     * <p>
-     * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
-     * operation fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws a runtime
-     * exception, the current offsets are committed and the failed message will be polled again with the next batch of
-     * records. If the offset commit fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerCommitException}.
      *
      * @param tenantId The tenant to consume data for.
-     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
-     *            runtime exception, it will be invoked again with the message.
+     * @param messageHandler The handler to be invoked for each message created from a record.
      * @param closeHandler The handler invoked when the consumer is closed due to an error.
      * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
      *         cannot be started.
@@ -63,26 +44,9 @@ public interface KafkaApplicationClient extends ApplicationClient<KafkaMessageCo
 
     /**
      * Creates a client for consuming data from Hono's north bound <em>Event API</em>.
-     * <p>
-     * The messages passed in to the consumer will be acknowledged automatically if the message handler does not throw
-     * an exception.
-     * <p>
-     * If a fatal error occurs, the consumer will be closed and the close-handler, if it is not {@code null}, invoked
-     * with an exception indicating the cause. There are error cases that might disappear later on and where it makes
-     * sense to create a new consumer and other cases that need to be resolved externally.
-     * <p>
-     * ERROR CASES:
-     * <p>
-     * Errors can happen when polling, in message processing, and when committing the offset to Kafka. If a {@code poll}
-     * operation fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerPollException} indicating the cause. If the provided message handler throws a runtime
-     * exception, the current offsets are committed and the failed message will be polled again with the next batch of
-     * records. If the offset commit fails, the consumer will be closed and the close handler will be passed a
-     * {@link KafkaConsumerCommitException}.
      *
      * @param tenantId The tenant to consume data for.
-     * @param messageHandler The handler to be invoked for each message created from a record. If the handler throws a
-     *            runtime exception, it will be invoked again with the message.
+     * @param messageHandler The handler to be invoked for each message created from a record.
      * @param closeHandler The handler invoked when the consumer is closed due to an error.
      * @return A future that will complete with the consumer once it is ready. The future will fail if the consumer
      *         cannot be started.

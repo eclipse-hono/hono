@@ -17,7 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -46,6 +44,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +62,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.serialization.BufferSerializer;
 
 /**
@@ -80,7 +78,7 @@ public class KafkaBasedCommandSenderTest {
     private KafkaConsumerConfigProperties consumerConfig;
     private KafkaProducerConfigProperties producerConfig;
     private MockProducer<String, Buffer> mockProducer;
-    private MockConsumer<String, Buffer> mockConsumer;
+    private KafkaMockConsumer mockConsumer;
     private String tenantId;
     private String deviceId;
     private Vertx vertx;
@@ -95,7 +93,7 @@ public class KafkaBasedCommandSenderTest {
     void setUp(final Vertx vertx) {
         this.vertx = vertx;
         consumerConfig = new KafkaConsumerConfigProperties();
-        mockConsumer = new MockConsumer<>(OffsetResetStrategy.LATEST);
+        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
         producerConfig = new KafkaProducerConfigProperties();
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
@@ -220,7 +218,7 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
-        commandSender.setKafkaConsumerSupplier(config -> KafkaConsumer.create(vertx, mockConsumer));
+        commandSender.setKafkaConsumerSupplier(() -> mockConsumer);
         commandSender
                 .sendCommand(tenantId, deviceId, "testCommand", null, Buffer.buffer("data"), null, null,
                         Duration.ofMillis(5), NoopSpan.INSTANCE.context())
@@ -267,18 +265,18 @@ public class KafkaBasedCommandSenderTest {
                 deviceId, correlationId, responseStatus, Buffer.buffer(responsePayload));
         final String responseTopic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
         final TopicPartition responseTopicPartition = new TopicPartition(responseTopic, 0);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(responseTopicPartition));
         onProducerRecordSentPromise.future().onComplete(ar -> {
             LOG.debug("producer record sent, add command response record to mockConsumer");
             // Send a command response with the same correlation id as that of the command
             mockConsumer.updateBeginningOffsets(Map.of(responseTopicPartition, 0L));
             mockConsumer.updateEndOffsets(Map.of(responseTopicPartition, 0L));
-            mockConsumer.rebalance(Collections.singletonList(responseTopicPartition));
             mockConsumer.addRecord(commandResponseRecord);
         });
 
         // This correlation id is used for both command and its response.
         commandSender.setCorrelationIdSupplier(() -> correlationId);
-        commandSender.setKafkaConsumerSupplier(config -> KafkaConsumer.create(vertx, mockConsumer));
+        commandSender.setKafkaConsumerSupplier(() -> mockConsumer);
 
         context.runOnContext(v -> {
             // Send a command to the device

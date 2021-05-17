@@ -33,6 +33,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Handler<Set<TopicPartition>> onPartitionsAssignedHandler;
     private Handler<Set<TopicPartition>> onRebalanceDoneHandler;
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
+    private boolean respectTtl = true;
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
 
     /**
@@ -111,6 +113,9 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @param recordHandler The handler to be invoked for each received record.
      * @param consumerConfig The Kafka consumer configuration.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the consumerConfig contains an
+     *             {@value ConsumerConfig#ENABLE_AUTO_COMMIT_CONFIG} property with value {@code true} but no
+     *             {@value ConsumerConfig#GROUP_ID_CONFIG} property.
      */
     public HonoKafkaConsumer(
             final Vertx vertx,
@@ -128,6 +133,9 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @param recordHandler The handler to be invoked for each received record.
      * @param consumerConfig The Kafka consumer configuration.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if the consumerConfig contains an
+     *             {@value ConsumerConfig#ENABLE_AUTO_COMMIT_CONFIG} property with value {@code true} but no
+     *             {@value ConsumerConfig#GROUP_ID_CONFIG} property.
      */
     public HonoKafkaConsumer(
             final Vertx vertx,
@@ -147,6 +155,9 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @param consumerConfig The Kafka consumer configuration.
      * @throws NullPointerException if vertx, recordHandler, consumerConfig or either topics or topicPattern is
      *                              {@code null}.
+     * @throws IllegalArgumentException if the consumerConfig contains an
+     *             {@value ConsumerConfig#ENABLE_AUTO_COMMIT_CONFIG} property with value {@code true} but no
+     *             {@value ConsumerConfig#GROUP_ID_CONFIG} property.
      */
     protected HonoKafkaConsumer(
             final Vertx vertx,
@@ -168,8 +179,12 @@ public class HonoKafkaConsumer implements Lifecycle {
             consumerConfig.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, DEFAULT_MAX_POLL_INTERNAL_MS);
         }
         if (!consumerConfig.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
-            log.trace("no group.id set, using a random UUID as default");
+            if ("true".equals(consumerConfig.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG))) {
+                throw new IllegalArgumentException(ConsumerConfig.GROUP_ID_CONFIG + " config entry has to be set if auto-commit is enabled");
+            }
+            log.trace("no group.id set, using a random UUID as default and disabling auto-commit");
             consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+            consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         }
     }
 
@@ -209,10 +224,22 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
+     * Defines whether records that contain a <em>ttl</em> header where the time-to-live has elapsed should be ignored.
+     * <p>
+     * The default is true.
+     *
+     * @param respectTtl The intended behaviour: if true, messages with elapsed ttl are silently dropped and the message
+     *            handler is not invoked.
+     */
+    public final void setRespectTtl(final boolean respectTtl) {
+        this.respectTtl = respectTtl;
+    }
+
+    /**
      * Only to be used for unit tests.
      * @param supplier Supplier creating the internal Kafka consumer.
      */
-    void setKafkaConsumerSupplier(final Supplier<Consumer<String, Buffer>> supplier) {
+    public void setKafkaConsumerSupplier(final Supplier<Consumer<String, Buffer>> supplier) {
         kafkaConsumerSupplier = supplier;
     }
 
@@ -238,7 +265,18 @@ public class HonoKafkaConsumer implements Lifecycle {
             kafkaConsumer = Optional.ofNullable(kafkaConsumerSupplier)
                     .map(supplier -> KafkaConsumer.create(vertx, supplier.get()))
                     .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class));
-            kafkaConsumer.handler(recordHandler);
+            kafkaConsumer.handler(record -> {
+                if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
+                    onRecordHandlerSkippedForExpiredRecord(record);
+                } else {
+                    try {
+                        recordHandler.handle(record);
+                    } catch (final Exception e) {
+                        log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
+                                record.topic(), record.partition(), record.offset(), record.headers(), e);
+                    }
+                }
+            });
             kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred", error));
             installRebalanceListeners();
             // subscribe and wait for rebalance to make sure that when start() completes,
@@ -261,6 +299,18 @@ public class HonoKafkaConsumer implements Lifecycle {
                     .onComplete(startPromise.future());
         });
         return startPromise.future();
+    }
+
+    /**
+     * Invoked when <em>respectTtl</em> is {@code true} and an expired record was received (meaning the
+     * <em>recordHandler</em> isn't getting invoked for the record).
+     * <p>
+     * This default implementation does nothing. Subclasses may override this method to implement specific handling.
+     *
+     * @param record The received record which has expired.
+     */
+    protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
+        // do nothing by default
     }
 
     private void installRebalanceListeners() {
@@ -402,7 +452,8 @@ public class HonoKafkaConsumer implements Lifecycle {
         if (kafkaConsumer == null) {
             return Future.failedFuture("not started");
         } else if (!stopCalled.compareAndSet(false, true)) {
-            return Future.failedFuture("stop already called");
+            log.trace("stop already called");
+            return Future.succeededFuture();
         }
         final Promise<Void> consumerClosePromise = Promise.promise();
         kafkaConsumer.close(consumerClosePromise);

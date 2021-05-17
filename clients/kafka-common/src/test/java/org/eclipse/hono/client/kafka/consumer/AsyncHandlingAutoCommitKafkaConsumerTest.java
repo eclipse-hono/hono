@@ -15,6 +15,7 @@ package org.eclipse.hono.client.kafka.consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,10 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.common.record.TimestampType;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +48,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -425,6 +431,89 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         });
         // now force a rebalance which should trigger the above onPartitionsAssignedHandler
         mockConsumer.rebalance(List.of(topicPartition));
+    }
+
+    /**
+     * Verifies that the consumer commits offsets for records whose ttl has expired.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
+     */
+    @Test
+    public void testConsumerCommitsOffsetsOfSkippedExpiredRecords(final VertxTestContext ctx) throws InterruptedException {
+        final int numNonExpiredTestRecords = 5;
+        final VertxTestContext receivedRecordsCtx = new VertxTestContext();
+        final Checkpoint expiredRecordCheckpoint = receivedRecordsCtx.checkpoint(1);
+        final Checkpoint receivedRecordsCheckpoint = receivedRecordsCtx.checkpoint(numNonExpiredTestRecords);
+        final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> handler = record -> {
+            receivedRecordsCheckpoint.flag();
+            return Future.succeededFuture();
+        };
+        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
+
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
+            @Override
+            protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
+                super.onRecordHandlerSkippedForExpiredRecord(record);
+                expiredRecordCheckpoint.flag();
+            }
+        };
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer.start().onComplete(ctx.succeeding(v2 -> {
+            mockConsumer.schedulePollTask(() -> {
+                // add record with elapsed ttl
+                mockConsumer.addRecord(createRecordWithElapsedTtl());
+                IntStream.range(1, numNonExpiredTestRecords + 1).forEach(offset -> {
+                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                });
+            });
+        }));
+        assertThat(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .as("records received in 5s").isTrue();
+        if (receivedRecordsCtx.failed()) {
+            ctx.failNow(receivedRecordsCtx.causeOfFailure());
+            return;
+        }
+        final int numExpiredTestRecords = 1;
+        final int latestFullyHandledOffset = numNonExpiredTestRecords + numExpiredTestRecords - 1;
+        final VertxTestContext commitCheckContext = new VertxTestContext();
+        final Checkpoint commitCheckpoint = commitCheckContext.checkpoint(1);
+
+        consumer.setOnPartitionsAssignedHandler(partitions -> {
+            final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(topicPartition));
+            ctx.verify(() -> {
+                final OffsetAndMetadata offsetAndMetadata = committed.get(topicPartition);
+                assertThat(offsetAndMetadata).isNotNull();
+                assertThat(offsetAndMetadata.offset()).isEqualTo(latestFullyHandledOffset + 1L);
+            });
+            commitCheckpoint.flag();
+        });
+        // now force a rebalance which should trigger the above onPartitionsAssignedHandler
+        mockConsumer.rebalance(List.of(topicPartition));
+        assertThat(commitCheckContext.awaitCompletion(5, TimeUnit.SECONDS))
+                .as("partition assigned in 5s for checking of commits").isTrue();
+        if (commitCheckContext.failed()) {
+            ctx.failNow(commitCheckContext.causeOfFailure());
+            return;
+        }
+        ctx.completeNow();
+    }
+
+    private ConsumerRecord<String, Buffer> createRecordWithElapsedTtl() {
+        final byte[] ttl1Second = "1".getBytes();
+        final RecordHeader ttl = new RecordHeader("ttl", ttl1Second);
+
+        final byte[] timestamp2SecondsAgo = Json.encode(Instant.now().minusSeconds(2).toEpochMilli()).getBytes();
+        final RecordHeader creationTime = new RecordHeader("creation-time", timestamp2SecondsAgo);
+
+        return new ConsumerRecord<>(TOPIC, PARTITION, 0, ConsumerRecord.NO_TIMESTAMP, TimestampType.NO_TIMESTAMP_TYPE,
+                (long) ConsumerRecord.NULL_CHECKSUM, ConsumerRecord.NULL_SIZE, ConsumerRecord.NULL_SIZE, "key_0",
+                Buffer.buffer(), new RecordHeaders(new Header[] { ttl, creationTime }));
     }
 
     /**
