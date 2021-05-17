@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -57,6 +56,7 @@ public abstract class AbstractConfig {
     private FileFormat trustStoreFormat = null;
     private FileFormat keyFormat = null;
     private List<String> secureProtocols;
+    private List<String> supportedCipherSuites;
 
     /**
      * Creates a new empty instance.
@@ -66,6 +66,8 @@ public abstract class AbstractConfig {
         initialProtocols.add("TLSv1.3");
         initialProtocols.add("TLSv1.2");
         this.secureProtocols = Collections.unmodifiableList(initialProtocols);
+        final List<String> initialCiphers = new ArrayList<>();
+        this.supportedCipherSuites = Collections.unmodifiableList(initialCiphers);
     }
 
     /**
@@ -82,7 +84,8 @@ public abstract class AbstractConfig {
         this.keyStorePassword = other.keyStorePassword;
         this.keyStorePath = other.keyStorePath;
         this.pathSeparator = other.pathSeparator;
-        this.secureProtocols = new LinkedList<>(other.secureProtocols);
+        this.secureProtocols = Collections.unmodifiableList(new ArrayList<>(other.secureProtocols));
+        this.supportedCipherSuites = Collections.unmodifiableList(new ArrayList<>(other.supportedCipherSuites));
         this.trustStoreFormat = other.trustStoreFormat;
         this.trustStorePassword = other.trustStorePassword;
         this.trustStorePath = other.trustStorePath;
@@ -438,7 +441,7 @@ public abstract class AbstractConfig {
      * <a href="https://vertx.io/docs/vertx-core/java/#ssl">vert.x
      * documentation</a> for a list of supported values.
      *
-     * @return The enabled protocols.
+     * @return The enabled protocols in order of preference.
      */
     public final List<String> getSecureProtocols() {
         return secureProtocols;
@@ -455,7 +458,7 @@ public abstract class AbstractConfig {
      * Note that setting this property to an empty list effectively
      * disables TLS altogether.
      *
-     * @param enabledProtocols The protocols.
+     * @param enabledProtocols The protocols in order of preference.
      * @throws NullPointerException if protocols is {@code null}.
      */
     public final void setSecureProtocols(final List<String> enabledProtocols) {
@@ -463,4 +466,35 @@ public abstract class AbstractConfig {
         this.secureProtocols = Collections.unmodifiableList(enabledProtocols);
     }
 
+    /**
+     * Gets the names of the cipher suites that may be used in TLS connections.
+     * <p>
+     * An empty list indicates that all cipher suites supported by the JVM can be used. This is also the default.
+     * <p>
+     * Please refer to
+     * <a href="https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#jsse-cipher-suite-names">
+     * JSSE Cipher Suite Names</a> for a list of supported cipher suite names.
+     *
+     * @return The supported cipher suites in order of preference.
+     */
+    public final List<String> getSupportedCipherSuites() {
+        return supportedCipherSuites;
+    }
+
+    /**
+     * Sets the names of the cipher suites that may be used in TLS connections.
+     * <p>
+     * An empty list indicates that all cipher suites supported by the JVM can be used. This is also the default.
+     * <p>
+     * Please refer to
+     * <a href="https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#jsse-cipher-suite-names">
+     * JSSE Cipher Suite Names</a> for a list of supported cipher suite names.
+     *
+     * @param cipherSuites The supported cipher suites in order of preference.
+     * @throws NullPointerException if cipher suites is {@code null}.
+     */
+    public final void setSupportedCipherSuites(final List<String> cipherSuites) {
+        Objects.requireNonNull(cipherSuites);
+        this.supportedCipherSuites = Collections.unmodifiableList(cipherSuites);
+    }
 }

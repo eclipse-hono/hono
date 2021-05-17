@@ -164,6 +164,7 @@ public class AbstractConfigTest {
     public void testConstructorCopiesAllProperties() {
 
         final List<String> protocols = Collections.singletonList("NON-EXISTING");
+        final List<String> ciphers = Collections.singletonList("NON-EXISTING");
         final TestConfig other = new TestConfig();
         other.setCertPath("cert/path");
         other.setKeyFormat(FileFormat.PEM);
@@ -172,6 +173,7 @@ public class AbstractConfigTest {
         other.setKeyStorePassword("pwd");
         other.setPathSeparator("::");
         other.setSecureProtocols(protocols);
+        other.setSupportedCipherSuites(ciphers);
         other.setTrustStoreFormat(FileFormat.PKCS12);
         other.setTrustStorePassword("tpwd");
         other.setTrustStorePath("truststore/path");
@@ -184,6 +186,7 @@ public class AbstractConfigTest {
         assertThat(newConfig.getKeyStorePath()).isEqualTo("keystore/path");
         assertThat(newConfig.getPathSeparator()).isEqualTo("::");
         assertThat(newConfig.getSecureProtocols()).hasSameElementsAs(protocols);
+        assertThat(newConfig.getSupportedCipherSuites()).hasSameElementsAs(ciphers);
         assertThat(newConfig.getTrustStoreFormat()).isEqualTo(FileFormat.PKCS12);
         assertThat(newConfig.getTrustStorePassword()).isEqualTo("tpwd");
         assertThat(newConfig.getTrustStorePath()).isEqualTo("truststore/path");

@@ -21,6 +21,7 @@ import java.security.KeyPair;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLHandshakeException;
 import javax.security.sasl.AuthenticationException;
 import javax.security.sasl.SaslException;
 
@@ -33,6 +34,7 @@ import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.vertx.core.net.SelfSignedCertificate;
@@ -64,8 +66,43 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
-        .compose(ok -> connectToAdapter(tlsVersion, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .compose(ok -> connectToAdapter(tlsVersion, null, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that the adapter rejects a connection attempt from a registered device if the device uses an unsupported
+     * set of TLS security parameters.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param cipherSuite The TLS cipher suite to use for connecting to the adapter.
+     * @param ctx The test context
+     */
+    @ParameterizedTest
+    @CsvSource(value = {
+          "TLSv1.2,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+          "TLSv1.3,TLS_AES_256_GCM_SHA384"
+          })
+    public void testConnectFailsForUnsupportedTlsSecurityParameters(
+            final String tlsVersion,
+            final String cipherSuite,
+            final VertxTestContext ctx) {
+
+        // GIVEN a client that is configured to use a combination of TLS version and cipher suite
+        // that is not supported by the AMQP adapter
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final Tenant tenant = new Tenant();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            // WHEN the client tries to establish an AMQP connection to the adapter
+            .compose(ok -> connectToAdapter(tlsVersion, cipherSuite, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+            .onComplete(ctx.failing(t -> {
+                // THEN the TLS handshake fails
+                ctx.verify(() -> assertThat(t).isInstanceOf(SSLHandshakeException.class));
+                ctx.completeNow();
+            }));
     }
 
     /**

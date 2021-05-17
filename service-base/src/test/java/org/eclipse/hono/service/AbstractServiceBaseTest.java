@@ -18,6 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
@@ -276,7 +277,7 @@ public class AbstractServiceBaseTest {
         // GIVEN a configuration with only TLS 1 and TLS 1.1 enabled
         final ServiceConfigProperties config = new ServiceConfigProperties();
         config.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
-        config.setSecureProtocols(Arrays.asList("TLSv1", "TLSv1.1"));
+        config.setSecureProtocols(List.of("TLSv1", "TLSv1.1"));
 
         // WHEN configuring a service using the configuration
         final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
@@ -285,10 +286,51 @@ public class AbstractServiceBaseTest {
 
         // THEN SSL is enabled and only TLSv1 and TLSv1.1 are supported
         assertTrue(options.isSsl());
-        assertTrue(options.getEnabledSecureTransportProtocols().size() == 2);
-        assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1"));
-        assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1.1"));
+        assertThat(options.getEnabledSecureTransportProtocols()).containsExactly("TLSv1", "TLSv1.1");
+    }
 
+    /**
+     * Verifies that all cipher suites are enabled by default.
+     *
+     */
+    @Test
+    public void testAddTlsKeyCertOptionsEnablesAllCipherSuitesByDefault() {
+
+        // GIVEN a default configuration for TLS
+        final ServiceConfigProperties config = new ServiceConfigProperties();
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
+
+        // WHEN configuring a service using the configuration
+        final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
+        final NetServerOptions options = new NetServerOptions();
+        service.addTlsKeyCertOptions(options);
+
+        // THEN no specific cipher suites are whitelisted
+        assertTrue(options.isSsl());
+        assertThat(options.getEnabledCipherSuites()).isEmpty();
+    }
+
+    /**
+     * Verifies that only the configured TLS cipher suites are enabled.
+     *
+     */
+    @Test
+    public void testAddTlsKeyCertOptionsEnablesConfiguredCipherSuites() {
+
+        // GIVEN a configuration with only TLS 1 and TLS 1.1 enabled
+        final ServiceConfigProperties config = new ServiceConfigProperties();
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
+        config.setSupportedCipherSuites(List.of("TLS_PSK_WITH_AES_256_CCM_8", "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8"));
+
+        // WHEN configuring a service using the configuration
+        final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
+        final NetServerOptions options = new NetServerOptions();
+        service.addTlsKeyCertOptions(options);
+
+        // THEN TLS is enabled and only the configured suites are enabled in the correct order
+        assertTrue(options.isSsl());
+        assertThat(options.getEnabledCipherSuites())
+            .containsExactly("TLS_PSK_WITH_AES_256_CCM_8", "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8");
     }
 
     /**

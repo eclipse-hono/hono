@@ -34,10 +34,10 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Test cases verifying the behavior of {@code HonoClient}.
+ * Test cases verifying the behavior of {@link ProtonBasedApplicationClient}.
  */
 @ExtendWith(VertxExtension.class)
-public class HonoClientImplIT {
+public class ApplicationClientIT {
 
     private static Vertx vertx;
 

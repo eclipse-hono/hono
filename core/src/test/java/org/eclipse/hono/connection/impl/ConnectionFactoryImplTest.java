@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -360,5 +361,31 @@ public class ConnectionFactoryImplTest {
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
         verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
         assertThat(optionsCaptor.getValue().getMaxFrameSize()).isEqualTo(64 * 1024);
+    }
+
+    /**
+     * Verifies that the factory sets the configured cipher suites on the AMQP connection.
+     */
+    @Test
+    public void testConnectUsesConfiguredCipherSuitesOnly() {
+
+        // GIVEN a factory configured to use a set of cipher suites only
+        final ClientConfigProperties config = new ClientConfigProperties();
+        config.setHost("remote.host");
+        config.setTrustStorePath(PREFIX_KEY_PATH + "trusted-certs.pem");
+        config.setSupportedCipherSuites(Arrays.asList("TLS_PSK_WITH_AES_256_CCM_8", "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8"));
+        final ProtonClient client = mock(ProtonClient.class);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, config);
+        factory.setProtonClient(client);
+
+        // WHEN connecting to the server
+        factory.connect(null, null, null, c -> {});
+
+        // THEN the factory uses TLS when establishing the connection
+        final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        assertTrue(optionsCaptor.getValue().isSsl());
+        assertThat(optionsCaptor.getValue().getEnabledCipherSuites())
+            .containsExactly("TLS_PSK_WITH_AES_256_CCM_8", "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8");
     }
 }
