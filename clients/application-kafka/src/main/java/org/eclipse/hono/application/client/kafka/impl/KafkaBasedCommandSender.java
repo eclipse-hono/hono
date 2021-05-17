@@ -20,12 +20,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
@@ -37,6 +38,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -55,7 +57,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
  * A Kafka based client for sending commands and receiving command responses.
@@ -68,6 +70,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaBasedCommandSender.class);
     private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
 
+    private final Vertx vertx;
     private final KafkaConsumerConfigProperties consumerConfig;
     /**
      * Key is the tenant identifier, value the corresponding message consumer for receiving the command responses.
@@ -78,9 +81,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
      * These correlation ids are used to correlate the response messages with the sent commands.
      */
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, ExpiringCommandPromise>> pendingCommandResponses = new ConcurrentHashMap<>();
+    private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
     private Supplier<String> correlationIdSupplier = () -> UUID.randomUUID().toString();
-    private Function<Map<String, String>, KafkaConsumer<String, Buffer>> kafkaConsumerSupplier;
-    private final Vertx vertx;
 
     /**
      * Creates a new Kafka-based command sender.
@@ -103,7 +105,6 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         super(producerFactory, "command-sender", producerConfig, tracer);
         this.vertx = Objects.requireNonNull(vertx);
         this.consumerConfig = Objects.requireNonNull(consumerConfig);
-        kafkaConsumerSupplier = config -> KafkaConsumer.create(vertx, config);
     }
 
     @SuppressWarnings("rawtypes")
@@ -248,7 +249,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
      * To be used for unit tests.
      * @param kafkaConsumerSupplier The KafkaConsumer supplier with the configuration as parameter.
      */
-    void setKafkaConsumerSupplier(final Function<Map<String, String>, KafkaConsumer<String, Buffer>> kafkaConsumerSupplier) {
+    void setKafkaConsumerSupplier(final Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier) {
         this.kafkaConsumerSupplier = Objects.requireNonNull(kafkaConsumerSupplier);
     }
 
@@ -354,23 +355,29 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         // Thereby the responses can be correlated with the command that has been sent.
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, tenantId + "-" + UUID.randomUUID());
 
-        return KafkaBasedDownstreamMessageConsumer
-                .create(tenantId,
-                        HonoTopic.Type.COMMAND_RESPONSE,
-                        kafkaConsumerSupplier.apply(consumerConfig),
-                        this.consumerConfig,
-                        getCommandResponseHandler(tenantId),
-                        t -> LOGGER.debug("closed consumer for tenant [{}]", tenantId))
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
+        final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
+            getCommandResponseHandler(tenantId)
+                    .handle(new KafkaDownstreamMessage(record));
+        };
+        final HonoKafkaConsumer consumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler, consumerConfig);
+        Optional.ofNullable(kafkaConsumerSupplier)
+                .ifPresent(consumer::setKafkaConsumerSupplier);
+        return consumer.start()
                 .recover(error -> {
                     LOGGER.debug("error creating command response consumer for tenant [{}]", tenantId, error);
                     TracingHelper.logError(span, "error creating command response consumer", error);
                     return Future.failedFuture(error);
                 })
-                .map(consumer -> {
+                .onSuccess(v -> {
                     LOGGER.debug("created command response consumer for tenant [{}]", tenantId);
                     span.log("created command response consumer");
-                    commandResponseSubscriptions.put(tenantId, consumer);
-                    return null;
+                    commandResponseSubscriptions.put(tenantId, new MessageConsumer() {
+                        @Override
+                        public Future<Void> close() {
+                            return consumer.stop();
+                        }
+                    });
                 });
     }
 

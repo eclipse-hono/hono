@@ -14,23 +14,26 @@ package org.eclipse.hono.application.client.kafka.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.clients.producer.MockProducer;
+import org.apache.kafka.common.TopicPartition;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
+import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.HonoTopic.Type;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,7 +47,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 
 /**
  * Verifies behavior of {@link KafkaApplicationClientImpl}.
@@ -55,7 +57,7 @@ public class KafkaApplicationClientImplTest {
 
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
     private KafkaApplicationClientImpl client;
-    private MockConsumer<String, Buffer> mockConsumer;
+    private KafkaMockConsumer mockConsumer;
     private String tenantId;
 
     static Stream<Type> messageTypes() {
@@ -79,7 +81,7 @@ public class KafkaApplicationClientImplTest {
 
         tenantId = UUID.randomUUID().toString();
 
-        mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
 
         final KafkaConsumerConfigProperties consumerConfig = new KafkaConsumerConfigProperties();
         consumerConfig.setCommonClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
@@ -89,7 +91,7 @@ public class KafkaApplicationClientImplTest {
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
         client = new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);
-        client.setKafkaConsumerFactory(() -> KafkaConsumer.create(vertx, mockConsumer));
+        client.setKafkaConsumerFactory(() -> mockConsumer);
     }
 
     /**
@@ -164,6 +166,12 @@ public class KafkaApplicationClientImplTest {
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Type type,
             final Handler<DownstreamMessage<KafkaMessageContext>> msgHandler, final Handler<Throwable> closeHandler) {
+
+        final String topic = new HonoTopic(type, tenantId).toString();
+        final TopicPartition topicPartition = new TopicPartition(topic, 0);
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
 
         switch (type) {
         case TELEMETRY:
